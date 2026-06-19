@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect } from 'react';
@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import FormInput from '../../../components/forms/FormInput';
 import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
+import PhoneInput from '../../../components/forms/PhoneInput';
 import Button from '../../../components/ui/Button';
 import { CLIENT_STATUS } from '../../../constants';
 import { useCreateClientMutation, useUpdateClientMutation } from '../../../services/clientApi';
@@ -18,15 +19,17 @@ const clientFormSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z
     .string()
-    .regex(/^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
+    .regex(/^$|^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
     .optional()
     .or(z.literal('')),
   gstNumber: z
     .string()
+    .regex(/^$|^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Invalid GST number format')
     .optional()
     .or(z.literal('')),
   panNumber: z
     .string()
+    .regex(/^$|^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN number format')
     .optional()
     .or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
@@ -82,6 +85,13 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
     }
   }, [client, reset]);
 
+  const getFieldErrors = (err) => {
+    if (err?.data?.errors && Array.isArray(err.data.errors)) {
+      return err.data.errors.map((e) => e.message).join('. ');
+    }
+    return err?.data?.message || 'Something went wrong';
+  };
+
   const onSubmit = async (data) => {
     try {
       const addressParts = (data.address || '').split(',').map((s) => s.trim());
@@ -89,9 +99,9 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
         companyName: data.companyName,
         contactPerson: data.contactPerson,
         email: data.email,
-        phone: data.phone || null,
-        gstNumber: data.gstNumber || null,
-        panNumber: data.panNumber || null,
+        phone: data.phone || undefined,
+        gstNumber: data.gstNumber || undefined,
+        panNumber: data.panNumber || undefined,
         address: {
           street: addressParts[0] || '',
           city: addressParts[1] || '',
@@ -115,7 +125,7 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
         onSuccess ? onSuccess() : navigate('/clients');
       }
     } catch (error) {
-      toast.error(error?.data?.message || 'Something went wrong');
+      toast.error(getFieldErrors(error));
     }
   };
 
@@ -135,36 +145,58 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
         <FormInput
           label="Company Name *"
           placeholder="Acme Corp"
+          autoCapitalize="words"
+          autoComplete="organization"
           error={errors.companyName?.message}
           {...register('companyName')}
         />
         <FormInput
           label="Contact Person *"
           placeholder="John Doe"
+          autoCapitalize="words"
+          autoComplete="name"
           error={errors.contactPerson?.message}
           {...register('contactPerson')}
         />
         <FormInput
           label="Email *"
+          type="email"
           placeholder="john@company.com"
+          autoComplete="email"
+          inputMode="email"
           error={errors.email?.message}
           {...register('email')}
         />
-        <FormInput
-          label="Phone"
-          placeholder="+91 98765 43210"
-          error={errors.phone?.message}
-          {...register('phone')}
+        <Controller
+          name="phone"
+          control={control}
+          render={({ field }) => (
+            <PhoneInput
+              label="Phone"
+              placeholder="98765 43210"
+              value={field.value}
+              onChange={field.onChange}
+              error={errors.phone?.message}
+            />
+          )}
         />
         <FormInput
           label="GST Number"
           placeholder="22AAAAA0000A1Z5"
+          maxLength={15}
+          autoCapitalize="characters"
+          autoComplete="off"
+          helperText="15-character GSTIN"
           error={errors.gstNumber?.message}
           {...register('gstNumber')}
         />
         <FormInput
           label="PAN Number"
           placeholder="ABCDE1234F"
+          maxLength={10}
+          autoCapitalize="characters"
+          autoComplete="off"
+          helperText="10 chars · 5 letters + 4 digits + 1 letter"
           error={errors.panNumber?.message}
           {...register('panNumber')}
         />

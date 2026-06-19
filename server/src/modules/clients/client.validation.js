@@ -21,16 +21,19 @@ export const createClientSchema = z.object({
   phone: z
     .string()
     .regex(/^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
+    .nullable()
     .optional()
     .or(z.literal('')),
   gstNumber: z
     .string()
     .regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Invalid GST number format')
+    .nullable()
     .optional()
     .or(z.literal('')),
   panNumber: z
     .string()
     .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN number format')
+    .nullable()
     .optional()
     .or(z.literal('')),
   address: addressSchema.optional(),
@@ -53,16 +56,19 @@ export const updateClientSchema = z.object({
   phone: z
     .string()
     .regex(/^[+]?[\d\s()-]{7,15}$/)
+    .nullable()
     .optional()
     .or(z.literal('')),
   gstNumber: z
     .string()
     .regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
+    .nullable()
     .optional()
     .or(z.literal('')),
   panNumber: z
     .string()
     .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)
+    .nullable()
     .optional()
     .or(z.literal('')),
   address: addressSchema.optional(),

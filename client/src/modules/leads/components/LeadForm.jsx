@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect } from 'react';
@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import FormInput from '../../../components/forms/FormInput';
 import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
+import PhoneInput from '../../../components/forms/PhoneInput';
 import Button from '../../../components/ui/Button';
 import { LEAD_STATUS, LEAD_SOURCES } from '../../../constants';
 import { useCreateLeadMutation, useUpdateLeadMutation } from '../../../services/leadApi';
@@ -17,7 +18,7 @@ const leadFormSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z
     .string()
-    .regex(/^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
+    .regex(/^$|^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
     .optional()
     .or(z.literal('')),
   company: z.string().max(200).optional().or(z.literal('')),
@@ -66,13 +67,20 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
     }
   }, [lead, reset]);
 
+  const getFieldErrors = (err) => {
+    if (err?.data?.errors && Array.isArray(err.data.errors)) {
+      return err.data.errors.map((e) => e.message).join('. ');
+    }
+    return err?.data?.message || 'Something went wrong';
+  };
+
   const onSubmit = async (data) => {
     try {
       const payload = {
         name: data.name,
         email: data.email,
-        phone: data.phone || null,
-        company: data.company || null,
+        phone: data.phone || undefined,
+        company: data.company || undefined,
         source: data.source || 'other',
         status: data.status || 'new',
       };
@@ -91,7 +99,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         onSuccess ? onSuccess() : navigate('/leads');
       }
     } catch (error) {
-      toast.error(error?.data?.message || 'Something went wrong');
+      toast.error(getFieldErrors(error));
     }
   };
 
@@ -111,24 +119,37 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         <FormInput
           label="Full Name *"
           placeholder="John Doe"
+          autoCapitalize="words"
+          autoComplete="name"
           error={errors.name?.message}
           {...register('name')}
         />
         <FormInput
           label="Email *"
+          type="email"
           placeholder="john@company.com"
+          autoComplete="email"
+          inputMode="email"
           error={errors.email?.message}
           {...register('email')}
         />
-        <FormInput
-          label="Phone"
-          placeholder="+91 98765 43210"
-          error={errors.phone?.message}
-          {...register('phone')}
+        <Controller
+          name="phone"
+          control={control}
+          render={({ field }) => (
+            <PhoneInput
+              label="Phone"
+              placeholder="98765 43210"
+              value={field.value}
+              onChange={field.onChange}
+              error={errors.phone?.message}
+            />
+          )}
         />
         <FormInput
           label="Company"
           placeholder="Acme Corp"
+          autoCapitalize="words"
           error={errors.company?.message}
           {...register('company')}
         />
