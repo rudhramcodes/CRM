@@ -256,13 +256,20 @@ Routes (/leads, /leads/new, /leads/:id)
   ├── [Route Guard] ProtectedRoute(requiredRoles) — blocks unauthorized roles at router level
   │
   ├── LeadList Page (/leads)
-  │   ├── Header — Title + "Add Lead" button (super_admin/admin/manager only)
+  │   ├── Header — Title + Table/Board toggle + "Add Lead" button (role-gated)
   │   ├── Stats Cards — Pipeline breakdown (hidden when empty)
   │   ├── LeadFilters — Search input + Status/Source shadcn Select dropdowns (debounced 300ms)
-  │   └── LeadTable — DataTable with:
-  │       ├── Columns: Name (avatar+company), Email, Source, Status (badge), Assigned To, Created
-  │       ├── Actions: Edit icon → detail page | Delete icon → confirm → delete (role-gated)
-  │       └── Row click → LeadDetail page
+  │   ├── [Table View] LeadTable — DataTable with:
+  │   │   ├── Columns: Name (avatar+company), Email, Source, Status (badge), Assigned To, Created
+  │   │   ├── Actions: Edit icon → detail page | Delete icon → confirm → delete (role-gated)
+  │   │   └── Row click → LeadDetail page
+  │   └── [Board View] LeadKanbanBoard — Drag-and-drop pipeline with:
+  │       ├── 6 Columns: New, Contacted, Meeting Scheduled, Proposal Sent, Won, Lost
+  │       ├── LeadKanbanCard — Draggable card (name, company, source, avatar)
+  │       ├── Drop zone highlights when hovering over a column
+  │       ├── DragOverlay — Floating card preview while dragging
+  │       ├── Status count badge per column
+  │       └── Drag end → calls onStatusChange → PATCH /leads/:id (status update)
   │
   ├── LeadForm Page (/leads/new) — Standalone create form
   │   ├── Back button (top-left) → navigates back to /leads
@@ -302,6 +309,8 @@ All mutations invalidate or update the relevant cache tags automatically — no 
 - `Modal.jsx` — Reusable modal for edit form
 - `Button.jsx` — Variants: primary, secondary, danger, ghost, outline
 - `Loader.jsx` / `EmptyState.jsx` — Loading and empty state placeholders
+- `LeadKanbanBoard.jsx` — Kanban pipeline with @dnd-kit DnD context, droppable columns, DragOverlay
+- `LeadKanbanCard.jsx` — Sortable card using `useSortable` hook with CSS transform animations
 
 ---
 
@@ -400,6 +409,7 @@ All mutations invalidate or update the relevant cache tags automatically — no 
 | June 2026 | shadcn Select replaces native `<select>` in LeadFilters | Consistent look and behavior |
 | June 2026 | Back button added to LeadForm (top-left) | Users can cancel creation easily |
 | June 2026 | Search clear bug fixed in LeadList | Stale search params no longer persist |
+| June 2026 | Kanban Board view with drag-and-drop (@dnd-kit) | Visual pipeline management with 6 status columns |
 
 ---
 
