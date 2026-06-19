@@ -4,6 +4,7 @@ import { cn } from '../../utils/cn';
 import COUNTRIES from '../../data/countries';
 
 const PHONE_MAX_LENGTH = 10;
+const DEFAULT_COUNTRY = COUNTRIES.find((c) => c.cca2 === 'IN') || COUNTRIES[0];
 
 function getFlagEmoji(cca2) {
   if (!cca2 || cca2.length !== 2) return '';
@@ -15,7 +16,7 @@ function getFlagEmoji(cca2) {
 }
 
 export default function PhoneInput({ value, onChange, error, label, placeholder, ...props }) {
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -25,7 +26,7 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
     (val) => {
       if (!val) {
         setPhoneNumber('');
-        setSelectedCountry(COUNTRIES[0]);
+        setSelectedCountry(DEFAULT_COUNTRY);
         return;
       }
       const strVal = String(val).trim();
