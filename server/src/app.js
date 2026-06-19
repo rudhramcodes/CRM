@@ -14,6 +14,7 @@ import logger from './utils/logger.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import usersRoutes from './modules/users/users.routes.js';
 import leadRoutes from './modules/leads/lead.routes.js';
+import clientRoutes from './modules/clients/client.routes.js';
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/leads', leadRoutes);
+app.use('/api/clients', clientRoutes);
 
 app.use((_req, _res, next) => {
   next(ApiError.notFound('Route not found'));

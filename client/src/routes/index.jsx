@@ -13,6 +13,9 @@ import NotFound from '../pages/NotFound';
 import LeadList from '../modules/leads/pages/LeadList';
 import LeadDetail from '../modules/leads/pages/LeadDetail';
 import LeadForm from '../modules/leads/components/LeadForm';
+import ClientList from '../modules/clients/pages/ClientList';
+import ClientDetail from '../modules/clients/pages/ClientDetail';
+import ClientForm from '../modules/clients/components/ClientForm';
 
 const router = createBrowserRouter([
   {
@@ -40,8 +43,9 @@ const router = createBrowserRouter([
       { path: 'leads', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><LeadList /></ProtectedRoute> },
       { path: 'leads/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><LeadForm /></ProtectedRoute> },
       { path: 'leads/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><LeadDetail /></ProtectedRoute> },
-      { path: 'clients', element: <div>Clients Module (Coming Soon)</div> },
-      { path: 'clients/:id', element: <div>Client Detail (Coming Soon)</div> },
+      { path: 'clients', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ClientList /></ProtectedRoute> },
+      { path: 'clients/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><ClientForm /></ProtectedRoute> },
+      { path: 'clients/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ClientDetail /></ProtectedRoute> },
       { path: 'meetings', element: <div>Meetings Module (Coming Soon)</div> },
       { path: 'projects', element: <div>Projects Module (Coming Soon)</div> },
       { path: 'projects/:id', element: <div>Project Detail (Coming Soon)</div> },

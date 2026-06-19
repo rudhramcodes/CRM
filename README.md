@@ -33,7 +33,7 @@ CRM/
 │       ├── layouts/         # MainLayout, AuthLayout, Sidebar, Header
 │       ├── modules/         # Feature-based modules
 │       │   ├── leads/       # Lead Management (✅ implemented)
-│       │   ├── clients/     # (Coming Soon)
+│       │   ├── clients/     # Client Management (✅ implemented)
 │       │   ├── projects/    # (Coming Soon)
 │       │   ├── tasks/       # (Coming Soon)
 │       │   ├── invoices/    # (Coming Soon)
@@ -51,7 +51,7 @@ CRM/
 │       │   ├── auth/        # Authentication (✅ implemented)
 │       │   ├── users/       # User management (✅ implemented)
 │       │   ├── leads/       # Lead Management (✅ implemented)
-│       │   ├── clients/     # (Coming Soon)
+│       │   ├── clients/     # Client Management (✅ implemented)
 │       │   ├── projects/    # (Coming Soon)
 │       │   ├── tasks/       # (Coming Soon)
 │       │   ├── invoices/    # (Coming Soon)
@@ -413,11 +413,93 @@ All mutations invalidate or update the relevant cache tags automatically — no 
 
 ---
 
+### 🏢 Client Management ✅ *(Fully Implemented)*
+
+**What it does:** Complete client relationship management with company profiles, GST/PAN tracking, lead conversion, notes, and role-based access.
+
+- **Backend:** `server/src/modules/clients/` — 6 files (Model → Validation → Repository → Service → Controller → Routes)
+- **Frontend:** `client/src/modules/clients/` — 4 components + 2 pages + 1 RTK Query service + route integration
+
+---
+
+**Data Model — `client.model.js`**
+
+```javascript
+{
+  companyName:     String (required, 2-200 chars),
+  contactPerson:   String (required, 2-100 chars),
+  email:           String (required, unique, lowercase),
+  phone:           String (optional, regex validated),
+  gstNumber:       String (optional, validated format),
+  panNumber:       String (optional, validated format),
+  address: {
+    street, city, state, pincode, country (default: 'India')
+  },
+  status:          'active' | 'inactive' (default: 'active'),
+  convertedFrom:   ObjectId → ref: 'Lead' (nullable),
+  notes:           [{ text, createdBy, createdAt }],
+  createdBy:       ObjectId → ref: 'User'
+}
+```
+
+**API Endpoints & Role Access:**
+
+| Method | Endpoint | Roles |
+|---|---|---|
+| `GET` | `/api/clients` | super_admin, admin, manager, employee |
+| `GET` | `/api/clients/stats` | super_admin, admin, manager |
+| `GET` | `/api/clients/:id` | super_admin, admin, manager, employee |
+| `POST` | `/api/clients` | super_admin, admin, manager |
+| `POST` | `/api/clients/convert/:leadId` | super_admin, admin, manager |
+| `PATCH` | `/api/clients/:id` | super_admin, admin, manager |
+| `DELETE` | `/api/clients/:id` | super_admin, admin |
+
+**Lead → Client Conversion:**
+
+When a lead reaches `won` status, authorized users can convert it to a client:
+1. `POST /api/clients/convert/:leadId` creates a client from lead data (company, contact person, email, phone)
+2. Lead's `convertedToClient` and `convertedAt` fields are set automatically
+3. Client's `convertedFrom` references the originating lead
+4. Double conversion is prevented (409 if lead already converted)
+
+**Frontend Pages:**
+
+| Route | Component | Access |
+|---|---|---|
+| `/clients` | `ClientList` — searchable table with stats cards, status filter | super_admin, admin, manager, employee |
+| `/clients/new` | `ClientForm` — standalone create with company/contact/email/GST/PAN/address | super_admin, admin, manager |
+| `/clients/:id` | `ClientDetail` — full profile, notes timeline, edit modal, delete | super_admin, admin, manager, employee |
+
+**UI Components:** `ClientForm`, `ClientTable`, `ClientFilters`, `ClientStatusBadge` — all follow the same patterns as the leads module using shadcn Select, FormSelect with Controller, and DataTable.
+
+**Access Control (Tested ✅):**
+
+| Action | super_admin | admin | manager | employee |
+|---|---|---|---|---|
+| View client list | ✅ | ✅ | ✅ | ✅ |
+| View client detail | ✅ | ✅ | ✅ | ✅ |
+| View stats | ✅ | ✅ | ✅ | ❌ |
+| Create client | ✅ | ✅ | ✅ | ❌ |
+| Convert lead → client | ✅ | ✅ | ✅ | ❌ |
+| Edit client | ✅ | ✅ | ✅ | ❌ |
+| Delete client | ✅ | ✅ | ❌ | ❌ |
+| No auth token | ❌ | ❌ | ❌ | ❌ |
+| Client role | ❌ | ❌ | ❌ | ❌ |
+
+---
+
+#### ⚙️ Recent Client Module Fix
+
+| Date | Change | Reason |
+|---|---|---|
+| June 2026 | Removed `unique: true` + `sparse: true` index on `gstNumber` | MongoDB sparse unique indexes reject multiple `null` values, preventing lead conversion and client creation when GST is empty |
+
+---
+
 ### 🚧 Upcoming Modules (Planned)
 
 | Module | Status | Description |
 |---|---|---|
-| **Clients** | ⬜ Pending | Client profiles, company info, GST, documents |
 | **Meetings** | ⬜ Pending | Schedule, calendar view, Google Meet/Zoom integration |
 | **Projects** | ⬜ Pending | Project creation, milestones, team assignment |
 | **Tasks** | ⬜ Pending | Task assignment, priority, comments, subtasks |

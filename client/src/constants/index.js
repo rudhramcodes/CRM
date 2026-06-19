@@ -52,6 +52,11 @@ export const INVOICE_STATUS = [
   { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-100 text-gray-800' },
 ];
 
+export const CLIENT_STATUS = [
+  { value: 'active', label: 'Active', color: 'bg-green-100 text-green-800' },
+  { value: 'inactive', label: 'Inactive', color: 'bg-red-100 text-red-800' },
+];
+
 export const LEAD_SOURCES = [
   { value: 'google_ads', label: 'Google Ads' },
   { value: 'referral', label: 'Referral' },
