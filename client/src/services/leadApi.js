@@ -8,6 +8,7 @@ export const leadApi = api.injectEndpoints({
         params,
       }),
       providesTags: ['Lead'],
+      keepUnusedDataFor: 0,
     }),
 
     getLeadById: builder.query({
@@ -33,6 +34,8 @@ export const leadApi = api.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: 'Lead', id },
         'Lead',
+        'Client',
+        'LeadStats',
       ],
     }),
 
@@ -41,7 +44,7 @@ export const leadApi = api.injectEndpoints({
         url: `/leads/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Lead'],
+      invalidatesTags: ['Lead', 'LeadStats'],
     }),
 
     addLeadNote: builder.mutation({
@@ -55,7 +58,8 @@ export const leadApi = api.injectEndpoints({
 
     getLeadStats: builder.query({
       query: () => '/leads/stats',
-      providesTags: ['Lead'],
+      providesTags: ['LeadStats'],
+      keepUnusedDataFor: 0,
     }),
   }),
 });

@@ -9,7 +9,8 @@ export const findById = async (id) => {
   return Lead.findById(id)
     .populate('assignedTo', 'name email avatar')
     .populate('notes.createdBy', 'name email avatar role')
-    .populate('createdBy', 'name email');
+    .populate('createdBy', 'name email')
+    .populate('convertedToClient', 'companyName email phone status');
 };
 
 export const findByEmail = async (email) => {
@@ -43,7 +44,8 @@ export const findAll = async (query = {}, options = {}) => {
       .sort(sort)
       .skip(skip)
       .limit(limit)
-      .populate('assignedTo', 'name email avatar'),
+      .populate('assignedTo', 'name email avatar')
+      .populate('convertedToClient', 'companyName email phone status'),
     Lead.countDocuments(filter),
   ]);
 
@@ -53,7 +55,8 @@ export const findAll = async (query = {}, options = {}) => {
 export const updateById = async (id, data) => {
   return Lead.findByIdAndUpdate(id, data, { new: true, runValidators: true })
     .populate('assignedTo', 'name email avatar')
-    .populate('notes.createdBy', 'name email avatar role');
+    .populate('notes.createdBy', 'name email avatar role')
+    .populate('convertedToClient', 'companyName email phone status');
 };
 
 export const deleteById = async (id) => {

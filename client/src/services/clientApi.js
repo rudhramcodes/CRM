@@ -8,6 +8,7 @@ export const clientApi = api.injectEndpoints({
         params,
       }),
       providesTags: ['Client'],
+      keepUnusedDataFor: 0,
     }),
 
     getClientById: builder.query({
@@ -55,6 +56,7 @@ export const clientApi = api.injectEndpoints({
     getClientStats: builder.query({
       query: () => '/clients/stats',
       providesTags: ['Client'],
+      keepUnusedDataFor: 0,
     }),
   }),
 });

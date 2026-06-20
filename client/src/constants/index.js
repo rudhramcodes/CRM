@@ -52,6 +52,12 @@ export const INVOICE_STATUS = [
   { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-100 text-gray-800' },
 ];
 
+export const MEETING_STATUS = [
+  { value: 'scheduled', label: 'Scheduled', color: 'bg-blue-100 text-blue-800' },
+  { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800' },
+  { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800' },
+];
+
 export const CLIENT_STATUS = [
   { value: 'active', label: 'Active', color: 'bg-green-100 text-green-800' },
   { value: 'inactive', label: 'Inactive', color: 'bg-red-100 text-red-800' },

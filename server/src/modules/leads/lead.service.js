@@ -1,5 +1,6 @@
 import ApiError from '../../utils/ApiError.js';
 import * as leadRepository from './lead.repository.js';
+import * as clientRepository from '../clients/client.repository.js';
 
 export const createLead = async (data, user) => {
   const existing = await leadRepository.findByEmail(data.email);
@@ -61,9 +62,25 @@ export const updateLead = async (id, data, user) => {
     data.statusChangedAt = new Date();
     data.statusChangedBy = user._id;
 
-    // If status is changed to 'won', track when it was won
+    // If status is changed to 'won', auto-convert to client
     if (data.status === 'won') {
       data.convertedAt = new Date();
+
+      if (!lead.convertedToClient) {
+        const existingClient = await clientRepository.findByEmail(lead.email);
+        if (!existingClient) {
+          const client = await clientRepository.create({
+            companyName: lead.company || `${lead.name}'s Company`,
+            contactPerson: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            convertedFrom: lead._id,
+            status: 'active',
+            createdBy: user._id,
+          });
+          data.convertedToClient = client._id;
+        }
+      }
     }
   }
 
