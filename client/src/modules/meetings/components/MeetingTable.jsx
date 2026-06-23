@@ -53,7 +53,6 @@ export default function MeetingTable({
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Date & Time</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Related To</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Assigned To</th>
               <th className="text-right px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -111,11 +110,6 @@ export default function MeetingTable({
                       <span className="text-zinc-300">—</span>
                     )}
                   </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm text-zinc-700">
-                    {meeting.assignedTo?.name || <span className="text-zinc-300">—</span>}
-                  </span>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1">

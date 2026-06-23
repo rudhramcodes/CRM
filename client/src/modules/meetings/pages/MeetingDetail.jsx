@@ -11,11 +11,13 @@ import {
   Link as LinkIcon,
   MapPin,
   FileText,
-  User,
+  Save,
+  X,
 } from 'lucide-react';
 import {
   useGetMeetingByIdQuery,
   useDeleteMeetingMutation,
+  useUpdateMeetingNotesMutation,
 } from '../../../services/meetingApi';
 import MeetingStatusBadge from '../components/MeetingStatusBadge';
 import MeetingForm from '../components/MeetingForm';
@@ -32,15 +34,19 @@ export default function MeetingDetail() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesText, setNotesText] = useState('');
 
   const { data: meetingData, isLoading, error } = useGetMeetingByIdQuery(id);
   const [deleteMeeting, { isLoading: isDeleting }] = useDeleteMeetingMutation();
+  const [updateNotes, { isLoading: isSavingNotes }] = useUpdateMeetingNotesMutation();
 
   const meeting = meetingData?.data?.meeting;
 
   useEffect(() => {
     if (meeting) {
       dispatch(setPageTitle(meeting.title));
+      setNotesText(meeting.notes || '');
     }
   }, [meeting, dispatch]);
 
@@ -55,8 +61,19 @@ export default function MeetingDetail() {
     }
   };
 
+  const handleSaveNotes = async () => {
+    try {
+      await updateNotes({ id, notes: notesText }).unwrap();
+      toast.success('Notes updated successfully');
+      setEditingNotes(false);
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to update notes');
+    }
+  };
+
   const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
+  const canWriteNotes = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
 
   if (isLoading) {
     return (
@@ -141,7 +158,7 @@ export default function MeetingDetail() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 pt-6 border-t border-zinc-100">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6 pt-6 border-t border-zinc-100">
             <div className="flex items-center gap-3">
               <Calendar className="w-4 h-4 text-zinc-400 shrink-0" />
               <div>
@@ -165,15 +182,6 @@ export default function MeetingDetail() {
                 <p className="text-sm text-primary-900">{meeting.location || '—'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <User className="w-4 h-4 text-zinc-400 shrink-0" />
-              <div>
-                <p className="text-xs text-zinc-400">Assigned To</p>
-                <p className="text-sm text-primary-900">
-                  {meeting.assignedTo?.name || '—'}
-                </p>
-              </div>
-            </div>
           </div>
 
           {/* Related To */}
@@ -182,7 +190,7 @@ export default function MeetingDetail() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {meeting.client && (
                   <div className="flex items-center gap-3">
-                    <User className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
                     <div>
                       <p className="text-xs text-zinc-400">Client</p>
                       <p className="text-sm text-primary-900">{meeting.client.companyName}</p>
@@ -191,7 +199,7 @@ export default function MeetingDetail() {
                 )}
                 {meeting.lead && (
                   <div className="flex items-center gap-3">
-                    <User className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
                     <div>
                       <p className="text-xs text-zinc-400">Lead</p>
                       <p className="text-sm text-primary-900">{meeting.lead.name}</p>
@@ -244,35 +252,65 @@ export default function MeetingDetail() {
         </div>
       </div>
 
-      {/* Description / Notes */}
-      {meeting.description && (
-        <div className="bg-white rounded-xl border border-zinc-200">
-          <div className="px-6 py-4 border-b border-zinc-100">
-            <h3 className="text-sm font-semibold text-primary-900 flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Description
-            </h3>
-          </div>
-          <div className="px-6 py-4">
-            <p className="text-sm text-zinc-700 whitespace-pre-wrap">{meeting.description}</p>
-          </div>
+      {/* Discussion Notes */}
+      <div className="bg-white rounded-xl border border-zinc-200">
+        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-primary-900 flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Discussion Notes
+          </h3>
+          {canWriteNotes && !editingNotes && (
+            <button
+              onClick={() => setEditingNotes(true)}
+              className="text-xs text-primary-900/70 hover:text-primary-900 flex items-center gap-1 transition-colors"
+            >
+              <Edit2 className="w-3 h-3" />
+              Edit
+            </button>
+          )}
         </div>
-      )}
-
-      {/* Notes */}
-      {meeting.notes && (
-        <div className="bg-white rounded-xl border border-zinc-200">
-          <div className="px-6 py-4 border-b border-zinc-100">
-            <h3 className="text-sm font-semibold text-primary-900 flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Notes
-            </h3>
-          </div>
-          <div className="px-6 py-4">
-            <p className="text-sm text-zinc-700 whitespace-pre-wrap">{meeting.notes}</p>
-          </div>
+        <div className="px-6 py-4">
+          {editingNotes ? (
+            <div className="space-y-3">
+              <textarea
+                value={notesText}
+                onChange={(e) => setNotesText(e.target.value)}
+                className="w-full min-h-[120px] px-3 py-2.5 text-sm text-zinc-700 border border-zinc-200 rounded-lg resize-y focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900"
+                placeholder="What was discussed in the meeting?"
+              />
+              <div className="flex items-center gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setNotesText(meeting.notes || '');
+                    setEditingNotes(false);
+                  }}
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveNotes}
+                  loading={isSavingNotes}
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  Save Notes
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
+              {meeting.notes || (
+                <span className="text-zinc-400 italic">No discussion notes yet.</span>
+              )}
+            </p>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Edit Modal */}
       <Modal

@@ -15,7 +15,6 @@ export const createMeeting = async (data, user) => {
 
   const payload = {
     title: data.title,
-    description: data.description || '',
     date: new Date(data.date),
     startTime: data.startTime,
     endTime: data.endTime,
@@ -25,7 +24,6 @@ export const createMeeting = async (data, user) => {
     recordingLink: data.recordingLink || '',
     lead: data.lead || null,
     client: data.client || null,
-    assignedTo: data.assignedTo || null,
     createdBy: user._id,
     status: data.status || 'scheduled',
   };
@@ -46,7 +44,7 @@ export const getMeetingById = async (id) => {
   return meeting;
 };
 
-export const updateMeeting = async (id, data, user) => {
+export const updateMeeting = async (id, data) => {
   const meeting = await meetingRepository.findById(id);
   if (!meeting) {
     throw ApiError.notFound('Meeting not found');
@@ -63,6 +61,15 @@ export const updateMeeting = async (id, data, user) => {
   }
 
   return meetingRepository.updateById(id, updateData);
+};
+
+export const updateMeetingNotes = async (id, notes) => {
+  const meeting = await meetingRepository.findById(id);
+  if (!meeting) {
+    throw ApiError.notFound('Meeting not found');
+  }
+
+  return meetingRepository.updateNotesById(id, notes);
 };
 
 export const deleteMeeting = async (id) => {

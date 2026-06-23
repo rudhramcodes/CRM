@@ -37,6 +37,18 @@ export const meetingApi = api.injectEndpoints({
       ],
     }),
 
+    updateMeetingNotes: builder.mutation({
+      query: ({ id, notes }) => ({
+        url: `/meetings/${id}/notes`,
+        method: 'PATCH',
+        body: { notes },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Meeting', id },
+        'Meeting',
+      ],
+    }),
+
     deleteMeeting: builder.mutation({
       query: (id) => ({
         url: `/meetings/${id}`,
@@ -52,5 +64,6 @@ export const {
   useGetMeetingByIdQuery,
   useCreateMeetingMutation,
   useUpdateMeetingMutation,
+  useUpdateMeetingNotesMutation,
   useDeleteMeetingMutation,
 } = meetingApi;

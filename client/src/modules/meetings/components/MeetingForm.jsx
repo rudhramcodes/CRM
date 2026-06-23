@@ -16,13 +16,12 @@ import { useCreateMeetingMutation, useUpdateMeetingMutation } from '../../../ser
 const meetingFormSchema = z
   .object({
     title: z.string().min(2, 'Title must be at least 2 characters').max(200),
-    description: z.string().max(1000).optional().or(z.literal('')),
     date: z.string().min(1, 'Date is required'),
     startTime: z.string().min(1, 'Start time is required'),
     endTime: z.string().min(1, 'End time is required'),
     meetingLink: z.string().url('Invalid URL').optional().or(z.literal('')),
     location: z.string().max(200).optional().or(z.literal('')),
-    notes: z.string().max(2000).optional().or(z.literal('')),
+    notes: z.string().max(5000).optional().or(z.literal('')),
     status: z.string().optional(),
   })
   .refine((data) => data.startTime < data.endTime, {
@@ -45,7 +44,6 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
     resolver: zodResolver(meetingFormSchema),
     defaultValues: {
       title: '',
-      description: '',
       date: '',
       startTime: '',
       endTime: '',
@@ -60,7 +58,6 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
     if (meeting) {
       reset({
         title: meeting.title || '',
-        description: meeting.description || '',
         date: meeting.date ? meeting.date.split('T')[0] : '',
         startTime: meeting.startTime || '',
         endTime: meeting.endTime || '',
@@ -76,7 +73,6 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
     try {
       const payload = {
         title: data.title,
-        description: data.description || undefined,
         date: data.date,
         startTime: data.startTime,
         endTime: data.endTime,
@@ -185,10 +181,10 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
       </div>
 
       <FormTextarea
-        label="Description"
-        placeholder="Meeting agenda, talking points..."
-        error={errors.description?.message}
-        {...register('description')}
+        label="Discussion Notes"
+        placeholder="What was discussed in the meeting? Agenda, decisions, action items..."
+        error={errors.notes?.message}
+        {...register('notes')}
       />
 
       <div className="flex items-center justify-end gap-3 pt-2">

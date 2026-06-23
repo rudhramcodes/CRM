@@ -6,6 +6,7 @@ import { ROLES } from '../../constants/index.js';
 import {
   createMeetingSchema,
   updateMeetingSchema,
+  meetingNotesSchema,
   meetingsQuerySchema,
 } from './meeting.validation.js';
 
@@ -38,6 +39,13 @@ router.patch(
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
   validate(updateMeetingSchema),
   meetingController.update,
+);
+
+router.patch(
+  '/:id/notes',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  validate(meetingNotesSchema),
+  meetingController.updateNotes,
 );
 
 router.delete(

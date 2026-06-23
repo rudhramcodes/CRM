@@ -10,17 +10,15 @@ export const createMeetingSchema = z
       .string()
       .min(2, 'Title must be at least 2 characters')
       .max(200, 'Title must not exceed 200 characters'),
-    description: z.string().max(1000).optional().or(z.literal('')),
     date: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date'),
     startTime: z.string().regex(TIME_REGEX, 'Start time must be in HH:mm format'),
     endTime: z.string().regex(TIME_REGEX, 'End time must be in HH:mm format'),
     meetingLink: z.string().url('Invalid meeting link URL').optional().or(z.literal('')),
     location: z.string().max(200).optional().or(z.literal('')),
-    notes: z.string().max(2000).optional().or(z.literal('')),
+    notes: z.string().max(5000).optional().or(z.literal('')),
     recordingLink: z.string().url('Invalid recording URL').optional().or(z.literal('')),
     lead: z.string().optional().nullable(),
     client: z.string().optional().nullable(),
-    assignedTo: z.string().optional().nullable(),
     status: z.enum(MEETING_STATUS_LIST).optional(),
   })
   .refine(
@@ -36,7 +34,6 @@ export const createMeetingSchema = z
 export const updateMeetingSchema = z
   .object({
     title: z.string().min(2).max(200).optional(),
-    description: z.string().max(1000).optional().or(z.literal('')),
     date: z
       .string()
       .refine((val) => !isNaN(Date.parse(val)), 'Invalid date')
@@ -45,11 +42,10 @@ export const updateMeetingSchema = z
     endTime: z.string().regex(TIME_REGEX, 'End time must be in HH:mm format').optional(),
     meetingLink: z.string().url('Invalid meeting link URL').optional().or(z.literal('')),
     location: z.string().max(200).optional().or(z.literal('')),
-    notes: z.string().max(2000).optional().or(z.literal('')),
+    notes: z.string().max(5000).optional().or(z.literal('')),
     recordingLink: z.string().url('Invalid recording URL').optional().or(z.literal('')),
     lead: z.string().optional().nullable(),
     client: z.string().optional().nullable(),
-    assignedTo: z.string().optional().nullable(),
     status: z.enum(MEETING_STATUS_LIST).optional(),
   })
   .refine(
@@ -62,12 +58,15 @@ export const updateMeetingSchema = z
     { message: 'End time must be after start time', path: ['endTime'] },
   );
 
+export const meetingNotesSchema = z.object({
+  notes: z.string().max(5000, 'Notes must not exceed 5000 characters'),
+});
+
 export const meetingsQuerySchema = z.object({
   search: z.string().optional(),
   status: z.enum(MEETING_STATUS_LIST).optional(),
   lead: z.string().optional(),
   client: z.string().optional(),
-  assignedTo: z.string().optional(),
   dateFrom: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), 'Invalid dateFrom')

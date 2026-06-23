@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { format, isValid } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import Button from '../ui/Button';
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/Popover';
 import Calendar from '../ui/Calendar';
 
-export default function DatePicker({ value, onChange, label, error, placeholder }) {
-  const [date, setDate] = useState(undefined);
+export default function DatePicker({ value, onChange, label, error, placeholder, className }) {
   const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(undefined);
 
   useEffect(() => {
     if (value) {
@@ -23,33 +24,34 @@ export default function DatePicker({ value, onChange, label, error, placeholder 
   };
 
   return (
-    <div className="space-y-1.5">
+    <div className={cn('space-y-1.5', className)}>
       {label && (
-        <label className="block text-sm font-medium text-zinc-700">{label}</label>
+        <label className="block text-xs font-medium text-zinc-500">{label}</label>
       )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button
-            type="button"
+          <Button
+            variant="outline"
             className={cn(
-              'w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm transition-colors bg-zinc-50 text-left',
-              'focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900',
-              error ? 'border-red-300' : 'border-zinc-200',
+              'w-full justify-start font-normal text-sm px-3 py-2 h-auto',
               !date && 'text-zinc-400',
+              error && 'border-red-300 focus-visible:ring-red-400',
             )}
           >
-            <CalendarIcon className="w-4 h-4 text-zinc-400 shrink-0" />
-            <span className="flex-1">
-              {date ? format(date, 'PPP') : placeholder || 'Pick a date'}
+            <span className="flex-1 truncate text-left">
+              {date ? format(date, 'PP') : placeholder || 'Select date'}
             </span>
-          </button>
+            <CalendarIcon className="size-4 text-zinc-400 shrink-0 ml-1" />
+          </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto overflow-hidden p-0 shadow-lg border-zinc-200/80" align="start">
           <Calendar
             mode="single"
             selected={date}
+            defaultMonth={date}
             onSelect={handleSelect}
             initialFocus
+            captionLayout="dropdown"
           />
         </PopoverContent>
       </Popover>

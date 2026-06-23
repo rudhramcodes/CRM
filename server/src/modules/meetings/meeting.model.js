@@ -10,12 +10,6 @@ const meetingSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 200,
     },
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 1000,
-      default: '',
-    },
     date: {
       type: Date,
       required: [true, 'Meeting date is required'],
@@ -49,7 +43,7 @@ const meetingSchema = new mongoose.Schema(
     notes: {
       type: String,
       trim: true,
-      maxlength: 2000,
+      maxlength: 5000,
       default: '',
     },
     recordingLink: {
@@ -65,11 +59,6 @@ const meetingSchema = new mongoose.Schema(
     client: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Client',
-      default: null,
-    },
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
       default: null,
     },
     createdBy: {
@@ -101,7 +90,6 @@ meetingSchema.index({ date: 1 });
 meetingSchema.index({ status: 1 });
 meetingSchema.index({ lead: 1 });
 meetingSchema.index({ client: 1 });
-meetingSchema.index({ assignedTo: 1 });
 meetingSchema.index({ date: 1, startTime: 1 });
 
 const Meeting = mongoose.model('Meeting', meetingSchema);

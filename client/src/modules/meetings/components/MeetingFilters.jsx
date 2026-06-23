@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import { MEETING_STATUS } from '../../../constants';
+import DatePicker from '../../../components/forms/DatePicker';
 
 export default function MeetingFilters({ onFilterChange }) {
   const [filters, setFilters] = useState({
@@ -63,26 +64,22 @@ export default function MeetingFilters({ onFilterChange }) {
         </div>
 
         {/* Date From */}
-        <div className="min-w-[150px]">
-          <label className="block text-xs font-medium text-zinc-500 mb-1">From Date</label>
-          <input
-            type="date"
-            value={filters.dateFrom}
-            onChange={(e) => handleChange('dateFrom', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900"
-          />
-        </div>
+        <DatePicker
+          value={filters.dateFrom}
+          onChange={(val) => handleChange('dateFrom', val)}
+          label="From Date"
+          placeholder="From date"
+          className="min-w-[150px]"
+        />
 
         {/* Date To */}
-        <div className="min-w-[150px]">
-          <label className="block text-xs font-medium text-zinc-500 mb-1">To Date</label>
-          <input
-            type="date"
-            value={filters.dateTo}
-            onChange={(e) => handleChange('dateTo', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900"
-          />
-        </div>
+        <DatePicker
+          value={filters.dateTo}
+          onChange={(val) => handleChange('dateTo', val)}
+          label="To Date"
+          placeholder="To date"
+          className="min-w-[150px]"
+        />
 
         {/* Clear */}
         {hasFilters && (

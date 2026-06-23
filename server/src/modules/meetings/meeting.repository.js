@@ -9,7 +9,6 @@ export const findById = async (id) => {
   return Meeting.findById(id)
     .populate('lead', 'name email company')
     .populate('client', 'companyName contactPerson email')
-    .populate('assignedTo', 'name email avatar')
     .populate('createdBy', 'name email');
 };
 
@@ -19,7 +18,7 @@ export const findAll = async (query = {}, options = {}) => {
 
   if (query.search) {
     const searchRegex = new RegExp(query.search, 'i');
-    filter.$or = [{ title: searchRegex }, { description: searchRegex }, { location: searchRegex }];
+    filter.$or = [{ title: searchRegex }, { notes: searchRegex }, { location: searchRegex }];
   }
 
   if (query.status) {
@@ -32,10 +31,6 @@ export const findAll = async (query = {}, options = {}) => {
 
   if (query.client) {
     filter.client = query.client;
-  }
-
-  if (query.assignedTo) {
-    filter.assignedTo = query.assignedTo;
   }
 
   if (query.dateFrom || query.dateTo) {
@@ -51,7 +46,7 @@ export const findAll = async (query = {}, options = {}) => {
       .limit(limit)
       .populate('lead', 'name email')
       .populate('client', 'companyName contactPerson')
-      .populate('assignedTo', 'name email avatar'),
+      .populate('createdBy', 'name email'),
     Meeting.countDocuments(filter),
   ]);
 
@@ -62,7 +57,13 @@ export const updateById = async (id, data) => {
   return Meeting.findByIdAndUpdate(id, data, { new: true, runValidators: true })
     .populate('lead', 'name email company')
     .populate('client', 'companyName contactPerson email')
-    .populate('assignedTo', 'name email avatar')
+    .populate('createdBy', 'name email');
+};
+
+export const updateNotesById = async (id, notes) => {
+  return Meeting.findByIdAndUpdate(id, { notes }, { new: true, runValidators: true })
+    .populate('lead', 'name email company')
+    .populate('client', 'companyName contactPerson email')
     .populate('createdBy', 'name email');
 };
 
