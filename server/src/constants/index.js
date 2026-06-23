@@ -62,6 +62,17 @@ export const PAYMENT_METHODS = {
   CASH: 'cash',
 };
 
+export const LEAD_BRANDS = [
+  'panigrahna',
+  'aghori',
+  'house_of_joggi',
+  'damrru',
+  'tandavs',
+  'kapaalik',
+  'kalyannam',
+  'storage_media_solution',
+];
+
 export const MEETING_STATUS = {
   SCHEDULED: 'scheduled',
   COMPLETED: 'completed',

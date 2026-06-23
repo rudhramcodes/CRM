@@ -52,6 +52,17 @@ export const INVOICE_STATUS = [
   { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-100 text-gray-800' },
 ];
 
+export const LEAD_BRANDS = [
+  { value: 'panigrahna', label: 'Panigrahna' },
+  { value: 'aghori', label: 'Aghori' },
+  { value: 'house_of_joggi', label: 'House of Joggi' },
+  { value: 'damrru', label: 'Damrru' },
+  { value: 'tandavs', label: 'Tandavs' },
+  { value: 'kapaalik', label: 'Kapaalik' },
+  { value: 'kalyannam', label: 'Kalyannam' },
+  { value: 'storage_media_solution', label: 'Storage Media Solution' },
+];
+
 export const MEETING_STATUS = [
   { value: 'scheduled', label: 'Scheduled', color: 'bg-blue-100 text-blue-800' },
   { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800' },

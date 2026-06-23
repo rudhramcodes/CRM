@@ -31,6 +31,10 @@ export const findAll = async (query = {}, options = {}) => {
     filter.status = query.status;
   }
 
+  if (query.brand) {
+    filter.brand = query.brand;
+  }
+
   if (query.source) {
     filter.source = query.source;
   }

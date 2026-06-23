@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LEAD_STATUS } from '../../constants/index.js';
+import { LEAD_STATUS, LEAD_BRANDS } from '../../constants/index.js';
 
 const LEAD_STATUS_LIST = Object.values(LEAD_STATUS);
 
@@ -26,6 +26,7 @@ export const createLeadSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal('')),
+  brand: z.enum(LEAD_BRANDS).optional().nullable(),
   company: z
     .string()
     .max(200, 'Company must not exceed 200 characters')
@@ -59,6 +60,7 @@ export const updateLeadSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal('')),
+  brand: z.enum(LEAD_BRANDS).optional().nullable(),
   company: z
     .string()
     .max(200, 'Company must not exceed 200 characters')
@@ -82,6 +84,7 @@ export const leadsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(10),
   search: z.string().optional(),
+  brand: z.enum(LEAD_BRANDS).optional(),
   status: z.enum(LEAD_STATUS_LIST).optional(),
   source: z.enum(LEAD_SOURCES).optional(),
   assignedTo: z.string().optional(),

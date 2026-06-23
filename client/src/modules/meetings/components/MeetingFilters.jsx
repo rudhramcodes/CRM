@@ -1,14 +1,11 @@
 import { useState, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import { MEETING_STATUS } from '../../../constants';
-import DatePicker from '../../../components/forms/DatePicker';
 
 export default function MeetingFilters({ onFilterChange }) {
   const [filters, setFilters] = useState({
     search: '',
     status: '',
-    dateFrom: '',
-    dateTo: '',
   });
 
   const handleChange = useCallback(
@@ -21,12 +18,12 @@ export default function MeetingFilters({ onFilterChange }) {
   );
 
   const clearFilters = useCallback(() => {
-    const cleared = { search: '', status: '', dateFrom: '', dateTo: '' };
+    const cleared = { search: '', status: '' };
     setFilters(cleared);
     onFilterChange?.(cleared);
   }, [onFilterChange]);
 
-  const hasFilters = filters.search || filters.status || filters.dateFrom || filters.dateTo;
+  const hasFilters = filters.search || filters.status;
 
   return (
     <div className="bg-white rounded-xl border border-zinc-200 p-4">
@@ -62,24 +59,6 @@ export default function MeetingFilters({ onFilterChange }) {
             ))}
           </select>
         </div>
-
-        {/* Date From */}
-        <DatePicker
-          value={filters.dateFrom}
-          onChange={(val) => handleChange('dateFrom', val)}
-          label="From Date"
-          placeholder="From date"
-          className="min-w-[150px]"
-        />
-
-        {/* Date To */}
-        <DatePicker
-          value={filters.dateTo}
-          onChange={(val) => handleChange('dateTo', val)}
-          label="To Date"
-          placeholder="To date"
-          className="min-w-[150px]"
-        />
 
         {/* Clear */}
         {hasFilters && (

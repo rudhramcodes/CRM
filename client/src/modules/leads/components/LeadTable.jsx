@@ -1,6 +1,7 @@
 import DataTable from '../../../components/tables/DataTable';
 import LeadStatusBadge from './LeadStatusBadge';
 import { formatDate } from '../../../utils/formatters';
+import { LEAD_BRANDS } from '../../../constants';
 import { Edit2, Trash2 } from 'lucide-react';
 
 export default function LeadTable({ leads, loading, error, onRowClick, searchable, canEdit, canDelete, onEdit, onDelete }) {
@@ -23,6 +24,20 @@ export default function LeadTable({ leads, loading, error, onRowClick, searchabl
           </div>
         </div>
       ),
+    },
+    {
+      header: 'Brand',
+      accessor: 'brand',
+      cell: ({ value }) => {
+        const brand = LEAD_BRANDS.find((b) => b.value === value);
+        return brand ? (
+          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-primary-50 text-primary-900">
+            {brand.label}
+          </span>
+        ) : (
+          <span className="text-xs text-zinc-300">—</span>
+        );
+      },
     },
     {
       header: 'Email',

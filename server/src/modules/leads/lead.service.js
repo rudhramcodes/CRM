@@ -29,10 +29,10 @@ export const createLead = async (data, user) => {
 };
 
 export const getLeads = async (query) => {
-  const { page, limit, search, status, source, assignedTo, sortBy, sortOrder } = query;
+  const { page, limit, search, status, source, assignedTo, brand, sortBy, sortOrder } = query;
 
   return leadRepository.findAll(
-    { search, status, source, assignedTo },
+    { search, status, source, assignedTo, brand },
     { page, limit, sortBy, sortOrder: sortOrder === 'asc' ? 'asc' : 'desc' },
   );
 };

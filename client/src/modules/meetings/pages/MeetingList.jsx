@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useGetMeetingsQuery, useDeleteMeetingMutation } from '../../../services/meetingApi';
 import MeetingTable from '../components/MeetingTable';
 import MeetingFilters from '../components/MeetingFilters';
@@ -32,8 +32,6 @@ export default function MeetingList() {
     const params = {};
     if (filters.search) params.search = filters.search;
     if (filters.status) params.status = filters.status;
-    if (filters.dateFrom) params.dateFrom = filters.dateFrom;
-    if (filters.dateTo) params.dateTo = filters.dateTo;
     setQueryParams(params);
   }, []);
 

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { LEAD_STATUS } from '../../constants/index.js';
+import { LEAD_STATUS, LEAD_BRANDS } from '../../constants/index.js';
 
 const noteSchema = new mongoose.Schema(
   {
@@ -37,6 +37,11 @@ const leadSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
+      default: null,
+    },
+    brand: {
+      type: String,
+      enum: LEAD_BRANDS,
       default: null,
     },
     company: {

@@ -10,7 +10,7 @@ import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
 import PhoneInput from '../../../components/forms/PhoneInput';
 import Button from '../../../components/ui/Button';
-import { LEAD_STATUS, LEAD_SOURCES } from '../../../constants';
+import { LEAD_STATUS, LEAD_SOURCES, LEAD_BRANDS } from '../../../constants';
 import { useCreateLeadMutation, useUpdateLeadMutation } from '../../../services/leadApi';
 
 const leadFormSchema = z.object({
@@ -21,6 +21,7 @@ const leadFormSchema = z.object({
     .regex(/^$|^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
     .optional()
     .or(z.literal('')),
+  brand: z.string().optional().or(z.literal('')),
   company: z.string().max(200).optional().or(z.literal('')),
   source: z.string().optional(),
   status: z.string().optional(),
@@ -46,6 +47,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
       name: '',
       email: '',
       phone: '',
+      brand: '',
       company: '',
       source: 'other',
       status: 'new',
@@ -59,6 +61,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         name: lead.name || '',
         email: lead.email || '',
         phone: lead.phone || '',
+        brand: lead.brand || '',
         company: lead.company || '',
         source: lead.source || 'other',
         status: lead.status || 'new',
@@ -80,6 +83,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         name: data.name,
         email: data.email,
         phone: data.phone || undefined,
+        brand: data.brand || undefined,
         company: data.company || undefined,
         source: data.source || 'other',
         status: data.status || 'new',
@@ -145,6 +149,14 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
               error={errors.phone?.message}
             />
           )}
+        />
+        <FormSelect
+          name="brand"
+          control={control}
+          label="Company Brand"
+          placeholder="Select brand"
+          options={LEAD_BRANDS}
+          error={errors.brand?.message}
         />
         <FormInput
           label="Company"

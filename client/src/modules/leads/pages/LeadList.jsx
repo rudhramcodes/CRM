@@ -11,7 +11,7 @@ import LeadStatusBadge from '../components/LeadStatusBadge';
 import Button from '../../../components/ui/Button';
 import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
-import { LEAD_STATUS } from '../../../constants';
+import { LEAD_STATUS, LEAD_BRANDS } from '../../../constants';
 import toast from 'react-hot-toast';
 
 export default function LeadList() {
@@ -39,8 +39,20 @@ export default function LeadList() {
   const pagination = leadsData?.pagination;
   const stats = statsData?.data || {};
 
+  const [activeBrand, setActiveBrand] = useState('');
+
+  const handleBrandChange = useCallback((brand) => {
+    setActiveBrand(brand);
+    setQueryParams((prev) => {
+      const next = { ...prev, page: 1 };
+      if (brand) next.brand = brand;
+      else delete next.brand;
+      return next;
+    });
+  }, []);
+
   const handleFilterChange = useCallback((filters) => {
-    setQueryParams({ ...filters, page: 1 });
+    setQueryParams((prev) => ({ ...prev, ...filters, page: 1 }));
   }, []);
 
   const canCreate = user && ['super_admin', 'admin', 'manager'].includes(user.role);
@@ -131,6 +143,33 @@ export default function LeadList() {
           ))}
         </div>
       )}
+
+      {/* Brand Tabs */}
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          onClick={() => handleBrandChange('')}
+          className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            !activeBrand
+              ? 'bg-primary-900 text-white shadow-sm'
+              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+          }`}
+        >
+          All
+        </button>
+        {LEAD_BRANDS.map((b) => (
+          <button
+            key={b.value}
+            onClick={() => handleBrandChange(b.value)}
+            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              activeBrand === b.value
+                ? 'bg-primary-900 text-white shadow-sm'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
+      </div>
 
       {/* Filters */}
       <LeadFilters onFilterChange={handleFilterChange} />

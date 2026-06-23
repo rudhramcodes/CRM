@@ -28,7 +28,7 @@ import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
 import toast from 'react-hot-toast';
 import { formatDate, formatDateTime, getTimeAgo } from '../../../utils/formatters';
-import { LEAD_SOURCES } from '../../../constants';
+import { LEAD_SOURCES, LEAD_BRANDS } from '../../../constants';
 
 export default function LeadDetail() {
   const { id } = useParams();
@@ -165,6 +165,17 @@ export default function LeadDetail() {
               <div>
                 <p className="text-xs text-zinc-400">Phone</p>
                 <p className="text-sm text-primary-900">{lead.phone || '—'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Building2 className="w-4 h-4 text-zinc-400 shrink-0" />
+              <div>
+                <p className="text-xs text-zinc-400">Company Brand</p>
+                <p className="text-sm text-primary-900">
+                  {LEAD_BRANDS.find((b) => b.value === lead.brand)?.label || (
+                    <span className="text-zinc-300">—</span>
+                  )}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
