@@ -89,7 +89,7 @@ export const NAV_ITEMS = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Leads', path: '/leads', icon: Users, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Clients', path: '/clients', icon: UserCheck, roles: ['super_admin', 'admin', 'manager', 'employee'] },
-  { label: 'Meetings', path: '/meetings', icon: Calendar, roles: ['super_admin', 'admin', 'manager'] },
+  { label: 'Meetings', path: '/meetings', icon: Calendar, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Projects', path: '/projects', icon: FolderKanban, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Tasks', path: '/tasks', icon: CheckSquare, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Invoices', path: '/invoices', icon: Receipt, roles: ['super_admin', 'admin'] },
