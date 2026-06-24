@@ -56,7 +56,7 @@ CRM/
 │       │   ├── tasks/       # (Coming Soon)
 │       │   ├── invoices/    # (Coming Soon)
 │       │   ├── payments/    # (Coming Soon)
-│       │   ├── meetings/    # (Coming Soon)
+│   │   ├── meetings/    # (✅ implemented)
 │       │   ├── notifications/ # (Coming Soon)
 │       │   ├── files/       # (Coming Soon)
 │       │   ├── reports/     # (Coming Soon)
@@ -496,11 +496,208 @@ When a lead reaches `won` status, authorized users can convert it to a client:
 
 ---
 
+### 📅 Meeting Management ✅ *(Fully Implemented)*
+
+**What it does:** Complete meeting scheduling and management system with date/time pickers, status tracking, meeting links, notes, and role-based access.
+
+- **Backend:** `server/src/modules/meetings/` — 6 files (Model → Validation → Repository → Service → Controller → Routes)
+- **Frontend:** `client/src/modules/meetings/` — 4 components + 2 pages + 1 RTK Query service + route integration
+
+---
+
+#### 🔧 Backend Architecture: Layer-by-Layer
+
+```
+HTTP Request
+  → Routes (meeting.routes.js)        — URL routing + auth guard + validation
+    → Controller (meeting.controller.js) — Parse request, call service, send response
+      → Service (meeting.service.js)      — Business logic (no DB knowledge)
+        → Repository (meeting.repository.js) — Database queries only
+          → Model (meeting.model.js)         — Mongoose schema + indexes
+```
+
+##### 1. Model — `meeting.model.js`
+
+```javascript
+{
+  title:          String (required, 2-200 chars),
+  date:           Date (required),
+  startTime:      String (required, HH:mm format),
+  endTime:        String (required, HH:mm format),
+  status:         'scheduled' | 'completed' | 'cancelled' (default: 'scheduled'),
+  meetingLink:    String (optional, URL),
+  location:       String (optional, 200 chars),
+  notes:          String (optional, 5000 chars),
+  recordingLink:  String (optional, URL),
+  lead:           ObjectId → ref: 'Lead' (nullable),
+  client:         ObjectId → ref: 'Client' (nullable),
+  createdBy:      ObjectId → ref: 'User',
+  reminderSent:   Boolean (default: false),
+  reminderAt:     Date (nullable)
+}
+```
+
+**Indexes:** `date`, `status`, `lead`, `client`, compound on `date + startTime`.
+
+##### 2. Validation — `meeting.validation.js`
+
+| Schema | Key Rules |
+|---|---|
+| `createMeetingSchema` | title: min 2 chars, date: valid ISO string, startTime/endTime: HH:mm regex, endTime > startTime refined |
+| `updateMeetingSchema` | All fields optional, same time validation |
+| `meetingNotesSchema` | notes: max 5000 chars |
+| `meetingsQuerySchema` | search, status, dateFrom/dateTo, lead, client, page/limit/sort |
+
+##### 3. Repository — `meeting.repository.js`
+
+- `create(data)` — Insert new meeting
+- `findById(id)` — Single meeting with populated `lead`, `client`, `createdBy`
+- `findAll(query, options)` — Paginated list with text search (`$regex` on title/notes/location), status filter, lead/client filter, date range filter (`dateFrom`/`dateTo`). Populates lead, client, createdBy
+- `updateById(id, data)` — Update with `runValidators: true`
+- `updateNotesById(id, notes)` — Update only the notes field
+- `deleteById(id)` — Hard delete
+- `countByStatus()` — Aggregate pipeline grouping by status
+- `countUpcoming()` — Count scheduled meetings from today onwards
+
+##### 4. Service — `meeting.service.js`
+
+| Function | Logic |
+|---|---|
+| `createMeeting(data, user)` | Validates duration > 0, sets `createdBy`, calls repository.create |
+| `getMeetings(query)` | Destructures pagination params, passes rest as filters to repository.findAll |
+| `getMeetingById(id)` | Delegates to repository.findById |
+| `updateMeeting(id, data)` | Validates duration if times provided, delegates to repository.updateById |
+| `updateMeetingNotes(id, notes)` | Delegates to repository.updateNotesById |
+| `deleteMeeting(id)` | Delegates to repository.deleteById |
+
+##### 5. Controller — `meeting.controller.js`
+
+```
+list(req, res)         → GET / → meetingService.getMeetings(req.query) → ApiResponse.paginated
+getById(req, res)      → GET /:id → meetingService.getMeetingById(id) → ApiResponse
+create(req, res)       → POST / → meetingService.createMeeting(body, req.user) → ApiResponse.created
+update(req, res)       → PATCH /:id → meetingService.updateMeeting(id, body) → ApiResponse
+updateNotes(req, res)  → PATCH /:id/notes → meetingService.updateMeetingNotes(id, body.notes) → ApiResponse
+remove(req, res)       → DELETE /:id → meetingService.deleteMeeting(id) → ApiResponse
+```
+
+##### 6. Routes — `meeting.routes.js`
+
+```
+GET    /api/meetings          → super_admin, admin, manager, employee
+GET    /api/meetings/:id      → super_admin, admin, manager, employee
+POST   /api/meetings          → super_admin, admin, manager
+PATCH  /api/meetings/:id      → super_admin, admin, manager
+PATCH  /api/meetings/:id/notes → super_admin, admin, manager, employee
+DELETE /api/meetings/:id      → super_admin, admin
+```
+
+All routes require `verifyToken`. Query params validated via `validateQuery(meetingsQuerySchema)`, body via `validate()` with respective Zod schemas.
+
+---
+
+#### 🎨 Frontend Architecture: Component Tree
+
+```
+Routes (/meetings, /meetings/:id)
+  ├── [Route Guard] ProtectedRoute(requiredRoles) — blocks unauthorized roles at router level
+  │
+  ├── MeetingList Page (/meetings)
+  │   ├── Header — Title + "Schedule Meeting" button (role-gated)
+  │   ├── MeetingFilters — Search input + Status shadcn Select + DatePickerSimple date range
+  │   ├── MeetingTable — Table with:
+  │   │   ├── Columns: Title (icon+link), Date & Time, Status (badge), Related To (lead/client)
+  │   │   ├── Actions: Edit icon → detail page | Delete icon → confirm → delete (role-gated)
+  │   │   └── Row click → MeetingDetail page
+  │   └── Create Modal → MeetingForm in a Modal
+  │
+  └── MeetingDetail Page (/meetings/:id)
+      ├── Back button → /meetings
+      ├── Actions: Edit (modal) | Delete (confirm) — role-gated
+      ├── Meeting Info Card — Date, Time, Location, Meeting Link, Recording Link, Lead/Client
+      └── Discussion Notes
+          ├── Edit inline (super_admin/admin/manager/employee)
+          └── Save/Cancel controls
+```
+
+**API Integration — `meetingApi.js` (RTK Query)**
+
+| Endpoint | Hook | Cache Tags |
+|---|---|---|
+| `GET /meetings` | `useGetMeetingsQuery(params)` | `'Meeting'` |
+| `GET /meetings/:id` | `useGetMeetingByIdQuery(id)` | `{ type: 'Meeting', id }` |
+| `POST /meetings` | `useCreateMeetingMutation()` | `'Meeting'` (invalidates on success) |
+| `PATCH /meetings/:id` | `useUpdateMeetingMutation()` | `'Meeting'`, `{ type: 'Meeting', id }` |
+| `PATCH /meetings/:id/notes` | `useUpdateMeetingNotesMutation()` | `'Meeting'`, `{ type: 'Meeting', id }` |
+| `DELETE /meetings/:id` | `useDeleteMeetingMutation()` | `'Meeting'` |
+
+**UI Components Used:**
+- `DatePickerSimple.jsx` — shadcn-styled date picker with popover calendar
+- `TimePicker.jsx` — Native time input with label
+- `LinkInput.jsx` — URL input with validation
+- `FormInput.jsx` / `FormSelect.jsx` / `FormTextarea.jsx` — Form wrappers
+- `DatePicker.jsx` — shadcn date picker for create/edit forms
+- `Modal.jsx` — Reusable modal for create/edit forms
+- `Button.jsx` — Variants: primary, secondary, danger, ghost, outline
+- `Select.jsx` — shadcn/ui Radix Select for status dropdown in filters
+
+---
+
+#### 🧪 Access Control & Permissions
+
+**API-Level (enforced by backend `authorize()` middleware):**
+
+| Action | super_admin | admin | manager | employee |
+|---|---|---|---|---|
+| View meeting list | ✅ | ✅ | ✅ | ✅ |
+| View meeting detail | ✅ | ✅ | ✅ | ✅ |
+| Create meeting | ✅ | ✅ | ✅ | ❌ |
+| Edit meeting | ✅ | ✅ | ✅ | ❌ |
+| Update notes | ✅ | ✅ | ✅ | ✅ |
+| Delete meeting | ✅ | ✅ | ❌ | ❌ |
+| No auth token | ❌ | ❌ | ❌ | ❌ |
+
+**UI-Level (enforced by frontend role checks + route guards):**
+
+| UI Element | super_admin | admin | manager | employee |
+|---|---|---|---|---|
+| Meetings nav item | ✅ Visible | ✅ Visible | ✅ Visible | ✅ Visible |
+| Schedule Meeting button | ✅ | ✅ | ✅ | ❌ |
+| Inline Edit icon (table) | ✅ | ✅ | ✅ | ❌ |
+| Inline Delete icon (table) | ✅ | ✅ | ❌ | ❌ |
+| Edit button (detail page) | ✅ | ✅ | ✅ | ❌ |
+| Delete button (detail page) | ✅ | ✅ | ❌ | ❌ |
+| Notes edit | ✅ | ✅ | ✅ | ✅ |
+| Route access (URL direct) | ✅ | ✅ | ✅ | ✅ |
+
+---
+
+#### 📚 How to Use — Step by Step
+
+**As a Super Admin / Admin / Manager:**
+
+1. **Access:** Navigate to **Meetings** in the sidebar
+2. **Search/filter:** Type in the search box to find by title/location, or use the Status dropdown, or filter by date range
+3. **Schedule a meeting:** Click **Schedule Meeting** → Fill in Title*, Date*, Start/End Time*, Meeting Link, Location → Click **Schedule Meeting**
+4. **View meeting detail:** Click any row in the table → See full info (date, time, location, links, lead/client)
+5. **Edit meeting:** On the detail page, click **Edit** → Modify fields → **Update Meeting**
+6. **Edit notes:** On the detail page, click **Edit** on the Discussion Notes section → Update text → **Save Notes**
+7. **Delete a meeting:** Click the delete icon on a table row, or the Delete button on the detail page → Confirm
+
+**As an Employee:**
+
+1. View the meeting list and meeting details (read-only)
+2. Can edit discussion notes
+3. No create/edit/delete meeting functionality
+4. Can search and filter
+
+---
+
 ### 🚧 Upcoming Modules (Planned)
 
 | Module | Status | Description |
 |---|---|---|
-| **Meetings** | ⬜ Pending | Schedule, calendar view, Google Meet/Zoom integration |
+| **Meetings** | ✅ Done | Schedule, calendar view, Google Meet/Zoom integration |
 | **Projects** | ⬜ Pending | Project creation, milestones, team assignment |
 | **Tasks** | ⬜ Pending | Task assignment, priority, comments, subtasks |
 | **Invoices** | ⬜ Pending | GST invoices, PDF, email, recurring |
