@@ -12,6 +12,8 @@ const paginate = (query = {}) => {
   return { page, limit, skip, sort };
 };
 
+export const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const getPaginationMeta = (total, page, limit) => ({
   page,
   limit,

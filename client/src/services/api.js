@@ -4,13 +4,6 @@ import { API_BASE_URL } from '../constants';
 const baseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,
   credentials: 'include',
-  prepareHeaders: (headers) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-    return headers;
-  },
 });
 
 const baseQueryWithReauth = async (args, api, extraOptions) => {
@@ -24,11 +17,8 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
     );
 
     if (refreshResult.data) {
-      const newToken = refreshResult.data.data.accessToken;
-      localStorage.setItem('token', newToken);
       result = await baseQuery(args, api, extraOptions);
     } else {
-      localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/auth/login';
     }

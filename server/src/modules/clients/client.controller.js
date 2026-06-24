@@ -5,7 +5,7 @@ export const list = async (req, res, next) => {
   try {
     const { page, limit, sort, ...query } = req.query;
     const result = await clientService.getAll(query, { page, limit, sort });
-    ApiResponse.success(res, 200, result.clients, 'Clients fetched successfully', result.pagination);
+    ApiResponse.paginated(res, result.clients, result.pagination);
   } catch (error) {
     next(error);
   }

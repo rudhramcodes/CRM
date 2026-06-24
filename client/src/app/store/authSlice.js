@@ -4,8 +4,7 @@ import { API_BASE_URL } from '../../constants';
 
 const initialState = {
   user: JSON.parse(localStorage.getItem('user') || 'null'),
-  token: localStorage.getItem('token') || null,
-  isAuthenticated: !!localStorage.getItem('token'),
+  isAuthenticated: !!JSON.parse(localStorage.getItem('user') || 'null'),
   loading: false,
   error: null,
 };
@@ -17,10 +16,9 @@ export const loginUser = createAsyncThunk(
       const response = await axios.post(`${API_BASE_URL}/auth/login`, credentials, {
         withCredentials: true,
       });
-      const { user, accessToken } = response.data.data;
+      const { user } = response.data.data;
       localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('token', accessToken);
-      return { user, token: accessToken };
+      return { user };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
       return rejectWithValue(message);
@@ -35,10 +33,9 @@ export const registerUser = createAsyncThunk(
       const response = await axios.post(`${API_BASE_URL}/auth/register`, userData, {
         withCredentials: true,
       });
-      const { user, accessToken } = response.data.data;
+      const { user } = response.data.data;
       localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('token', accessToken);
-      return { user, token: accessToken };
+      return { user };
     } catch (error) {
       const message = error.response?.data?.message || 'Registration failed';
       return rejectWithValue(message);
@@ -84,11 +81,9 @@ const authSlice = createSlice({
   reducers: {
     logout(state) {
       state.user = null;
-      state.token = null;
       state.isAuthenticated = false;
       state.error = null;
       localStorage.removeItem('user');
-      localStorage.removeItem('token');
     },
     setUser(state, action) {
       state.user = action.payload;
@@ -96,10 +91,8 @@ const authSlice = createSlice({
     },
     setCredentials(state, action) {
       state.user = action.payload.user;
-      state.token = action.payload.token;
       state.isAuthenticated = true;
       localStorage.setItem('user', JSON.stringify(action.payload.user));
-      localStorage.setItem('token', action.payload.token);
     },
     clearError(state) {
       state.error = null;
@@ -114,7 +107,6 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
-        state.token = action.payload.token;
         state.isAuthenticated = true;
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -128,7 +120,6 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
-        state.token = action.payload.token;
         state.isAuthenticated = true;
       })
       .addCase(registerUser.rejected, (state, action) => {

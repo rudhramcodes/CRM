@@ -20,7 +20,7 @@ const seedSuperAdmin = async () => {
       const user = await User.create({
         name: 'Faizal Shaikh',
         email: 'faizal@crm.com',
-        password: 'admin123',
+        password: process.env.SEED_PASSWORD || 'admin123', // ponytail: env override, remove default after first seed
         role: ROLES.SUPER_ADMIN,
         permissions: ROLE_PERMISSIONS[ROLES.SUPER_ADMIN],
         isEmailVerified: true,

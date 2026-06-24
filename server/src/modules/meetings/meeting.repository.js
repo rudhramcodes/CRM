@@ -1,5 +1,5 @@
 import Meeting from './meeting.model.js';
-import paginate, { getPaginationMeta } from '../../utils/pagination.js';
+import paginate, { getPaginationMeta, escapeRegex } from '../../utils/pagination.js';
 
 export const create = async (data) => {
   return Meeting.create(data);
@@ -17,7 +17,7 @@ export const findAll = async (query = {}, options = {}) => {
   const filter = {};
 
   if (query.search) {
-    const searchRegex = new RegExp(query.search, 'i');
+    const searchRegex = new RegExp(escapeRegex(query.search), 'i');
     filter.$or = [{ title: searchRegex }, { notes: searchRegex }, { location: searchRegex }];
   }
 

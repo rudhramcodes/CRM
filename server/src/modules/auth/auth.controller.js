@@ -4,7 +4,7 @@ import * as authService from './auth.service.js';
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
+  sameSite: 'strict',
 };
 
 export const register = async (req, res, next) => {
@@ -24,7 +24,6 @@ export const register = async (req, res, next) => {
 
     ApiResponse.created(res, {
       user: result.user,
-      accessToken: result.accessToken,
     }, 'Registration successful');
   } catch (error) {
     next(error);
@@ -49,7 +48,6 @@ export const login = async (req, res, next) => {
 
     ApiResponse.success(res, 200, {
       user: result.user,
-      accessToken: result.accessToken,
     }, 'Login successful');
   } catch (error) {
     next(error);
@@ -85,9 +83,7 @@ export const refresh = async (req, res, next) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    ApiResponse.success(res, 200, {
-      accessToken: tokens.accessToken,
-    }, 'Token refreshed');
+    ApiResponse.success(res, 200, null, 'Token refreshed');
   } catch (error) {
     next(error);
   }

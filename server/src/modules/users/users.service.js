@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import ApiError from '../../utils/ApiError.js';
+import { escapeRegex } from '../../utils/pagination.js';
 import * as authRepository from '../auth/auth.repository.js';
 import { ROLE_PERMISSIONS } from '../../constants/index.js';
 import { sendWelcomeEmail, sendVerificationEmail } from '../../services/emailService.js';
@@ -8,7 +9,7 @@ export const listUsers = async (query, options) => {
   const filter = {};
 
   if (query.search) {
-    const searchRegex = new RegExp(query.search, 'i');
+    const searchRegex = new RegExp(escapeRegex(query.search), 'i');
     filter.$or = [{ name: searchRegex }, { email: searchRegex }];
   }
 

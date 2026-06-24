@@ -5,13 +5,17 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
+if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables');
+}
+
 const config = {
   port: parseInt(process.env.PORT, 10) || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
   mongodbUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/crm',
   jwt: {
-    secret: process.env.JWT_SECRET || 'fallback-secret',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+    secret: process.env.JWT_SECRET,
+    refreshSecret: process.env.JWT_REFRESH_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },

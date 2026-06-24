@@ -24,13 +24,6 @@ class ApiResponse {
     });
   }
 
-  static error(res, statusCode = 500, message = 'Internal server error', errors = []) {
-    return res.status(statusCode).json({
-      success: false,
-      message,
-      errors: errors.length > 0 ? errors : undefined,
-    });
-  }
 }
 
 export default ApiResponse;
