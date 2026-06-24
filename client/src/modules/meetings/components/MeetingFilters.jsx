@@ -1,11 +1,21 @@
 import { useState, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import { MEETING_STATUS } from '../../../constants';
+import { DatePickerSimple } from '../../../components/ui/DatePickerSimple';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../../../components/ui/Select';
 
 export default function MeetingFilters({ onFilterChange }) {
   const [filters, setFilters] = useState({
     search: '',
     status: '',
+    dateFrom: '',
+    dateTo: '',
   });
 
   const handleChange = useCallback(
@@ -18,12 +28,12 @@ export default function MeetingFilters({ onFilterChange }) {
   );
 
   const clearFilters = useCallback(() => {
-    const cleared = { search: '', status: '' };
+    const cleared = { search: '', status: '', dateFrom: '', dateTo: '' };
     setFilters(cleared);
     onFilterChange?.(cleared);
   }, [onFilterChange]);
 
-  const hasFilters = filters.search || filters.status;
+  const hasFilters = filters.search || filters.status || filters.dateFrom || filters.dateTo;
 
   return (
     <div className="bg-white rounded-xl border border-zinc-200 p-4">
@@ -46,19 +56,39 @@ export default function MeetingFilters({ onFilterChange }) {
         {/* Status */}
         <div className="min-w-[150px]">
           <label className="block text-xs font-medium text-zinc-500 mb-1">Status</label>
-          <select
-            value={filters.status}
-            onChange={(e) => handleChange('status', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900 bg-white"
+          <Select
+            value={filters.status || 'all'}
+            onValueChange={(value) => handleChange('status', value === 'all' ? '' : value)}
           >
-            <option value="">All Status</option>
-            {MEETING_STATUS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              {MEETING_STATUS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+
+        {/* Date From */}
+        <DatePickerSimple
+          value={filters.dateFrom}
+          onChange={(val) => handleChange('dateFrom', val)}
+          label="From Date"
+          placeholder="From date"
+        />
+
+        {/* Date To */}
+        <DatePickerSimple
+          value={filters.dateTo}
+          onChange={(val) => handleChange('dateTo', val)}
+          label="To Date"
+          placeholder="To date"
+        />
 
         {/* Clear */}
         {hasFilters && (
