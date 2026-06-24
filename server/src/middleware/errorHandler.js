@@ -22,7 +22,7 @@ const errorHandler = (err, req, res, _next) => {
             .map((e) => e.message)
             .join(', ')
         : error.name === 'CastError'
-          ? `Invalid ${error.path}: ${error.value}`
+          ? `"${error.path}" me ye value ("${error.value}") valid nahi hai. Expected: 24-character hex ID (e.g. "6628f1a2b3c4d5e6f7a8b9c0").`
           : error.code === 11000
             ? `${Object.keys(error.keyValue).join(', ')} already exists`
             : error.name === 'JsonWebTokenError'

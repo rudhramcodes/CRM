@@ -18,6 +18,8 @@ import ClientDetail from '../modules/clients/pages/ClientDetail';
 import ClientForm from '../modules/clients/components/ClientForm';
 import MeetingList from '../modules/meetings/pages/MeetingList';
 import MeetingDetail from '../modules/meetings/pages/MeetingDetail';
+import ProjectList from '../modules/projects/pages/ProjectList';
+import ProjectDetail from '../modules/projects/pages/ProjectDetail';
 
 const router = createBrowserRouter([
   {
@@ -50,8 +52,8 @@ const router = createBrowserRouter([
       { path: 'clients/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ClientDetail /></ProtectedRoute> },
       { path: 'meetings', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><MeetingList /></ProtectedRoute> },
       { path: 'meetings/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><MeetingDetail /></ProtectedRoute> },
-      { path: 'projects', element: <div>Projects Module (Coming Soon)</div> },
-      { path: 'projects/:id', element: <div>Project Detail (Coming Soon)</div> },
+      { path: 'projects', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ProjectList /></ProtectedRoute> },
+      { path: 'projects/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ProjectDetail /></ProtectedRoute> },
       { path: 'tasks', element: <div>Tasks Module (Coming Soon)</div> },
       { path: 'invoices', element: <div>Invoices Module (Coming Soon)</div> },
       { path: 'invoices/new', element: <div>New Invoice (Coming Soon)</div> },
