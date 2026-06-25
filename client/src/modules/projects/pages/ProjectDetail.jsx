@@ -17,11 +17,17 @@ import {
   useGetProjectByIdQuery,
   useDeleteProjectMutation,
   useUpdateProjectMutation,
+  useGetProjectActivitiesQuery,
+  useAddProjectTaskMutation,
+  useUpdateProjectTaskMutation,
+  useDeleteProjectTaskMutation,
 } from '../../../services/projectApi';
 import ProjectStatusBadge from '../components/ProjectStatusBadge';
 import ProjectPriorityBadge from '../components/ProjectPriorityBadge';
 import ProjectForm from '../components/ProjectForm';
 import ProjectMilestones from '../components/ProjectMilestones';
+import ProjectTasks from '../components/ProjectTasks';
+import ProjectActivityLog from '../components/ProjectActivityLog';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import Loader from '../../../components/ui/Loader';
@@ -49,8 +55,13 @@ export default function ProjectDetail() {
   const { data: projectData, isLoading, error } = useGetProjectByIdQuery(id);
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
   const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();
+  const { data: activitiesData, isLoading: activitiesLoading } = useGetProjectActivitiesQuery(id, { skip: !id });
+  const [addTask] = useAddProjectTaskMutation();
+  const [updateTask] = useUpdateProjectTaskMutation();
+  const [deleteTask] = useDeleteProjectTaskMutation();
 
   const project = projectData?.data?.project;
+  const activities = activitiesData?.data || [];
 
   useEffect(() => {
     if (project) {
@@ -58,6 +69,7 @@ export default function ProjectDetail() {
     }
   }, [project, dispatch]);
 
+  const canEditAll = user && ['super_admin', 'admin'].includes(user.role);
   const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
@@ -83,6 +95,33 @@ export default function ProjectDetail() {
     },
     [id, updateProject],
   );
+
+  const handleAddTask = useCallback(async (data) => {
+    try {
+      await addTask({ id, ...data }).unwrap();
+      toast.success('Task added');
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to add task');
+    }
+  }, [id, addTask]);
+
+  const handleUpdateTask = useCallback(async (taskId, data) => {
+    try {
+      await updateTask({ id, taskId, ...data }).unwrap();
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to update task');
+    }
+  }, [id, updateTask]);
+
+  const handleDeleteTask = useCallback(async (taskId) => {
+    if (!window.confirm('Remove this task?')) return;
+    try {
+      await deleteTask({ id, taskId }).unwrap();
+      toast.success('Task removed');
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to remove task');
+    }
+  }, [id, deleteTask]);
 
   if (isLoading) {
     return (
@@ -110,7 +149,7 @@ export default function ProjectDetail() {
   const budgetFormatted = formatCurrency(project.budget, project.currency);
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/projects')}
@@ -231,6 +270,16 @@ export default function ProjectDetail() {
         onUpdate={handleMilestonesUpdate}
         canManage={canManage}
       />
+
+      <ProjectTasks
+        tasks={project.tasks || []}
+        canManage={canEditAll}
+        onAdd={handleAddTask}
+        onUpdate={handleUpdateTask}
+        onDelete={handleDeleteTask}
+      />
+
+      <ProjectActivityLog activities={activities} loading={activitiesLoading} />
 
       <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Project">
         <ProjectForm

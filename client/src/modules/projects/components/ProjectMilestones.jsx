@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, CheckCircle2, Circle, Loader2, PlayCircle, Trash2 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
+import DatePicker from '../../../components/forms/DatePicker';
 
 function getStatusIcon(status) {
   switch (status) {
@@ -164,11 +165,11 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
               className="flex-1 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900"
               onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
             />
-            <input
-              type="date"
+            <DatePicker
               value={newDueDate}
-              onChange={(e) => setNewDueDate(e.target.value)}
-              className="w-36 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900"
+              onChange={setNewDueDate}
+              placeholder="Due date"
+              className="w-40"
             />
             <Button type="button" size="sm" onClick={handleAdd} disabled={!newTitle.trim()}>
               <Plus className="w-3.5 h-3.5" />

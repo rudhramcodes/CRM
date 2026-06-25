@@ -1,6 +1,53 @@
 import mongoose from 'mongoose';
 import { PROJECT_STATUS } from '../../constants/index.js';
 
+const taskSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, 'Task title is required'],
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    status: {
+      type: String,
+      enum: ['todo', 'in_progress', 'review', 'done'],
+      default: 'todo',
+    },
+    priority: {
+      type: String,
+      enum: ['low', 'medium', 'high', 'urgent'],
+      default: 'medium',
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    dueDate: Date,
+    completedAt: Date,
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+  },
+  { _id: true, timestamps: true },
+);
+
+const activitySchema = new mongoose.Schema(
+  {
+    action: { type: String, required: true },
+    field: String,
+    oldValue: String,
+    newValue: String,
+    performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  },
+  { _id: true, timestamps: true },
+);
+
 const milestoneSchema = new mongoose.Schema(
   {
     title: {
@@ -78,6 +125,8 @@ const projectSchema = new mongoose.Schema(
     completedAt: Date,
     teamMembers: [teamMemberSchema],
     milestones: [milestoneSchema],
+    tasks: [taskSchema],
+    activities: [activitySchema],
     tags: [String],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

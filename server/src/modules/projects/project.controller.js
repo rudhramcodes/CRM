@@ -30,7 +30,7 @@ export const create = async (req, res, next) => {
 
 export const update = async (req, res, next) => {
   try {
-    const project = await projectService.updateProject(req.params.id, req.body);
+    const project = await projectService.updateProject(req.params.id, req.body, req.user);
     ApiResponse.success(res, 200, { project }, 'Project updated successfully');
   } catch (error) {
     next(error);
@@ -50,6 +50,44 @@ export const stats = async (req, res, next) => {
   try {
     const projectStats = await projectService.getProjectStats();
     ApiResponse.success(res, 200, projectStats);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Tasks
+export const addTask = async (req, res, next) => {
+  try {
+    const task = await projectService.addTask(req.params.id, req.body, req.user);
+    ApiResponse.created(res, { task }, 'Task added');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateTask = async (req, res, next) => {
+  try {
+    const task = await projectService.updateTask(req.params.id, req.params.taskId, req.body, req.user);
+    ApiResponse.success(res, 200, { task }, 'Task updated');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteTask = async (req, res, next) => {
+  try {
+    await projectService.deleteTask(req.params.id, req.params.taskId, req.user);
+    ApiResponse.success(res, 200, null, 'Task deleted');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Activities
+export const getActivities = async (req, res, next) => {
+  try {
+    const activities = await projectService.getActivities(req.params.id);
+    ApiResponse.success(res, 200, activities);
   } catch (error) {
     next(error);
   }

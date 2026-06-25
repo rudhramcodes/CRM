@@ -8,6 +8,9 @@ export const create = async (data) => {
 export const findById = async (id) => {
   return Project.findById(id)
     .populate('teamMembers.user', 'name email avatar')
+    .populate('tasks.assignedTo', 'name email avatar')
+    .populate('tasks.createdBy', 'name email avatar')
+    .populate('activities.performedBy', 'name email avatar role')
     .populate('createdBy', 'name email');
 };
 
@@ -20,21 +23,10 @@ export const findAll = async (query = {}, options = {}) => {
     filter.$or = [{ title: searchRegex }, { description: searchRegex }];
   }
 
-  if (query.status) {
-    filter.status = query.status;
-  }
-
-  if (query.priority) {
-    filter.priority = query.priority;
-  }
-
-  if (query.tag) {
-    filter.tags = { $in: [query.tag] };
-  }
-
-  if (query.employeeFilter) {
-    filter['teamMembers.user'] = query.employeeFilter;
-  }
+  if (query.status) filter.status = query.status;
+  if (query.priority) filter.priority = query.priority;
+  if (query.tag) filter.tags = { $in: [query.tag] };
+  if (query.employeeFilter) filter['teamMembers.user'] = query.employeeFilter;
 
   const [projects, total] = await Promise.all([
     Project.find(filter)
@@ -49,9 +41,17 @@ export const findAll = async (query = {}, options = {}) => {
   return { projects, pagination: getPaginationMeta(total, page, limit) };
 };
 
-export const updateById = async (id, data) => {
-  return Project.findByIdAndUpdate(id, data, { new: true, runValidators: true })
+export const updateById = async (id, data, activities = []) => {
+  const update = { ...data };
+  if (activities.length > 0) {
+    update.$push = { activities: { $each: activities } };
+    delete update.activities;
+  }
+  return Project.findByIdAndUpdate(id, update, { new: true, runValidators: true })
     .populate('teamMembers.user', 'name email avatar')
+    .populate('tasks.assignedTo', 'name email avatar')
+    .populate('tasks.createdBy', 'name email avatar')
+    .populate('activities.performedBy', 'name email avatar role')
     .populate('createdBy', 'name email');
 };
 

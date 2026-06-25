@@ -2,13 +2,15 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, FolderKanban } from 'lucide-react';
+import { Plus, FolderKanban, Columns, LayoutList } from 'lucide-react';
 import {
   useGetProjectsQuery,
   useGetProjectStatsQuery,
   useDeleteProjectMutation,
+  useUpdateProjectMutation,
 } from '../../../services/projectApi';
 import ProjectTable from '../components/ProjectTable';
+import ProjectKanbanBoard from '../components/ProjectKanbanBoard';
 import ProjectFilters from '../components/ProjectFilters';
 import ProjectForm from '../components/ProjectForm';
 import Button from '../../../components/ui/Button';
@@ -21,14 +23,14 @@ export default function ProjectList() {
   const user = useSelector((state) => state.auth.user);
   const [queryParams, setQueryParams] = useState({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [viewMode, setViewMode] = useState('table');
 
-  useEffect(() => {
-    dispatch(setPageTitle('Projects'));
-  }, [dispatch]);
+  useEffect(() => { dispatch(setPageTitle('Projects')); }, [dispatch]);
 
   const { data, isLoading, error } = useGetProjectsQuery(queryParams);
   const { data: statsData, isLoading: statsLoading } = useGetProjectStatsQuery();
   const [deleteProject] = useDeleteProjectMutation();
+  const [updateProject] = useUpdateProjectMutation();
 
   const projects = data?.data || [];
   const pagination = data?.pagination;
@@ -42,28 +44,26 @@ export default function ProjectList() {
   const canEdit = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
-  const handleRowClick = useCallback(
-    (project) => navigate(`/projects/${project._id}`),
-    [navigate],
-  );
+  const handleRowClick = useCallback((project) => navigate(`/projects/${project._id}`), [navigate]);
+  const handleEdit = useCallback((project) => navigate(`/projects/${project._id}`), [navigate]);
+  const handleDelete = useCallback(async (project) => {
+    if (!window.confirm(`Delete project "${project.title}"? This cannot be undone.`)) return;
+    try {
+      await deleteProject(project._id).unwrap();
+      toast.success('Project deleted');
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to delete project');
+    }
+  }, [deleteProject]);
 
-  const handleEdit = useCallback(
-    (project) => navigate(`/projects/${project._id}`),
-    [navigate],
-  );
-
-  const handleDelete = useCallback(
-    async (project) => {
-      if (!window.confirm(`Delete project "${project.title}"? This cannot be undone.`)) return;
-      try {
-        await deleteProject(project._id).unwrap();
-        toast.success('Project deleted successfully');
-      } catch (err) {
-        toast.error(err?.data?.message || 'Failed to delete project');
-      }
-    },
-    [deleteProject],
-  );
+  const handleStatusChange = useCallback(async (projectId, status) => {
+    try {
+      await updateProject({ id: projectId, status }).unwrap();
+      toast.success('Status updated');
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to update status');
+    }
+  }, [updateProject]);
 
   const statsConfig = [
     { key: 'total', label: 'Total', color: 'text-zinc-600' },
@@ -87,12 +87,21 @@ export default function ProjectList() {
             </p>
           </div>
         </div>
-        {canCreate && (
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="w-4 h-4" />
-            New Project
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
+            <button onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow-sm text-primary-900' : 'text-zinc-400 hover:text-zinc-600'}`}
+              title="Table view"><LayoutList className="w-4 h-4" /></button>
+            <button onClick={() => setViewMode('kanban')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-primary-900' : 'text-zinc-400 hover:text-zinc-600'}`}
+              title="Kanban view"><Columns className="w-4 h-4" /></button>
+          </div>
+          {canCreate && (
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="w-4 h-4" /> New Project
+            </Button>
+          )}
+        </div>
       </div>
 
       {!statsLoading && stats.total > 0 && (
@@ -108,46 +117,36 @@ export default function ProjectList() {
 
       <ProjectFilters onFilterChange={handleFilterChange} />
 
-      <ProjectTable
-        projects={projects}
-        loading={isLoading}
-        error={error}
-        onRowClick={handleRowClick}
-        canEdit={canEdit}
-        canDelete={canDelete}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
-
-      {pagination && pagination.pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            disabled={!pagination.hasPrevPage}
-            onClick={() => setQueryParams((p) => ({ ...p, page: pagination.page - 1 }))}
-            className="px-3 py-1.5 text-sm rounded-lg border border-zinc-200 disabled:opacity-40 hover:bg-zinc-50 transition-colors"
-          >
-            Previous
-          </button>
-          <span className="text-sm text-zinc-500">
-            Page {pagination.page} of {pagination.pages}
-          </span>
-          <button
-            disabled={!pagination.hasNextPage}
-            onClick={() => setQueryParams((p) => ({ ...p, page: pagination.page + 1 }))}
-            className="px-3 py-1.5 text-sm rounded-lg border border-zinc-200 disabled:opacity-40 hover:bg-zinc-50 transition-colors"
-          >
-            Next
-          </button>
-        </div>
+      {viewMode === 'kanban' ? (
+        <ProjectKanbanBoard
+          projects={projects}
+          loading={isLoading}
+          onProjectClick={handleRowClick}
+          onStatusChange={handleStatusChange}
+        />
+      ) : (
+        <>
+          <ProjectTable
+            projects={projects} loading={isLoading} error={error}
+            onRowClick={handleRowClick} canEdit={canEdit} canDelete={canDelete}
+            onEdit={handleEdit} onDelete={handleDelete}
+          />
+          {pagination && pagination.pages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <button disabled={!pagination.hasPrevPage}
+                onClick={() => setQueryParams((p) => ({ ...p, page: pagination.page - 1 }))}
+                className="px-3 py-1.5 text-sm rounded-lg border border-zinc-200 disabled:opacity-40 hover:bg-zinc-50">Previous</button>
+              <span className="text-sm text-zinc-500">Page {pagination.page} of {pagination.pages}</span>
+              <button disabled={!pagination.hasNextPage}
+                onClick={() => setQueryParams((p) => ({ ...p, page: pagination.page + 1 }))}
+                className="px-3 py-1.5 text-sm rounded-lg border border-zinc-200 disabled:opacity-40 hover:bg-zinc-50">Next</button>
+            </div>
+          )}
+        </>
       )}
 
       <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title="New Project">
-        <ProjectForm
-          onSuccess={() => {
-            setShowCreateModal(false);
-          }}
-          onCancel={() => setShowCreateModal(false)}
-        />
+        <ProjectForm onSuccess={() => setShowCreateModal(false)} onCancel={() => setShowCreateModal(false)} />
       </Modal>
     </div>
   );
