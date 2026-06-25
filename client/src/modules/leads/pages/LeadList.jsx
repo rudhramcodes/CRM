@@ -11,6 +11,7 @@ import LeadStatusBadge from '../components/LeadStatusBadge';
 import Button from '../../../components/ui/Button';
 import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { LEAD_STATUS, LEAD_BRANDS } from '../../../constants';
 import toast from 'react-hot-toast';
 
@@ -20,6 +21,7 @@ export default function LeadList() {
   const user = useSelector((state) => state.auth.user);
   const [queryParams, setQueryParams] = useState({});
   const [view, setView] = useState('table');
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
     dispatch(setPageTitle('Leads'));
@@ -71,15 +73,18 @@ export default function LeadList() {
     }
   }, [updateLead]);
 
-  const handleDelete = useCallback(async (row) => {
-    if (!window.confirm(`Delete lead "${row.name}"? This cannot be undone.`)) return;
+  const handleDelete = useCallback((row) => setDeleteTarget(row), []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteLead(row._id).unwrap();
+      await deleteLead(deleteTarget._id).unwrap();
       toast.success('Lead deleted successfully');
+      setDeleteTarget(null);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to delete lead');
     }
-  }, [deleteLead]);
+  }, [deleteTarget, deleteLead]);
 
   const statCards = LEAD_STATUS.map((s) => ({
     label: s.label,
@@ -210,6 +215,15 @@ export default function LeadList() {
           />
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Lead?"
+        message={deleteTarget ? `Delete lead "${deleteTarget.name}"? This cannot be undone.` : ''}
+      />
     </div>
   );
 }
+

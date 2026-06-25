@@ -30,6 +30,7 @@ import ProjectTasks from '../components/ProjectTasks';
 import ProjectActivityLog from '../components/ProjectActivityLog';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
 import toast from 'react-hot-toast';
@@ -51,6 +52,8 @@ export default function ProjectDetail() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTaskId, setDeleteTaskId] = useState(null);
 
   const { data: projectData, isLoading, error } = useGetProjectByIdQuery(id);
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
@@ -73,8 +76,9 @@ export default function ProjectDetail() {
   const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
-  const handleDelete = async () => {
-    if (!window.confirm('Delete this project? This action cannot be undone.')) return;
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const confirmDelete = useCallback(async () => {
     try {
       await deleteProject(id).unwrap();
       toast.success('Project deleted successfully');
@@ -82,7 +86,7 @@ export default function ProjectDetail() {
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to delete project');
     }
-  };
+  }, [id, deleteProject, navigate]);
 
   const handleMilestonesUpdate = useCallback(
     async (milestones) => {
@@ -113,15 +117,18 @@ export default function ProjectDetail() {
     }
   }, [id, updateTask]);
 
-  const handleDeleteTask = useCallback(async (taskId) => {
-    if (!window.confirm('Remove this task?')) return;
+  const handleDeleteTask = useCallback((taskId) => setDeleteTaskId(taskId), []);
+
+  const confirmDeleteTask = useCallback(async () => {
+    if (!deleteTaskId) return;
     try {
-      await deleteTask({ id, taskId }).unwrap();
+      await deleteTask({ id, taskId: deleteTaskId }).unwrap();
       toast.success('Task removed');
+      setDeleteTaskId(null);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to remove task');
     }
-  }, [id, deleteTask]);
+  }, [deleteTaskId, id, deleteTask]);
 
   if (isLoading) {
     return (
@@ -288,6 +295,23 @@ export default function ProjectDetail() {
           onCancel={() => setShowEditModal(false)}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Project?"
+        message="Delete this project? This action cannot be undone."
+      />
+
+      <ConfirmDialog
+        open={!!deleteTaskId}
+        onClose={() => setDeleteTaskId(null)}
+        onConfirm={confirmDeleteTask}
+        title="Remove Task?"
+        message="Remove this task?"
+        confirmLabel="Remove"
+      />
     </div>
   );
 }

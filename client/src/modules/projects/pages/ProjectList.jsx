@@ -15,6 +15,7 @@ import ProjectFilters from '../components/ProjectFilters';
 import ProjectForm from '../components/ProjectForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 export default function ProjectList() {
@@ -23,6 +24,7 @@ export default function ProjectList() {
   const user = useSelector((state) => state.auth.user);
   const [queryParams, setQueryParams] = useState({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewMode, setViewMode] = useState('table');
 
   useEffect(() => { dispatch(setPageTitle('Projects')); }, [dispatch]);
@@ -46,15 +48,18 @@ export default function ProjectList() {
 
   const handleRowClick = useCallback((project) => navigate(`/projects/${project._id}`), [navigate]);
   const handleEdit = useCallback((project) => navigate(`/projects/${project._id}`), [navigate]);
-  const handleDelete = useCallback(async (project) => {
-    if (!window.confirm(`Delete project "${project.title}"? This cannot be undone.`)) return;
+  const handleDelete = useCallback((project) => setDeleteTarget(project), []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteProject(project._id).unwrap();
+      await deleteProject(deleteTarget._id).unwrap();
       toast.success('Project deleted');
+      setDeleteTarget(null);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to delete project');
     }
-  }, [deleteProject]);
+  }, [deleteTarget, deleteProject]);
 
   const handleStatusChange = useCallback(async (projectId, status) => {
     try {
@@ -148,6 +153,14 @@ export default function ProjectList() {
       <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title="New Project">
         <ProjectForm onSuccess={() => setShowCreateModal(false)} onCancel={() => setShowCreateModal(false)} />
       </Modal>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Project?"
+        message={deleteTarget ? `Delete project "${deleteTarget.title}"? This cannot be undone.` : ''}
+      />
     </div>
   );
 }

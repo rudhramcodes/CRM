@@ -23,9 +23,9 @@ export default function Sidebar({ open, onClose }) {
 
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-full bg-white border-r border-zinc-200 transition-all duration-300 flex flex-col',
+          'fixed top-0 left-0 z-50 h-screen bg-white border-r border-zinc-200 transition-all duration-300 flex flex-col',
           open ? 'translate-x-0' : '-translate-x-full',
-          'lg:translate-x-0 lg:static lg:z-auto',
+          'lg:translate-x-0',
           sidebarOpen ? 'lg:w-56' : 'lg:w-16',
         )}
       >

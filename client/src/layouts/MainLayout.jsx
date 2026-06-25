@@ -18,6 +18,7 @@ export default function MainLayout() {
       <div
         className={cn(
           'flex-1 flex flex-col transition-all duration-300 min-w-0',
+          sidebarOpen ? 'lg:ml-56' : 'lg:ml-16',
         )}
       >
         <Header onMobileMenuOpen={() => setMobileMenuOpen(true)} />

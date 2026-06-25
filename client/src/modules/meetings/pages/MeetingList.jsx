@@ -9,6 +9,7 @@ import MeetingFilters from '../components/MeetingFilters';
 import MeetingForm from '../components/MeetingForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 export default function MeetingList() {
@@ -17,6 +18,7 @@ export default function MeetingList() {
   const user = useSelector((state) => state.auth.user);
   const [queryParams, setQueryParams] = useState({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
     dispatch(setPageTitle('Meetings'));
@@ -48,18 +50,18 @@ export default function MeetingList() {
     [navigate],
   );
 
-  const handleDelete = useCallback(
-    async (row) => {
-      if (!window.confirm(`Delete meeting "${row.title}"? This cannot be undone.`)) return;
-      try {
-        await deleteMeeting(row._id).unwrap();
-        toast.success('Meeting deleted successfully');
-      } catch (err) {
-        toast.error(err?.data?.message || 'Failed to delete meeting');
-      }
-    },
-    [deleteMeeting],
-  );
+  const handleDelete = useCallback((row) => setDeleteTarget(row), []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMeeting(deleteTarget._id).unwrap();
+      toast.success('Meeting deleted successfully');
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to delete meeting');
+    }
+  }, [deleteTarget, deleteMeeting]);
 
   const handlePageChange = useCallback(
     (page) => {
@@ -136,6 +138,14 @@ export default function MeetingList() {
           onCancel={() => setShowCreateModal(false)}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Meeting?"
+        message={deleteTarget ? `Delete meeting "${deleteTarget.title}"? This cannot be undone.` : ''}
+      />
     </div>
   );
 }

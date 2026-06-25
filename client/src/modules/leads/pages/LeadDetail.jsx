@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
@@ -24,6 +24,7 @@ import LeadStatusBadge from '../components/LeadStatusBadge';
 import LeadForm from '../components/LeadForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
 import toast from 'react-hot-toast';
@@ -36,6 +37,7 @@ export default function LeadDetail() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [noteText, setNoteText] = useState('');
 
   const { data: leadData, isLoading, error } = useGetLeadByIdQuery(id);
@@ -50,8 +52,9 @@ export default function LeadDetail() {
     }
   }, [lead, dispatch]);
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this lead? This action cannot be undone.')) return;
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const confirmDelete = useCallback(async () => {
     try {
       await deleteLead(id).unwrap();
       toast.success('Lead deleted successfully');
@@ -59,7 +62,7 @@ export default function LeadDetail() {
     } catch (error) {
       toast.error(error?.data?.message || 'Failed to delete lead');
     }
-  };
+  }, [id, deleteLead, navigate]);
 
   const handleAddNote = async (e) => {
     e.preventDefault();
@@ -279,6 +282,14 @@ export default function LeadDetail() {
           onCancel={() => setShowEditModal(false)}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Lead?"
+        message="Are you sure you want to delete this lead? This action cannot be undone."
+      />
     </div>
   );
 }

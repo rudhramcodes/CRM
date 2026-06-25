@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
@@ -24,6 +24,7 @@ import ClientStatusBadge from '../components/ClientStatusBadge';
 import ClientForm from '../components/ClientForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
 import toast from 'react-hot-toast';
@@ -35,6 +36,7 @@ export default function ClientDetail() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: clientData, isLoading, error } = useGetClientByIdQuery(id);
   const [deleteClient, { isLoading: isDeleting }] = useDeleteClientMutation();
@@ -47,8 +49,9 @@ export default function ClientDetail() {
     }
   }, [client, dispatch]);
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this client? This action cannot be undone.')) return;
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const confirmDelete = useCallback(async () => {
     try {
       await deleteClient(id).unwrap();
       toast.success('Client deleted successfully');
@@ -56,7 +59,7 @@ export default function ClientDetail() {
     } catch (error) {
       toast.error(error?.data?.message || 'Failed to delete client');
     }
-  };
+  }, [id, deleteClient, navigate]);
 
   const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
@@ -256,6 +259,14 @@ export default function ClientDetail() {
           onCancel={() => setShowEditModal(false)}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Client?"
+        message="Are you sure you want to delete this client? This action cannot be undone."
+      />
     </div>
   );
 }

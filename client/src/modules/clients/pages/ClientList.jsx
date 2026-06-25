@@ -9,6 +9,7 @@ import ClientFilters from '../components/ClientFilters';
 import Button from '../../../components/ui/Button';
 import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 export default function ClientList() {
@@ -16,6 +17,7 @@ export default function ClientList() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const [queryParams, setQueryParams] = useState({});
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
     dispatch(setPageTitle('Clients'));
@@ -41,15 +43,18 @@ export default function ClientList() {
     navigate(`/clients/${row._id}`);
   }, [navigate]);
 
-  const handleDelete = useCallback(async (row) => {
-    if (!window.confirm(`Delete client "${row.companyName}"? This cannot be undone.`)) return;
+  const handleDelete = useCallback((row) => setDeleteTarget(row), []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteClient(row._id).unwrap();
+      await deleteClient(deleteTarget._id).unwrap();
       toast.success('Client deleted successfully');
+      setDeleteTarget(null);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to delete client');
     }
-  }, [deleteClient]);
+  }, [deleteTarget, deleteClient]);
 
   return (
     <div className="space-y-6">
@@ -117,6 +122,14 @@ export default function ClientList() {
           onDelete={handleDelete}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Client?"
+        message={deleteTarget ? `Delete client "${deleteTarget.companyName}"? This cannot be undone.` : ''}
+      />
     </div>
   );
 }

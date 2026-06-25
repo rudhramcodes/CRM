@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
@@ -23,6 +23,7 @@ import MeetingStatusBadge from '../components/MeetingStatusBadge';
 import MeetingForm from '../components/MeetingForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
 import toast from 'react-hot-toast';
@@ -34,6 +35,7 @@ export default function MeetingDetail() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState('');
 
@@ -50,8 +52,9 @@ export default function MeetingDetail() {
     }
   }, [meeting, dispatch]);
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this meeting? This action cannot be undone.')) return;
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const confirmDelete = useCallback(async () => {
     try {
       await deleteMeeting(id).unwrap();
       toast.success('Meeting deleted successfully');
@@ -59,7 +62,7 @@ export default function MeetingDetail() {
     } catch (error) {
       toast.error(error?.data?.message || 'Failed to delete meeting');
     }
-  };
+  }, [id, deleteMeeting, navigate]);
 
   const handleSaveNotes = async () => {
     try {
@@ -325,6 +328,14 @@ export default function MeetingDetail() {
           onCancel={() => setShowEditModal(false)}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Meeting?"
+        message="Are you sure you want to delete this meeting? This action cannot be undone."
+      />
     </div>
   );
 }
