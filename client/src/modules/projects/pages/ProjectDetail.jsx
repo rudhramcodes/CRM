@@ -278,6 +278,13 @@ export default function ProjectDetail() {
         canManage={canManage}
       />
 
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-primary-900">Tasks ({project.tasks?.length || 0})</h3>
+        <button onClick={() => navigate(`/tasks?project=${project._id}`)}
+          className="text-xs text-primary-900 hover:underline font-medium">
+          Manage in Tasks →
+        </button>
+      </div>
       <ProjectTasks
         tasks={project.tasks || []}
         canManage={canEditAll}

@@ -1,4 +1,5 @@
 import ApiError from '../../utils/ApiError.js';
+import generateClientId from '../../utils/generateClientId.js';
 import * as clientRepository from './client.repository.js';
 import * as leadRepository from '../leads/lead.repository.js';
 
@@ -15,7 +16,11 @@ export const create = async (data, user) => {
     }
   }
 
+  const clientId = await generateClientId(data.brand);
+
   const payload = {
+    clientId,
+    brand: data.brand,
     companyName: data.companyName,
     contactPerson: data.contactPerson,
     email: data.email,
@@ -49,7 +54,12 @@ export const convertFromLead = async (leadId, user) => {
     throw ApiError.conflict('A client with this email already exists');
   }
 
+  const brand = lead.brand || 'panigrahna';
+  const clientId = await generateClientId(brand);
+
   const client = await clientRepository.create({
+    clientId,
+    brand,
     companyName: lead.company || `${lead.name}'s Company`,
     contactPerson: lead.name,
     email: lead.email,

@@ -6,10 +6,11 @@ import {
   useSensor,
   useSensors,
   useDroppable,
+  closestCorners,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { LEAD_STATUS } from '../../../constants';
-import LeadKanbanCard from './LeadKanbanCard';
+import LeadKanbanCard, { LeadKanbanCardOverlay } from './LeadKanbanCard';
 import { cn } from '../../../utils/cn';
 
 const COLUMN_ID_PREFIX = 'kanban-col-';
@@ -152,6 +153,7 @@ export default function LeadKanbanBoard({ leads = [], loading, onLeadClick, onSt
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -171,7 +173,7 @@ export default function LeadKanbanBoard({ leads = [], loading, onLeadClick, onSt
       <DragOverlay>
         {activeLead ? (
           <div className="rotate-2 opacity-90">
-            <LeadKanbanCard lead={activeLead} />
+            <LeadKanbanCardOverlay lead={activeLead} />
           </div>
         ) : null}
       </DragOverlay>

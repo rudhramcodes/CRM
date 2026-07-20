@@ -144,7 +144,7 @@ export default function DataTable({
                   {columns.map((col) => (
                     <td key={col.accessor || col.header} className="px-4 py-3 text-sm text-zinc-700">
                       {col.cell
-                        ? col.cell({ value: row[col.accessor], row })
+                        ? col.cell({ getValue: () => row[col.accessor], value: row[col.accessor], row })
                         : row[col.accessor]}
                     </td>
                   ))}

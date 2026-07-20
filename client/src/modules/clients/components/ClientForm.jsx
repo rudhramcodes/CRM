@@ -10,10 +10,11 @@ import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
 import PhoneInput from '../../../components/forms/PhoneInput';
 import Button from '../../../components/ui/Button';
-import { CLIENT_STATUS } from '../../../constants';
+import { CLIENT_STATUS, BRANDS } from '../../../constants';
 import { useCreateClientMutation, useUpdateClientMutation } from '../../../services/clientApi';
 
 const clientFormSchema = z.object({
+  brand: z.string({ required_error: 'Brand is required' }),
   companyName: z.string().min(2, 'Company name must be at least 2 characters').max(200),
   contactPerson: z.string().min(2, 'Contact person name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email address'),
@@ -53,6 +54,7 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
   } = useForm({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
+      brand: '',
       companyName: '',
       contactPerson: '',
       email: '',
@@ -68,6 +70,7 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
   useEffect(() => {
     if (client) {
       reset({
+        brand: client.brand || '',
         companyName: client.companyName || '',
         contactPerson: client.contactPerson || '',
         email: client.email || '',
@@ -96,6 +99,7 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
     try {
       const addressParts = (data.address || '').split(',').map((s) => s.trim());
       const payload = {
+        brand: data.brand,
         companyName: data.companyName,
         contactPerson: data.contactPerson,
         email: data.email,
@@ -142,6 +146,14 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
         </button>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormSelect
+          name="brand"
+          control={control}
+          label="Brand / Venture *"
+          options={BRANDS}
+          placeholder="Select brand"
+          error={errors.brand?.message}
+        />
         <FormInput
           label="Company Name *"
           placeholder="Acme Corp"

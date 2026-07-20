@@ -8,7 +8,10 @@ const addressSchema = z.object({
   country: z.string().max(100).optional().or(z.literal('')),
 });
 
+const BRANDS = ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam', 'storage_media_solution'];
+
 export const createClientSchema = z.object({
+  brand: z.enum(BRANDS, { required_error: 'Brand/venture is required' }),
   companyName: z
     .string()
     .min(2, 'Company name must be at least 2 characters')
@@ -42,6 +45,7 @@ export const createClientSchema = z.object({
 });
 
 export const updateClientSchema = z.object({
+  brand: z.enum(BRANDS).optional(),
   companyName: z
     .string()
     .min(2)

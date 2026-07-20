@@ -73,6 +73,19 @@ export const LEAD_BRANDS = [
   'storage_media_solution',
 ];
 
+export const BRANDS = LEAD_BRANDS;
+
+export const VENTURE_CODES = {
+  panigrahna: 'PG',
+  aghori: 'AG',
+  house_of_joggi: 'HG',
+  damrru: 'DM',
+  tandavs: 'TD',
+  kalyannam: 'KL',
+  kapaalik: 'KP',
+  storage_media_solution: 'SM',
+};
+
 export const MEETING_STATUS = {
   SCHEDULED: 'scheduled',
   COMPLETED: 'completed',

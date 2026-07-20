@@ -30,6 +30,18 @@ const addressSchema = new mongoose.Schema(
 
 const clientSchema = new mongoose.Schema(
   {
+    clientId: {
+      type: String,
+      unique: true,
+      trim: true,
+      default: null,
+    },
+    brand: {
+      type: String,
+      enum: ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam', 'storage_media_solution'],
+      required: [true, 'Brand/venture is required'],
+      trim: true,
+    },
     companyName: {
       type: String,
       required: [true, 'Company name is required'],

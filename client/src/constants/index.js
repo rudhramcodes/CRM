@@ -37,6 +37,13 @@ export const TASK_STATUS = [
   { value: 'done', label: 'Done', color: 'bg-green-100 text-green-800' },
 ];
 
+export const TASK_PRIORITY = [
+  { value: 'low', label: 'Low', color: 'bg-zinc-100 text-zinc-600' },
+  { value: 'medium', label: 'Medium', color: 'bg-blue-100 text-blue-700' },
+  { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-700' },
+  { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-700' },
+];
+
 export const PROJECT_STATUS = [
   { value: 'planning', label: 'Planning', color: 'bg-purple-100 text-purple-800' },
   { value: 'active', label: 'Active', color: 'bg-green-100 text-green-800' },
@@ -50,6 +57,17 @@ export const INVOICE_STATUS = [
   { value: 'paid', label: 'Paid', color: 'bg-green-100 text-green-800' },
   { value: 'overdue', label: 'Overdue', color: 'bg-red-100 text-red-800' },
   { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-100 text-gray-800' },
+];
+
+export const BRANDS = [
+  { value: 'panigrahna', label: 'Panigrahna' },
+  { value: 'aghori', label: 'Aghori' },
+  { value: 'house_of_joggi', label: 'House of Joggi' },
+  { value: 'damrru', label: 'Damrru' },
+  { value: 'tandavs', label: 'Tandavs' },
+  { value: 'kapaalik', label: 'Kapaalik' },
+  { value: 'kalyannam', label: 'Kalyannam' },
+  { value: 'storage_media_solution', label: 'Storage Media Solution' },
 ];
 
 export const LEAD_BRANDS = [

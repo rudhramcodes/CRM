@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, closestCorners } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PROJECT_STATUS } from '../../../constants';
-import ProjectKanbanCard from './ProjectKanbanCard';
+import ProjectKanbanCard, { ProjectKanbanCardOverlay } from './ProjectKanbanCard';
 import { cn } from '../../../utils/cn';
 
 const COL_ID = 'kanban-col-';
@@ -73,7 +73,7 @@ export default function ProjectKanbanBoard({ projects = [], loading, onProjectCl
   const colors = { planning: 'bg-purple-500', active: 'bg-green-500', review: 'bg-yellow-500', completed: 'bg-blue-500' };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-4 min-h-[400px]">
         {PROJECT_STATUS.map(({ value, label }) => (
           <KanbanColumn key={value} status={value} label={label} color={colors[value]}
@@ -81,7 +81,7 @@ export default function ProjectKanbanBoard({ projects = [], loading, onProjectCl
         ))}
       </div>
       <DragOverlay>
-        {active ? <div className="rotate-2 opacity-90"><ProjectKanbanCard project={active} /></div> : null}
+        {active ? <div className="rotate-2 opacity-90"><ProjectKanbanCardOverlay project={active} /></div> : null}
       </DragOverlay>
     </DndContext>
   );
