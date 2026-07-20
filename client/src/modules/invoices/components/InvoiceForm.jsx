@@ -6,7 +6,9 @@ import { Plus, Trash2 } from 'lucide-react';
 import FormInput from '../../../components/forms/FormInput';
 import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
+import DatePicker from '../../../components/forms/DatePicker';
 import Button from '../../../components/ui/Button';
+
 const itemSchema = z.object({
   description: z.string().min(1, 'Required').max(500),
   quantity: z.coerce.number().min(1, 'Min 1'),
@@ -32,26 +34,50 @@ const TAX_OPTIONS = [
   { value: '28', label: '28%' },
 ];
 
-export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmitting, onCancel }) {
+export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmitting, onCancel, initialData, submitLabel = 'Create Invoice' }) {
+  const defaultValues = initialData
+    ? {
+        client: initialData.client?._id || initialData.client || '',
+        project: initialData.project?._id || initialData.project || '',
+        dueDate: initialData.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
+        items: (initialData.items || []).map((item) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+        taxRate: initialData.taxRate ?? 0,
+        discountPercent: initialData.discountPercent ?? 0,
+        notes: initialData.notes || '',
+        termsConditions: initialData.termsConditions || '',
+      }
+    : {
+        client: '',
+        project: '',
+        dueDate: '',
+        items: [{ description: '', quantity: 1, unitPrice: 0 }],
+        taxRate: 0,
+        discountPercent: 0,
+        notes: '',
+        termsConditions: '',
+      };
+
   const {
     register,
     handleSubmit,
     control,
     watch,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(invoiceFormSchema),
-    defaultValues: {
-      client: '',
-      project: '',
-      dueDate: '',
-      items: [{ description: '', quantity: 1, unitPrice: 0 }],
-      taxRate: 0,
-      discountPercent: 0,
-      notes: '',
-      termsConditions: '',
-    },
+    defaultValues,
   });
+
+  useEffect(() => {
+    if (initialData) {
+      reset(defaultValues);
+    }
+  }, [initialData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
 
@@ -100,11 +126,18 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
           placeholder={clientsLoading ? 'Loading clients...' : 'Select client'}
           error={errors.client?.message}
         />
-        <FormInput
-          label="Due Date *"
-          type="date"
-          error={errors.dueDate?.message}
-          {...register('dueDate')}
+        <Controller
+          name="dueDate"
+          control={control}
+          render={({ field }) => (
+            <DatePicker
+              label="Due Date *"
+              value={field.value}
+              onChange={field.onChange}
+              error={errors.dueDate?.message}
+              placeholder="Select due date"
+            />
+          )}
         />
       </div>
 
@@ -234,7 +267,7 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
           </Button>
         )}
         <Button type="submit" loading={isSubmitting}>
-          Create Invoice
+          {submitLabel}
         </Button>
       </div>
     </form>

@@ -11,17 +11,21 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex">
-      <Sidebar
-        open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
+      <div className="print:hidden">
+        <Sidebar
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+        />
+      </div>
       <div
         className={cn(
-          'flex-1 flex flex-col transition-all duration-300 min-w-0',
+          'flex-1 flex flex-col transition-all duration-300 min-w-0 print:ml-0',
           sidebarOpen ? 'lg:ml-56' : 'lg:ml-16',
         )}
       >
-        <Header onMobileMenuOpen={() => setMobileMenuOpen(true)} />
+        <div className="print:hidden">
+          <Header onMobileMenuOpen={() => setMobileMenuOpen(true)} />
+        </div>
         <main className="flex-1 p-6 lg:p-8 overflow-auto">
           <Outlet />
         </main>

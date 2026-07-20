@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, CheckCircle, XCircle, Trash2, Printer, Download } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, Trash2, Printer, Download, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InvoiceStatusBadge from '../components/InvoiceStatusBadge';
+import InvoiceForm from '../components/InvoiceForm';
+import Modal from '../../../components/ui/Modal';
 import {
   useGetInvoiceByIdQuery,
+  useUpdateInvoiceMutation,
   useUpdateInvoiceStatusMutation,
   useDeleteInvoiceMutation,
 } from '../../../services/invoiceApi';
+import { useGetClientsQuery } from '../../../services/clientApi';
 import Button from '../../../components/ui/Button';
 import Loader from '../../../components/ui/Loader';
 
@@ -16,13 +20,17 @@ export default function InvoiceDetail() {
   const navigate = useNavigate();
 
   const { data, isLoading } = useGetInvoiceByIdQuery(id);
-  const [updateStatus, { isLoading: isUpdating }] = useUpdateInvoiceStatusMutation();
+  const [updateInvoice, { isLoading: isUpdating }] = useUpdateInvoiceMutation();
+  const [updateStatus, { isLoading: isUpdatingStatus }] = useUpdateInvoiceStatusMutation();
   const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation();
+  const { data: clientsData } = useGetClientsQuery({ limit: 100 });
 
   const [actionLoading, setActionLoading] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const invoice = data?.data?.invoice;
   const client = invoice?.client;
+  const clients = clientsData?.data || [];
 
   const handleStatusChange = async (status) => {
     const confirmMessages = {
@@ -55,6 +63,22 @@ export default function InvoiceDetail() {
     }
   };
 
+  const handleEdit = async (formData) => {
+    try {
+      await updateInvoice({ id, ...formData }).unwrap();
+      toast.success('Invoice updated successfully');
+      setShowEditModal(false);
+    } catch (err) {
+      const msg = err?.data?.message || 'Failed to update invoice';
+      const errors = err?.data?.errors;
+      if (errors && Array.isArray(errors)) {
+        toast.error(errors.map((e) => e.message).join('. '));
+      } else {
+        toast.error(msg);
+      }
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -68,7 +92,7 @@ export default function InvoiceDetail() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <button
           type="button"
           onClick={() => navigate('/invoices')}
@@ -78,9 +102,12 @@ export default function InvoiceDetail() {
           Back to Invoices
         </button>
 
-        <div className="flex items-center gap-2" data-print-hidden>
+        <div className="flex items-center gap-2 print:hidden">
           {invoice.status === 'draft' && (
             <>
+              <Button variant="secondary" size="sm" onClick={() => setShowEditModal(true)}>
+                <Edit2 className="w-4 h-4 mr-1" /> Edit
+              </Button>
               <Button variant="primary" size="sm" onClick={() => handleStatusChange('sent')} loading={actionLoading === 'sent'}>
                 <Send className="w-4 h-4 mr-1" /> Send Invoice
               </Button>
@@ -111,7 +138,7 @@ export default function InvoiceDetail() {
             <h1 className="text-3xl font-bold text-zinc-900">INVOICE</h1>
             <p className="text-lg text-zinc-500 mt-1">{invoice.invoiceNumber}</p>
           </div>
-          <div className="text-right">
+          <div className="text-right print:hidden">
             <InvoiceStatusBadge status={invoice.status} />
           </div>
         </div>
@@ -221,7 +248,7 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-4">
+      <div className="bg-white rounded-lg border border-zinc-200 p-4 print:hidden">
         <h3 className="text-sm font-medium text-zinc-700 mb-3">Timeline</h3>
         <div className="space-y-2 text-sm text-zinc-500">
           <p>Created: {formatDateTime(invoice.createdAt)} by {invoice.createdBy?.name || 'N/A'}</p>
@@ -230,6 +257,16 @@ export default function InvoiceDetail() {
           {invoice.cancelledAt && <p>Cancelled: {formatDateTime(invoice.cancelledAt)}</p>}
         </div>
       </div>
+      <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Invoice" size="xl">
+        <InvoiceForm
+          clients={clients}
+          initialData={invoice}
+          submitLabel="Update Invoice"
+          onSubmit={handleEdit}
+          isSubmitting={isUpdating}
+          onCancel={() => setShowEditModal(false)}
+        />
+      </Modal>
     </div>
   );
 }

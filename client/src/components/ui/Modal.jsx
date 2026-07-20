@@ -43,12 +43,12 @@ export default function Modal({
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div
         className={cn(
-          'relative bg-white rounded-xl shadow-xl w-full animate-in fade-in zoom-in-95',
+          'relative bg-white rounded-xl shadow-xl w-full max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95',
           sizeClasses[size],
         )}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
             <h3 className="font-heading text-base font-semibold text-primary-900">{title}</h3>
             {showClose && (
               <button
@@ -60,7 +60,7 @@ export default function Modal({
             )}
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="p-6 overflow-y-auto">{children}</div>
       </div>
     </div>
   );

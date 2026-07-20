@@ -4,7 +4,7 @@ import { Receipt, Plus, FileText, Send, CheckCircle, AlertTriangle, XCircle, Ind
 import toast from 'react-hot-toast';
 import InvoiceTable from '../components/InvoiceTable';
 import InvoiceFilters from '../components/InvoiceFilters';
-import { useGetInvoicesQuery, useGetInvoiceStatsQuery, useDeleteInvoiceMutation } from '../../../services/invoiceApi';
+import { useGetInvoicesQuery, useGetInvoiceStatsQuery, useUpdateInvoiceStatusMutation, useDeleteInvoiceMutation } from '../../../services/invoiceApi';
 import { useSelector } from 'react-redux';
 import Button from '../../../components/ui/Button';
 import Loader from '../../../components/ui/Loader';
@@ -28,8 +28,10 @@ export default function InvoiceList() {
   const [page, setPage] = useState(1);
 
   const { data: invoicesData, isLoading, isFetching } = useGetInvoicesQuery({ ...filters, page, limit: 10 });
-  const { data: stats, isLoading: statsLoading } = useGetInvoiceStatsQuery();
+  const { data: statsData, isLoading: statsLoading } = useGetInvoiceStatsQuery();
+  const stats = statsData?.data || {};
   const [deleteInvoice] = useDeleteInvoiceMutation();
+  const [updateStatus] = useUpdateInvoiceStatusMutation();
 
   const invoices = invoicesData?.data || [];
   const pagination = invoicesData?.pagination;
@@ -38,6 +40,18 @@ export default function InvoiceList() {
     setFilters(newFilters);
     setPage(1);
   }, []);
+
+  const handleStatusChange = useCallback(
+    async (id, status) => {
+      try {
+        await updateStatus({ id, status }).unwrap();
+        toast.success(`Invoice ${status} successfully`);
+      } catch (err) {
+        toast.error(err?.data?.message || `Failed to update status`);
+      }
+    },
+    [updateStatus],
+  );
 
   const handleDelete = useCallback(
     async (id) => {
@@ -127,6 +141,7 @@ export default function InvoiceList() {
             <InvoiceTable
               invoices={invoices}
               onDelete={handleDelete}
+              onStatusChange={handleStatusChange}
               userRole={userRole}
             />
             {pagination && pagination.pages > 1 && (
