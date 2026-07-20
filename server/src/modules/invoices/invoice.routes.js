@@ -54,6 +54,12 @@ router.patch(
   invoiceController.updateStatus,
 );
 
+router.post(
+  '/:id/resend',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  invoiceController.resendEmail,
+);
+
 router.delete(
   '/:id',
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),

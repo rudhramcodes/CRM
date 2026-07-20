@@ -11,6 +11,7 @@ import {
   useUpdateInvoiceMutation,
   useUpdateInvoiceStatusMutation,
   useDeleteInvoiceMutation,
+  useResendInvoiceEmailMutation,
 } from '../../../services/invoiceApi';
 import { useGetClientsQuery } from '../../../services/clientApi';
 import Button from '../../../components/ui/Button';
@@ -26,15 +27,26 @@ export default function InvoiceDetail() {
   const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation();
   const { data: clientsData } = useGetClientsQuery({ limit: 100 });
 
+  const [resendEmail, { isLoading: isResending }] = useResendInvoiceEmailMutation();
+
   const [actionLoading, setActionLoading] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const invoice = data?.data?.invoice;
   const clients = clientsData?.data || [];
 
+  const handleResend = async () => {
+    try {
+      await resendEmail(id).unwrap();
+      toast.success('Invoice email sent to client');
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to send invoice email');
+    }
+  };
+
   const handleStatusChange = async (status) => {
     const confirmMessages = {
-      sent: 'Mark this invoice as sent? The client will be notified.',
+      sent: 'Send this invoice to the client? An email with invoice details will be sent.',
       paid: 'Mark this invoice as paid?',
       cancelled: 'Cancel this invoice?',
     };
@@ -117,6 +129,11 @@ export default function InvoiceDetail() {
           {invoice.status === 'sent' && (
             <Button variant="primary" size="sm" onClick={() => handleStatusChange('paid')} loading={actionLoading === 'paid'}>
               <CheckCircle className="w-4 h-4 mr-1" /> Mark as Paid
+            </Button>
+          )}
+          {(invoice.status === 'sent' || invoice.status === 'overdue') && (
+            <Button variant="secondary" size="sm" onClick={handleResend} loading={isResending}>
+              <Send className="w-4 h-4 mr-1" /> Resend
             </Button>
           )}
           {(invoice.status === 'sent' || invoice.status === 'overdue') && (

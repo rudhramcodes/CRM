@@ -63,6 +63,13 @@ export const invoiceApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Invoice', 'InvoiceStats'],
     }),
+
+    resendInvoiceEmail: builder.mutation({
+      query: (id) => ({
+        url: `/invoices/${id}/resend`,
+        method: 'POST',
+      }),
+    }),
   }),
 });
 
@@ -74,4 +81,5 @@ export const {
   useUpdateInvoiceMutation,
   useUpdateInvoiceStatusMutation,
   useDeleteInvoiceMutation,
+  useResendInvoiceEmailMutation,
 } = invoiceApi;

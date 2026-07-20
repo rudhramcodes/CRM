@@ -24,7 +24,7 @@ const config = {
   },
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   smtp: {
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
     port: parseInt(process.env.SMTP_PORT, 10) || 587,
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',

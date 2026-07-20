@@ -2,10 +2,13 @@ import app from './app.js';
 import config from './config/index.js';
 import connectDB from './config/db.js';
 import logger from './utils/logger.js';
+import { startOverdueCron } from './jobs/invoiceOverdue.job.js';
 
 const startServer = async () => {
   try {
     await connectDB();
+
+    startOverdueCron();
 
     app.listen(config.port, () => {
       logger.info(`Server running on port ${config.port} in ${config.nodeEnv} mode`);

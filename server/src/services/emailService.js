@@ -2,43 +2,58 @@ import nodemailer from 'nodemailer';
 import config from '../config/index.js';
 import logger from '../utils/logger.js';
 
-let transporter = null;
-
-const getTransporter = () => {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: config.smtp.host,
-      port: config.smtp.port,
-      secure: config.smtp.port === 465,
-      auth: {
-        user: config.smtp.user,
-        pass: config.smtp.pass,
-      },
-    });
-  }
-  return transporter;
+const createTransporter = () => {
+  const isSecure = config.smtp.port === 465;
+  return nodemailer.createTransport({
+    host: config.smtp.host,
+    port: config.smtp.port,
+    secure: isSecure,
+    auth: {
+      user: config.smtp.user,
+      pass: config.smtp.pass,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
 };
 
-export const sendEmail = async ({ to, subject, html }) => {
-  // Fallback: log to console when SMTP is not configured
-  if (!config.smtp.user || !config.smtp.pass) {
+export const sendEmail = async ({ to, subject, html, attachments }) => {
+  const hasCredentials = config.smtp.user && config.smtp.pass;
+
+  if (!hasCredentials) {
     logger.info(`[EMAIL FALLBACK] To: ${to} | Subject: ${subject}`);
-    logger.info(`[EMAIL FALLBACK] Body preview: ${html.replace(/<[^>]*>/g, '').trim().slice(0, 200)}...`);
+    if (attachments) logger.info(`[EMAIL FALLBACK] Attachments: ${attachments.length} file(s)`);
     return { messageId: 'dev-fallback', accepted: [to] };
   }
 
+  const transport = createTransporter();
+
   try {
-    const transport = getTransporter();
-    const info = await transport.sendMail({
-      from: `"Rudhram CRM" <${config.smtp.user}>`,
+    await transport.verify();
+    logger.info('SMTP connection verified successfully');
+  } catch (verifyError) {
+    logger.warn(`SMTP verify() failed (non-fatal, trying to send anyway): ${verifyError.message}`);
+  }
+
+  try {
+    const mailOptions = {
+      from: `"Rudhram Enterprises" <${config.smtp.user}>`,
       to,
       subject,
       html,
-    });
-    logger.info(`Email sent: ${info.messageId}`);
+    };
+    if (attachments && attachments.length > 0) {
+      mailOptions.attachments = attachments;
+    }
+    const info = await transport.sendMail(mailOptions);
+    logger.info(`Email sent successfully: ${info.messageId} | to: ${to} | subject: ${subject}`);
+    transport.close();
     return info;
   } catch (error) {
     logger.error(`Email send failed: ${error.message}`);
+    logger.error(`SMTP config used - host: ${config.smtp.host}, port: ${config.smtp.port}, user: ${config.smtp.user}`);
+    transport.close();
     throw error;
   }
 };

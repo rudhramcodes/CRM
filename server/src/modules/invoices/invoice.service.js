@@ -1,5 +1,8 @@
 import ApiError from '../../utils/ApiError.js';
 import * as invoiceRepository from './invoice.repository.js';
+import { sendEmail } from '../../services/emailService.js';
+import { generateInvoicePdf } from '../../services/pdfService.js';
+import logger from '../../utils/logger.js';
 
 const VALID_TRANSITIONS = {
   draft: ['sent', 'cancelled'],
@@ -20,6 +23,9 @@ export const generateInvoiceNumber = async () => {
 
   return `${prefix}${seq}`;
 };
+
+const fmtCurrency = (val) => `INR ${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
 
 const validateStatusTransition = (currentStatus, newStatus) => {
   if (currentStatus === newStatus) return;
@@ -91,11 +97,54 @@ export const updateInvoiceStatus = async (id, status) => {
   validateStatusTransition(invoice.status, status);
 
   const updateData = { status };
-  if (status === 'sent') updateData.sentAt = new Date();
+  if (status === 'sent') {
+    updateData.sentAt = new Date();
+    sendInvoiceEmail(invoice).catch((err) => {
+      logger.error(`Invoice email failed: ${err.message}`, { invoice: invoice.invoiceNumber });
+    });
+  }
   if (status === 'paid') updateData.paidAt = new Date();
   if (status === 'cancelled') updateData.cancelledAt = new Date();
 
   return invoiceRepository.updateById(id, updateData);
+};
+
+const sendInvoiceEmail = async (invoice) => {
+  const clientEmail = invoice.client?.email;
+  if (!clientEmail) {
+    logger.warn(`Cannot send invoice ${invoice.invoiceNumber}: client has no email`);
+    return;
+  }
+
+  logger.info(`Generating PDF for invoice ${invoice.invoiceNumber}...`);
+  const pdfBuffer = await generateInvoicePdf(invoice);
+  logger.info(`PDF generated (${(pdfBuffer.length / 1024).toFixed(1)} KB), sending email to ${clientEmail}...`);
+
+  const client = invoice.client || {};
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px">
+      <p style="font-size:15px;color:#374151;line-height:1.7">Dear ${client.contactPerson || 'Client'},</p>
+      <p style="font-size:15px;color:#374151;line-height:1.7">
+        Please find attached the invoice <strong>${invoice.invoiceNumber}</strong> for <strong>${fmtCurrency(invoice.total)}</strong>, due by <strong>${fmtDate(invoice.dueDate)}</strong>.
+      </p>
+      <p style="font-size:15px;color:#374151;line-height:1.7">The PDF copy of the invoice is attached to this email for your records.</p>
+      <p style="font-size:15px;color:#374151;line-height:1.7">If you have any questions, feel free to reach out.</p>
+      <br>
+      <p style="font-size:15px;color:#374151;line-height:1.7">Best regards,<br><strong style="color:#B3752F">Rudhram Enterprises</strong></p>
+    </div>
+  `;
+
+  await sendEmail({
+    to: clientEmail,
+    subject: `Invoice ${invoice.invoiceNumber} from Rudhram Enterprises`,
+    html,
+    attachments: [{
+      filename: `invoice-${invoice.invoiceNumber}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf',
+    }],
+  });
 };
 
 export const deleteInvoice = async (id) => {
@@ -109,6 +158,14 @@ export const deleteInvoice = async (id) => {
   }
 
   return invoiceRepository.deleteById(id);
+};
+
+export const sendInvoiceEmailById = async (id) => {
+  const invoice = await invoiceRepository.findById(id);
+  if (!invoice) throw ApiError.notFound('Invoice not found');
+  if (!invoice.client?.email) throw ApiError.badRequest('Client has no email address');
+
+  await sendInvoiceEmail(invoice);
 };
 
 export const getStats = async () => {

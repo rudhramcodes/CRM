@@ -63,3 +63,12 @@ export const stats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const resendEmail = async (req, res, next) => {
+  try {
+    await invoiceService.sendInvoiceEmailById(req.params.id);
+    ApiResponse.success(res, 200, null, 'Invoice email sent successfully');
+  } catch (error) {
+    next(error);
+  }
+};
