@@ -66,19 +66,23 @@ const buildClassicBorderedHtml = (invoice) => {
   const items = invoice.items || [];
   const venture = VENTURES[client.brand] || VENTURES.aghori;
   const BORDER = '#000';
-  const HEAD_BG = '#BDD7EE'; // pale blue used in header/total highlight cells
+  const HEAD_BG = '#D4E7F7';
+  const date = (d) => d ? fmtDate(d) : '';
+  const amount = (val, zero = '0,00,000') => Number(val || 0)
+    ? Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })
+    : zero;
 
   // pad items to at least 3 rows so empty grid lines show like the template
   const rows = [...items];
   while (rows.length < 3) rows.push(null);
 
   const itemsHtml = rows.map((item, i) => `
-    <tr>
-      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;width:32px">${item ? i + 1 : ''}</td>
-      <td style="padding:6px 8px;border:1px solid ${BORDER}">${item ? esc(item.description) : ''}</td>
-      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:right;width:44px">${item ? item.quantity : ''}</td>
-      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:right;width:88px">${item ? fmt(item.unitPrice) : ''}</td>
-      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:right;width:100px">${item ? fmt(item.amount) : ''}</td>
+    <tr class="item-row">
+      <td>${item ? i + 1 : ''}</td>
+      <td>${item ? esc(item.description) : ''}</td>
+      <td>${item ? item.quantity : ''}</td>
+      <td>${item ? amount(item.unitPrice, '') : ''}</td>
+      <td>${item ? amount(item.amount, '') : ''}</td>
     </tr>
   `).join('');
 
@@ -87,32 +91,58 @@ const buildClassicBorderedHtml = (invoice) => {
 <head>
   <meta charset="utf-8">
   <style>
-    @page { margin: 30px 40px; }
+    @page { size: letter; margin: 0; }
     * { box-sizing: border-box; }
-    body { font-family: 'Arial', 'Helvetica', sans-serif; color: #111; margin: 0; padding: 0; font-size: 12px; line-height: 1.5; }
-    table { border-collapse: collapse; width: 100%; }
+    body { margin: 0; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.15; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { width: 612pt; min-height: 792pt; padding: 20pt 72pt 22pt; }
+    .logos { display: flex; justify-content: space-between; align-items: flex-start; height: 52pt; }
+    .rudhram-logo { height: 52pt; width: auto; object-fit: contain; }
+    .venture-logo { height: 52pt; width: auto; object-fit: contain; }
+    .company-row { display: flex; justify-content: space-between; margin-top: 38pt; margin-bottom: 34pt; font-size: 9.5pt; line-height: 1.16; }
+    .contact { width: 177pt; }
+    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+    .invoice-table { border: 1pt solid ${BORDER}; font-size: 12pt; }
+    .invoice-table td { border: 1pt solid ${BORDER}; padding: 0 5pt; vertical-align: middle; }
+    .title { height: 38pt; background: ${HEAD_BG}; color: #09588E; text-align: center; font-size: 12.5pt; text-decoration: underline; }
+    .to-cell { height: 105pt; vertical-align: top !important; padding-top: 9pt !important; }
+    .meta-label, .meta-value { height: 26.25pt; font-size: 12pt; font-weight: 400; }
+    .service-head td { height: 41.5pt; background: ${HEAD_BG}; text-align: center; font-size: 12pt; }
+    .item-row td { height: 32pt; }
+    .item-row td:nth-child(1), .item-row td:nth-child(3), .item-row td:nth-child(4), .item-row td:nth-child(5) { text-align: center; }
+    .total-row td { height: 26.5pt; font-size: 12pt; font-weight: 400; }
+    .total-label { text-align: right; padding-right: 12pt !important; }
+    .total-value { text-align: center; }
+    .net td { background: ${HEAD_BG}; }
+    .words td { height: 37pt; font-size: 12pt; }
+    .words .currency { display: inline-block; width: 26pt; font-weight: 700; }
+    .words .gap { display: inline-block; width: 66pt; }
+    .bank-sign { display: flex; justify-content: space-between; margin-top: 1pt; font-size: 11pt; line-height: 1.28; }
+    .sign { width: 205pt; padding-top: 28pt; }
+    .addresses { margin-top: 16pt; font-size: 8pt; line-height: 1.15; }
+    .office { margin-top: 13pt; }
   </style>
 </head>
 <body>
+<div class="page">
 
   <!-- HEADER: two logos -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+  <div class="logos">
     <div>
       ${RUDHRAM_LOGO_URL
-        ? `<img src="${RUDHRAM_LOGO_URL}" style="height:58px;width:auto;object-fit:contain" />`
+        ? `<img src="${RUDHRAM_LOGO_URL}" class="rudhram-logo" />`
         : `<div style="font-size:26px;font-weight:700;letter-spacing:3px;color:#8a6a3a">RUDHRAM<span style="color:#8a6a3a">.</span></div>`
       }
     </div>
     <div>
       ${venture.logoUrl
-        ? `<img src="${venture.logoUrl}" style="height:58px;width:auto;object-fit:contain" />`
+        ? `<img src="${venture.logoUrl}" class="venture-logo" />`
         : `<div style="font-size:22px;font-weight:700;letter-spacing:4px;color:#333">${esc(venture.code)}</div>`
       }
     </div>
   </div>
 
   <!-- COMPANY DETAILS -->
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;font-size:12px;line-height:1.7">
+  <div class="company-row">
     <div>
       <div>${COMPANY.legalName}</div>
       <div>CIN: ${COMPANY.cin}</div>
@@ -121,102 +151,98 @@ const buildClassicBorderedHtml = (invoice) => {
       <div>GSTIN: ${COMPANY.gstin}</div>
       <div>Company Type: ${COMPANY.companyType}</div>
     </div>
-    <div style="text-align:right">
+    <div class="contact">
       <div>Email: ${COMPANY.email}</div>
       <div>Contact: ${COMPANY.contact}</div>
     </div>
   </div>
 
   <!-- INVOICE GRID -->
-  <table style="border:1.5px solid ${BORDER};margin-bottom:0">
+  <table class="invoice-table">
+    <colgroup>
+      <col style="width:43.5pt" />
+      <col style="width:206pt" />
+      <col style="width:38.5pt" />
+      <col style="width:75pt" />
+      <col style="width:105pt" />
+    </colgroup>
     <tr>
-      <td colspan="5" style="background:${HEAD_BG};text-align:center;font-size:20px;font-weight:500;text-decoration:underline;padding:10px;border-bottom:1.5px solid ${BORDER}">INVOICE</td>
+      <td colspan="5" class="title">INVOICE</td>
     </tr>
     <tr>
-      <td rowspan="4" colspan="2" style="vertical-align:top;padding:10px 12px;border-right:1.5px solid ${BORDER};border-bottom:1.5px solid ${BORDER}">
+      <td rowspan="4" colspan="3" class="to-cell">
         To,<br/><br/>
-        ${client.companyName ? `<strong>${esc(client.companyName)}</strong><br/>` : ''}
+        ${client.companyName ? `${esc(client.companyName)}<br/>` : ''}
         ${client.contactPerson ? esc(client.contactPerson) + '<br/>' : ''}
         ${client.email ? esc(client.email) + '<br/>' : ''}
         ${client.gstNumber ? 'GST: ' + esc(client.gstNumber) : ''}
       </td>
-      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};font-weight:600;white-space:nowrap;width:10%">Client ID</td>
-      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap;width:15%">${esc(client.clientId) || ''}</td>
-      <td style="border-bottom:1px solid ${BORDER}"></td>
+      <td class="meta-label">Client ID</td>
+      <td class="meta-value">${esc(client.clientId) || ''}</td>
     </tr>
     <tr>
-      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};font-weight:600;white-space:nowrap">Invoice No</td>
-      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap">${esc(invoice.invoiceNumber) || ''}</td>
-      <td style="border-bottom:1px solid ${BORDER}"></td>
+      <td class="meta-label">Invoice No</td>
+      <td class="meta-value">${esc(invoice.invoiceNumber) || ''}</td>
     </tr>
     <tr>
-      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};font-weight:600;white-space:nowrap">Date</td>
-      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap">${fmtDate(invoice.issueDate)}</td>
-      <td style="border-bottom:1px solid ${BORDER}"></td>
+      <td class="meta-label">Date</td>
+      <td class="meta-value">${date(invoice.issueDate)}</td>
     </tr>
     <tr>
-      <td style="padding:6px 12px;border-bottom:1.5px solid ${BORDER};font-weight:600;white-space:nowrap">Due Date</td>
-      <td style="padding:6px 12px;border-bottom:1.5px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap">${fmtDate(invoice.dueDate)}</td>
-      <td style="border-bottom:1.5px solid ${BORDER}"></td>
+      <td class="meta-label">Due Date</td>
+      <td class="meta-value">${date(invoice.dueDate)}</td>
     </tr>
 
-    <tr style="background:${HEAD_BG}">
-      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;font-weight:600;width:32px">Sr<br/>No</td>
-      <td style="padding:6px 8px;border:1px solid ${BORDER};font-weight:600">Services</td>
-      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;font-weight:600;width:32px">Qty</td>
-      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;font-weight:600;width:88px">Rate</td>
-      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;font-weight:600;width:100px">Amount</td>
+    <tr class="service-head">
+      <td>Sr.<br/>No</td>
+      <td>Services</td>
+      <td>Qty</td>
+      <td>Rate</td>
+      <td>Amount</td>
     </tr>
     ${itemsHtml}
 
-    <tr>
-      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Total</td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">${fmt(invoice.subtotal)}</td>
+    <tr class="total-row">
+      <td colspan="4" class="total-label">Total</td>
+      <td class="total-value">${amount(invoice.subtotal)}</td>
     </tr>
     ${invoice.taxAmount ? `
-    <tr>
-      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Taxes${invoice.taxRate ? ' (' + invoice.taxRate + '%)' : ''}</td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">${fmt(invoice.taxAmount)}</td>
+    <tr class="total-row">
+      <td colspan="4" class="total-label">Taxes${invoice.taxRate ? ' (' + invoice.taxRate + '%)' : ''}</td>
+      <td class="total-value">${amount(invoice.taxAmount, '00,000')}</td>
     </tr>` : `
-    <tr>
-      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Taxes</td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">${fmt(0)}</td>
+    <tr class="total-row">
+      <td colspan="4" class="total-label">Taxes</td>
+      <td class="total-value">${amount(0, '00,000')}</td>
     </tr>`}
     ${invoice.discountAmount ? `
-    <tr>
-      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Discount${invoice.discountPercent ? ' (' + invoice.discountPercent + '%)' : ''}</td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">-${fmt(invoice.discountAmount)}</td>
+    <tr class="total-row">
+      <td colspan="4" class="total-label">Discount${invoice.discountPercent ? ' (' + invoice.discountPercent + '%)' : ''}</td>
+      <td class="total-value">-${amount(invoice.discountAmount, '00,000')}</td>
     </tr>` : ''}
-    <tr style="background:${HEAD_BG}">
-      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1.5px solid ${BORDER}"></td>
-      <td style="padding:8px 12px;border:1.5px solid ${BORDER};text-align:right;font-weight:700">Net Payable</td>
-      <td style="padding:8px 12px;border:1.5px solid ${BORDER};text-align:right;font-weight:700">${fmt(invoice.total)}</td>
+    <tr class="total-row net">
+      <td colspan="4" class="total-label">Net Payable</td>
+      <td class="total-value">${amount(invoice.total)}</td>
     </tr>
     ${invoice.paidAmount > 0 ? `
-    <tr>
-      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Paid</td>
-      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">-${fmt(invoice.paidAmount)}</td>
+    <tr class="total-row">
+      <td colspan="4" class="total-label">Paid</td>
+      <td class="total-value">-${amount(invoice.paidAmount, '00,000')}</td>
     </tr>
-    <tr>
-      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1.5px solid ${BORDER}"></td>
-      <td style="padding:8px 12px;border:1.5px solid ${BORDER};text-align:right;font-weight:700">Balance Due</td>
-      <td style="padding:8px 12px;border:1.5px solid ${BORDER};text-align:right;font-weight:700">${fmt(invoice.balanceDue)}</td>
+    <tr class="total-row">
+      <td colspan="4" class="total-label">Balance Due</td>
+      <td class="total-value">${amount(invoice.balanceDue)}</td>
     </tr>` : ''}
 
-    <tr>
-      <td colspan="5" style="padding:8px 12px;border:1.5px solid ${BORDER};font-style:italic">
-        \u20B9&nbsp;&nbsp;&nbsp;${numberToIndianWords(invoice.total)}
+    <tr class="words">
+      <td colspan="5">
+        <span class="currency">\u20B9</span>${invoice.total ? numberToIndianWords(invoice.total) : `Lakhs <span class="gap"></span>Thousands <span class="gap"></span>Hundreds Only`}
       </td>
     </tr>
   </table>
 
   <!-- BANK DETAILS + SIGNATORY -->
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:14px;font-size:12px;line-height:1.8">
+  <div class="bank-sign">
     <div>
       <div>Bank Name: ${BANK.bankName}</div>
       <div>Account Holder: ${BANK.accountHolder}</div>
@@ -225,27 +251,21 @@ const buildClassicBorderedHtml = (invoice) => {
       <div>IFSC Code: ${BANK.ifscCode}</div>
       <div>UPI ID: ${BANK.upiId}</div>
     </div>
-    <div style="text-align:right;padding-top:2px">
+    <div class="sign">
       <div>${COMPANY.signatoryLine1}</div>
       <div>${COMPANY.signatoryLine2}</div>
     </div>
   </div>
 
-  <!-- NOTES -->
-  ${invoice.notes ? `
-  <div style="margin-top:16px;font-size:12px">
-    <strong>Notes:</strong>
-    <div style="white-space:pre-wrap">${esc(invoice.notes)}</div>
-  </div>` : ''}
-
   <!-- ADDRESSES -->
-  <div style="border-top:1px solid #888;padding-top:10px;margin-top:16px;font-size:11px;color:#333;line-height:1.7">
+  <div class="addresses">
     <div>Head Office:</div>
     <div>${ADDR.headOffice}</div>
-    <div style="margin-top:6px">Operational Office:</div>
+    <div class="office">Operational Office:</div>
     <div>${ADDR.operationsOffice}</div>
   </div>
 
+</div>
 </body>
 </html>`;
 };
@@ -261,11 +281,11 @@ const buildWarmHtml = (invoice) => {
 
   const itemsHtml = items.map((item, i) => `
     <tr>
-      <td style="padding:10px 12px;border-bottom:1px solid #e8ddd0;color:#8b7355;text-align:center;width:48px">${i + 1}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #e8ddd0;color:#2c1810">${esc(item.description)}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #e8ddd0;color:#2c1810;text-align:right">${item.quantity}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #e8ddd0;color:#2c1810;text-align:right">${fmt(item.unitPrice)}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #e8ddd0;color:#2c1810;text-align:right;font-weight:600">${fmt(item.amount)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #e8ddd0;color:#8b7355;text-align:center;width:36px">${i + 1}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #e8ddd0;color:#2c1810">${esc(item.description)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #e8ddd0;color:#2c1810;text-align:right">${item.quantity}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #e8ddd0;color:#2c1810;text-align:right">${fmt(item.unitPrice)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #e8ddd0;color:#2c1810;text-align:right;font-weight:600">${fmt(item.amount)}</td>
     </tr>
   `).join('');
 
@@ -273,52 +293,55 @@ const buildWarmHtml = (invoice) => {
 <html>
 <head>
   <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    @page { margin: 36px 48px; }
+    @page { margin: 20px 30px; }
     * { box-sizing: border-box; }
-    body { font-family: 'Inter', 'Arial', sans-serif; color: #2c1810; margin: 0; padding: 0; font-size: 12px; line-height: 1.5; }
+    body { font-family: 'Inter', 'Arial', sans-serif; color: #2c1810; margin: 0; padding: 0; font-size: 10.5px; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     table { border-collapse: collapse; width: 100%; }
   </style>
 </head>
 <body>
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid ${brand}">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid ${brand}">
     <div>
       ${venture.logoUrl
-        ? `<img src="${venture.logoUrl}" style="height:64px;width:auto;object-fit:contain" />`
-        : `<div style="width:64px;height:64px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:${brand};color:#fff;font-size:12px;font-weight:700">${venture.code}</div>`
+        ? `<img src="${venture.logoUrl}" style="height:44px;width:auto;object-fit:contain" />`
+        : `<div style="width:44px;height:44px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:${brand};color:#fff;font-size:10px;font-weight:700">${venture.code}</div>`
       }
     </div>
     <div style="text-align:right">
-      <div style="font-size:30px;font-weight:700;color:${brand};letter-spacing:2px">INVOICE</div>
+      <div style="font-size:24px;font-weight:700;color:${brand};letter-spacing:2px">INVOICE</div>
     </div>
   </div>
 
-  <div style="display:flex;gap:32px;margin-bottom:32px">
+  <div style="display:flex;gap:24px;margin-bottom:18px">
     <div style="flex:1">
-      <div style="font-size:12px;font-weight:600;color:${brand};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Bill To</div>
-      <div style="font-size:16px;font-weight:600;color:#2c1810;margin-bottom:4px">${esc(client.companyName) || '-'}</div>
-      <div style="font-size:14px;color:#4a3f35;line-height:1.6">
+      <div style="font-size:10.5px;font-weight:600;color:${brand};text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Bill To</div>
+      <div style="font-size:14px;font-weight:600;color:#2c1810;margin-bottom:2px">${esc(client.companyName) || '-'}</div>
+      <div style="font-size:12px;color:#4a3f35;line-height:1.5">
         ${client.contactPerson ? esc(client.contactPerson) + '<br>' : ''}
         ${esc(client.email) || ''}
         ${client.gstNumber ? '<br>GST: ' + esc(client.gstNumber) : ''}
       </div>
-      <div style="font-size:12px;color:#8b7355;margin-top:4px">Client ID: ${esc(client.clientId) || '-'}</div>
+      <div style="font-size:10.5px;color:#8b7355;margin-top:2px">Client ID: ${esc(client.clientId) || '-'}</div>
     </div>
-    <div style="text-align:right;font-size:14px;line-height:2">
+    <div style="text-align:right;font-size:12px;line-height:1.8">
       <div><span style="color:#b3752f">Invoice No : </span><span style="color:#2c1810;font-weight:600">${esc(invoice.invoiceNumber)}</span></div>
       <div><span style="color:#b3752f">Date : </span><span style="color:#2c1810">${fmtDate(invoice.issueDate)}</span></div>
       <div><span style="color:#b3752f">Due Date : </span><span style="color:#2c1810">${fmtDate(invoice.dueDate)}</span></div>
     </div>
   </div>
 
-  <table style="width:100%;border-collapse:collapse;margin-bottom:32px">
+  <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
     <thead>
       <tr style="background:${brand};color:#fff">
-        <th style="padding:12px;text-align:left;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:1px;width:48px">Sr. No.</th>
-        <th style="padding:12px;text-align:left;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:1px">Services</th>
-        <th style="padding:12px;text-align:right;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:1px;width:80px">Quantity</th>
-        <th style="padding:12px;text-align:right;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:1px;width:112px">Rate</th>
-        <th style="padding:12px;text-align:right;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:1px;width:112px">Amount</th>
+        <th style="padding:8px;text-align:left;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:1px;width:36px">Sr. No.</th>
+        <th style="padding:8px;text-align:left;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:1px">Services</th>
+        <th style="padding:8px;text-align:right;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:1px;width:64px">Quantity</th>
+        <th style="padding:8px;text-align:right;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:1px;width:88px">Rate</th>
+        <th style="padding:8px;text-align:right;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:1px;width:88px">Amount</th>
       </tr>
     </thead>
     <tbody>
@@ -326,43 +349,43 @@ const buildWarmHtml = (invoice) => {
     </tbody>
   </table>
 
-  <div style="display:flex;justify-content:flex-end;margin-bottom:32px">
-    <div style="width:288px">
-      <div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+    <div style="width:260px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0">
         <span style="color:#8b7355">Subtotal</span>
         <span style="color:#2c1810">${fmt(invoice.subtotal)}</span>
       </div>
       ${invoice.taxRate > 0 ? `
-      <div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0">
         <span style="color:#8b7355">GST (${invoice.taxRate}%)</span>
         <span style="color:#2c1810">${fmt(invoice.taxAmount)}</span>
       </div>` : ''}
       ${invoice.discountPercent > 0 ? `
-      <div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0">
         <span style="color:#8b7355">Discount (${invoice.discountPercent}%)</span>
         <span style="color:#b3752f">-${fmt(invoice.discountAmount)}</span>
       </div>` : ''}
-      <hr style="border:none;border-top:1.5px solid ${brand};margin:4px 0" />
-      <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:700;color:${brand};padding-top:4px">
+      <hr style="border:none;border-top:1.5px solid ${brand};margin:2px 0" />
+      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:${brand};padding-top:2px">
         <span>Total</span>
         <span>${fmt(invoice.total)}</span>
       </div>
-      <div style="text-align:right;font-size:12px;font-style:italic;color:#8b7355;padding-top:4px">${numberToIndianWords(invoice.total)}</div>
+      <div style="text-align:right;font-size:10.5px;font-style:italic;color:#8b7355;padding-top:2px">${numberToIndianWords(invoice.total)}</div>
       ${invoice.paidAmount > 0 ? `
-      <div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0;color:#588157;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#588157;margin-top:2px">
         <span>Paid</span>
         <span>-${fmt(invoice.paidAmount)}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:${brand};padding:4px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:${brand};padding:2px 0">
         <span>Balance Due</span>
         <span>${fmt(invoice.balanceDue)}</span>
       </div>` : ''}
     </div>
   </div>
 
-  <div style="border-top:2px solid ${brand};padding-top:24px;margin-bottom:24px">
-    <div style="font-size:14px;font-weight:700;color:${brand};margin-bottom:8px">Bank Details</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 32px;font-size:14px;color:#4a3f35">
+  <div style="border-top:2px solid ${brand};padding-top:12px;margin-bottom:12px">
+    <div style="font-size:12px;font-weight:700;color:${brand};margin-bottom:4px">Bank Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;font-size:12px;color:#4a3f35">
       <div><span style="color:#8b7355">Bank Name :</span> ${BANK.bankName}</div>
       <div><span style="color:#8b7355">Account Holder :</span> ${BANK.accountHolder}</div>
       <div><span style="color:#8b7355">Account Type :</span> ${BANK.accountType}</div>
@@ -373,12 +396,12 @@ const buildWarmHtml = (invoice) => {
   </div>
 
   ${invoice.notes ? `
-  <div style="margin-bottom:24px;font-size:14px;color:#4a3f35">
-    <div style="font-size:12px;color:${brand};margin-bottom:4px;font-weight:600">Notes:</div>
+  <div style="margin-bottom:12px;font-size:12px;color:#4a3f35">
+    <div style="font-size:10.5px;color:${brand};margin-bottom:2px;font-weight:600">Notes:</div>
     <div style="white-space:pre-wrap">${esc(invoice.notes)}</div>
   </div>` : ''}
 
-  <div style="border-top:2px solid ${brand};padding-top:16px;margin-top:24px;font-size:12px;color:#8b7355;line-height:1.8">
+  <div style="border-top:2px solid ${brand};padding-top:8px;margin-top:8px;font-size:10.5px;color:#8b7355;line-height:1.5">
     <div><span style="color:${brand};font-weight:600">Head Office :</span> ${ADDR.headOffice}</div>
     <div><span style="color:${brand};font-weight:600">Operations Office :</span> ${ADDR.operationsOffice}</div>
   </div>
@@ -404,6 +427,8 @@ const buildHtml = (invoice) => {
 export const generateInvoiceHtml = (invoice) => buildHtml(invoice);
 
 export const generateInvoicePdf = async (invoice) => {
+  const client = invoice.client || {};
+  const venture = VENTURES[client.brand] || VENTURES.panigrahna;
   const html = buildHtml(invoice);
   const browser = await puppeteer.launch({
     headless: true,
@@ -413,9 +438,11 @@ export const generateInvoicePdf = async (invoice) => {
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
+    const isClassic = venture.template === 'classic-bordered';
     const pdf = await page.pdf({
-      format: 'A4',
-      margin: { top: '30px', bottom: '30px', left: '40px', right: '40px' },
+      ...(isClassic
+        ? { width: '8.5in', height: '11in', margin: { top: '0', bottom: '0', left: '0', right: '0' } }
+        : { format: 'A4', margin: { top: '30px', bottom: '30px', left: '40px', right: '40px' } }),
       printBackground: true,
       preferCSSPageSize: true,
     });
