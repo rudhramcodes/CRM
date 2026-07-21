@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import InvoiceStatusBadge from '../components/InvoiceStatusBadge';
 import InvoiceForm from '../components/InvoiceForm';
 import Modal from '../../../components/ui/Modal';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import {
   useGetInvoiceByIdQuery,
   useGetInvoiceHtmlQuery,
@@ -31,6 +32,7 @@ export default function InvoiceDetail() {
 
   const [actionLoading, setActionLoading] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', confirmLabel: '', variant: 'danger', onConfirm: () => {} });
 
   const invoice = data?.data?.invoice;
   const { data: invoiceHtml } = useGetInvoiceHtmlQuery(id, { skip: !id });
@@ -46,14 +48,6 @@ export default function InvoiceDetail() {
   };
 
   const handleStatusChange = async (status) => {
-    const confirmMessages = {
-      sent: 'Send this invoice to the client? An email with invoice details will be sent.',
-      paid: 'Mark this invoice as paid?',
-      cancelled: 'Cancel this invoice?',
-    };
-
-    if (confirmMessages[status] && !window.confirm(confirmMessages[status])) return;
-
     setActionLoading(status);
     try {
       await updateStatus({ id, status }).unwrap();
@@ -65,8 +59,18 @@ export default function InvoiceDetail() {
     }
   };
 
+  const confirmStatusChange = (status) => {
+    const configs = {
+      sent: { title: 'Send Invoice', message: 'Send this invoice to the client? An email with invoice details will be sent.', confirmLabel: 'Send', variant: 'primary' },
+      paid: { title: 'Mark as Paid', message: 'Mark this invoice as paid?', confirmLabel: 'Mark Paid', variant: 'primary' },
+      cancelled: { title: 'Cancel Invoice', message: 'Cancel this invoice?', confirmLabel: 'Cancel', variant: 'danger' },
+    };
+    const config = configs[status];
+    if (!config) { handleStatusChange(status); return; }
+    setConfirmDialog({ open: true, ...config, onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); handleStatusChange(status); } });
+  };
+
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this invoice?')) return;
     try {
       await deleteInvoice(id).unwrap();
       toast.success('Invoice deleted successfully');
@@ -74,6 +78,10 @@ export default function InvoiceDetail() {
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to delete invoice');
     }
+  };
+
+  const confirmDelete = () => {
+    setConfirmDialog({ open: true, title: 'Delete Invoice', message: 'Are you sure you want to delete this invoice?', confirmLabel: 'Delete', variant: 'danger', onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); handleDelete(); } });
   };
 
   const handleEdit = async (formData) => {
@@ -119,16 +127,16 @@ export default function InvoiceDetail() {
               <Button variant="secondary" size="sm" onClick={() => setShowEditModal(true)}>
                 <Edit2 className="w-4 h-4 mr-1" /> Edit
               </Button>
-              <Button variant="primary" size="sm" onClick={() => handleStatusChange('sent')} loading={actionLoading === 'sent'}>
+              <Button variant="primary" size="sm" onClick={() => confirmStatusChange('sent')} loading={actionLoading === 'sent'}>
                 <Send className="w-4 h-4 mr-1" /> Send Invoice
               </Button>
-              <Button variant="danger" size="sm" onClick={handleDelete} loading={isDeleting}>
+              <Button variant="danger" size="sm" onClick={confirmDelete} loading={isDeleting}>
                 <Trash2 className="w-4 h-4 mr-1" /> Delete
               </Button>
             </>
           )}
           {invoice.status === 'sent' && (
-            <Button variant="primary" size="sm" onClick={() => handleStatusChange('paid')} loading={actionLoading === 'paid'}>
+            <Button variant="primary" size="sm" onClick={() => confirmStatusChange('paid')} loading={actionLoading === 'paid'}>
               <CheckCircle className="w-4 h-4 mr-1" /> Mark as Paid
             </Button>
           )}
@@ -138,7 +146,7 @@ export default function InvoiceDetail() {
             </Button>
           )}
           {(invoice.status === 'sent' || invoice.status === 'overdue') && (
-            <Button variant="danger" size="sm" onClick={() => handleStatusChange('cancelled')} loading={actionLoading === 'cancelled'}>
+            <Button variant="danger" size="sm" onClick={() => confirmStatusChange('cancelled')} loading={actionLoading === 'cancelled'}>
               <XCircle className="w-4 h-4 mr-1" /> Cancel Invoice
             </Button>
           )}
@@ -178,6 +186,16 @@ export default function InvoiceDetail() {
           onCancel={() => setShowEditModal(false)}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(d => ({ ...d, open: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        variant={confirmDialog.variant}
+      />
     </div>
   );
 }

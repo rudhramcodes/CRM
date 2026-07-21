@@ -9,6 +9,7 @@ import { useSelector } from 'react-redux';
 import Button from '../../../components/ui/Button';
 import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 const statCards = [
   { key: 'total', label: 'Total Invoices', icon: FileText, color: 'text-blue-600 bg-blue-50' },
@@ -35,6 +36,7 @@ export default function InvoiceList() {
 
   const invoices = invoicesData?.data || [];
   const pagination = invoicesData?.pagination;
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const handleFilterChange = useCallback((newFilters) => {
     setFilters(newFilters);
@@ -55,16 +57,21 @@ export default function InvoiceList() {
 
   const handleDelete = useCallback(
     async (id) => {
-      if (!window.confirm('Are you sure you want to delete this invoice?')) return;
       try {
         await deleteInvoice(id).unwrap();
         toast.success('Invoice deleted successfully');
+        setDeleteTarget(null);
       } catch (err) {
         toast.error(err?.data?.message || 'Failed to delete invoice');
+        setDeleteTarget(null);
       }
     },
     [deleteInvoice],
   );
+
+  const confirmDelete = useCallback((id) => {
+    setDeleteTarget(id);
+  }, []);
 
   const formatCurrency = (val) => `₹${(val || 0).toFixed(2)}`;
 
@@ -140,7 +147,7 @@ export default function InvoiceList() {
           <>
             <InvoiceTable
               invoices={invoices}
-              onDelete={handleDelete}
+              onDelete={confirmDelete}
               onStatusChange={handleStatusChange}
               userRole={userRole}
             />
@@ -170,6 +177,16 @@ export default function InvoiceList() {
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => handleDelete(deleteTarget)}
+        title="Delete Invoice"
+        message="Are you sure you want to delete this invoice?"
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 }
