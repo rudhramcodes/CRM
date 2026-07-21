@@ -74,11 +74,11 @@ const buildClassicBorderedHtml = (invoice) => {
 
   const itemsHtml = rows.map((item, i) => `
     <tr>
-      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;width:44px">${item ? i + 1 : ''}</td>
-      <td style="padding:8px 10px;border:1px solid ${BORDER}">${item ? esc(item.description) : ''}</td>
-      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:right;width:64px">${item ? item.quantity : ''}</td>
-      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:right;width:96px">${item ? fmt(item.unitPrice) : ''}</td>
-      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:right;width:110px">${item ? fmt(item.amount) : ''}</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;width:32px">${item ? i + 1 : ''}</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER}">${item ? esc(item.description) : ''}</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:right;width:44px">${item ? item.quantity : ''}</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:right;width:88px">${item ? fmt(item.unitPrice) : ''}</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:right;width:100px">${item ? fmt(item.amount) : ''}</td>
     </tr>
   `).join('');
 
@@ -130,38 +130,42 @@ const buildClassicBorderedHtml = (invoice) => {
   <!-- INVOICE GRID -->
   <table style="border:1.5px solid ${BORDER};margin-bottom:0">
     <tr>
-      <td colspan="5" style="background:${HEAD_BG};text-align:center;font-size:20px;font-weight:700;text-decoration:underline;padding:10px;border-bottom:1.5px solid ${BORDER}">INVOICE</td>
+      <td colspan="5" style="background:${HEAD_BG};text-align:center;font-size:20px;font-weight:500;text-decoration:underline;padding:10px;border-bottom:1.5px solid ${BORDER}">INVOICE</td>
     </tr>
     <tr>
-      <td rowspan="4" colspan="2" style="vertical-align:top;padding:10px 12px;border-right:1.5px solid ${BORDER};border-bottom:1.5px solid ${BORDER};width:55%">
+      <td rowspan="4" colspan="2" style="vertical-align:top;padding:10px 12px;border-right:1.5px solid ${BORDER};border-bottom:1.5px solid ${BORDER}">
         To,<br/><br/>
         ${client.companyName ? `<strong>${esc(client.companyName)}</strong><br/>` : ''}
         ${client.contactPerson ? esc(client.contactPerson) + '<br/>' : ''}
         ${client.email ? esc(client.email) + '<br/>' : ''}
         ${client.gstNumber ? 'GST: ' + esc(client.gstNumber) : ''}
       </td>
-      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};font-weight:600;width:26%">Client ID</td>
-      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER}">${esc(client.clientId) || ''}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};font-weight:600;white-space:nowrap;width:10%">Client ID</td>
+      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap;width:15%">${esc(client.clientId) || ''}</td>
+      <td style="border-bottom:1px solid ${BORDER}"></td>
     </tr>
     <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};font-weight:600">Invoice No</td>
-      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER}">${esc(invoice.invoiceNumber) || ''}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};font-weight:600;white-space:nowrap">Invoice No</td>
+      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap">${esc(invoice.invoiceNumber) || ''}</td>
+      <td style="border-bottom:1px solid ${BORDER}"></td>
     </tr>
     <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};font-weight:600">Date</td>
-      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER}">${fmtDate(invoice.issueDate)}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};font-weight:600;white-space:nowrap">Date</td>
+      <td style="padding:6px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap">${fmtDate(invoice.issueDate)}</td>
+      <td style="border-bottom:1px solid ${BORDER}"></td>
     </tr>
     <tr>
-      <td style="padding:8px 12px;border-bottom:1.5px solid ${BORDER};font-weight:600">Due Date</td>
-      <td style="padding:8px 12px;border-bottom:1.5px solid ${BORDER};border-left:1px solid ${BORDER}">${fmtDate(invoice.dueDate)}</td>
+      <td style="padding:6px 12px;border-bottom:1.5px solid ${BORDER};font-weight:600;white-space:nowrap">Due Date</td>
+      <td style="padding:6px 12px;border-bottom:1.5px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap">${fmtDate(invoice.dueDate)}</td>
+      <td style="border-bottom:1.5px solid ${BORDER}"></td>
     </tr>
 
     <tr style="background:${HEAD_BG}">
-      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;font-weight:600">Sr.<br/>No</td>
-      <td style="padding:8px 10px;border:1px solid ${BORDER};font-weight:600">Services</td>
-      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;font-weight:600">Qty</td>
-      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;font-weight:600">Rate</td>
-      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;font-weight:600">Amount</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;font-weight:600;width:32px">Sr<br/>No</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER};font-weight:600">Services</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;font-weight:600;width:32px">Qty</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;font-weight:600;width:88px">Rate</td>
+      <td style="padding:6px 8px;border:1px solid ${BORDER};text-align:center;font-weight:600;width:100px">Amount</td>
     </tr>
     ${itemsHtml}
 
