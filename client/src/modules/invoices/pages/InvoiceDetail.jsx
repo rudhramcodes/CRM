@@ -102,7 +102,7 @@ export default function InvoiceDetail() {
   const formatDateTime = (date) => (date ? new Date(date).toLocaleString('en-IN') : '-');
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 print:max-w-none print:mx-0 print:space-y-0">
       <div className="flex items-center justify-between print:hidden">
         <button
           type="button"
@@ -148,7 +148,7 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-zinc-200 print:border-none overflow-hidden">
+      <div className="bg-white rounded-lg border border-zinc-200 print:border-none print:rounded-none print:overflow-visible overflow-hidden">
         <div className="flex justify-end p-4 pb-0 print:hidden">
           <InvoiceStatusBadge status={invoice.status} />
         </div>

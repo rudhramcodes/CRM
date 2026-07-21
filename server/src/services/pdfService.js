@@ -91,10 +91,10 @@ const buildClassicBorderedHtml = (invoice) => {
 <head>
   <meta charset="utf-8">
   <style>
-    @page { size: letter; margin: 0; }
+    @page { size: 8.5in 11in; margin: 0; }
     * { box-sizing: border-box; }
     body { margin: 0; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.15; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page { width: 612pt; min-height: 792pt; padding: 20pt 72pt 22pt; }
+    .page { width: 100%; max-width: 612pt; margin: 0 auto; padding: 20pt 72pt 22pt; background: #fff; }
     .logos { display: flex; justify-content: space-between; align-items: flex-start; height: 52pt; }
     .rudhram-logo { height: 52pt; width: auto; object-fit: contain; }
     .venture-logo { height: 52pt; width: auto; object-fit: contain; }
@@ -120,6 +120,14 @@ const buildClassicBorderedHtml = (invoice) => {
     .sign { width: 205pt; padding-top: 28pt; }
     .addresses { margin-top: 16pt; font-size: 8pt; line-height: 1.15; }
     .office { margin-top: 13pt; }
+    @media print {
+      html, body { width: 8.5in; height: 11in; overflow: hidden; }
+      .page { width: 612pt; height: 792pt; max-width: none; margin: 0; padding: 12pt 40pt 0; }
+      .company-row { margin-top: 22pt; margin-bottom: 22pt; }
+      .sign { padding-top: 18pt; }
+      .addresses { margin-top: 6pt; }
+      .office { margin-top: 8pt; }
+    }
   </style>
 </head>
 <body>
@@ -395,11 +403,11 @@ const buildWarmHtml = (invoice) => {
     </div>
   </div>
 
-  ${invoice.notes ? `
-  <div style="margin-bottom:12px;font-size:12px;color:#4a3f35">
-    <div style="font-size:10.5px;color:${brand};margin-bottom:2px;font-weight:600">Notes:</div>
-    <div style="white-space:pre-wrap">${esc(invoice.notes)}</div>
-  </div>` : ''}
+  // ${invoice.notes ? `
+  // <div style="margin-bottom:12px;font-size:12px;color:#4a3f35">
+  //   <div style="font-size:10.5px;color:${brand};margin-bottom:2px;font-weight:600">Notes:</div>
+  //   <div style="white-space:pre-wrap">${esc(invoice.notes)}</div>
+  // </div>` : ''}
 
   <div style="border-top:2px solid ${brand};padding-top:8px;margin-top:8px;font-size:10.5px;color:#8b7355;line-height:1.5">
     <div><span style="color:${brand};font-weight:600">Head Office :</span> ${ADDR.headOffice}</div>
