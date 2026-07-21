@@ -33,6 +33,12 @@ router.get(
   invoiceController.getById,
 );
 
+router.get(
+  '/:id/html',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  invoiceController.getHtml,
+);
+
 router.post(
   '/',
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),

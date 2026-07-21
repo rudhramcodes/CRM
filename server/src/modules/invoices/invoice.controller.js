@@ -19,6 +19,15 @@ export const getById = async (req, res, next) => {
   }
 };
 
+export const getHtml = async (req, res, next) => {
+  try {
+    const html = await invoiceService.getInvoiceHtml(req.params.id);
+    res.type('html').send(html);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const create = async (req, res, next) => {
   try {
     const invoice = await invoiceService.createInvoice(req.body, req.user);

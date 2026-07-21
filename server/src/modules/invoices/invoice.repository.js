@@ -96,13 +96,6 @@ export const countOverdue = async () => {
   });
 };
 
-export const getDailyInvoiceCount = async () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  return Invoice.countDocuments({
-    createdAt: { $gte: today, $lt: tomorrow },
-  });
+export const getInvoiceCountByPrefix = async (prefix) => {
+  return Invoice.countDocuments({ invoiceNumber: { $regex: `^${escapeRegex(prefix)}` } });
 };

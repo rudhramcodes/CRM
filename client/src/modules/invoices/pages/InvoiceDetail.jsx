@@ -4,10 +4,10 @@ import { ArrowLeft, Send, CheckCircle, XCircle, Trash2, Printer, Edit2 } from 'l
 import toast from 'react-hot-toast';
 import InvoiceStatusBadge from '../components/InvoiceStatusBadge';
 import InvoiceForm from '../components/InvoiceForm';
-import InvoiceTemplateRenderer from '../templates/InvoiceTemplateRenderer';
 import Modal from '../../../components/ui/Modal';
 import {
   useGetInvoiceByIdQuery,
+  useGetInvoiceHtmlQuery,
   useUpdateInvoiceMutation,
   useUpdateInvoiceStatusMutation,
   useDeleteInvoiceMutation,
@@ -33,6 +33,7 @@ export default function InvoiceDetail() {
   const [showEditModal, setShowEditModal] = useState(false);
 
   const invoice = data?.data?.invoice;
+  const { data: invoiceHtml } = useGetInvoiceHtmlQuery(id, { skip: !id });
   const clients = clientsData?.data || [];
 
   const handleResend = async () => {
@@ -147,11 +148,15 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-8 print:border-none print:p-0">
-        <div className="flex justify-end mb-2 print:hidden">
+      <div className="bg-white rounded-lg border border-zinc-200 print:border-none overflow-hidden">
+        <div className="flex justify-end p-4 pb-0 print:hidden">
           <InvoiceStatusBadge status={invoice.status} />
         </div>
-        <InvoiceTemplateRenderer invoice={invoice} />
+        {invoiceHtml ? (
+          <div className="p-8 print:p-0" dangerouslySetInnerHTML={{ __html: invoiceHtml }} />
+        ) : (
+          <div className="p-8 text-zinc-400 text-center text-sm">Loading preview...</div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg border border-zinc-200 p-4 print:hidden">

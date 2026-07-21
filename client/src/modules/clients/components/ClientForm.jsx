@@ -1,7 +1,7 @@
+import { useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -14,7 +14,7 @@ import { CLIENT_STATUS, BRANDS } from '../../../constants';
 import { useCreateClientMutation, useUpdateClientMutation } from '../../../services/clientApi';
 
 const clientFormSchema = z.object({
-  brand: z.string({ required_error: 'Brand is required' }),
+  brand: z.string().min(1, 'Please select a brand/venture'),
   companyName: z.string().min(2, 'Company name must be at least 2 characters').max(200),
   contactPerson: z.string().min(2, 'Contact person name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email address'),
@@ -38,55 +38,51 @@ const clientFormSchema = z.object({
   notes: z.string().optional(),
 });
 
+const getFormValues = (client) => client ? ({
+  brand: client.brand || '',
+  companyName: client.companyName || '',
+  contactPerson: client.contactPerson || '',
+  email: client.email || '',
+  phone: client.phone || '',
+  gstNumber: client.gstNumber || '',
+  panNumber: client.panNumber || '',
+  address: client.address
+    ? [client.address.street, client.address.city, client.address.state, client.address.pincode]
+        .filter(Boolean)
+        .join(', ')
+    : '',
+  status: client.status || 'active',
+  notes: '',
+}) : {
+  brand: '',
+  companyName: '',
+  contactPerson: '',
+  email: '',
+  phone: '',
+  gstNumber: '',
+  panNumber: '',
+  address: '',
+  status: 'active',
+  notes: '',
+};
+
 export default function ClientForm({ client, onSuccess, onCancel }) {
   const navigate = useNavigate();
   const [createClient, { isLoading: isCreating }] = useCreateClientMutation();
   const [updateClient, { isLoading: isUpdating }] = useUpdateClientMutation();
 
   const isEditing = !!client;
+  const formValues = useMemo(() => getFormValues(client), [client]);
 
   const {
     register,
     handleSubmit,
     control,
-    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(clientFormSchema),
-    defaultValues: {
-      brand: '',
-      companyName: '',
-      contactPerson: '',
-      email: '',
-      phone: '',
-      gstNumber: '',
-      panNumber: '',
-      address: '',
-      status: 'active',
-      notes: '',
-    },
+    values: formValues,
   });
-
-  useEffect(() => {
-    if (client) {
-      reset({
-        brand: client.brand || '',
-        companyName: client.companyName || '',
-        contactPerson: client.contactPerson || '',
-        email: client.email || '',
-        phone: client.phone || '',
-        gstNumber: client.gstNumber || '',
-        panNumber: client.panNumber || '',
-        address: client.address
-          ? [client.address.street, client.address.city, client.address.state, client.address.pincode]
-              .filter(Boolean)
-              .join(', ')
-          : '',
-        status: client.status || 'active',
-        notes: '',
-      });
-    }
-  }, [client, reset]);
 
   const getFieldErrors = (err) => {
     if (err?.data?.errors && Array.isArray(err.data.errors)) {

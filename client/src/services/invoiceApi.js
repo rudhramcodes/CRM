@@ -70,6 +70,14 @@ export const invoiceApi = api.injectEndpoints({
         method: 'POST',
       }),
     }),
+
+    getInvoiceHtml: builder.query({
+      query: (id) => ({
+        url: `/invoices/${id}/html`,
+        responseHandler: 'text',
+      }),
+      providesTags: (result, error, id) => [{ type: 'Invoice', id }],
+    }),
   }),
 });
 
@@ -82,4 +90,5 @@ export const {
   useUpdateInvoiceStatusMutation,
   useDeleteInvoiceMutation,
   useResendInvoiceEmailMutation,
+  useGetInvoiceHtmlQuery,
 } = invoiceApi;

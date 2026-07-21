@@ -26,14 +26,14 @@ export const createLeadSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal('')),
-  brand: z.enum(LEAD_BRANDS).optional().nullable(),
+  brand: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.enum(LEAD_BRANDS, { required_error: 'Please select a brand/venture' })).optional().nullable(),
   company: z
     .string()
     .max(200, 'Company must not exceed 200 characters')
     .optional()
     .nullable()
     .or(z.literal('')),
-  source: z.enum(LEAD_SOURCES, { message: 'Invalid lead source' }).optional().default('other'),
+  source: z.enum(LEAD_SOURCES, { errorMap: () => ({ message: 'Please select a valid source' }) }).optional().default('other'),
   status: z.enum(LEAD_STATUS_LIST, { message: 'Invalid lead status' }).optional().default(LEAD_STATUS.NEW),
   assignedTo: z.string().optional().nullable(),
   followUpDate: z.string().datetime({ offset: true }).optional().nullable().or(z.literal('')),

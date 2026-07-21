@@ -11,7 +11,7 @@ const addressSchema = z.object({
 const BRANDS = ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam', 'storage_media_solution'];
 
 export const createClientSchema = z.object({
-  brand: z.enum(BRANDS, { required_error: 'Brand/venture is required' }),
+  brand: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.enum(BRANDS, { required_error: 'Please select a brand/venture' })),
   companyName: z
     .string()
     .min(2, 'Company name must be at least 2 characters')
@@ -45,7 +45,7 @@ export const createClientSchema = z.object({
 });
 
 export const updateClientSchema = z.object({
-  brand: z.enum(BRANDS).optional(),
+  brand: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.enum(BRANDS, { required_error: 'Please select a brand/venture' })).optional(),
   companyName: z
     .string()
     .min(2)

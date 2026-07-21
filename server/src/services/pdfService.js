@@ -1,14 +1,31 @@
 import puppeteer from 'puppeteer';
 
+// Parent company logo — paste your Rudhram wordmark cloudinary URL here
+const RUDHRAM_LOGO_URL = 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png'; // TODO: replace with actual Rudhram wordmark logo url
+
 const VENTURES = {
-  panigrahna: { code: 'PG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535274/pg-logo.avif' },
-  aghori:     { code: 'AG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535471/ag-logo.avif' },
-  house_of_joggi:             { code: 'HG', logoUrl: '' },
-  damrru:                     { code: 'DM', logoUrl: '' },
-  tandavs:                    { code: 'TD', logoUrl: '' },
-  kapaalik:                   { code: 'KP', logoUrl: '' },
-  kalyannam:                  { code: 'KL', logoUrl: '' },
-  storage_media_solution:     { code: 'SM', logoUrl: '' },
+  panigrahna: { code: 'PG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535274/pg-logo.avif', template: 'warm' },
+  aghori:     { code: 'AG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535471/ag-logo.avif', template: 'classic-bordered' },
+  house_of_joggi:             { code: 'HG', logoUrl: '', template: 'warm' },
+  damrru:                     { code: 'DM', logoUrl: '', template: 'warm' },
+  tandavs:                    { code: 'TD', logoUrl: '', template: 'warm' },
+  kapaalik:                   { code: 'KP', logoUrl: '', template: 'warm' },
+  kalyannam:                  { code: 'KL', logoUrl: '', template: 'warm' },
+  storage_media_solution:     { code: 'SM', logoUrl: '', template: 'warm' },
+};
+
+// Shared registered company details (parent legal entity issuing all venture invoices)
+const COMPANY = {
+  legalName: 'RUDHRAM ENTERPRISES PRIVATE LIMITED',
+  cin: 'U59111MH2026PTC470019',
+  pan: 'AAPCR7787R',
+  tan: 'MUMR56059D',
+  gstin: '27CYSPG6483K1ZK',
+  companyType: 'Private Limited Company',
+  email: 'Admin@rudhramenterprises.com',
+  contact: '7285833101',
+  signatoryLine1: 'For.',
+  signatoryLine2: 'Rudhram Enterprises pvt. ltd',
 };
 
 const BANK = { bankName: 'HDFC Bank', accountHolder: 'Rudhram Entertainment', accountType: 'Current Account', accountNumber: '50200095934904', ifscCode: 'HDFC0006679', upiId: '7285833101@hdfcbank' };
@@ -41,7 +58,198 @@ function numberToIndianWords(num) {
   return words.join(' ') + ' Only';
 }
 
-const buildHtml = (invoice) => {
+/* ============================================================
+   TEMPLATE 1: "classic-bordered" — exact match of Aghhori PDF
+   ============================================================ */
+const buildClassicBorderedHtml = (invoice) => {
+  const client = invoice.client || {};
+  const items = invoice.items || [];
+  const venture = VENTURES[client.brand] || VENTURES.aghori;
+  const BORDER = '#000';
+  const HEAD_BG = '#BDD7EE'; // pale blue used in header/total highlight cells
+
+  // pad items to at least 3 rows so empty grid lines show like the template
+  const rows = [...items];
+  while (rows.length < 3) rows.push(null);
+
+  const itemsHtml = rows.map((item, i) => `
+    <tr>
+      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;width:44px">${item ? i + 1 : ''}</td>
+      <td style="padding:8px 10px;border:1px solid ${BORDER}">${item ? esc(item.description) : ''}</td>
+      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:right;width:64px">${item ? item.quantity : ''}</td>
+      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:right;width:96px">${item ? fmt(item.unitPrice) : ''}</td>
+      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:right;width:110px">${item ? fmt(item.amount) : ''}</td>
+    </tr>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { margin: 30px 40px; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Arial', 'Helvetica', sans-serif; color: #111; margin: 0; padding: 0; font-size: 12px; line-height: 1.5; }
+    table { border-collapse: collapse; width: 100%; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER: two logos -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    <div>
+      ${RUDHRAM_LOGO_URL
+        ? `<img src="${RUDHRAM_LOGO_URL}" style="height:58px;width:auto;object-fit:contain" />`
+        : `<div style="font-size:26px;font-weight:700;letter-spacing:3px;color:#8a6a3a">RUDHRAM<span style="color:#8a6a3a">.</span></div>`
+      }
+    </div>
+    <div>
+      ${venture.logoUrl
+        ? `<img src="${venture.logoUrl}" style="height:58px;width:auto;object-fit:contain" />`
+        : `<div style="font-size:22px;font-weight:700;letter-spacing:4px;color:#333">${esc(venture.code)}</div>`
+      }
+    </div>
+  </div>
+
+  <!-- COMPANY DETAILS -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;font-size:12px;line-height:1.7">
+    <div>
+      <div>${COMPANY.legalName}</div>
+      <div>CIN: ${COMPANY.cin}</div>
+      <div>PAN: ${COMPANY.pan}</div>
+      <div>TAN: ${COMPANY.tan}</div>
+      <div>GSTIN: ${COMPANY.gstin}</div>
+      <div>Company Type: ${COMPANY.companyType}</div>
+    </div>
+    <div style="text-align:right">
+      <div>Email: ${COMPANY.email}</div>
+      <div>Contact: ${COMPANY.contact}</div>
+    </div>
+  </div>
+
+  <!-- INVOICE GRID -->
+  <table style="border:1.5px solid ${BORDER};margin-bottom:0">
+    <tr>
+      <td colspan="5" style="background:${HEAD_BG};text-align:center;font-size:20px;font-weight:700;text-decoration:underline;padding:10px;border-bottom:1.5px solid ${BORDER}">INVOICE</td>
+    </tr>
+    <tr>
+      <td rowspan="4" colspan="2" style="vertical-align:top;padding:10px 12px;border-right:1.5px solid ${BORDER};border-bottom:1.5px solid ${BORDER};width:55%">
+        To,<br/><br/>
+        ${client.companyName ? `<strong>${esc(client.companyName)}</strong><br/>` : ''}
+        ${client.contactPerson ? esc(client.contactPerson) + '<br/>' : ''}
+        ${client.email ? esc(client.email) + '<br/>' : ''}
+        ${client.gstNumber ? 'GST: ' + esc(client.gstNumber) : ''}
+      </td>
+      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};font-weight:600;width:26%">Client ID</td>
+      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER}">${esc(client.clientId) || ''}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};font-weight:600">Invoice No</td>
+      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER}">${esc(invoice.invoiceNumber) || ''}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};font-weight:600">Date</td>
+      <td style="padding:8px 12px;border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER}">${fmtDate(invoice.issueDate)}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1.5px solid ${BORDER};font-weight:600">Due Date</td>
+      <td style="padding:8px 12px;border-bottom:1.5px solid ${BORDER};border-left:1px solid ${BORDER}">${fmtDate(invoice.dueDate)}</td>
+    </tr>
+
+    <tr style="background:${HEAD_BG}">
+      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;font-weight:600">Sr.<br/>No</td>
+      <td style="padding:8px 10px;border:1px solid ${BORDER};font-weight:600">Services</td>
+      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;font-weight:600">Qty</td>
+      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;font-weight:600">Rate</td>
+      <td style="padding:8px 10px;border:1px solid ${BORDER};text-align:center;font-weight:600">Amount</td>
+    </tr>
+    ${itemsHtml}
+
+    <tr>
+      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Total</td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">${fmt(invoice.subtotal)}</td>
+    </tr>
+    ${invoice.taxAmount ? `
+    <tr>
+      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Taxes${invoice.taxRate ? ' (' + invoice.taxRate + '%)' : ''}</td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">${fmt(invoice.taxAmount)}</td>
+    </tr>` : `
+    <tr>
+      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Taxes</td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">${fmt(0)}</td>
+    </tr>`}
+    ${invoice.discountAmount ? `
+    <tr>
+      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Discount${invoice.discountPercent ? ' (' + invoice.discountPercent + '%)' : ''}</td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">-${fmt(invoice.discountAmount)}</td>
+    </tr>` : ''}
+    <tr style="background:${HEAD_BG}">
+      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1.5px solid ${BORDER}"></td>
+      <td style="padding:8px 12px;border:1.5px solid ${BORDER};text-align:right;font-weight:700">Net Payable</td>
+      <td style="padding:8px 12px;border:1.5px solid ${BORDER};text-align:right;font-weight:700">${fmt(invoice.total)}</td>
+    </tr>
+    ${invoice.paidAmount > 0 ? `
+    <tr>
+      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1px solid ${BORDER}"></td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right;font-weight:600">Paid</td>
+      <td style="padding:8px 12px;border:1px solid ${BORDER};text-align:right">-${fmt(invoice.paidAmount)}</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="border-left:1.5px solid ${BORDER};border-bottom:1.5px solid ${BORDER}"></td>
+      <td style="padding:8px 12px;border:1.5px solid ${BORDER};text-align:right;font-weight:700">Balance Due</td>
+      <td style="padding:8px 12px;border:1.5px solid ${BORDER};text-align:right;font-weight:700">${fmt(invoice.balanceDue)}</td>
+    </tr>` : ''}
+
+    <tr>
+      <td colspan="5" style="padding:8px 12px;border:1.5px solid ${BORDER};font-style:italic">
+        \u20B9&nbsp;&nbsp;&nbsp;${numberToIndianWords(invoice.total)}
+      </td>
+    </tr>
+  </table>
+
+  <!-- BANK DETAILS + SIGNATORY -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:14px;font-size:12px;line-height:1.8">
+    <div>
+      <div>Bank Name: ${BANK.bankName}</div>
+      <div>Account Holder: ${BANK.accountHolder}</div>
+      <div>Account Type: ${BANK.accountType}</div>
+      <div>Account Number: ${BANK.accountNumber}</div>
+      <div>IFSC Code: ${BANK.ifscCode}</div>
+      <div>UPI ID: ${BANK.upiId}</div>
+    </div>
+    <div style="text-align:right;padding-top:2px">
+      <div>${COMPANY.signatoryLine1}</div>
+      <div>${COMPANY.signatoryLine2}</div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  ${invoice.notes ? `
+  <div style="margin-top:16px;font-size:12px">
+    <strong>Notes:</strong>
+    <div style="white-space:pre-wrap">${esc(invoice.notes)}</div>
+  </div>` : ''}
+
+  <!-- ADDRESSES -->
+  <div style="border-top:1px solid #888;padding-top:10px;margin-top:16px;font-size:11px;color:#333;line-height:1.7">
+    <div>Head Office:</div>
+    <div>${ADDR.headOffice}</div>
+    <div style="margin-top:6px">Operational Office:</div>
+    <div>${ADDR.operationsOffice}</div>
+  </div>
+
+</body>
+</html>`;
+};
+
+/* ============================================================
+   TEMPLATE 2: "warm" — your original bronze/rounded layout
+   ============================================================ */
+const buildWarmHtml = (invoice) => {
   const client = invoice.client || {};
   const items = invoice.items || [];
   const venture = VENTURES[client.brand] || VENTURES.panigrahna;
@@ -69,7 +277,6 @@ const buildHtml = (invoice) => {
   </style>
 </head>
 <body>
-  <!-- HEADER -->
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid ${brand}">
     <div>
       ${venture.logoUrl
@@ -82,7 +289,6 @@ const buildHtml = (invoice) => {
     </div>
   </div>
 
-  <!-- BILL TO + DATES -->
   <div style="display:flex;gap:32px;margin-bottom:32px">
     <div style="flex:1">
       <div style="font-size:12px;font-weight:600;color:${brand};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Bill To</div>
@@ -101,7 +307,6 @@ const buildHtml = (invoice) => {
     </div>
   </div>
 
-  <!-- ITEMS TABLE -->
   <table style="width:100%;border-collapse:collapse;margin-bottom:32px">
     <thead>
       <tr style="background:${brand};color:#fff">
@@ -117,7 +322,6 @@ const buildHtml = (invoice) => {
     </tbody>
   </table>
 
-  <!-- TOTALS -->
   <div style="display:flex;justify-content:flex-end;margin-bottom:32px">
     <div style="width:288px">
       <div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0">
@@ -152,7 +356,6 @@ const buildHtml = (invoice) => {
     </div>
   </div>
 
-  <!-- BANK DETAILS -->
   <div style="border-top:2px solid ${brand};padding-top:24px;margin-bottom:24px">
     <div style="font-size:14px;font-weight:700;color:${brand};margin-bottom:8px">Bank Details</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 32px;font-size:14px;color:#4a3f35">
@@ -165,14 +368,12 @@ const buildHtml = (invoice) => {
     </div>
   </div>
 
-  <!-- NOTES -->
   ${invoice.notes ? `
   <div style="margin-bottom:24px;font-size:14px;color:#4a3f35">
     <div style="font-size:12px;color:${brand};margin-bottom:4px;font-weight:600">Notes:</div>
     <div style="white-space:pre-wrap">${esc(invoice.notes)}</div>
   </div>` : ''}
 
-  <!-- ADDRESSES -->
   <div style="border-top:2px solid ${brand};padding-top:16px;margin-top:24px;font-size:12px;color:#8b7355;line-height:1.8">
     <div><span style="color:${brand};font-weight:600">Head Office :</span> ${ADDR.headOffice}</div>
     <div><span style="color:${brand};font-weight:600">Operations Office :</span> ${ADDR.operationsOffice}</div>
@@ -180,6 +381,23 @@ const buildHtml = (invoice) => {
 </body>
 </html>`;
 };
+
+/* ============================================================
+   DISPATCHER
+   ============================================================ */
+const buildHtml = (invoice) => {
+  const client = invoice.client || {};
+  const venture = VENTURES[client.brand] || VENTURES.panigrahna;
+  switch (venture.template) {
+    case 'classic-bordered':
+      return buildClassicBorderedHtml(invoice);
+    case 'warm':
+    default:
+      return buildWarmHtml(invoice);
+  }
+};
+
+export const generateInvoiceHtml = (invoice) => buildHtml(invoice);
 
 export const generateInvoicePdf = async (invoice) => {
   const html = buildHtml(invoice);
@@ -193,7 +411,7 @@ export const generateInvoicePdf = async (invoice) => {
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdf = await page.pdf({
       format: 'A4',
-      margin: { top: '36px', bottom: '36px', left: '48px', right: '48px' },
+      margin: { top: '30px', bottom: '30px', left: '40px', right: '40px' },
       printBackground: true,
       preferCSSPageSize: true,
     });

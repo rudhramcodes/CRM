@@ -1,8 +1,10 @@
 import ApiError from '../../utils/ApiError.js';
 import * as invoiceRepository from './invoice.repository.js';
 import { sendEmail } from '../../services/emailService.js';
-import { generateInvoicePdf } from '../../services/pdfService.js';
+import { generateInvoicePdf, generateInvoiceHtml } from '../../services/pdfService.js';
 import logger from '../../utils/logger.js';
+import Client from '../clients/client.model.js';
+import { VENTURE_CODES } from '../../constants/index.js';
 
 const VALID_TRANSITIONS = {
   draft: ['sent', 'cancelled'],
@@ -12,15 +14,11 @@ const VALID_TRANSITIONS = {
   cancelled: [],
 };
 
-export const generateInvoiceNumber = async () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const prefix = `INV-${year}${month}-`;
-
-  const todayCount = await invoiceRepository.getDailyInvoiceCount();
-  const seq = String(todayCount + 1).padStart(4, '0');
-
+export const generateInvoiceNumber = async (brand) => {
+  const ventureCode = VENTURE_CODES[brand] || 'PG';
+  const prefix = `INV-${ventureCode}-`;
+  const count = await invoiceRepository.getInvoiceCountByPrefix(prefix);
+  const seq = String(count + 1).padStart(4, '0');
   return `${prefix}${seq}`;
 };
 
@@ -38,7 +36,8 @@ const validateStatusTransition = (currentStatus, newStatus) => {
 };
 
 export const createInvoice = async (data, user) => {
-  const invoiceNumber = await generateInvoiceNumber();
+  const clientDoc = await Client.findById(data.client).select('brand');
+  const invoiceNumber = await generateInvoiceNumber(clientDoc?.brand);
 
   const payload = {
     invoiceNumber,
@@ -69,6 +68,14 @@ export const getInvoiceById = async (id) => {
     throw ApiError.notFound('Invoice not found');
   }
   return invoice;
+};
+
+export const getInvoiceHtml = async (id) => {
+  const invoice = await invoiceRepository.findById(id);
+  if (!invoice) {
+    throw ApiError.notFound('Invoice not found');
+  }
+  return generateInvoiceHtml(invoice);
 };
 
 export const updateInvoice = async (id, data) => {
