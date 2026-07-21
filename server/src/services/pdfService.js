@@ -4,7 +4,7 @@ import puppeteer from 'puppeteer';
 const RUDHRAM_LOGO_URL = 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png'; // TODO: replace with actual Rudhram wordmark logo url
 
 const VENTURES = {
-  panigrahna: { code: 'PG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535274/pg-logo.avif', template: 'warm' },
+  panigrahna: { code: 'PG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535274/pg-logo.avif', template: 'classic-bordered' },
   aghori:     { code: 'AG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535471/ag-logo.avif', template: 'classic-bordered' },
   house_of_joggi:             { code: 'HG', logoUrl: '', template: 'warm' },
   damrru:                     { code: 'DM', logoUrl: '', template: 'warm' },
@@ -12,6 +12,11 @@ const VENTURES = {
   kapaalik:                   { code: 'KP', logoUrl: '', template: 'warm' },
   kalyannam:                  { code: 'KL', logoUrl: '', template: 'warm' },
   storage_media_solution:     { code: 'SM', logoUrl: '', template: 'warm' },
+};
+
+const CLASSIC_THEMES = {
+  aghori: { pageBg: '#fff', headBg: '#D4E7F7', text: '#000', accent: '#09588E', border: '#000' },
+  panigrahna: { pageBg: '#fff', headBg: '#FEF6EA', text: '#3C2B1B', accent: '#3C2B1B', border: '#3C2B1B' },
 };
 
 // Shared registered company details (parent legal entity issuing all venture invoices)
@@ -65,8 +70,10 @@ const buildClassicBorderedHtml = (invoice) => {
   const client = invoice.client || {};
   const items = invoice.items || [];
   const venture = VENTURES[client.brand] || VENTURES.aghori;
-  const BORDER = '#000';
-  const HEAD_BG = '#D4E7F7';
+  const theme = CLASSIC_THEMES[client.brand] || CLASSIC_THEMES.aghori;
+  const isPanigrahna = client.brand === 'panigrahna';
+  const BORDER = theme.border;
+  const HEAD_BG = theme.headBg;
   const date = (d) => d ? fmtDate(d) : '';
   const amount = (val, zero = '0,00,000') => Number(val || 0)
     ? Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })
@@ -79,9 +86,8 @@ const buildClassicBorderedHtml = (invoice) => {
   const itemsHtml = rows.map((item, i) => `
     <tr class="item-row">
       <td>${item ? i + 1 : ''}</td>
-      <td>${item ? esc(item.description) : ''}</td>
-      <td>${item ? item.quantity : ''}</td>
-      <td>${item ? amount(item.unitPrice, '') : ''}</td>
+      <td${isPanigrahna ? ' colspan="3"' : ''}>${item ? esc(item.description) : ''}</td>
+      ${isPanigrahna ? '' : `<td>${item ? item.quantity : ''}</td><td>${item ? amount(item.unitPrice, '') : ''}</td>`}
       <td>${item ? amount(item.amount, '') : ''}</td>
     </tr>
   `).join('');
@@ -93,8 +99,8 @@ const buildClassicBorderedHtml = (invoice) => {
   <style>
     @page { size: 8.5in 11in; margin: 0; }
     * { box-sizing: border-box; }
-    body { margin: 0; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.15; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page { width: 100%; max-width: 612pt; margin: 0 auto; padding: 20pt 72pt 22pt; background: #fff; }
+    body { margin: 0; color: ${theme.text}; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.15; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { width: 100%; max-width: 612pt; margin: 0 auto; padding: 20pt 72pt 22pt; background: ${theme.pageBg}; }
     .logos { display: flex; justify-content: space-between; align-items: flex-start; height: 52pt; }
     .rudhram-logo { height: 52pt; width: auto; object-fit: contain; }
     .venture-logo { height: 52pt; width: auto; object-fit: contain; }
@@ -103,7 +109,7 @@ const buildClassicBorderedHtml = (invoice) => {
     table { border-collapse: collapse; width: 100%; table-layout: fixed; }
     .invoice-table { border: 1pt solid ${BORDER}; font-size: 12pt; }
     .invoice-table td { border: 1pt solid ${BORDER}; padding: 0 5pt; vertical-align: middle; }
-    .title { height: 38pt; background: ${HEAD_BG}; color: #09588E; text-align: center; font-size: 12.5pt; text-decoration: underline; }
+    .title { height: 38pt; background: ${HEAD_BG}; color: ${theme.accent}; text-align: center; font-size: 12.5pt; text-decoration: underline; }
     .to-cell { height: 105pt; vertical-align: top !important; padding-top: 9pt !important; }
     .meta-label, .meta-value { height: 26.25pt; font-size: 12pt; font-weight: 400; }
     .service-head td { height: 41.5pt; background: ${HEAD_BG}; text-align: center; font-size: 12pt; }
@@ -203,9 +209,8 @@ const buildClassicBorderedHtml = (invoice) => {
 
     <tr class="service-head">
       <td>Sr.<br/>No</td>
-      <td>Services</td>
-      <td>Qty</td>
-      <td>Rate</td>
+      <td${isPanigrahna ? ' colspan="3"' : ''}>${isPanigrahna ? 'Description' : 'Services'}</td>
+      ${isPanigrahna ? '' : '<td>Qty</td><td>Rate</td>'}
       <td>Amount</td>
     </tr>
     ${itemsHtml}
