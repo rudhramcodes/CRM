@@ -4,7 +4,7 @@ import puppeteer from 'puppeteer';
 const RUDHRAM_LOGO_URL = 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png'; // TODO: replace with actual Rudhram wordmark logo url
 
 const VENTURES = {
-  panigrahna: { code: 'PG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535274/pg-logo.avif', template: 'classic-bordered' },
+  panigrahna: { code: 'PG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784704090/pg-logo-with-name.png', template: 'classic-bordered' },
   aghori:     { code: 'AG', logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535471/ag-logo.avif', template: 'classic-bordered' },
   house_of_joggi:             { code: 'HG', logoUrl: '', template: 'warm' },
   damrru:                     { code: 'DM', logoUrl: '', template: 'warm' },
