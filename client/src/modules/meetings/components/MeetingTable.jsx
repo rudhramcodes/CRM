@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
 import { Edit2, Trash2, Calendar, Clock, ExternalLink } from 'lucide-react';
 import MeetingStatusBadge from './MeetingStatusBadge';
 import { formatDate } from '../../../utils/formatters';
+import { TableSkeleton } from '../../../components/ui/Skeleton';
 
 export default function MeetingTable({
   meetings = [],
@@ -16,7 +16,7 @@ export default function MeetingTable({
   if (loading) {
     return (
       <div className="bg-white rounded-xl border border-zinc-200">
-        <div className="p-12 text-center text-sm text-zinc-400">Loading meetings...</div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }

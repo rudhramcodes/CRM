@@ -4,6 +4,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { PROJECT_STATUS } from '../../../constants';
 import ProjectKanbanCard, { ProjectKanbanCardOverlay } from './ProjectKanbanCard';
 import { cn } from '../../../utils/cn';
+import Skeleton from '../../../components/ui/Skeleton';
 
 const COL_ID = 'kanban-col-';
 
@@ -67,7 +68,21 @@ export default function ProjectKanbanBoard({ projects = [], loading, onProjectCl
     }
   }, [columns, onStatusChange]);
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-sm text-zinc-400">Loading board...</div>;
+  if (loading) return (
+    <div className="flex gap-3 overflow-x-auto pb-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="bg-white rounded-xl border border-zinc-200 w-72 shrink-0 p-4 space-y-3">
+          <Skeleton className="h-5 w-24" />
+          {Array.from({ length: 3 }).map((_, j) => (
+            <div key={j} className="bg-zinc-50 rounded-lg p-3 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
   if (!projects.length) return <div className="flex items-center justify-center h-64 text-sm text-zinc-400">No projects to display.</div>;
 
   const colors = { planning: 'bg-purple-500', active: 'bg-green-500', review: 'bg-yellow-500', completed: 'bg-blue-500' };

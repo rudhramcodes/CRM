@@ -20,9 +20,9 @@ import TaskFilters from '../components/TaskFilters';
 import TaskForm from '../components/TaskForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
-import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { TASK_STATUS } from '../../../constants';
 import toast from 'react-hot-toast';
@@ -197,7 +197,11 @@ export default function TaskList() {
         </div>
       </div>
 
-      {!statsLoading && stats.total > 0 && (
+      {statsLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)}
+        </div>
+      ) : stats.total > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {statsConfig.map(({ key, label, color, alert }) => (
             <div key={key} className={`bg-white rounded-xl border px-4 py-3 ${alert && stats[key] > 0 ? 'border-red-200 bg-red-50/30' : 'border-zinc-200'}`}>
@@ -243,8 +247,8 @@ export default function TaskList() {
       ) : (
         <>
           {isLoading ? (
-            <div className="bg-white rounded-xl border border-zinc-200 p-12">
-              <Loader size="lg" text="Loading tasks..." />
+            <div className="bg-white rounded-xl border border-zinc-200">
+              <TableSkeleton rows={5} />
             </div>
           ) : error ? (
             <div className="bg-white rounded-xl border border-zinc-200 p-12">

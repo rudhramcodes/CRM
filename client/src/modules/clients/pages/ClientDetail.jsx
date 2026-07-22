@@ -25,8 +25,8 @@ import ClientForm from '../components/ClientForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
-import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
+import { DetailSkeleton } from '../../../components/ui/Skeleton';
 import toast from 'react-hot-toast';
 import { formatDate, getTimeAgo } from '../../../utils/formatters';
 
@@ -65,11 +65,7 @@ export default function ClientDetail() {
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader size="lg" text="Loading client..." />
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   if (error || !client) {

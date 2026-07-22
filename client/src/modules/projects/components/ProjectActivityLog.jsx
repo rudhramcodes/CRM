@@ -1,5 +1,6 @@
 import { PlusCircle, RefreshCw, Edit2, Trash2, CheckSquare, ClipboardList } from 'lucide-react';
 import { formatDate } from '../../../utils/formatters';
+import Skeleton from '../../../components/ui/Skeleton';
 
 const ACTION_ICONS = {
   project_created: PlusCircle,
@@ -22,8 +23,16 @@ const ACTION_LABELS = {
 export default function ProjectActivityLog({ activities = [], loading }) {
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-zinc-200 p-8 text-center text-sm text-zinc-400">
-        Loading activities...
+      <div className="bg-white rounded-xl border border-zinc-200 p-6 space-y-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <Skeleton className="w-6 h-6 rounded-full shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/4" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

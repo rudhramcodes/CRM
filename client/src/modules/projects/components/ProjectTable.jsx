@@ -2,6 +2,7 @@ import { FolderKanban, Edit2, Trash2 } from 'lucide-react';
 import ProjectStatusBadge from './ProjectStatusBadge';
 import ProjectPriorityBadge from './ProjectPriorityBadge';
 import { formatDate } from '../../../utils/formatters';
+import { TableSkeleton } from '../../../components/ui/Skeleton';
 
 const formatCurrency = (amount, currency = 'INR') => {
   return new Intl.NumberFormat('en-IN', {
@@ -25,7 +26,7 @@ export default function ProjectTable({
   if (loading) {
     return (
       <div className="bg-white rounded-xl border border-zinc-200">
-        <div className="p-12 text-center text-sm text-zinc-400">Loading projects...</div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }

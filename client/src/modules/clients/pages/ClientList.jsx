@@ -7,8 +7,8 @@ import { useGetClientsQuery, useGetClientStatsQuery, useDeleteClientMutation } f
 import ClientTable from '../components/ClientTable';
 import ClientFilters from '../components/ClientFilters';
 import Button from '../../../components/ui/Button';
-import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
+import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 
@@ -77,7 +77,11 @@ export default function ClientList() {
       </div>
 
       {/* Stats */}
-      {!statsLoading && stats.total > 0 && (
+      {statsLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => <StatCardSkeleton key={i} />)}
+        </div>
+      ) : stats.total > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-white rounded-xl border border-zinc-200 p-4 text-center">
             <p className="text-2xl font-semibold text-primary-900">{stats.total}</p>
@@ -99,8 +103,8 @@ export default function ClientList() {
 
       {/* Table */}
       {isLoading ? (
-        <div className="bg-white rounded-xl border border-zinc-200 p-12">
-          <Loader size="lg" text="Loading clients..." />
+        <div className="bg-white rounded-xl border border-zinc-200">
+          <TableSkeleton rows={5} />
         </div>
       ) : error ? (
         <div className="bg-white rounded-xl border border-zinc-200 p-12">

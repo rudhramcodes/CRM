@@ -24,8 +24,8 @@ import MeetingForm from '../components/MeetingForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
-import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
+import { DetailSkeleton } from '../../../components/ui/Skeleton';
 import toast from 'react-hot-toast';
 import { formatDate } from '../../../utils/formatters';
 
@@ -79,11 +79,7 @@ export default function MeetingDetail() {
   const canWriteNotes = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader size="lg" text="Loading meeting..." />
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   if (error || !meeting) {

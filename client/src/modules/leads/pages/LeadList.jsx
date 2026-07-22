@@ -9,8 +9,8 @@ import LeadKanbanBoard from '../components/LeadKanbanBoard';
 import LeadFilters from '../components/LeadFilters';
 import LeadStatusBadge from '../components/LeadStatusBadge';
 import Button from '../../../components/ui/Button';
-import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
+import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { LEAD_STATUS, LEAD_BRANDS } from '../../../constants';
 import toast from 'react-hot-toast';
@@ -133,7 +133,11 @@ export default function LeadList() {
       </div>
 
       {/* Stats */}
-      {!statsLoading && stats.total > 0 && (
+      {statsLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)}
+        </div>
+      ) : stats.total > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {statCards.map((card) => (
             <div
@@ -182,8 +186,8 @@ export default function LeadList() {
       {/* Table / Board */}
       {view === 'table' ? (
         isLoading ? (
-          <div className="bg-white rounded-xl border border-zinc-200 p-12">
-            <Loader size="lg" text="Loading leads..." />
+          <div className="bg-white rounded-xl border border-zinc-200">
+            <TableSkeleton rows={5} />
           </div>
         ) : error ? (
           <div className="bg-white rounded-xl border border-zinc-200 p-12">

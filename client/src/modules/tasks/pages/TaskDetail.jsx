@@ -31,9 +31,9 @@ import TaskComment from '../components/TaskComment';
 import TaskForm from '../components/TaskForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
-import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import { DetailSkeleton } from '../../../components/ui/Skeleton';
 import toast from 'react-hot-toast';
 import { formatDate, formatDateTime, getTimeAgo } from '../../../utils/formatters';
 import { renderMarkdown } from '../../../utils/markdown';
@@ -100,7 +100,7 @@ export default function TaskDetail() {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><Loader /></div>;
+    return <DetailSkeleton />;
   }
 
   if (error || !task) {

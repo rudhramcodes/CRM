@@ -31,8 +31,8 @@ import ProjectActivityLog from '../components/ProjectActivityLog';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
-import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
+import { DetailSkeleton } from '../../../components/ui/Skeleton';
 import toast from 'react-hot-toast';
 import { formatDate } from '../../../utils/formatters';
 
@@ -131,11 +131,7 @@ export default function ProjectDetail() {
   }, [deleteTaskId, id, deleteTask]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader />
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   if (error || !project) {

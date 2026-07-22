@@ -16,6 +16,7 @@ import ProjectForm from '../components/ProjectForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import { StatCardSkeleton } from '../../../components/ui/Skeleton';
 import toast from 'react-hot-toast';
 
 export default function ProjectList() {
@@ -109,7 +110,11 @@ export default function ProjectList() {
         </div>
       </div>
 
-      {!statsLoading && stats.total > 0 && (
+      {statsLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)}
+        </div>
+      ) : stats.total > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {statsConfig.map(({ key, label, color }) => (
             <div key={key} className="bg-white rounded-xl border border-zinc-200 px-4 py-3">
