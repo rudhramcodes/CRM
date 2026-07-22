@@ -28,6 +28,19 @@ export const getHtml = async (req, res, next) => {
   }
 };
 
+export const downloadPdf = async (req, res, next) => {
+  try {
+    const invoice = await invoiceService.getInvoiceById(req.params.id);
+    const pdf = await invoiceService.getInvoicePdf(req.params.id);
+    const filename = `invoice-${invoice.invoiceNumber || req.params.id}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdf);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const create = async (req, res, next) => {
   try {
     const invoice = await invoiceService.createInvoice(req.body, req.user);

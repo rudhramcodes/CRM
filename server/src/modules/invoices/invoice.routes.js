@@ -39,6 +39,12 @@ router.get(
   invoiceController.getHtml,
 );
 
+router.get(
+  '/:id/pdf',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  invoiceController.downloadPdf,
+);
+
 router.post(
   '/',
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),

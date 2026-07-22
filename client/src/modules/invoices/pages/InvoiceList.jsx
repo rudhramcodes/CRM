@@ -7,9 +7,9 @@ import InvoiceFilters from '../components/InvoiceFilters';
 import { useGetInvoicesQuery, useGetInvoiceStatsQuery, useUpdateInvoiceStatusMutation, useDeleteInvoiceMutation } from '../../../services/invoiceApi';
 import { useSelector } from 'react-redux';
 import Button from '../../../components/ui/Button';
-import Loader from '../../../components/ui/Loader';
 import EmptyState from '../../../components/ui/EmptyState';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 
 const statCards = [
   { key: 'total', label: 'Total Invoices', icon: FileText, color: 'text-blue-600 bg-blue-50' },
@@ -85,7 +85,9 @@ export default function InvoiceList() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {statCards.map((card) => (
+        {statsLoading
+          ? Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)
+          : statCards.map((card) => (
           <div key={card.key} className="bg-white rounded-lg border border-zinc-200 p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className={`p-1.5 rounded-md ${card.color}`}>
@@ -132,7 +134,7 @@ export default function InvoiceList() {
 
       <div className="bg-white rounded-lg border border-zinc-200">
         {isLoading ? (
-          <Loader />
+          <div className="p-4"><TableSkeleton rows={5} /></div>
         ) : invoices.length === 0 ? (
           <EmptyState
             title="No invoices yet"

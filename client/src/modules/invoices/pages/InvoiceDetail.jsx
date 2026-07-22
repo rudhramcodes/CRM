@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, CheckCircle, XCircle, Trash2, Printer, Edit2 } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, Trash2, Printer, Edit2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InvoiceStatusBadge from '../components/InvoiceStatusBadge';
 import InvoiceForm from '../components/InvoiceForm';
@@ -15,8 +15,9 @@ import {
   useResendInvoiceEmailMutation,
 } from '../../../services/invoiceApi';
 import { useGetClientsQuery } from '../../../services/clientApi';
+import { API_BASE_URL } from '../../../constants';
 import Button from '../../../components/ui/Button';
-import Loader from '../../../components/ui/Loader';
+import { DetailSkeleton } from '../../../components/ui/Skeleton';
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -29,6 +30,7 @@ export default function InvoiceDetail() {
   const { data: clientsData } = useGetClientsQuery({ limit: 100 });
 
   const [resendEmail, { isLoading: isResending }] = useResendInvoiceEmailMutation();
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const [actionLoading, setActionLoading] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -45,6 +47,10 @@ export default function InvoiceDetail() {
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to send invoice email');
     }
+  };
+
+  const confirmResend = () => {
+    setConfirmDialog({ open: true, title: 'Resend Invoice', message: 'Send this invoice again to the client email?', confirmLabel: 'Resend', variant: 'primary', onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); handleResend(); } });
   };
 
   const handleStatusChange = async (status) => {
@@ -104,7 +110,28 @@ export default function InvoiceDetail() {
     window.print();
   };
 
-  if (isLoading) return <Loader />;
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/invoices/${id}/pdf`, { credentials: 'include' });
+      if (!res.ok) { const errBody = await res.text(); throw new Error(JSON.parse(errBody)?.message || 'Failed to download'); }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${invoice?.invoiceNumber || id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err.message || 'Failed to download PDF');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  if (isLoading) return <DetailSkeleton />;
   if (!invoice) return <div className="text-zinc-500 py-8 text-center">Invoice not found</div>;
 
   const formatDateTime = (date) => (date ? new Date(date).toLocaleString('en-IN') : '-');
@@ -141,7 +168,7 @@ export default function InvoiceDetail() {
             </Button>
           )}
           {(invoice.status === 'sent' || invoice.status === 'overdue') && (
-            <Button variant="secondary" size="sm" onClick={handleResend} loading={isResending}>
+            <Button variant="secondary" size="sm" onClick={confirmResend} loading={isResending}>
               <Send className="w-4 h-4 mr-1" /> Resend
             </Button>
           )}
@@ -150,6 +177,9 @@ export default function InvoiceDetail() {
               <XCircle className="w-4 h-4 mr-1" /> Cancel Invoice
             </Button>
           )}
+          <Button variant="secondary" size="sm" onClick={handleDownloadPdf} loading={isDownloading}>
+            <Download className="w-4 h-4 mr-1" /> PDF
+          </Button>
           <Button variant="secondary" size="sm" onClick={handlePrint}>
             <Printer className="w-4 h-4 mr-1" /> Print
           </Button>

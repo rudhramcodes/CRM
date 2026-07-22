@@ -78,6 +78,14 @@ export const getInvoiceHtml = async (id) => {
   return generateInvoiceHtml(invoice);
 };
 
+export const getInvoicePdf = async (id) => {
+  const invoice = await invoiceRepository.findById(id);
+  if (!invoice) {
+    throw ApiError.notFound('Invoice not found');
+  }
+  return generateInvoicePdf(invoice);
+};
+
 export const updateInvoice = async (id, data) => {
   const invoice = await invoiceRepository.findById(id);
   if (!invoice) {

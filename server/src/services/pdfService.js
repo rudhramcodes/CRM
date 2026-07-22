@@ -452,14 +452,14 @@ export const generateInvoicePdf = async (invoice) => {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const isClassic = venture.template === 'classic-bordered';
-    const pdf = await page.pdf({
+    const raw = await page.pdf({
       ...(isClassic
         ? { width: '8.5in', height: '11in', margin: { top: '0', bottom: '0', left: '0', right: '0' } }
         : { format: 'A4', margin: { top: '30px', bottom: '30px', left: '40px', right: '40px' } }),
       printBackground: true,
       preferCSSPageSize: true,
     });
-    return pdf;
+    return Buffer.from(raw);
   } finally {
     await browser.close();
   }

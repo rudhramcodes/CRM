@@ -29,6 +29,7 @@ export default function InvoiceTable({ invoices, onDelete, onStatusChange, userR
     {
       header: 'Client',
       accessor: 'client',
+      sortable: false,
       cell: ({ getValue }) => {
         const client = getValue();
         return client ? client.companyName : '-';
@@ -101,6 +102,7 @@ export default function InvoiceTable({ invoices, onDelete, onStatusChange, userR
     {
       header: 'Actions',
       id: 'actions',
+      sortable: false,
       cell: ({ row }) => {
         const invoice = row;
         return (

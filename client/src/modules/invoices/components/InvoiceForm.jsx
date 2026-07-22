@@ -8,6 +8,7 @@ import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
 import DatePicker from '../../../components/forms/DatePicker';
 import Button from '../../../components/ui/Button';
+import { useGetProjectsQuery } from '../../../services/projectApi';
 
 const itemSchema = z.object({
   description: z.string().min(1, 'Required').max(500),
@@ -22,6 +23,13 @@ const invoiceFormSchema = z.object({
   items: z.array(itemSchema).min(1, 'At least one item required'),
   taxRate: z.coerce.number().min(0).max(100).optional().default(0),
   discountPercent: z.coerce.number().min(0).max(100).optional().default(0),
+  billingAddress: z.object({
+    street: z.string().optional().or(z.literal('')),
+    city: z.string().optional().or(z.literal('')),
+    state: z.string().optional().or(z.literal('')),
+    pincode: z.string().optional().or(z.literal('')),
+    country: z.string().optional().or(z.literal('')),
+  }).optional(),
   notes: z.string().optional().or(z.literal('')),
   termsConditions: z.string().optional().or(z.literal('')),
 });
@@ -35,6 +43,9 @@ const TAX_OPTIONS = [
 ];
 
 export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmitting, onCancel, initialData, submitLabel = 'Create Invoice' }) {
+  const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
+  const projects = projectsData?.data || [];
+
   const defaultValues = initialData
     ? {
         client: initialData.client?._id || initialData.client || '',
@@ -47,6 +58,7 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
         })),
         taxRate: initialData.taxRate ?? 0,
         discountPercent: initialData.discountPercent ?? 0,
+        billingAddress: initialData.billingAddress || { street: '', city: '', state: '', pincode: '', country: 'India' },
         notes: initialData.notes || '',
         termsConditions: initialData.termsConditions || '',
       }
@@ -57,6 +69,7 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
         items: [{ description: '', quantity: 1, unitPrice: 0 }],
         taxRate: 0,
         discountPercent: 0,
+        billingAddress: { street: '', city: '', state: '', pincode: '', country: 'India' },
         notes: '',
         termsConditions: '',
       };
@@ -139,6 +152,17 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
             />
           )}
         />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormSelect
+          name="project"
+          control={control}
+          label="Project"
+          options={projects.map((p) => ({ value: p._id, label: p.title || p.name || p._id }))}
+          placeholder="Select project (optional)"
+        />
+        <div />
       </div>
 
       <div className="space-y-3">
@@ -243,6 +267,17 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
           </div>
         </div>
       </div>
+
+      <details className="border border-zinc-200 rounded-lg">
+        <summary className="text-sm font-medium text-zinc-700 px-4 py-2.5 cursor-pointer hover:bg-zinc-50 select-none">Billing Address</summary>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 pt-3">
+          <FormInput label="Street" placeholder="Street address" {...register('billingAddress.street')} />
+          <FormInput label="City" placeholder="City" {...register('billingAddress.city')} />
+          <FormInput label="State" placeholder="State" {...register('billingAddress.state')} />
+          <FormInput label="Pincode" placeholder="Pincode" {...register('billingAddress.pincode')} />
+          <FormInput label="Country" placeholder="Country" {...register('billingAddress.country')} />
+        </div>
+      </details>
 
       <FormTextarea
         label="Notes"

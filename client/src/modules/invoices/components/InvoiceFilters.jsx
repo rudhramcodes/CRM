@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { INVOICE_STATUS } from '../../../constants';
+import { DatePickerSimple } from '../../../components/ui/DatePickerSimple';
 import {
   Select,
   SelectTrigger,
@@ -13,6 +14,8 @@ export default function InvoiceFilters({ onFilterChange }) {
   const [filters, setFilters] = useState({
     search: '',
     status: '',
+    dateFrom: '',
+    dateTo: '',
   });
 
   useEffect(() => {
@@ -20,20 +23,22 @@ export default function InvoiceFilters({ onFilterChange }) {
       const activeFilters = {};
       if (filters.search) activeFilters.search = filters.search;
       if (filters.status) activeFilters.status = filters.status;
+      if (filters.dateFrom) activeFilters.dateFrom = filters.dateFrom;
+      if (filters.dateTo) activeFilters.dateTo = filters.dateTo;
       onFilterChange(activeFilters);
     }, 300);
     return () => clearTimeout(timer);
   }, [filters, onFilterChange]);
 
   const clearFilters = () => {
-    setFilters({ search: '', status: '' });
+    setFilters({ search: '', status: '', dateFrom: '', dateTo: '' });
   };
 
-  const hasFilters = filters.search || filters.status;
+  const hasFilters = filters.search || filters.status || filters.dateFrom || filters.dateTo;
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
-      <div className="relative flex-1 max-w-sm">
+    <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+      <div className="relative flex-1 min-w-[180px] max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
         <input
           type="text"
@@ -60,6 +65,20 @@ export default function InvoiceFilters({ onFilterChange }) {
           ))}
         </SelectContent>
       </Select>
+
+      <DatePickerSimple
+        label=""
+        placeholder="From date"
+        value={filters.dateFrom}
+        onChange={(val) => setFilters((p) => ({ ...p, dateFrom: val }))}
+      />
+
+      <DatePickerSimple
+        label=""
+        placeholder="To date"
+        value={filters.dateTo}
+        onChange={(val) => setFilters((p) => ({ ...p, dateTo: val }))}
+      />
 
       {hasFilters && (
         <button

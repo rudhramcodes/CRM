@@ -78,6 +78,13 @@ export const invoiceApi = api.injectEndpoints({
       }),
       providesTags: (result, error, id) => [{ type: 'Invoice', id }],
     }),
+
+    getInvoicePdf: builder.query({
+      query: (id) => ({
+        url: `/invoices/${id}/pdf`,
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
   }),
 });
 
@@ -91,4 +98,5 @@ export const {
   useDeleteInvoiceMutation,
   useResendInvoiceEmailMutation,
   useGetInvoiceHtmlQuery,
+  useLazyGetInvoicePdfQuery,
 } = invoiceApi;
