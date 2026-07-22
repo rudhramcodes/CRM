@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Edit2, Trash2, Eye, ChevronDown } from 'lucide-react';
+import { Edit2, Trash2, Eye, CreditCard } from 'lucide-react';
 import InvoiceStatusBadge from './InvoiceStatusBadge';
 import DataTable from '../../../components/tables/DataTable';
 import {
@@ -10,13 +10,18 @@ import {
   SelectItem,
 } from '../../../components/ui/Select';
 
+// Only non-financial status transitions here.
+// "Mark as Paid" / "Collect Remaining" are payment actions done via POST /api/payments.
 const STATUS_TRANSITIONS = {
   draft: [{ value: 'sent', label: 'Send' }, { value: 'cancelled', label: 'Cancel' }],
-  sent: [{ value: 'paid', label: 'Mark Paid' }, { value: 'cancelled', label: 'Cancel' }],
-  overdue: [{ value: 'paid', label: 'Mark Paid' }, { value: 'cancelled', label: 'Cancel' }],
+  sent: [{ value: 'cancelled', label: 'Cancel' }],
+  partially_paid: [{ value: 'cancelled', label: 'Cancel' }],
+  overdue: [{ value: 'cancelled', label: 'Cancel' }],
   paid: [],
   cancelled: [],
 };
+
+const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 export default function InvoiceTable({ invoices, onDelete, onStatusChange, userRole }) {
   const navigate = useNavigate();
@@ -40,7 +45,7 @@ export default function InvoiceTable({ invoices, onDelete, onStatusChange, userR
       accessor: 'issueDate',
       cell: ({ getValue }) => {
         const date = getValue();
-        return date ? new Date(date).toLocaleDateString() : '-';
+        return date ? new Date(date).toLocaleDateString('en-IN') : '-';
       },
     },
     {
@@ -48,7 +53,7 @@ export default function InvoiceTable({ invoices, onDelete, onStatusChange, userR
       accessor: 'dueDate',
       cell: ({ getValue }) => {
         const date = getValue();
-        return date ? new Date(date).toLocaleDateString() : '-';
+        return date ? new Date(date).toLocaleDateString('en-IN') : '-';
       },
     },
     {
@@ -63,40 +68,64 @@ export default function InvoiceTable({ invoices, onDelete, onStatusChange, userR
         }
 
         return (
-          <Select
-            value={status}
-            onValueChange={(newStatus) => onStatusChange?.(row._id, newStatus)}
-          >
-            <SelectTrigger className="w-36 h-8 text-xs">
-              <SelectValue>
-                <InvoiceStatusBadge status={status} />
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {transitions.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-1.5">
+            <InvoiceStatusBadge status={status} />
+            <Select
+              value={status}
+              onValueChange={(newStatus) => onStatusChange?.(row._id, newStatus)}
+            >
+              <SelectTrigger className="w-8 h-8 p-0 border-0 shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {transitions.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         );
       },
     },
     {
       header: 'Total',
       accessor: 'total',
-      cell: ({ getValue }) => {
-        const val = getValue();
-        return `₹${(val || 0).toFixed(2)}`;
+      cell: ({ getValue }) => fmt(getValue()),
+    },
+    {
+      header: 'Paid',
+      accessor: 'paidAmount',
+      cell: ({ getValue, row }) => {
+        const paid = getValue() || 0;
+        const total = row.total || 0;
+        const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-green-600 font-medium">{fmt(paid)}</span>
+            {paid > 0 && paid < total && (
+              <span className="text-xs text-zinc-400">({pct}%)</span>
+            )}
+          </div>
+        );
       },
     },
     {
       header: 'Balance',
       accessor: 'balanceDue',
-      cell: ({ getValue }) => {
-        const val = getValue();
-        return `₹${(val || 0).toFixed(2)}`;
+      cell: ({ getValue, row }) => {
+        const bal = getValue() || 0;
+        const status = row.status;
+        if (bal === 0) {
+          return <span className="text-green-600 font-medium">Fully Paid</span>;
+        }
+        const color = status === 'overdue'
+          ? 'text-red-600'
+          : status === 'partially_paid'
+            ? 'text-orange-600'
+            : 'text-zinc-700';
+        return <span className={`${color} font-medium`}>{fmt(bal)}</span>;
       },
     },
     {
@@ -105,8 +134,9 @@ export default function InvoiceTable({ invoices, onDelete, onStatusChange, userR
       sortable: false,
       cell: ({ row }) => {
         const invoice = row;
+        const canRecordPayment = ['sent', 'overdue', 'partially_paid'].includes(invoice.status);
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={(e) => {
@@ -118,6 +148,19 @@ export default function InvoiceTable({ invoices, onDelete, onStatusChange, userR
             >
               <Eye className="w-4 h-4" />
             </button>
+            {canRecordPayment && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/invoices/${invoice._id}?recordPayment=1`);
+                }}
+                className="p-1.5 text-zinc-400 hover:text-green-600 transition-colors rounded"
+                title="Record Payment"
+              >
+                <CreditCard className="w-4 h-4" />
+              </button>
+            )}
             {invoice.status === 'draft' && (
               <>
                 <button

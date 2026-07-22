@@ -25,6 +25,8 @@ import TaskDetail from '../modules/tasks/pages/TaskDetail';
 import InvoiceList from '../modules/invoices/pages/InvoiceList';
 import InvoiceCreate from '../modules/invoices/pages/InvoiceCreate';
 import InvoiceDetail from '../modules/invoices/pages/InvoiceDetail';
+import PaymentList from '../modules/payments/pages/PaymentList';
+import PaymentDetail from '../modules/payments/pages/PaymentDetail';
 
 const router = createBrowserRouter([
   {
@@ -64,7 +66,8 @@ const router = createBrowserRouter([
       { path: 'invoices', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceList /></ProtectedRoute> },
       { path: 'invoices/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceCreate /></ProtectedRoute> },
       { path: 'invoices/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceDetail /></ProtectedRoute> },
-      { path: 'payments', element: <div>Payments Module (Coming Soon)</div> },
+      { path: 'payments', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><PaymentList /></ProtectedRoute> },
+      { path: 'payments/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><PaymentDetail /></ProtectedRoute> },
       { path: 'reports', element: <div>Reports Module (Coming Soon)</div> },
       { path: 'notifications', element: <div>Notifications (Coming Soon)</div> },
       { path: 'settings', element: <div>Settings (Coming Soon)</div> },

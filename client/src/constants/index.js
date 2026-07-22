@@ -54,6 +54,7 @@ export const PROJECT_STATUS = [
 export const INVOICE_STATUS = [
   { value: 'draft', label: 'Draft', color: 'bg-gray-100 text-gray-800' },
   { value: 'sent', label: 'Sent', color: 'bg-blue-100 text-blue-800' },
+  { value: 'partially_paid', label: 'Partially Paid', color: 'bg-indigo-100 text-indigo-800' },
   { value: 'paid', label: 'Paid', color: 'bg-green-100 text-green-800' },
   { value: 'overdue', label: 'Overdue', color: 'bg-red-100 text-red-800' },
   { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-100 text-gray-800' },
@@ -85,6 +86,22 @@ export const MEETING_STATUS = [
   { value: 'scheduled', label: 'Scheduled', color: 'bg-blue-100 text-blue-800' },
   { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800' },
   { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800' },
+];
+
+export const PAYMENT_STATUS = [
+  { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800' },
+  { value: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'failed', label: 'Failed', color: 'bg-red-100 text-red-800' },
+  { value: 'refunded', label: 'Refunded', color: 'bg-purple-100 text-purple-800' },
+];
+
+export const PAYMENT_METHODS = [
+  { value: 'upi', label: 'UPI' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'razorpay', label: 'Razorpay' },
+  { value: 'stripe', label: 'Stripe' },
+  { value: 'paypal', label: 'PayPal' },
+  { value: 'cash', label: 'Cash' },
 ];
 
 export const CLIENT_STATUS = [

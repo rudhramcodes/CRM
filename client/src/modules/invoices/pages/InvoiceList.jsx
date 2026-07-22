@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Receipt, Plus, FileText, Send, CheckCircle, AlertTriangle, XCircle, IndianRupee } from 'lucide-react';
+import { Receipt, Plus, FileText, Send, CheckCircle, AlertTriangle, XCircle, IndianRupee, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InvoiceTable from '../components/InvoiceTable';
 import InvoiceFilters from '../components/InvoiceFilters';
@@ -15,6 +15,7 @@ const statCards = [
   { key: 'total', label: 'Total Invoices', icon: FileText, color: 'text-blue-600 bg-blue-50' },
   { key: 'draft', label: 'Draft', icon: FileText, color: 'text-zinc-600 bg-zinc-50' },
   { key: 'sent', label: 'Sent', icon: Send, color: 'text-blue-600 bg-blue-50' },
+  { key: 'partially_paid', label: 'Partially Paid', icon: Clock, color: 'text-indigo-600 bg-indigo-50' },
   { key: 'paid', label: 'Paid', icon: CheckCircle, color: 'text-green-600 bg-green-50' },
   { key: 'overdue', label: 'Overdue', icon: AlertTriangle, color: 'text-red-600 bg-red-50' },
   { key: 'cancelled', label: 'Cancelled', icon: XCircle, color: 'text-zinc-400 bg-zinc-50' },
@@ -84,9 +85,9 @@ export default function InvoiceList() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {statsLoading
-          ? Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)
+          ? Array.from({ length: 7 }).map((_, i) => <StatCardSkeleton key={i} />)
           : statCards.map((card) => (
           <div key={card.key} className="bg-white rounded-lg border border-zinc-200 p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -102,9 +103,9 @@ export default function InvoiceList() {
         ))}
       </div>
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <IndianRupee className="w-5 h-5 text-green-600" />
+      <div className="bg-white rounded-lg border border-zinc-200 p-4">
+        <div className="flex flex-wrap items-center gap-6">
+          <IndianRupee className="w-5 h-5 text-green-600 shrink-0" />
           <div>
             <p className="text-xs text-zinc-500">Revenue (Paid)</p>
             <p className="text-lg font-bold text-green-600">
@@ -113,9 +114,27 @@ export default function InvoiceList() {
           </div>
           <div className="h-8 w-px bg-zinc-200" />
           <div>
-            <p className="text-xs text-zinc-500">Pending</p>
+            <p className="text-xs text-zinc-500">Outstanding</p>
             <p className="text-lg font-bold text-orange-600">
               {statsLoading ? '-' : formatCurrency(stats?.revenue?.totalPending)}
+            </p>
+          </div>
+          <div className="h-8 w-px bg-zinc-200" />
+          <div>
+            <p className="text-xs text-zinc-500">Total Invoiced</p>
+            <p className="text-lg font-bold text-zinc-900">
+              {statsLoading ? '-' : formatCurrency(stats?.revenue?.totalRevenue)}
+            </p>
+          </div>
+          <div className="h-8 w-px bg-zinc-200" />
+          <div>
+            <p className="text-xs text-zinc-500">Collection Rate</p>
+            <p className="text-lg font-bold text-zinc-900">
+              {statsLoading
+                ? '-'
+                : stats?.revenue?.totalRevenue
+                  ? `${Math.round((stats.revenue.totalPaid / stats.revenue.totalRevenue) * 100)}%`
+                  : '0%'}
             </p>
           </div>
           <div className="h-8 w-px bg-zinc-200" />
@@ -126,6 +145,14 @@ export default function InvoiceList() {
             </p>
           </div>
         </div>
+        {!statsLoading && stats?.revenue?.totalRevenue > 0 && (
+          <div className="mt-3 w-full bg-zinc-100 rounded-full h-1.5">
+            <div
+              className="bg-green-500 h-1.5 rounded-full transition-all"
+              style={{ width: `${Math.min((stats.revenue.totalPaid / stats.revenue.totalRevenue) * 100, 100)}%` }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg border border-zinc-200 p-4">

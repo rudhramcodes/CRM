@@ -61,7 +61,7 @@ export const update = async (req, res, next) => {
 
 export const updateStatus = async (req, res, next) => {
   try {
-    const invoice = await invoiceService.updateInvoiceStatus(req.params.id, req.body.status);
+    const invoice = await invoiceService.updateInvoiceStatus(req.params.id, req.body.status, req.user);
     ApiResponse.success(res, 200, { invoice }, `Invoice ${req.body.status} successfully`);
   } catch (error) {
     next(error);

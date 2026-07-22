@@ -6,11 +6,15 @@ import logger from '../../utils/logger.js';
 import Client from '../clients/client.model.js';
 import { VENTURE_CODES } from '../../constants/index.js';
 
+// Invoice service manages NON-FINANCIAL status transitions only.
+// Financial transitions (→ partially_paid, → paid) are handled by Payment service
+// when payments are created/updated/deleted.
 const VALID_TRANSITIONS = {
   draft: ['sent', 'cancelled'],
-  sent: ['paid', 'cancelled'],
+  sent: ['cancelled'],
+  partially_paid: ['cancelled'],
+  overdue: ['cancelled'],
   paid: [],
-  overdue: ['paid', 'cancelled'],
   cancelled: [],
 };
 
@@ -103,7 +107,7 @@ export const updateInvoice = async (id, data) => {
   return invoiceRepository.updateById(id, updateData);
 };
 
-export const updateInvoiceStatus = async (id, status) => {
+export const updateInvoiceStatus = async (id, status, user = null) => {
   const invoice = await invoiceRepository.findById(id);
   if (!invoice) {
     throw ApiError.notFound('Invoice not found');
@@ -118,7 +122,6 @@ export const updateInvoiceStatus = async (id, status) => {
       logger.error(`Invoice email failed: ${err.message}`, { invoice: invoice.invoiceNumber });
     });
   }
-  if (status === 'paid') updateData.paidAt = new Date();
   if (status === 'cancelled') updateData.cancelledAt = new Date();
 
   return invoiceRepository.updateById(id, updateData);
@@ -189,7 +192,7 @@ export const getStats = async () => {
   const total = await invoiceRepository.countAll();
   const overdueCount = await invoiceRepository.countOverdue();
 
-  const statusBreakdown = { draft: 0, sent: 0, paid: 0, overdue: 0, cancelled: 0 };
+  const statusBreakdown = { draft: 0, sent: 0, partially_paid: 0, paid: 0, overdue: 0, cancelled: 0 };
   statusCounts.forEach(({ _id, count }) => {
     statusBreakdown[_id] = count;
   });

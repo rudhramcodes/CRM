@@ -74,7 +74,7 @@ export const countAll = async (filter = {}) => {
 
 export const getRevenueStats = async () => {
   const result = await Invoice.aggregate([
-    { $match: { status: { $in: ['paid', 'sent', 'overdue'] } } },
+    { $match: { status: { $in: ['paid', 'sent', 'overdue', 'partially_paid'] } } },
     {
       $group: {
         _id: null,
@@ -91,7 +91,7 @@ export const getRevenueStats = async () => {
 export const countOverdue = async () => {
   const now = new Date();
   return Invoice.countDocuments({
-    status: { $in: ['sent', 'overdue'] },
+    status: { $in: ['sent', 'overdue', 'partially_paid'] },
     dueDate: { $lt: now },
   });
 };

@@ -41,6 +41,7 @@ export const TASK_PRIORITY = {
 export const INVOICE_STATUS = {
   DRAFT: 'draft',
   SENT: 'sent',
+  PARTIALLY_PAID: 'partially_paid',
   PAID: 'paid',
   OVERDUE: 'overdue',
   CANCELLED: 'cancelled',
@@ -134,6 +135,7 @@ export const PERMISSIONS = {
   PAYMENTS_READ: 'payments:read',
   PAYMENTS_CREATE: 'payments:create',
   PAYMENTS_UPDATE: 'payments:update',
+  PAYMENTS_DELETE: 'payments:delete',
 
   // Meetings
   MEETINGS_READ: 'meetings:read',
@@ -178,6 +180,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.INVOICES_DELETE,
     PERMISSIONS.PAYMENTS_READ,
     PERMISSIONS.PAYMENTS_CREATE,
+    PERMISSIONS.PAYMENTS_UPDATE,
     PERMISSIONS.MEETINGS_READ,
     PERMISSIONS.MEETINGS_CREATE,
     PERMISSIONS.MEETINGS_UPDATE,

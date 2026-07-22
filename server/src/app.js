@@ -19,6 +19,7 @@ import meetingRoutes from './modules/meetings/meeting.routes.js';
 import projectRoutes from './modules/projects/project.routes.js';
 import taskRoutes from './modules/tasks/task.routes.js';
 import invoiceRoutes from './modules/invoices/invoice.routes.js';
+import paymentRoutes from './modules/payments/payment.routes.js';
 import templateRoutes from './modules/templates/template.routes.js';
 
 const app = express();
@@ -75,6 +76,7 @@ app.use('/api/meetings', meetingRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/templates', templateRoutes);
 
 app.use((_req, _res, next) => {
