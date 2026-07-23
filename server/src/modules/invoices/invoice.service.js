@@ -4,6 +4,7 @@ import { sendEmail } from '../../services/emailService.js';
 import { generateInvoicePdf, generateInvoiceHtml } from '../../services/pdfService.js';
 import logger from '../../utils/logger.js';
 import Client from '../clients/client.model.js';
+import Payment from '../payments/payment.model.js';
 import { VENTURE_CODES } from '../../constants/index.js';
 
 // Invoice service manages NON-FINANCIAL status transitions only.
@@ -12,7 +13,7 @@ import { VENTURE_CODES } from '../../constants/index.js';
 const VALID_TRANSITIONS = {
   draft: ['sent', 'cancelled'],
   sent: ['cancelled'],
-  partially_paid: ['cancelled'],
+  partially_paid: ['paid', 'cancelled'],
   overdue: ['cancelled'],
   paid: [],
   cancelled: [],
@@ -66,12 +67,25 @@ export const getInvoices = async (query) => {
   return invoiceRepository.findAll(filters, { page, limit, sortBy, sortOrder });
 };
 
+const markOverdueIfPastDue = async (invoice) => {
+  if (!invoice) return;
+  const now = new Date();
+  const shouldBeOverdue =
+    ['sent', 'partially_paid'].includes(invoice.status) &&
+    invoice.dueDate < now;
+  if (shouldBeOverdue) {
+    invoice.status = 'overdue';
+    await invoice.save();
+  }
+};
+
 export const getInvoiceById = async (id) => {
   const invoice = await invoiceRepository.findById(id);
   if (!invoice) {
     throw ApiError.notFound('Invoice not found');
   }
-  return invoice;
+  await markOverdueIfPastDue(invoice);
+  return invoiceRepository.findById(id);
 };
 
 export const getInvoiceHtml = async (id) => {
@@ -103,6 +117,23 @@ export const updateInvoice = async (id, data) => {
   const updateData = { ...data };
   if (data.issueDate) updateData.issueDate = new Date(data.issueDate);
   if (data.dueDate) updateData.dueDate = new Date(data.dueDate);
+  // normalize empty project string to null
+  if (updateData.project === '') updateData.project = null;
+  // recalculate computed fields (pre('save') doesn't run on findByIdAndUpdate)
+  if (updateData.items) {
+    updateData.items = updateData.items.map((item) => ({
+      ...item,
+      amount: item.quantity * item.unitPrice,
+    }));
+    const subtotal = updateData.items.reduce((s, i) => s + i.amount, 0);
+    const taxRate = updateData.taxRate ?? 0;
+    const discountPercent = updateData.discountPercent ?? 0;
+    const taxAmount = (subtotal * taxRate) / 100;
+    const discountAmount = (subtotal * discountPercent) / 100;
+    const total = subtotal + taxAmount - discountAmount;
+    const paidAmount = updateData.paidAmount ?? invoice.paidAmount ?? 0;
+    Object.assign(updateData, { subtotal, taxAmount, discountAmount, total, balanceDue: total - paidAmount });
+  }
 
   return invoiceRepository.updateById(id, updateData);
 };
@@ -173,6 +204,13 @@ export const deleteInvoice = async (id) => {
 
   if (invoice.status !== 'draft') {
     throw ApiError.badRequest('Only draft invoices can be deleted');
+  }
+
+  const paymentCount = await Payment.countDocuments({ invoice: id });
+  if (paymentCount > 0) {
+    throw ApiError.badRequest(
+      'Cannot delete invoice with existing payments. Delete the payments first.',
+    );
   }
 
   return invoiceRepository.deleteById(id);

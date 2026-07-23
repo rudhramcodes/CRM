@@ -90,6 +90,7 @@ const invoiceSchema = new mongoose.Schema(
     },
     sentAt: { type: Date, default: null },
     paidAt: { type: Date, default: null },
+    lastPaymentDate: { type: Date, default: null },
     cancelledAt: { type: Date, default: null },
     templateId: { type: String, default: 'default' },
   },

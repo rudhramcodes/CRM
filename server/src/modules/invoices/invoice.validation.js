@@ -23,7 +23,7 @@ const billingAddressSchema = z.object({
 export const createInvoiceSchema = z
   .object({
     client: z.string().min(1, 'Client is required'),
-    project: z.string().optional().nullable(),
+    project: z.string().optional().nullable().or(z.literal('')),
     issueDate: z
       .string()
       .refine((val) => !isNaN(Date.parse(val)), 'Invalid issue date')
@@ -52,7 +52,7 @@ export const createInvoiceSchema = z
 
 export const updateInvoiceSchema = z.object({
   client: z.string().optional(),
-  project: z.string().optional().nullable(),
+  project: z.string().optional().nullable().or(z.literal('')),
   issueDate: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), 'Invalid issue date')

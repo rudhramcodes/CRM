@@ -11,7 +11,7 @@ import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton
 
 const statCards = [
   { key: 'totalCollected', label: 'Total Collected', icon: IndianRupee, color: 'text-green-600 bg-green-50', format: (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
-  { key: 'pendingAmount', label: 'Pending', icon: Clock, color: 'text-orange-600 bg-orange-50', format: (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
+  { key: 'pendingAmount', label: 'Total Outstanding', icon: Clock, color: 'text-orange-600 bg-orange-50', format: (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
   { key: 'methodCount', label: 'Payment Methods', icon: TrendingUp, color: 'text-blue-600 bg-blue-50', format: (v) => v },
 ];
 

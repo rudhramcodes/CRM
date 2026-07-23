@@ -63,3 +63,14 @@ export const stats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const downloadReceipt = async (req, res, next) => {
+  try {
+    const pdf = await paymentService.getPaymentReceiptPdf(req.params.id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="receipt-${req.params.id.slice(-8)}.pdf"`);
+    res.send(pdf);
+  } catch (error) {
+    next(error);
+  }
+};

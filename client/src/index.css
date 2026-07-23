@@ -18,6 +18,16 @@
   --radius: 0.5rem;
 }
 
+:root {
+  --chart-1: #6366f1;
+  --chart-2: #22c55e;
+  --chart-3: #ef4444;
+  --chart-4: #f59e0b;
+  --chart-5: #8b5cf6;
+  --chart-6: #a1a1aa;
+  --chart-7: #06b6d4;
+}
+
 *,
 *::before,
 *::after {

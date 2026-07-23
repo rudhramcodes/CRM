@@ -464,3 +464,76 @@ export const generateInvoicePdf = async (invoice) => {
     await browser.close();
   }
 };
+
+/* ============================================================
+   PAYMENT RECEIPT
+   ============================================================ */
+export const generatePaymentReceiptHtml = (payment, invoice) => {
+  const client = payment.client || invoice?.client || {};
+  const inv = invoice || payment.invoice || {};
+  const methodLabels = { upi: 'UPI', bank_transfer: 'Bank Transfer', razorpay: 'Razorpay', stripe: 'Stripe', paypal: 'PayPal', cash: 'Cash' };
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4; margin: 20mm; }
+    body { font-family: Arial, sans-serif; color: #1a1a1a; font-size: 10pt; line-height: 1.5; }
+    .container { max-width: 500px; margin: 0 auto; }
+    .header { text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px; }
+    .header h1 { font-size: 18pt; color: #1a1a1a; margin: 0 0 4px; }
+    .header p { color: #6b7280; margin: 0; font-size: 9pt; }
+    .badge { display: inline-block; background: #059669; color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 8pt; }
+    .amount-block { text-align: center; padding: 24px 0; }
+    .amount-block .label { font-size: 8pt; color: #6b7280; text-transform: uppercase; }
+    .amount-block .value { font-size: 22pt; font-weight: bold; color: #059669; margin: 4px 0; }
+    .details { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    .details td { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+    .details td:first-child { color: #6b7280; width: 120px; }
+    .details td:last-child { text-align: right; font-weight: 500; }
+    .footer { text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 8pt; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Payment Receipt</h1>
+      <p>Rudhram Enterprises Private Limited</p>
+    </div>
+    <div class="amount-block">
+      <div class="label">Amount Paid</div>
+      <div class="value">${fmt(payment.amount)}</div>
+      <span class="badge">${payment.status.toUpperCase()}</span>
+    </div>
+    <table class="details">
+      <tr><td>Receipt No.</td><td>RCT-${String(payment._id || '').slice(-8).toUpperCase() || 'N/A'}</td></tr>
+      <tr><td>Payment Date</td><td>${fmtDate(payment.paymentDate)}</td></tr>
+      <tr><td>Payment Method</td><td>${methodLabels[payment.paymentMethod] || payment.paymentMethod}</td></tr>
+      <tr><td>Reference</td><td>${payment.referenceNo || '-'}</td></tr>
+      <tr><td>Invoice</td><td>${inv.invoiceNumber || '-'}</td></tr>
+      <tr><td>Client</td><td>${esc(client.companyName || client.contactPerson || 'N/A')}</td></tr>
+    </table>
+    <div class="footer">
+      <p>This is a computer-generated receipt. No signature required.</p>
+      <p>${COMPANY.legalName} | ${COMPANY.email} | ${COMPANY.contact}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+};
+
+export const generatePaymentReceiptPdf = async (payment, invoice) => {
+  const html = generatePaymentReceiptHtml(payment, invoice);
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const raw = await page.pdf({ format: 'A4', margin: { top: '20mm', bottom: '20mm' }, printBackground: true });
+    return Buffer.from(raw);
+  } finally {
+    await browser.close();
+  }
+};

@@ -57,6 +57,13 @@ export const paymentApi = api.injectEndpoints({
       ],
     }),
 
+    getPaymentReceipt: builder.query({
+      query: (id) => ({
+        url: `/payments/${id}/receipt`,
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+
     deletePayment: builder.mutation({
       query: (id) => ({
         url: `/payments/${id}`,
@@ -82,4 +89,5 @@ export const {
   useCreatePaymentMutation,
   useUpdatePaymentMutation,
   useDeletePaymentMutation,
+  useLazyGetPaymentReceiptQuery,
 } = paymentApi;

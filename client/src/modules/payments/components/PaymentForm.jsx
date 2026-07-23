@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, ArrowRightToLine, Wallet } from 'lucide-react';
 import { PAYMENT_METHODS, PAYMENT_STATUS } from '../../../constants';
 import Button from '../../../components/ui/Button';
 import {
@@ -9,11 +9,23 @@ import {
   SelectContent,
   SelectItem,
 } from '../../../components/ui/Select';
+import DatePicker from '../../../components/forms/DatePicker';
 
-export default function PaymentForm({ invoiceId, invoiceNumber, onSubmit, onClose, initial }) {
+const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+const methodIcons = {
+  upi: 'UPI',
+  bank_transfer: 'BANK',
+  razorpay: 'RZPY',
+  stripe: 'STRP',
+  paypal: 'PYPL',
+  cash: 'CASH',
+};
+
+export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, total, onSubmit, onClose, initial }) {
   const [form, setForm] = useState({
     invoice: invoiceId || initial?.invoice?._id || '',
-    amount: initial?.amount || '',
+    amount: initial?.amount || (balanceDue ? String(balanceDue) : ''),
     paymentMethod: initial?.paymentMethod || 'upi',
     referenceNo: initial?.referenceNo || '',
     notes: initial?.notes || '',
@@ -25,6 +37,15 @@ export default function PaymentForm({ invoiceId, invoiceNumber, onSubmit, onClos
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const amountNum = Number(form.amount) || 0;
+  const amountOverLimit = balanceDue > 0 && amountNum > balanceDue;
+  const newPaid = Math.min((total || 0) > 0 ? (amountNum + ((initial?.amount ? 0 : 0))) : amountNum, total || 0);
+  const newPaidTotal = initial
+    ? (total || 0) - (balanceDue || 0) + amountNum
+    : (total || 0) - (balanceDue || 0) + amountNum;
+  const newBalance = Math.max(0, (total || 0) - newPaidTotal);
+  const newStatus = newBalance <= 0 ? 'paid' : (newPaidTotal > 0 ? 'partially_paid' : 'sent');
+
   const handleChange = (field, value) => {
     setForm((p) => ({ ...p, [field]: value }));
   };
@@ -33,8 +54,13 @@ export default function PaymentForm({ invoiceId, invoiceNumber, onSubmit, onClos
     e.preventDefault();
     setError('');
 
-    if (!form.amount || form.amount <= 0) {
+    if (!form.amount || amountNum <= 0) {
       setError('Amount must be greater than 0');
+      return;
+    }
+
+    if (amountOverLimit) {
+      setError(`Amount exceeds balance due of ${fmt(balanceDue)}. Enter ${fmt(balanceDue)} or less.`);
       return;
     }
 
@@ -42,7 +68,7 @@ export default function PaymentForm({ invoiceId, invoiceNumber, onSubmit, onClos
     try {
       await onSubmit({
         invoice: form.invoice,
-        amount: Number(form.amount),
+        amount: amountNum,
         paymentMethod: form.paymentMethod,
         referenceNo: form.referenceNo,
         notes: form.notes,
@@ -64,9 +90,12 @@ export default function PaymentForm({ invoiceId, invoiceNumber, onSubmit, onClos
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-5 border-b border-zinc-200">
-          <h2 className="text-lg font-semibold text-zinc-900">
-            {initial ? 'Edit Payment' : 'Record Payment'}
-          </h2>
+          <div className="flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-lg font-semibold text-zinc-900">
+              {initial ? 'Edit Payment' : 'Record Payment'}
+            </h2>
+          </div>
           <button onClick={onClose} className="p-1 text-zinc-400 hover:text-zinc-600 rounded">
             <X className="w-5 h-5" />
           </button>
@@ -76,7 +105,29 @@ export default function PaymentForm({ invoiceId, invoiceNumber, onSubmit, onClos
           {invoiceNumber && (
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-1">Invoice</label>
-              <p className="text-sm text-zinc-900 font-medium">{invoiceNumber}</p>
+              <p className="text-sm text-zinc-900 font-medium bg-zinc-50 px-3 py-2 rounded-lg border border-zinc-100">
+                {invoiceNumber}
+              </p>
+            </div>
+          )}
+
+          {/* Balance Due indicator */}
+          {balanceDue > 0 && !initial && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <div>
+                  <span className="text-xs text-orange-500 font-medium">BALANCE DUE</span>
+                  <p className="text-lg font-bold text-orange-700">{fmt(balanceDue)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleChange('amount', String(balanceDue))}
+                  className="inline-flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 font-medium bg-orange-100 hover:bg-orange-200 px-3 py-1.5 rounded transition-colors"
+                >
+                  <ArrowRightToLine className="w-3.5 h-3.5" />
+                  Full Amount
+                </button>
+              </div>
             </div>
           )}
 
@@ -84,32 +135,76 @@ export default function PaymentForm({ invoiceId, invoiceNumber, onSubmit, onClos
             <label className="block text-sm font-medium text-zinc-700 mb-1">
               Amount <span className="text-red-500">*</span>
             </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={form.amount}
-              onChange={(e) => handleChange('amount', e.target.value)}
-              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-900"
-              required
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-medium text-sm">₹</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max={balanceDue}
+                placeholder="0.00"
+                value={form.amount}
+                onChange={(e) => handleChange('amount', e.target.value)}
+                className={`w-full pl-7 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 transition-colors ${
+                  amountOverLimit
+                    ? 'border-red-400 bg-red-50 focus:ring-red-400 focus:border-red-400'
+                    : 'border-zinc-200 focus:ring-indigo-500 focus:border-indigo-500'
+                } border`}
+                required
+              />
+            </div>
+            {amountOverLimit && (
+              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                <span>⚠</span>
+                Exceeds balance due of {fmt(balanceDue)}
+              </p>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Payment Method</label>
-            <Select value={form.paymentMethod} onValueChange={(v) => handleChange('paymentMethod', v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">Payment Method</label>
+              <Select value={form.paymentMethod} onValueChange={(v) => handleChange('paymentMethod', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHODS.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                          {methodIcons[m.value]}
+                        </span>
+                        {m.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">Status</label>
+              <Select value={form.status} onValueChange={(v) => handleChange('status', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_STATUS.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      <span className={`inline-flex items-center gap-1.5`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          s.value === 'completed' ? 'bg-green-500' :
+                          s.value === 'pending' ? 'bg-yellow-400' :
+                          s.value === 'failed' ? 'bg-red-500' : 'bg-purple-500'
+                        }`} />
+                        {s.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>
@@ -119,34 +214,17 @@ export default function PaymentForm({ invoiceId, invoiceNumber, onSubmit, onClos
               placeholder="UTR / Cheque no. / Transaction ID"
               value={form.referenceNo}
               onChange={(e) => handleChange('referenceNo', e.target.value)}
-              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-900"
+              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Payment Date</label>
-            <input
-              type="date"
+            <DatePicker
+              label="Payment Date"
               value={form.paymentDate}
-              onChange={(e) => handleChange('paymentDate', e.target.value)}
-              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-900"
+              onChange={(v) => handleChange('paymentDate', v)}
+              placeholder="Select payment date"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Status</label>
-            <Select value={form.status} onValueChange={(v) => handleChange('status', v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_STATUS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div>
@@ -156,21 +234,49 @@ export default function PaymentForm({ invoiceId, invoiceNumber, onSubmit, onClos
               placeholder="Optional notes..."
               value={form.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
-              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-900 resize-none"
+              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+          {/* Payment Impact Preview */}
+          {amountNum > 0 && !initial && (
+            <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">After this payment</p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-indigo-500 text-[11px]">Paid Amount</span>
+                  <p className="font-semibold text-indigo-700">{fmt(newPaidTotal)}</p>
+                </div>
+                <div>
+                  <span className="text-indigo-500 text-[11px]">Balance Due</span>
+                  <p className={`font-semibold ${newBalance <= 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                    {newBalance <= 0 ? 'Fully Paid ✓' : fmt(newBalance)}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-indigo-500 text-[11px]">New Status</span>
+                  <p className="font-semibold text-indigo-700 capitalize">
+                    {newStatus === 'paid' ? 'Paid' : newStatus === 'partially_paid' ? 'Partially Paid' : 'Sent'}
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+              {error}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2 border-t border-zinc-100">
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {initial ? 'Update Payment' : 'Record Payment'}
+              {initial ? 'Update Payment' : amountNum === balanceDue ? 'Pay Full Amount' : 'Record Payment'}
             </Button>
           </div>
         </form>

@@ -27,6 +27,7 @@ import InvoiceCreate from '../modules/invoices/pages/InvoiceCreate';
 import InvoiceDetail from '../modules/invoices/pages/InvoiceDetail';
 import PaymentList from '../modules/payments/pages/PaymentList';
 import PaymentDetail from '../modules/payments/pages/PaymentDetail';
+import ReportsPage from '../modules/reports/pages/ReportsPage';
 
 const router = createBrowserRouter([
   {
@@ -68,7 +69,7 @@ const router = createBrowserRouter([
       { path: 'invoices/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceDetail /></ProtectedRoute> },
       { path: 'payments', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><PaymentList /></ProtectedRoute> },
       { path: 'payments/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><PaymentDetail /></ProtectedRoute> },
-      { path: 'reports', element: <div>Reports Module (Coming Soon)</div> },
+      { path: 'reports', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><ReportsPage /></ProtectedRoute> },
       { path: 'notifications', element: <div>Notifications (Coming Soon)</div> },
       { path: 'settings', element: <div>Settings (Coming Soon)</div> },
     ],

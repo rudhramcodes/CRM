@@ -1,5 +1,8 @@
+import mongoose from 'mongoose';
 import Invoice from './invoice.model.js';
 import paginate, { getPaginationMeta, escapeRegex } from '../../utils/pagination.js';
+
+const Client = mongoose.model('Client');
 
 export const create = async (data) => {
   return Invoice.create(data);
@@ -22,7 +25,15 @@ export const findAll = async (query = {}, options = {}) => {
 
   if (query.search) {
     const searchRegex = new RegExp(escapeRegex(query.search), 'i');
+    const matchingClients = await Client.find(
+      { companyName: searchRegex },
+      { _id: 1 },
+    );
+    const clientIds = matchingClients.map((c) => c._id);
     filter.$or = [{ invoiceNumber: searchRegex }];
+    if (clientIds.length > 0) {
+      filter.$or.push({ client: { $in: clientIds } });
+    }
   }
 
   if (query.status) {

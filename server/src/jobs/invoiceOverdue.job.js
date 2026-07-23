@@ -6,7 +6,7 @@ const markOverdueInvoices = async () => {
   const now = new Date();
 
   const result = await Invoice.updateMany(
-    { status: 'sent', dueDate: { $lt: now } },
+    { status: { $in: ['sent', 'partially_paid'] }, dueDate: { $lt: now } },
     { $set: { status: 'overdue' } },
   );
 

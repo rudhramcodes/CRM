@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Edit2, Trash2, ExternalLink, IndianRupee } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, ExternalLink, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PaymentStatusBadge from '../components/PaymentStatusBadge';
 import PaymentForm from '../components/PaymentForm';
-import InvoiceStatusBadge from '../../invoices/components/InvoiceStatusBadge';
 import {
   useGetPaymentByIdQuery,
   useUpdatePaymentMutation,
   useDeletePaymentMutation,
+  useLazyGetPaymentReceiptQuery,
+  useGetInvoicePaymentsQuery,
 } from '../../../services/paymentApi';
 import { PAYMENT_METHODS } from '../../../constants';
 import { useSelector } from 'react-redux';
@@ -35,14 +36,39 @@ export default function PaymentDetail() {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [getReceipt, { isFetching: isDownloading }] = useLazyGetPaymentReceiptQuery();
 
   const payment = data?.data?.payment;
   const inv = payment?.invoice;
+  const invoiceId = inv?._id;
+  const { data: allPaymentsData } = useGetInvoicePaymentsQuery(invoiceId, { skip: !invoiceId });
+  const allPayments = allPaymentsData?.data?.payments || [];
+  const otherPayments = allPayments.filter((p) => p._id !== payment?._id);
+
+  const fmtDate = (d) => d
+    ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '';
 
   const handleUpdate = async (formData) => {
     await updatePayment({ id, ...formData }).unwrap();
     toast.success('Payment updated successfully');
     setShowEditModal(false);
+  };
+
+  const handleDownloadReceipt = async () => {
+    try {
+      const blob = await getReceipt(id).unwrap();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${id.slice(-8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error('Failed to download receipt');
+    }
   };
 
   const handleDelete = async () => {
@@ -59,9 +85,6 @@ export default function PaymentDetail() {
   if (isLoading) return <DetailSkeleton />;
   if (!payment) return <p className="text-zinc-500 p-6">Payment not found.</p>;
 
-  const paidPercent = inv ? Math.round((payment.amount / inv.total) * 100) : 0;
-  const remainingAfter = inv ? inv.total - payment.amount : 0;
-
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -72,6 +95,9 @@ export default function PaymentDetail() {
           <ArrowLeft className="w-4 h-4" /> Back to Payments
         </button>
         <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={handleDownloadReceipt} loading={isDownloading}>
+            <Download className="w-4 h-4 mr-1" /> Receipt
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => setShowEditModal(true)}>
             <Edit2 className="w-4 h-4 mr-1" /> Edit
           </Button>
@@ -118,7 +144,7 @@ export default function PaymentDetail() {
           <h2 className="text-sm font-semibold text-zinc-700 mb-3">Invoice Summary</h2>
           {inv ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
                 <span className="text-sm text-zinc-500">Invoice</span>
                 <Link
                   to={`/invoices/${inv._id}`}
@@ -127,38 +153,39 @@ export default function PaymentDetail() {
                   {inv.invoiceNumber} <ExternalLink className="w-3 h-3" />
                 </Link>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-500">Invoice Total</span>
-                <span className="text-sm font-semibold text-zinc-900">{fmt(inv.total)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-500">Invoice Status</span>
-                <InvoiceStatusBadge status={inv.status} />
+
+              <div className="bg-zinc-50 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-zinc-500">
+                    This Payment
+                    <span className="text-zinc-400 ml-1 font-normal">
+                      · {fmtDate(payment.paymentDate)}
+                    </span>
+                  </span>
+                  <span className="font-semibold text-green-600">{fmt(payment.amount)}</span>
+                </div>
+                {otherPayments.map((p) => (
+                  <div key={p._id} className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">
+                      Other Payment
+                      <span className="text-zinc-400 ml-1 font-normal">
+                        · {fmtDate(p.paymentDate)}
+                      </span>
+                    </span>
+                    <span className="font-medium text-zinc-700">{fmt(p.amount)}</span>
+                  </div>
+                ))}
+                <div className="border-t border-zinc-200 pt-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-zinc-700">Total Paid</span>
+                  <span className="text-base font-bold text-green-700">{fmt(inv.paidAmount)}</span>
+                </div>
               </div>
 
-              {/* Progress bar */}
-              <div className="pt-2">
-                <div className="flex items-center justify-between text-xs text-zinc-500 mb-1.5">
-                  <span>Payment Progress</span>
-                  <span>{paidPercent}% of invoice</span>
-                </div>
-                <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500 rounded-full transition-all"
-                    style={{ width: `${Math.min(paidPercent, 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="bg-green-50 rounded-lg p-3">
-                  <p className="text-xs text-green-700 font-medium">Paid</p>
-                  <p className="text-lg font-bold text-green-700">{fmt(payment.amount)}</p>
-                </div>
-                <div className="bg-orange-50 rounded-lg p-3">
-                  <p className="text-xs text-orange-700 font-medium">Remaining</p>
-                  <p className="text-lg font-bold text-orange-700">{remainingAfter > 0 ? fmt(remainingAfter) : 'Fully Paid'}</p>
-                </div>
+              <div className={`flex items-center justify-between px-1 ${inv.balanceDue > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                <span className="text-xs font-medium uppercase tracking-wide">{inv.balanceDue > 0 ? 'Balance Due' : 'Status'}</span>
+                <span className={`text-sm font-bold ${inv.balanceDue > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                  {inv.balanceDue > 0 ? fmt(inv.balanceDue) : 'Settled'}
+                </span>
               </div>
             </div>
           ) : (

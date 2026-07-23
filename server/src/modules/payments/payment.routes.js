@@ -27,6 +27,12 @@ router.get(
 );
 
 router.get(
+  '/:id/receipt',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  paymentController.downloadReceipt,
+);
+
+router.get(
   '/:id',
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   paymentController.getById,

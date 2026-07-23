@@ -91,18 +91,21 @@ export default function InvoiceDetail() {
     'Cancel', 'danger', () => performStatusChange('cancelled'),
   );
 
-  // Payment shortcut: creates a payment via POST /api/payments for the full balance
-  // Invoice status auto-updates to partially_paid or paid via recalculateInvoicePayment
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
+
+  // Quick full-payment with method selection dialog
   const handleFullPayment = async () => {
     const amount = invoice.balanceDue;
     if (amount <= 0) { toast.error('No balance due'); return; }
     setLoadingAction('paid');
     try {
       await createPayment({
-        invoice: id, amount, paymentMethod: 'bank_transfer',
+        invoice: id, amount, paymentMethod,
         paymentDate: new Date().toISOString().split('T')[0], status: 'completed',
       }).unwrap();
       toast.success('Payment recorded successfully');
+      setShowPaymentDialog(false);
       refetch();
       refetchPayments();
     } catch (err) {
@@ -113,13 +116,8 @@ export default function InvoiceDetail() {
   };
 
   const confirmFullPayment = () => {
-    const isPartial = invoice.status === 'partially_paid';
-    confirmAndExecute(
-      isPartial ? 'Collect Remaining Payment' : 'Mark as Paid',
-      `${fmt(invoice.balanceDue)} will be recorded as payment and invoice will be updated.`,
-      isPartial ? 'Collect & Close' : 'Confirm Payment',
-      'primary', handleFullPayment,
-    );
+    setPaymentMethod('bank_transfer');
+    setShowPaymentDialog(true);
   };
 
   const handleRecordPayment = async (formData) => {
@@ -340,35 +338,43 @@ export default function InvoiceDetail() {
           </div>
         )}
 
-        {/* Payments list */}
+        {/* Payments timeline */}
         {invoicePayments.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200">
-                  <th className="text-left py-2 px-2 text-xs text-zinc-500 font-medium">Date</th>
-                  <th className="text-left py-2 px-2 text-xs text-zinc-500 font-medium">Amount</th>
-                  <th className="text-left py-2 px-2 text-xs text-zinc-500 font-medium">Method</th>
-                  <th className="text-left py-2 px-2 text-xs text-zinc-500 font-medium">Ref</th>
-                  <th className="text-left py-2 px-2 text-xs text-zinc-500 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoicePayments.map((p) => (
-                  <tr
-                    key={p._id}
-                    className="border-b border-zinc-100 hover:bg-zinc-50 cursor-pointer"
-                    onClick={() => navigate(`/payments/${p._id}`)}
-                  >
-                    <td className="py-2 px-2">{fmtDate(p.paymentDate)}</td>
-                    <td className="py-2 px-2 font-medium text-green-600">{fmt(p.amount)}</td>
-                    <td className="py-2 px-2 text-zinc-500">{methodMap[p.paymentMethod] || p.paymentMethod}</td>
-                    <td className="py-2 px-2 text-zinc-500">{p.referenceNo || '-'}</td>
-                    <td className="py-2 px-2"><PaymentStatusBadge status={p.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-0">
+            {invoicePayments.map((p, i) => {
+              const cumulative = invoicePayments
+                .slice(0, i + 1)
+                .reduce((s, x) => s + (x.status === 'completed' ? x.amount : 0), 0);
+              return (
+                <div
+                  key={p._id}
+                  className="flex items-center gap-3 py-2.5 px-3 border-b border-zinc-100 last:border-0 hover:bg-zinc-50 cursor-pointer rounded-sm transition-colors"
+                  onClick={() => navigate(`/payments/${p._id}`)}
+                >
+                  {/* Timeline dot */}
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${
+                    p.status === 'completed' ? 'bg-green-500' :
+                    p.status === 'pending' ? 'bg-yellow-400' :
+                    p.status === 'failed' ? 'bg-red-500' : 'bg-zinc-300'
+                  }`} />
+                  {/* Content */}
+                  <div className="flex-1 flex items-center justify-between min-w-0 gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-sm font-medium text-green-600 whitespace-nowrap">{fmt(p.amount)}</span>
+                      <span className="text-xs text-zinc-400 hidden sm:inline">{methodMap[p.paymentMethod] || p.paymentMethod}</span>
+                      {p.referenceNo && <span className="text-xs text-zinc-400 hidden md:inline">#{p.referenceNo}</span>}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-[11px] text-zinc-400">{fmtDate(p.paymentDate)}</span>
+                      <PaymentStatusBadge status={p.status} />
+                      <span className="text-[11px] text-zinc-400 w-16 text-right tabular-nums">
+                        {cumulative > 0 ? `→ ${fmt(cumulative)}` : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-zinc-400 text-center py-4">No payments recorded yet</p>
@@ -394,6 +400,8 @@ export default function InvoiceDetail() {
         <PaymentForm
           invoiceId={id}
           invoiceNumber={invoice.invoiceNumber}
+          balanceDue={invoice.balanceDue}
+          total={invoice.total}
           onSubmit={handleRecordPayment}
           onClose={() => setShowPaymentForm(false)}
         />
@@ -419,6 +427,62 @@ export default function InvoiceDetail() {
         confirmLabel={confirmDialog.confirmLabel}
         variant={confirmDialog.variant}
       />
+
+      {/* Payment method selection dialog */}
+      <ConfirmDialog
+        open={showPaymentDialog}
+        onClose={() => setShowPaymentDialog(false)}
+        onConfirm={handleFullPayment}
+        title={invoice.status === 'partially_paid' ? 'Collect Remaining Payment' : 'Mark as Paid'}
+        confirmLabel={invoice.status === 'partially_paid' ? 'Collect & Close' : 'Confirm Payment'}
+        variant="primary"
+      >
+        <div className="space-y-3 mb-1">
+          <p className="text-sm text-zinc-600">
+            <span className="font-semibold text-zinc-800">{fmt(invoice.balanceDue)}</span> will be recorded as payment.
+          </p>
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 mb-1.5">Payment Method</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {PAYMENT_METHODS.filter(m => ['upi', 'bank_transfer', 'cash'].includes(m.value)).map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(m.value)}
+                  className={`px-3 py-2 text-xs rounded-lg border transition-all ${
+                    paymentMethod === m.value
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
+                      : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {PAYMENT_METHODS.filter(m => !['upi', 'bank_transfer', 'cash'].includes(m.value)).length > 0 && (
+              <details className="mt-1.5">
+                <summary className="text-[11px] text-zinc-400 cursor-pointer hover:text-zinc-600">More...</summary>
+                <div className="grid grid-cols-3 gap-1.5 mt-1.5">
+                  {PAYMENT_METHODS.filter(m => !['upi', 'bank_transfer', 'cash'].includes(m.value)).map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setPaymentMethod(m.value)}
+                      className={`px-3 py-2 text-xs rounded-lg border transition-all ${
+                        paymentMethod === m.value
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
+                          : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

@@ -21,6 +21,7 @@ import taskRoutes from './modules/tasks/task.routes.js';
 import invoiceRoutes from './modules/invoices/invoice.routes.js';
 import paymentRoutes from './modules/payments/payment.routes.js';
 import templateRoutes from './modules/templates/template.routes.js';
+import reportRoutes from './modules/reports/reports.routes.js';
 
 const app = express();
 
@@ -42,7 +43,12 @@ const limiter = rateLimit({
     message: 'Too many requests, please try again later',
   },
 });
-app.use('/api', limiter);
+
+// Skip rate limiter for reports — heavy aggregate queries that fail on retry
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/reports')) return next();
+  return limiter(req, res, next);
+});
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -78,6 +84,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.use((_req, _res, next) => {
   next(ApiError.notFound('Route not found'));
