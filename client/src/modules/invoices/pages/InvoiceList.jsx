@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Receipt, Plus, FileText, Send, CheckCircle, AlertTriangle, XCircle, IndianRupee, Clock } from 'lucide-react';
+import { Receipt, Plus, FileText, Send, CheckCircle, AlertTriangle, XCircle, IndianRupee, Clock, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InvoiceTable from '../components/InvoiceTable';
 import InvoiceFilters from '../components/InvoiceFilters';
@@ -29,8 +29,8 @@ export default function InvoiceList() {
   const [filters, setFilters] = useState({});
   const [page, setPage] = useState(1);
 
-  const { data: invoicesData, isLoading, isFetching } = useGetInvoicesQuery({ ...filters, page, limit: 10 });
-  const { data: statsData, isLoading: statsLoading } = useGetInvoiceStatsQuery();
+  const { data: invoicesData, isLoading, isFetching, refetch: refetchInvoices } = useGetInvoicesQuery({ ...filters, page, limit: 10 });
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetInvoiceStatsQuery();
   const stats = statsData?.data || {};
   const [deleteInvoice] = useDeleteInvoiceMutation();
   const [updateStatus] = useUpdateInvoiceStatusMutation();
@@ -80,9 +80,18 @@ export default function InvoiceList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-zinc-900">Invoices</h1>
-        <Button onClick={() => navigate('/invoices/new')}>
-          <Plus className="w-4 h-4 mr-1.5" /> Create Invoice
-        </Button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { refetchInvoices(); refetchStats(); }}
+            disabled={isFetching}
+            className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+            title="Refresh invoices"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+          <Button onClick={() => navigate('/invoices/new')}>
+            <Plus className="w-4 h-4 mr-1.5" /> Create Invoice
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">

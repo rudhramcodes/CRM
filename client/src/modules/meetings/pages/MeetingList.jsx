@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { useGetMeetingsQuery, useDeleteMeetingMutation } from '../../../services/meetingApi';
 import MeetingTable from '../components/MeetingTable';
 import MeetingFilters from '../components/MeetingFilters';
@@ -24,7 +24,7 @@ export default function MeetingList() {
     dispatch(setPageTitle('Meetings'));
   }, [dispatch]);
 
-  const { data: meetingsData, isLoading, error } = useGetMeetingsQuery(queryParams);
+  const { data: meetingsData, isLoading, error, refetch: refetchMeetings, isFetching: isFetchingMeetings } = useGetMeetingsQuery(queryParams);
   const [deleteMeeting] = useDeleteMeetingMutation();
 
   const meetings = meetingsData?.data || [];
@@ -80,6 +80,13 @@ export default function MeetingList() {
             Schedule and manage meetings with leads and clients
           </p>
         </div>
+        <button onClick={() => refetchMeetings()}
+          disabled={isFetchingMeetings}
+          className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+          title="Refresh meetings"
+        >
+          <RefreshCw className={`w-4 h-4 ${isFetchingMeetings ? 'animate-spin' : ''}`} />
+        </button>
         {canCreate && (
           <Button onClick={() => setShowCreateModal(true)}>
             <Plus className="w-4 h-4" />

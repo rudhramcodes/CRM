@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, CheckSquare, Columns, LayoutList, AlertTriangle, X, Download } from 'lucide-react';
+import { Plus, CheckSquare, Columns, LayoutList, AlertTriangle, X, Download, RefreshCw } from 'lucide-react';
 import {
   useGetTasksQuery,
   useGetTaskStatsQuery,
@@ -47,8 +47,8 @@ export default function TaskList() {
 
   useEffect(() => { dispatch(setPageTitle('Tasks')); }, [dispatch]);
 
-  const { data, isLoading, error } = useGetTasksQuery(queryParams);
-  const { data: statsData, isLoading: statsLoading } = useGetTaskStatsQuery();
+  const { data, isLoading, error, refetch: refetchTasks, isFetching: isFetchingTasks } = useGetTasksQuery(queryParams);
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetTaskStatsQuery();
   const { data: usersData } = useGetUsersQuery({ limit: 100 }, { skip: !['super_admin', 'admin', 'manager'].includes(user?.role) });
   const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
 
@@ -178,6 +178,13 @@ export default function TaskList() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => { refetchTasks(); refetchStats(); }}
+            disabled={isFetchingTasks}
+            className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+            title="Refresh tasks"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetchingTasks ? 'animate-spin' : ''}`} />
+          </button>
           <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
             <button onClick={() => setViewMode('table')}
               className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow-sm text-primary-900' : 'text-zinc-400 hover:text-zinc-600'}`}

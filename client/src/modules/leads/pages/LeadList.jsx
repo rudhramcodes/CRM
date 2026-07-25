@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, Users, Columns3, LayoutList } from 'lucide-react';
+import { Plus, Users, Columns3, LayoutList, RefreshCw } from 'lucide-react';
 import { useGetLeadsQuery, useGetLeadStatsQuery, useDeleteLeadMutation, useUpdateLeadMutation } from '../../../services/leadApi';
 import LeadTable from '../components/LeadTable';
 import LeadKanbanBoard from '../components/LeadKanbanBoard';
@@ -19,7 +19,7 @@ export default function LeadList() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  const [queryParams, setQueryParams] = useState({});
+  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 });
   const [view, setView] = useState('table');
   const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -27,12 +27,12 @@ export default function LeadList() {
     dispatch(setPageTitle('Leads'));
   }, [dispatch]);
 
-  const { data: leadsData, isLoading, error } = useGetLeadsQuery(queryParams);
+  const { data: leadsData, isLoading, error, refetch: refetchLeads, isFetching: isFetchingLeads } = useGetLeadsQuery(queryParams);
   const { data: kanbanData, isLoading: kanbanLoading } = useGetLeadsQuery(
     { limit: 100 },
     { skip: view !== 'board' },
   );
-  const { data: statsData, isLoading: statsLoading } = useGetLeadStatsQuery();
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetLeadStatsQuery();
   const [deleteLead] = useDeleteLeadMutation();
   const [updateLead] = useUpdateLeadMutation();
 
@@ -54,7 +54,14 @@ export default function LeadList() {
   }, []);
 
   const handleFilterChange = useCallback((filters) => {
-    setQueryParams((prev) => ({ ...prev, ...filters, page: 1 }));
+    setQueryParams((prev) => {
+      const next = { ...prev, page: 1 };
+      for (const [key, val] of Object.entries(filters)) {
+        if (val) next[key] = val;
+        else delete next[key];
+      }
+      return next;
+    });
   }, []);
 
   const canCreate = user && ['super_admin', 'admin', 'manager'].includes(user.role);
@@ -74,6 +81,14 @@ export default function LeadList() {
   }, [updateLead]);
 
   const handleDelete = useCallback((row) => setDeleteTarget(row), []);
+
+  const handlePageChange = useCallback((newPage) => {
+    setQueryParams((prev) => ({ ...prev, page: newPage }));
+  }, []);
+
+  const handlePageSizeChange = useCallback((newLimit) => {
+    setQueryParams((prev) => ({ ...prev, page: 1, limit: newLimit }));
+  }, []);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -103,6 +118,14 @@ export default function LeadList() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => { refetchLeads(); refetchStats(); }}
+            disabled={isFetchingLeads}
+            className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+            title="Refresh leads"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetchingLeads ? 'animate-spin' : ''}`} />
+          </button>
           <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
             <button
               onClick={() => setView('table')}
@@ -207,6 +230,15 @@ export default function LeadList() {
             canDelete={canDelete}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            serverPagination
+            page={pagination?.page || 1}
+            pageSize={pagination?.limit || 10}
+            total={pagination?.total}
+            totalPages={pagination?.pages}
+            hasNextPage={pagination?.hasNextPage}
+            hasPrevPage={pagination?.hasPrevPage}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
           />
         )
       ) : (

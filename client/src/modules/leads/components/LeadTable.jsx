@@ -4,7 +4,7 @@ import { formatDate } from '../../../utils/formatters';
 import { LEAD_BRANDS } from '../../../constants';
 import { Edit2, Trash2 } from 'lucide-react';
 
-export default function LeadTable({ leads, loading, error, onRowClick, searchable, canEdit, canDelete, onEdit, onDelete }) {
+export default function LeadTable({ leads, loading, error, onRowClick, searchable, canEdit, canDelete, onEdit, onDelete, serverPagination, page, pageSize, total, totalPages, hasNextPage, hasPrevPage, onPageChange, onPageSizeChange }) {
   const columns = [
     {
       header: 'Name',
@@ -123,6 +123,15 @@ export default function LeadTable({ leads, loading, error, onRowClick, searchabl
       emptyTitle="No leads found"
       emptyDescription="Get started by creating your first lead."
       onRowClick={onRowClick}
+      serverPagination={serverPagination}
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      totalPages={totalPages}
+      hasNextPage={hasNextPage}
+      hasPrevPage={hasPrevPage}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
     />
   );
 }

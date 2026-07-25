@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { CreditCard, IndianRupee, Clock, TrendingUp } from 'lucide-react';
+import { CreditCard, IndianRupee, Clock, TrendingUp, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PaymentTable from '../components/PaymentTable';
 import PaymentFilters from '../components/PaymentFilters';
@@ -22,8 +22,8 @@ export default function PaymentList() {
   const [filters, setFilters] = useState({});
   const [page, setPage] = useState(1);
 
-  const { data: paymentsData, isLoading, isFetching } = useGetPaymentsQuery({ ...filters, page, limit: 10 });
-  const { data: statsData, isLoading: statsLoading } = useGetPaymentStatsQuery();
+  const { data: paymentsData, isLoading, isFetching, refetch: refetchPayments } = useGetPaymentsQuery({ ...filters, page, limit: 10 });
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetPaymentStatsQuery();
   const stats = statsData?.data || {};
   const [deletePayment] = useDeletePaymentMutation();
 
@@ -56,6 +56,13 @@ export default function PaymentList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-zinc-900">Payments</h1>
+        <button onClick={() => { refetchPayments(); refetchStats(); }}
+          disabled={isFetching}
+          className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+          title="Refresh payments"
+        >
+          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

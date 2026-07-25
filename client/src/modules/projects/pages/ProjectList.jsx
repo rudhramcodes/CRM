@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, FolderKanban, Columns, LayoutList } from 'lucide-react';
+import { Plus, FolderKanban, Columns, LayoutList, RefreshCw } from 'lucide-react';
 import {
   useGetProjectsQuery,
   useGetProjectStatsQuery,
@@ -30,8 +30,8 @@ export default function ProjectList() {
 
   useEffect(() => { dispatch(setPageTitle('Projects')); }, [dispatch]);
 
-  const { data, isLoading, error } = useGetProjectsQuery(queryParams);
-  const { data: statsData, isLoading: statsLoading } = useGetProjectStatsQuery();
+  const { data, isLoading, error, refetch: refetchProjects, isFetching: isFetchingProjects } = useGetProjectsQuery(queryParams);
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetProjectStatsQuery();
   const [deleteProject] = useDeleteProjectMutation();
   const [updateProject] = useUpdateProjectMutation();
 
@@ -94,6 +94,13 @@ export default function ProjectList() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => { refetchProjects(); refetchStats(); }}
+            disabled={isFetchingProjects}
+            className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+            title="Refresh projects"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetchingProjects ? 'animate-spin' : ''}`} />
+          </button>
           <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
             <button onClick={() => setViewMode('table')}
               className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow-sm text-primary-900' : 'text-zinc-400 hover:text-zinc-600'}`}

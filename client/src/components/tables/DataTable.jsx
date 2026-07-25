@@ -3,6 +3,9 @@ import { ChevronUp, ChevronDown, ChevronsUpDown, Search } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Loader from '../ui/Loader';
 import EmptyState from '../ui/EmptyState';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/Select';
+
+const PAGE_SIZES = [10, 20, 50];
 
 export default function DataTable({
   columns,
@@ -15,10 +18,21 @@ export default function DataTable({
   emptyDescription = 'No records to display.',
   onRowClick,
   pageSize = 10,
+  serverPagination = false,
+  page = 1,
+  total,
+  totalPages,
+  hasNextPage,
+  hasPrevPage,
+  onPageChange,
+  onPageSizeChange,
 }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Disable internal search in server mode — server handles it via external filters
+  const showSearch = searchable && !serverPagination;
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
@@ -28,7 +42,7 @@ export default function DataTable({
   };
 
   const filteredData = useMemo(() => {
-    if (!searchQuery || !searchable) return data || [];
+    if (!searchQuery || !showSearch) return data || [];
     const query = searchQuery.toLowerCase();
     return (data || []).filter((row) =>
       columns.some((col) => {
@@ -36,7 +50,7 @@ export default function DataTable({
         return String(value).toLowerCase().includes(query);
       }),
     );
-  }, [data, searchQuery, columns, searchable]);
+  }, [data, searchQuery, columns, showSearch]);
 
   const sortedData = useMemo(() => {
     if (!sortConfig.key) return filteredData;
@@ -49,11 +63,37 @@ export default function DataTable({
     });
   }, [filteredData, sortConfig]);
 
-  const totalPages = Math.ceil(sortedData.length / pageSize);
-  const paginatedData = sortedData.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
+  // Server mode: data is already paginated server-side
+  // Client mode: slice locally
+  const displayData = serverPagination
+    ? sortedData
+    : sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Pagination values
+  const effPage = serverPagination ? page : currentPage;
+  const effPageSize = serverPagination ? (pageSize || 10) : pageSize;
+  const effTotalPages = serverPagination ? (totalPages || 1) : Math.ceil(sortedData.length / effPageSize);
+  const effTotal = serverPagination ? (total || sortedData.length) : sortedData.length;
+
+  const handlePageChange = (p) => {
+    if (serverPagination) {
+      onPageChange?.(p);
+    } else {
+      setCurrentPage(p);
+    }
+  };
+
+  const handlePageSizeChange = (size) => {
+    const numSize = Number(size);
+    if (serverPagination) {
+      onPageSizeChange?.(numSize);
+    } else {
+      // In client mode, reset to page 1 when changing size
+      setCurrentPage(1);
+      // Pass up if caller wants to track it
+      onPageSizeChange?.(numSize);
+    }
+  };
 
   const getSortIcon = (key) => {
     if (sortConfig.key !== key) return <ChevronsUpDown className="w-4 h-4 text-zinc-400" />;
@@ -85,7 +125,7 @@ export default function DataTable({
 
   return (
     <div className="card">
-      {searchable && (
+      {showSearch && (
         <div className="card-header">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -125,14 +165,14 @@ export default function DataTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {paginatedData.length === 0 ? (
+            {displayData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-12">
                   <EmptyState title={emptyTitle} description={emptyDescription} />
                 </td>
               </tr>
             ) : (
-              paginatedData.map((row, i) => (
+              displayData.map((row, i) => (
                 <tr
                   key={row._id || i}
                   onClick={() => onRowClick?.(row)}
@@ -155,32 +195,53 @@ export default function DataTable({
         </table>
       </div>
 
-      {totalPages > 1 && (
+      {(effTotalPages > 1 || onPageSizeChange || serverPagination) && (
         <div className="card-footer flex items-center justify-between px-4 py-3 border-t border-zinc-200">
-          <p className="text-sm text-zinc-500">
-            Showing {(currentPage - 1) * pageSize + 1} to{' '}
-            {Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-zinc-500">
+              {effTotal === 0
+                ? 'No results'
+                : `Showing ${(effPage - 1) * effPageSize + 1} to ${Math.min(effPage * effPageSize, effTotal)} of ${effTotal}`}
+            </p>
+            {(serverPagination || onPageSizeChange) && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-400">per page:</span>
+                <Select
+                  value={String(effPageSize)}
+                  onValueChange={handlePageSizeChange}
+                >
+                  <SelectTrigger className="w-16 h-7 text-xs px-2 py-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZES.map((s) => (
+                      <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              onClick={() => handlePageChange(effPage - 1)}
+              disabled={serverPagination ? !hasPrevPage : effPage === 1}
               className="px-3 py-1 text-sm border border-zinc-300 rounded-md hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+            {Array.from({ length: effTotalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === effTotalPages || Math.abs(p - effPage) <= 1)
               .map((p, idx, arr) => (
                 <span key={p} className="flex items-center gap-1">
                   {idx > 0 && arr[idx - 1] !== p - 1 && (
                     <span className="px-1 text-zinc-400">...</span>
                   )}
                   <button
-                    onClick={() => setCurrentPage(p)}
+                    onClick={() => handlePageChange(p)}
                     className={cn(
                       'w-8 h-8 text-sm rounded-md',
-                      currentPage === p
+                      effPage === p
                         ? 'bg-primary-900 text-white'
                         : 'border border-zinc-300 hover:bg-zinc-50',
                     )}
@@ -190,8 +251,8 @@ export default function DataTable({
                 </span>
               ))}
             <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(effPage + 1)}
+              disabled={serverPagination ? !hasNextPage : effPage === effTotalPages}
               className="px-3 py-1 text-sm border border-zinc-300 rounded-md hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next

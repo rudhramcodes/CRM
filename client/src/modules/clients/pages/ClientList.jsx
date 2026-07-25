@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, UserCheck } from 'lucide-react';
+import { Plus, UserCheck, RefreshCw } from 'lucide-react';
 import { useGetClientsQuery, useGetClientStatsQuery, useDeleteClientMutation } from '../../../services/clientApi';
 import ClientTable from '../components/ClientTable';
 import ClientFilters from '../components/ClientFilters';
@@ -16,15 +16,15 @@ export default function ClientList() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  const [queryParams, setQueryParams] = useState({});
+  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 });
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
     dispatch(setPageTitle('Clients'));
   }, [dispatch]);
 
-  const { data: clientsData, isLoading, error } = useGetClientsQuery(queryParams);
-  const { data: statsData, isLoading: statsLoading } = useGetClientStatsQuery();
+  const { data: clientsData, isLoading, error, refetch: refetchClients, isFetching: isFetchingClients } = useGetClientsQuery(queryParams);
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetClientStatsQuery();
   const [deleteClient] = useDeleteClientMutation();
 
   const clients = clientsData?.data || [];
@@ -44,6 +44,14 @@ export default function ClientList() {
   }, [navigate]);
 
   const handleDelete = useCallback((row) => setDeleteTarget(row), []);
+
+  const handlePageChange = useCallback((newPage) => {
+    setQueryParams((prev) => ({ ...prev, page: newPage }));
+  }, []);
+
+  const handlePageSizeChange = useCallback((newLimit) => {
+    setQueryParams((prev) => ({ ...prev, page: 1, limit: newLimit }));
+  }, []);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -67,6 +75,13 @@ export default function ClientList() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => { refetchClients(); refetchStats(); }}
+            disabled={isFetchingClients}
+            className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+            title="Refresh clients"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetchingClients ? 'animate-spin' : ''}`} />
+          </button>
           {canCreate && (
             <Button onClick={() => navigate('/clients/new')}>
               <Plus className="w-4 h-4" />
@@ -124,6 +139,15 @@ export default function ClientList() {
           canDelete={canDelete}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          serverPagination
+          page={pagination?.page || 1}
+          pageSize={pagination?.limit || 10}
+          total={pagination?.total}
+          totalPages={pagination?.pages}
+          hasNextPage={pagination?.hasNextPage}
+          hasPrevPage={pagination?.hasPrevPage}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
         />
       )}
 

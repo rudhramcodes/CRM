@@ -3,7 +3,7 @@ import ClientStatusBadge from './ClientStatusBadge';
 import { formatDate } from '../../../utils/formatters';
 import { Edit2, Trash2 } from 'lucide-react';
 
-export default function ClientTable({ clients, loading, error, onRowClick, canEdit, canDelete, onEdit, onDelete }) {
+export default function ClientTable({ clients, loading, error, onRowClick, canEdit, canDelete, onEdit, onDelete, serverPagination, page, pageSize, total, totalPages, hasNextPage, hasPrevPage, onPageChange, onPageSizeChange }) {
   const columns = [
     {
       header: 'Company',
@@ -103,6 +103,15 @@ export default function ClientTable({ clients, loading, error, onRowClick, canEd
       emptyTitle="No clients found"
       emptyDescription="Get started by creating your first client or converting a won lead."
       onRowClick={onRowClick}
+      serverPagination={serverPagination}
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      totalPages={totalPages}
+      hasNextPage={hasNextPage}
+      hasPrevPage={hasPrevPage}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
     />
   );
 }

@@ -33,9 +33,11 @@ app.use(cors({
   credentials: true,
 }));
 
+const isDev = config.nodeEnv === 'development';
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: isDev ? 1000 : 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -44,9 +46,9 @@ const limiter = rateLimit({
   },
 });
 
-// Skip rate limiter for reports — heavy aggregate queries that fail on retry
+// Skip rate limiter in dev (annoying during development) and for reports
 app.use('/api', (req, res, next) => {
-  if (req.path.startsWith('/reports')) return next();
+  if (isDev || req.path.startsWith('/reports')) return next();
   return limiter(req, res, next);
 });
 

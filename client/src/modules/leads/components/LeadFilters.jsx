@@ -18,11 +18,7 @@ export default function LeadFilters({ onFilterChange }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const activeFilters = {};
-      if (filters.search) activeFilters.search = filters.search;
-      if (filters.status) activeFilters.status = filters.status;
-      if (filters.source) activeFilters.source = filters.source;
-      onFilterChange(activeFilters);
+      onFilterChange({ search: filters.search, status: filters.status, source: filters.source });
     }, 300);
     return () => clearTimeout(timer);
   }, [filters, onFilterChange]);

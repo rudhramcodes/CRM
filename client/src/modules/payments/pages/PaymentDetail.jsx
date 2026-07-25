@@ -23,6 +23,7 @@ const methodMap = PAYMENT_METHODS.reduce((map, m) => {
 }, {});
 
 const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+const fmtAmt = (amt, status) => status === 'refunded' ? `-${fmt(amt)}` : fmt(amt);
 
 export default function PaymentDetail() {
   const { id } = useParams();
@@ -119,8 +120,8 @@ export default function PaymentDetail() {
 
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="text-xs text-zinc-500 uppercase tracking-wide">Amount Paid</label>
-              <p className="text-2xl font-bold text-green-600 mt-1">{fmt(payment.amount)}</p>
+              <label className="text-xs text-zinc-500 uppercase tracking-wide">{payment.status === 'refunded' ? 'Refund Amount' : 'Amount Paid'}</label>
+              <p className={`text-2xl font-bold mt-1 ${payment.status === 'refunded' ? 'text-red-600' : 'text-green-600'}`}>{fmtAmt(payment.amount, payment.status)}</p>
             </div>
             <div>
               <label className="text-xs text-zinc-500 uppercase tracking-wide">Payment Method</label>
@@ -162,7 +163,7 @@ export default function PaymentDetail() {
                       · {fmtDate(payment.paymentDate)}
                     </span>
                   </span>
-                  <span className="font-semibold text-green-600">{fmt(payment.amount)}</span>
+                  <span className={`font-semibold ${payment.status === 'refunded' ? 'text-red-600' : 'text-green-600'}`}>{fmtAmt(payment.amount, payment.status)}</span>
                 </div>
                 {otherPayments.map((p) => (
                   <div key={p._id} className="flex items-center justify-between text-sm">
@@ -172,7 +173,7 @@ export default function PaymentDetail() {
                         · {fmtDate(p.paymentDate)}
                       </span>
                     </span>
-                    <span className="font-medium text-zinc-700">{fmt(p.amount)}</span>
+                    <span className={`font-medium ${p.status === 'refunded' ? 'text-red-600' : 'text-zinc-700'}`}>{fmtAmt(p.amount, p.status)}</span>
                   </div>
                 ))}
                 <div className="border-t border-zinc-200 pt-2 flex items-center justify-between">
