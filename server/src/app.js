@@ -4,12 +4,16 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import config from './config/index.js';
 import errorHandler from './middleware/errorHandler.js';
 import ApiError from './utils/ApiError.js';
 import logger from './utils/logger.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import authRoutes from './modules/auth/auth.routes.js';
 import usersRoutes from './modules/users/users.routes.js';
@@ -89,6 +93,15 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+// Serve frontend build in production
+if (config.nodeEnv === 'production') {
+  const clientDist = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientDist));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 app.use((_req, _res, next) => {
   next(ApiError.notFound('Route not found'));
