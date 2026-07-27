@@ -1,5 +1,7 @@
 import ApiError from '../../utils/ApiError.js';
 import * as projectRepository from './project.repository.js';
+import { uploadBuffer } from '../../services/cloudinaryService.js';
+import Task from '../tasks/task.model.js';
 
 export const createProject = async (data, user) => {
   const payload = {
@@ -167,6 +169,92 @@ export const deleteTask = async (projectId, taskId, user) => {
 
   project.tasks.pull(taskId);
   project.activities.push({ action: 'task_deleted', performedBy: user._id });
+  await project.save();
+};
+
+// --- Messages ---
+const TASK_CMD_RE = /^\/task\s+"([^"]+)"(?:\s+@(\S+))?(?:\s+priority:(\w+))?(?:\s+due:(\S+))?/i;
+
+const parseTaskCommand = (text) => {
+  const match = text.match(TASK_CMD_RE);
+  if (!match) return null;
+  return {
+    title: match[1],
+    assigneeUsername: match[2] || null,
+    priority: match[3] || 'medium',
+    dueDate: match[4] || null,
+  };
+};
+
+export const addMessage = async (projectId, data, user, files = []) => {
+  const project = await projectRepository.findById(projectId);
+  if (!project) throw ApiError.notFound('Project not found');
+
+  const images = await Promise.all(
+    (files || []).map(async (f) => {
+      try {
+        return await uploadBuffer(f.buffer, { folder: 'crm/messages' });
+      } catch {
+        return { url: `/uploads/${f.originalname}`, fileId: `local-${Date.now()}`, name: f.originalname };
+      }
+    }),
+  );
+
+  const messageData = {
+    text: data.text || '',
+    images,
+    createdBy: user._id,
+  };
+
+  // Check for /task command → create standalone Task, store ref in message
+  const taskCmd = data.text ? parseTaskCommand(data.text) : null;
+  if (taskCmd) {
+    const taskData = {
+      title: taskCmd.title,
+      status: 'todo',
+      priority: taskCmd.priority || 'medium',
+      dueDate: taskCmd.dueDate ? new Date(taskCmd.dueDate) : undefined,
+      project: project._id,
+      createdBy: user._id,
+    };
+
+    if (taskCmd.assigneeUsername) {
+      const User = (await import('../auth/auth.model.js')).default;
+      const assignedUser = await User.findOne({ name: new RegExp(`^${taskCmd.assigneeUsername}$`, 'i') });
+      if (assignedUser) taskData.assignedTo = assignedUser._id;
+    }
+
+    const standaloneTask = await Task.create(taskData);
+    messageData.taskId = standaloneTask._id;
+    messageData.taskTitle = taskCmd.title;
+    project.activities.push({ action: 'task_added', performedBy: user._id });
+  }
+
+  project.messages.push(messageData);
+  project.activities.push({ action: 'message_posted', performedBy: user._id });
+  await project.save();
+
+  const saved = project.messages[project.messages.length - 1];
+  return saved;
+};
+
+export const getMessages = async (projectId) => {
+  const project = await projectRepository.findById(projectId);
+  if (!project) throw ApiError.notFound('Project not found');
+
+  await project.populate('messages.createdBy', 'name email avatar');
+  return (project.messages || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+};
+
+export const deleteMessage = async (projectId, messageId, user) => {
+  const project = await projectRepository.findById(projectId);
+  if (!project) throw ApiError.notFound('Project not found');
+
+  const message = project.messages.id(messageId);
+  if (!message) throw ApiError.notFound('Message not found');
+  if (!message.createdBy._id.equals(user._id)) throw ApiError.forbidden('You can only delete your own messages');
+
+  project.messages.pull(messageId);
   await project.save();
 };
 

@@ -4,6 +4,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toggleSidebar } from '../app/store/uiSlice';
 import { logout } from '../app/store/authSlice';
+import { useGetUnreadCountQuery, useGetNotificationsQuery, useMarkAllNotificationsReadMutation } from '../services/notificationApi';
+import { formatDistanceToNow } from 'date-fns';
 import axios from 'axios';
 import { API_BASE_URL } from '../constants';
 
@@ -13,12 +15,24 @@ export default function Header({ onMobileMenuOpen }) {
   const pageTitle = useSelector((state) => state.ui.pageTitle);
   const user = useSelector((state) => state.auth.user);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const notifRef = useRef(null);
+
+  const { data: unreadData } = useGetUnreadCountQuery(undefined, { skip: !user, pollingInterval: 30000 });
+  const { data: notifData } = useGetNotificationsQuery({ limit: 5, unread: true }, { skip: !user || !showNotifDropdown });
+  const [markAllRead] = useMarkAllNotificationsReadMutation();
+
+  const unreadCount = unreadData?.data?.count || 0;
+  const notifications = notifData?.data || [];
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowDropdown(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setShowNotifDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -65,10 +79,51 @@ export default function Header({ onMobileMenuOpen }) {
           />
         </div>
 
-        <button className="relative p-2 rounded-lg hover:bg-zinc-100 text-zinc-400 transition-colors">
-          <Bell className="w-4.5 h-4.5" strokeWidth={1.5} />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-zinc-800 rounded-full" />
-        </button>
+        <div className="relative" ref={notifRef}>
+          <button onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+            className="relative p-2 rounded-lg hover:bg-zinc-100 text-zinc-400 transition-colors">
+            <Bell className="w-4.5 h-4.5" strokeWidth={1.5} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {showNotifDropdown && (
+            <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-zinc-200 rounded-lg shadow-lg z-50">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-100">
+                <p className="text-sm font-medium text-primary-900">Notifications</p>
+                {unreadCount > 0 && (
+                  <button onClick={() => markAllRead()} className="text-xs text-primary-900 hover:underline">
+                    Mark all read
+                  </button>
+                )}
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <p className="text-sm text-zinc-400 text-center py-6">No new notifications</p>
+                ) : (
+                  notifications.map((n) => (
+                    <button key={n._id} onClick={() => { navigate(n.link); setShowNotifDropdown(false); }}
+                      className="w-full text-left px-3 py-2.5 hover:bg-zinc-50 border-b border-zinc-50 last:border-0">
+                      <p className="text-sm text-zinc-700">{n.message}</p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+              {notifications.length > 0 && (
+                <button onClick={() => { navigate('/notifications'); setShowNotifDropdown(false); }}
+                  className="w-full text-center text-xs text-primary-900 py-2 border-t border-zinc-100 hover:bg-zinc-50">
+                  View all
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {user && (
           <div className="relative pl-2 border-l border-zinc-200 ml-1" ref={dropdownRef}>

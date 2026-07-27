@@ -43,6 +43,25 @@ export const projectApi = api.injectEndpoints({
       query: ({ id, taskId }) => ({ url: `/projects/${id}/tasks/${taskId}`, method: 'DELETE' }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, 'Project'],
     }),
+    addProjectMessage: builder.mutation({
+      query: ({ id, formData }) => ({
+        url: `/projects/${id}/messages`,
+        method: 'POST',
+        body: formData,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, { type: 'ProjectActivities', id }],
+    }),
+    getProjectMessages: builder.query({
+      query: ({ id }) => `/projects/${id}/messages`,
+      providesTags: (result, error, { id }) => [{ type: 'ProjectActivities', id }],
+    }),
+    deleteProjectMessage: builder.mutation({
+      query: ({ id, messageId }) => ({
+        url: `/projects/${id}/messages/${messageId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, { type: 'ProjectActivities', id }],
+    }),
   }),
 });
 
@@ -57,4 +76,7 @@ export const {
   useAddProjectTaskMutation,
   useUpdateProjectTaskMutation,
   useDeleteProjectTaskMutation,
+  useAddProjectMessageMutation,
+  useGetProjectMessagesQuery,
+  useDeleteProjectMessageMutation,
 } = projectApi;

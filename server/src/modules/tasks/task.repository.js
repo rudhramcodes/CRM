@@ -1,96 +1,100 @@
 import Task from './task.model.js';
-import paginate, { getPaginationMeta, escapeRegex } from '../../utils/pagination.js';
 
-const TASK_POPULATE = [
+const POPULATE_FIELDS = [
   { path: 'assignedTo', select: 'name email avatar' },
-  { path: 'project', select: 'title' },
-  { path: 'createdBy', select: 'name email' },
-  { path: 'comments.createdBy', select: 'name email avatar role' },
-  { path: 'activities.performedBy', select: 'name email avatar role' },
+  { path: 'createdBy', select: 'name email avatar' },
+  { path: 'project', select: 'name' },
+  { path: 'parent', select: 'title status' },
+  { path: 'dependsOn', select: 'title status' },
+  { path: 'blockedBy', select: 'title status' },
 ];
 
-export const create = async (data) => {
-  return Task.create(data);
-};
+export const create = (data) => Task.create(data);
 
-export const findById = async (id) => {
-  return Task.findById(id).populate(TASK_POPULATE);
-};
+export const findById = (id) =>
+  Task.findById(id).populate(POPULATE_FIELDS);
 
-export const findAll = async (query = {}, options = {}) => {
-  const { page, limit, skip, sort: userSort } = paginate(options);
-  const sort = userSort || { order: 1, createdAt: -1 };
+export const findAll = async (query, options) => {
   const filter = {};
-
   if (query.search) {
-    const searchRegex = new RegExp(escapeRegex(query.search), 'i');
-    filter.$or = [{ title: searchRegex }, { description: searchRegex }];
+    const re = { $regex: query.search, $options: 'i' };
+    filter.$or = [{ title: re }, { description: re }];
   }
   if (query.status) filter.status = query.status;
   if (query.priority) filter.priority = query.priority;
   if (query.assignedTo) filter.assignedTo = query.assignedTo;
   if (query.project) filter.project = query.project;
+  if (query.tags) filter.tags = { $in: query.tags.split(',') };
   if (query.dueDateFrom || query.dueDateTo) {
     filter.dueDate = {};
     if (query.dueDateFrom) filter.dueDate.$gte = new Date(query.dueDateFrom);
     if (query.dueDateTo) filter.dueDate.$lte = new Date(query.dueDateTo);
   }
-  if (query.employeeFilter) filter.assignedTo = query.employeeFilter;
+  if (query.parent !== undefined) filter.parent = query.parent || null;
+  if (query.watchedBy) filter.watchers = query.watchedBy;
+
+  const sort = {};
+  const sortField = query.sort?.startsWith('-') ? query.sort.slice(1) : query.sort || 'createdAt';
+  sort[sortField] = query.sort?.startsWith('-') ? -1 : 1;
+
+  const page = query.page || 1;
+  const limit = query.limit || 20;
+  const skip = (page - 1) * limit;
 
   const [tasks, total] = await Promise.all([
-    Task.find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .populate(TASK_POPULATE),
+    Task.find(filter).sort(sort).skip(skip).limit(limit).populate(POPULATE_FIELDS),
     Task.countDocuments(filter),
   ]);
 
-  return { tasks, pagination: getPaginationMeta(total, page, limit) };
+  return {
+    tasks,
+    pagination: { page, limit, total, pages: Math.ceil(total / limit), hasNextPage: page * limit < total, hasPrevPage: page > 1 },
+  };
 };
 
-export const updateById = async (id, data) => {
-  return Task.findByIdAndUpdate(id, data, { new: true, runValidators: true }).populate(TASK_POPULATE);
-};
+export const updateById = (id, data) =>
+  Task.findByIdAndUpdate(id, data, { new: true, runValidators: true }).populate(POPULATE_FIELDS);
 
-export const deleteById = async (id) => {
-  return Task.findByIdAndDelete(id);
-};
+export const deleteById = (id) => Task.findByIdAndDelete(id);
 
-export const countByStatus = async () => {
-  return Task.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
-};
+export const countAll = (filter = {}) => Task.countDocuments(filter);
 
-export const countOverdue = async () => {
-  return Task.countDocuments({ dueDate: { $lt: new Date() }, status: { $ne: 'done' } });
-};
+export const findSubtasks = (parentId) =>
+  Task.find({ parent: parentId }).populate(POPULATE_FIELDS);
 
-export const countAll = async (filter = {}) => {
-  return Task.countDocuments(filter);
-};
+export const addActivity = (taskId, activity) =>
+  Task.findByIdAndUpdate(taskId, { $push: { activities: activity } }, { new: true });
 
-export const addComment = async (id, commentData) => {
-  return Task.findByIdAndUpdate(id, { $push: { comments: commentData } }, { new: true }).populate(TASK_POPULATE);
-};
+export const addComment = (taskId, comment) =>
+  Task.findByIdAndUpdate(taskId, { $push: { comments: comment } }, { new: true }).populate(POPULATE_FIELDS);
 
-export const bulkUpdate = async (ids, data) => {
-  return Task.updateMany({ _id: { $in: ids } }, { $set: data });
-};
+export const addChecklistItem = (taskId, item) =>
+  Task.findByIdAndUpdate(taskId, { $push: { checklists: item } }, { new: true }).populate(POPULATE_FIELDS);
 
-export const findLastByStatus = async (status) => {
-  return Task.findOne({ status }).sort({ order: -1 }).select('order');
-};
+export const updateChecklistItem = (taskId, itemId, data) =>
+  Task.findOneAndUpdate(
+    { _id: taskId, 'checklists._id': itemId },
+    { $set: Object.fromEntries(Object.entries(data).map(([k, v]) => [`checklists.$.${k}`, v])) },
+    { new: true },
+  ).populate(POPULATE_FIELDS);
 
-export const addActivity = async (id, activityData) => {
-  const update = Array.isArray(activityData)
-    ? { $push: { activities: { $each: activityData } } }
-    : { $push: { activities: activityData } };
-  return Task.findByIdAndUpdate(id, update, { new: true }).populate(TASK_POPULATE);
-};
+export const removeChecklistItem = (taskId, itemId) =>
+  Task.findByIdAndUpdate(taskId, { $pull: { checklists: { _id: itemId } } }, { new: true }).populate(POPULATE_FIELDS);
 
-export const reorderTasks = async (orderedIds) => {
-  const ops = orderedIds.map((taskId, index) => ({
-    updateOne: { filter: { _id: taskId }, update: { $set: { order: index } } },
-  }));
-  return Task.bulkWrite(ops);
-};
+export const addWatcher = (taskId, userId) =>
+  Task.findByIdAndUpdate(taskId, { $addToSet: { watchers: userId } }, { new: true }).populate(POPULATE_FIELDS);
+
+export const removeWatcher = (taskId, userId) =>
+  Task.findByIdAndUpdate(taskId, { $pull: { watchers: userId } }, { new: true }).populate(POPULATE_FIELDS);
+
+export const addTimeEntry = (taskId, entry) =>
+  Task.findByIdAndUpdate(taskId, { $push: { timeEntries: entry } }, { new: true }).populate(POPULATE_FIELDS);
+
+export const removeTimeEntry = (taskId, entryId) =>
+  Task.findByIdAndUpdate(taskId, { $pull: { timeEntries: { _id: entryId } } }, { new: true }).populate(POPULATE_FIELDS);
+
+export const addDependency = (taskId, depId) =>
+  Task.findByIdAndUpdate(taskId, { $addToSet: { dependsOn: depId } }, { new: true }).populate(POPULATE_FIELDS);
+
+export const removeDependency = (taskId, depId) =>
+  Task.findByIdAndUpdate(taskId, { $pull: { dependsOn: depId } }, { new: true }).populate(POPULATE_FIELDS);

@@ -1,22 +1,33 @@
 import { useState } from 'react';
-import { Plus, CheckCircle2, Circle, Loader2, PlayCircle, Trash2 } from 'lucide-react';
+import { Plus, CheckCircle2, PlayCircle, Loader2, Calendar } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import DatePicker from '../../../components/forms/DatePicker';
 
-function getStatusIcon(status) {
-  switch (status) {
-    case 'completed':
-      return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-    case 'in_progress':
-      return <PlayCircle className="w-5 h-5 text-blue-500" />;
-    default:
-      return <Circle className="w-5 h-5 text-zinc-300" />;
-  }
+function Diamond({ status, spinning }) {
+  const colors = {
+    completed: 'border-green-500 bg-green-500 text-white',
+    in_progress: 'border-blue-500 bg-blue-500 text-white',
+    pending: 'border-zinc-300 bg-white text-zinc-400',
+  };
+  return (
+    <div className={`w-5 h-5 rotate-45 border-2 flex items-center justify-center shrink-0 transition-all duration-200 ${colors[status] || colors.pending} ${spinning ? 'animate-spin' : ''}`}>
+      <div className="-rotate-45">
+        {spinning ? (
+          <Loader2 className="w-3 h-3" />
+        ) : status === 'completed' ? (
+          <CheckCircle2 className="w-3 h-3" />
+        ) : status === 'in_progress' ? (
+          <PlayCircle className="w-3 h-3" />
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function getNextStatus(current) {
-  if (current === 'completed') return 'pending';
-  return 'completed';
+  if (current === 'pending') return 'in_progress';
+  if (current === 'in_progress') return 'completed';
+  return 'pending';
 }
 
 export default function ProjectMilestones({ milestones = [], onUpdate, canManage }) {
@@ -26,154 +37,128 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
 
   const handleAdd = () => {
     if (!newTitle.trim()) return;
-    const updated = [
+    onUpdate([
       ...milestones,
-      {
-        title: newTitle.trim(),
-        description: '',
-        dueDate: newDueDate || undefined,
-        status: 'pending',
-      },
-    ];
-    onUpdate(updated);
+      { title: newTitle.trim(), description: '', dueDate: newDueDate || undefined, status: 'pending' },
+    ]);
     setNewTitle('');
     setNewDueDate('');
   };
 
-  const handleStatusToggle = async (index) => {
+  const handleToggle = async (index) => {
     if (updatingIndex !== null) return;
     setUpdatingIndex(index);
-
-    const milestone = milestones[index];
-    const nextStatus = getNextStatus(milestone.status);
-    const updated = milestones.map((m, i) => {
-      if (i !== index) return m;
-      return {
-        ...m,
-        status: nextStatus,
-        completedAt: nextStatus === 'completed' ? new Date().toISOString() : null,
-      };
-    });
-
+    const m = milestones[index];
+    const next = getNextStatus(m.status);
     try {
-      await onUpdate(updated);
+      await onUpdate(milestones.map((x, i) =>
+        i !== index ? x : { ...x, status: next, completedAt: next === 'completed' ? new Date().toISOString() : null }
+      ));
     } finally {
       setUpdatingIndex(null);
     }
   };
 
-  const handleRemove = (index) => {
-    const updated = milestones.filter((_, i) => i !== index);
-    onUpdate(updated);
-  };
+  const handleRemove = (index) => onUpdate(milestones.filter((_, i) => i !== index));
 
   const completed = milestones.filter((m) => m.status === 'completed').length;
-  const progress = milestones.length > 0 ? Math.round((completed / milestones.length) * 100) : 0;
+  const total = milestones.length;
+  const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
     <div className="bg-white rounded-xl border border-zinc-200">
       <div className="px-6 py-4 border-b border-zinc-100">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-primary-900">
-            Milestones ({completed}/{milestones.length})
+            Milestones {total > 0 && <span className="text-zinc-400 font-normal">({completed}/{total})</span>}
           </h3>
-          {milestones.length > 0 && (
-            <span className="text-xs text-zinc-500">{progress}% complete</span>
+          {total > 0 && (
+            <span className="text-xs text-zinc-500">{progress}% done</span>
           )}
         </div>
-        {milestones.length > 0 && (
+        {total > 0 && (
           <div className="mt-2 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary-900 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="h-full bg-primary-900 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         )}
       </div>
 
-      <div className="px-6 py-3 space-y-2">
-        {milestones.length === 0 ? (
+      {/* Timeline */}
+      <div className="px-6 py-4">
+        {total === 0 ? (
           <p className="text-sm text-zinc-400 text-center py-4">No milestones yet</p>
         ) : (
-          milestones.map((milestone, index) => {
-            const isUpdating = updatingIndex === index;
+          <div className="relative">
+            {/* Vertical line behind diamonds */}
+            <div className="absolute left-[10px] top-2 bottom-2 w-0.5 bg-zinc-200" />
 
-            return (
-              <div
-                key={index}
-                className={`flex items-center gap-3 py-2 px-3 rounded-lg transition-colors group ${
-                  isUpdating ? 'opacity-60' : 'hover:bg-zinc-50'
-                }`}
-              >
-                <button
-                  onClick={() => handleStatusToggle(index)}
-                  disabled={!canManage || isUpdating}
-                  className="shrink-0 relative"
-                  title={
-                    canManage
-                      ? milestone.status === 'completed'
-                        ? 'Mark as pending'
-                        : 'Mark as completed'
-                      : milestone.status
-                  }
-                >
-                  {isUpdating ? (
-                    <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
-                  ) : (
-                    getStatusIcon(milestone.status)
-                  )}
-                </button>
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={`text-sm ${
-                      milestone.status === 'completed'
-                        ? 'text-zinc-400 line-through'
-                        : 'text-zinc-700'
-                    }`}
-                  >
-                    {milestone.title}
-                  </p>
-                  {milestone.dueDate && (
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      Due: {new Date(milestone.dueDate).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-                {canManage && !isUpdating && (
-                  <button
-                    onClick={() => handleRemove(index)}
-                    className="p-1 rounded-md text-zinc-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all shrink-0"
-                    title="Remove milestone"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            );
-          })
+            <div className="space-y-0">
+              {milestones.map((m, i) => {
+                const isUpdating = updatingIndex === i;
+                const isLast = i === total - 1;
+
+                return (
+                  <div key={i} className={`relative flex gap-4 ${isLast ? '' : 'pb-6'}`}>
+                    {/* Diamond icon column */}
+                    <div className="relative z-10 flex items-start pt-1">
+                      <button
+                        onClick={() => handleToggle(i)}
+                        disabled={!canManage || isUpdating}
+                        className="relative"
+                        title={canManage ? `Mark as ${getNextStatus(m.status)}` : m.status}>
+                        <Diamond status={m.status} spinning={isUpdating} />
+                      </button>
+                    </div>
+
+                    {/* Content */}
+                    <div className={`flex-1 min-w-0 pt-0.5 group ${isUpdating ? 'opacity-50' : ''}`}>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className={`text-sm font-medium ${m.status === 'completed' ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                            {m.title}
+                          </p>
+                          {m.dueDate && (
+                            <p className="text-xs text-zinc-400 mt-0.5 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(m.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </p>
+                          )}
+                        </div>
+                        {canManage && !isUpdating && (
+                          <button onClick={() => handleRemove(i)}
+                            className="text-[10px] uppercase tracking-wider text-zinc-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Status chip */}
+                      <span className={`inline-block mt-1.5 text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                        m.status === 'completed' ? 'text-green-700 bg-green-50' :
+                        m.status === 'in_progress' ? 'text-blue-700 bg-blue-50' :
+                        'text-zinc-400 bg-zinc-50'
+                      }`}>
+                        {m.status === 'in_progress' ? 'In Progress' : m.status}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
 
       {canManage && (
         <div className="px-6 py-3 border-t border-zinc-100">
           <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
+            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
               placeholder="Add a milestone..."
               className="flex-1 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900"
-              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            />
-            <DatePicker
-              value={newDueDate}
-              onChange={setNewDueDate}
-              placeholder="Due date"
-              className="w-40"
-            />
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
+            <DatePicker value={newDueDate} onChange={setNewDueDate} placeholder="Due date" className="w-40" />
             <Button type="button" size="sm" onClick={handleAdd} disabled={!newTitle.trim()}>
-              <Plus className="w-3.5 h-3.5" />
-              Add
+              <Plus className="w-3.5 h-3.5" /> Add
             </Button>
           </div>
         </div>

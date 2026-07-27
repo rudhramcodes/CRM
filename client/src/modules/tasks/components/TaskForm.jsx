@@ -1,110 +1,88 @@
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 import FormInput from '../../../components/forms/FormInput';
+import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
-import DatePicker from '../../../components/forms/DatePicker';
 import Button from '../../../components/ui/Button';
 import { TASK_STATUS, TASK_PRIORITY } from '../../../constants';
 
-const taskSchema = z.object({
-  title: z.string().min(2, 'Title must be at least 2 characters'),
-  description: z.string().optional(),
+const taskFormSchema = z.object({
+  title: z.string().min(2, 'Title must be at least 2 characters').max(200),
+  description: z.string().optional().or(z.literal('')),
   status: z.string().optional(),
   priority: z.string().optional(),
-  assignedTo: z.string().optional(),
-  project: z.string().optional(),
-  dueDate: z.string().optional(),
-  estimatedHours: z.coerce.number().min(0).optional(),
+  assignedTo: z.string().optional().or(z.literal('')),
+  project: z.string().optional().or(z.literal('')),
+  parent: z.string().optional().or(z.literal('')),
+  dueDate: z.string().optional().or(z.literal('')),
+  estimatedHours: z.coerce.number().min(0).optional().or(z.literal('')),
+  tags: z.string().optional(),
 });
 
-export default function TaskForm({ initialData, projects = [], users = [], onSubmit, onCancel, loading }) {
-  const { register, handleSubmit, control, formState: { errors } } = useForm({
-    resolver: zodResolver(taskSchema),
+export default function TaskForm({ initialData, projects = [], users = [], tasks = [], onSubmit, onCancel, loading }) {
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+    resolver: zodResolver(taskFormSchema),
     defaultValues: {
-      title: initialData?.title || '',
-      description: initialData?.description || '',
-      status: initialData?.status || 'todo',
-      priority: initialData?.priority || 'medium',
-      assignedTo: initialData?.assignedTo?._id || '',
-      project: initialData?.project?._id || '',
-      dueDate: initialData?.dueDate || '',
-      estimatedHours: initialData?.estimatedHours || 0,
+      title: '', description: '', status: 'todo', priority: 'medium',
+      assignedTo: '', project: '', parent: '', dueDate: '', estimatedHours: '', tags: '',
     },
   });
 
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        title: initialData.title || '',
+        description: initialData.description || '',
+        status: initialData.status || 'todo',
+        priority: initialData.priority || 'medium',
+        assignedTo: initialData.assignedTo?._id || '',
+        project: initialData.project?._id || '',
+        parent: initialData.parent?._id || initialData.parent || '',
+        dueDate: initialData.dueDate ? initialData.dueDate.slice(0, 10) : '',
+        estimatedHours: initialData.estimatedHours || '',
+        tags: initialData.tags?.join(', ') || '',
+      });
+    }
+  }, [initialData, reset]);
+
+  const otherTasks = tasks.filter((t) => t._id !== initialData?._id);
+
+  const handleFormSubmit = (data) => {
+    const payload = {
+      ...data,
+      estimatedHours: data.estimatedHours ? Number(data.estimatedHours) : 0,
+      tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+      assignedTo: data.assignedTo || undefined,
+      project: data.project || undefined,
+      parent: data.parent || undefined,
+      dueDate: data.dueDate || undefined,
+    };
+    onSubmit(payload);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <FormInput label="Title" {...register('title')} error={errors.title?.message} placeholder="Enter task title" />
-
       <FormTextarea label="Description" {...register('description')} error={errors.description?.message} placeholder="Optional description" rows={3} />
-
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-zinc-500">Status</label>
-          <Controller name="status" control={control} render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger className="w-full h-auto py-2 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {TASK_STATUS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )} />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-zinc-500">Priority</label>
-          <Controller name="priority" control={control} render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger className="w-full h-auto py-2 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {TASK_PRIORITY.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )} />
-        </div>
+        <FormSelect label="Status" control={control} name="status" options={TASK_STATUS.map((s) => ({ value: s.value, label: s.label }))} />
+        <FormSelect label="Priority" control={control} name="priority" options={TASK_PRIORITY.map((p) => ({ value: p.value, label: p.label }))} />
       </div>
-
+      <FormSelect label="Assignee" control={control} name="assignedTo"
+        options={[{ value: '', label: 'Unassigned' }, ...users.map((u) => ({ value: u._id, label: u.name }))]} />
+      <FormSelect label="Project" control={control} name="project"
+        options={[{ value: '', label: 'No Project' }, ...projects.map((p) => ({ value: p._id, label: p.name }))]} />
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-zinc-500">Assigned To</label>
-          <Controller name="assignedTo" control={control} render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger className="w-full h-auto py-2 text-sm"><SelectValue placeholder="Unassigned" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
-                {(users || []).map((u) => <SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )} />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-zinc-500">Project</label>
-          <Controller name="project" control={control} render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger className="w-full h-auto py-2 text-sm"><SelectValue placeholder="No project" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No project</SelectItem>
-                {(projects || []).map((p) => <SelectItem key={p._id} value={p._id}>{p.title}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )} />
-        </div>
+        <FormInput label="Due Date" type="date" {...register('dueDate')} />
+        <FormInput label="Est. Hours" type="number" step="0.5" {...register('estimatedHours')} error={errors.estimatedHours?.message} />
       </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Controller name="dueDate" control={control} render={({ field }) => (
-          <DatePicker value={field.value} onChange={field.onChange} label="Due Date" />
-        )} />
-
-        <FormInput label="Estimated Hours" type="number" min="0" step="0.5" {...register('estimatedHours')} />
-      </div>
-
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
+      <FormSelect label="Parent Task" control={control} name="parent"
+        options={[{ value: '', label: 'No Parent' }, ...otherTasks.map((t) => ({ value: t._id, label: t.title }))]} />
+      <FormInput label="Tags (comma-separated)" {...register('tags')} placeholder="e.g. frontend, bug, urgent" />
+      <div className="flex justify-end gap-3 pt-2">
+        {onCancel && <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>}
         <Button type="submit" loading={loading}>{initialData ? 'Update Task' : 'Create Task'}</Button>
       </div>
     </form>

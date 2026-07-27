@@ -1,34 +1,43 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { AlertCircle } from 'lucide-react';
-import TaskPriorityBadge from '../../tasks/components/TaskPriorityBadge';
+import { Calendar } from 'lucide-react';
+import TaskPriorityBadge from './TaskPriorityBadge';
 import { formatDate } from '../../../utils/formatters';
 
 function TaskCardContent({ task }) {
-  const isOverdue = task.dueDate && task.status !== 'done' && new Date(task.dueDate) < new Date();
-
   return (
-    <div className="flex items-start gap-1.5">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-700 leading-snug line-clamp-2">{task.title}</p>
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          <TaskPriorityBadge priority={task.priority} />
-          {task.assignedTo?.name && (
-            <div className="flex items-center gap-1" title={task.assignedTo.name}>
-              <div className="w-5 h-5 bg-zinc-200 rounded-full flex items-center justify-center">
-                <span className="text-[10px] font-medium text-zinc-500">{task.assignedTo.name.charAt(0)}</span>
-              </div>
-              <span className="text-[11px] text-zinc-400 truncate max-w-[80px]">{task.assignedTo.name}</span>
+    <div className="space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium text-primary-900 leading-snug">{task.title}</p>
+        {task.priority && <TaskPriorityBadge priority={task.priority} />}
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        {task.assignedTo?.name ? (
+          <div className="flex items-center gap-1.5">
+            <div className="w-5 h-5 bg-zinc-100 rounded-full flex items-center justify-center">
+              <span className="text-[9px] font-medium text-zinc-500">
+                {task.assignedTo.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+              </span>
             </div>
-          )}
-        </div>
+            <span className="text-[11px] text-zinc-400 truncate max-w-[100px]">{task.assignedTo.name}</span>
+          </div>
+        ) : (
+          <span className="text-[11px] text-zinc-300">Unassigned</span>
+        )}
         {task.dueDate && (
-          <p className={`flex items-center gap-1 text-[11px] mt-1.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-zinc-400'}`}>
-            {isOverdue && <AlertCircle className="w-3 h-3" />}
-            {formatDate(task.dueDate)}
-          </p>
+          <span className="flex items-center gap-1 text-[11px] text-zinc-400">
+            <Calendar className="w-3 h-3" /> {formatDate(task.dueDate)}
+          </span>
         )}
       </div>
+      {task.checklistProgress > 0 && (
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-1 bg-zinc-100 rounded-full overflow-hidden">
+            <div className="h-full bg-primary-900 rounded-full" style={{ width: `${task.checklistProgress}%` }} />
+          </div>
+          <span className="text-[10px] text-zinc-400">{task.checklistProgress}%</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -50,6 +59,7 @@ export default function TaskKanbanCard({ task }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (

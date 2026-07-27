@@ -83,6 +83,35 @@ export const deleteTask = async (req, res, next) => {
   }
 };
 
+// Messages
+export const addMessage = async (req, res, next) => {
+  try {
+    const files = req.files || [];
+    const message = await projectService.addMessage(req.params.id, req.body, req.user, files);
+    ApiResponse.created(res, { message }, 'Message posted');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMessages = async (req, res, next) => {
+  try {
+    const messages = await projectService.getMessages(req.params.id);
+    ApiResponse.success(res, 200, messages);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteMessage = async (req, res, next) => {
+  try {
+    await projectService.deleteMessage(req.params.id, req.params.messageId, req.user);
+    ApiResponse.success(res, 200, null, 'Message deleted');
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Activities
 export const getActivities = async (req, res, next) => {
   try {

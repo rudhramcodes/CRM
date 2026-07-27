@@ -1,8 +1,11 @@
 import { Router } from 'express';
+import multer from 'multer';
 import * as projectController from './project.controller.js';
 import validate, { validateQuery } from '../../middleware/validate.js';
 import { verifyToken, authorize } from '../../middleware/auth.js';
 import { ROLES } from '../../constants/index.js';
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -52,6 +55,26 @@ router.delete(
   '/:id',
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   projectController.remove,
+);
+
+// Messages - viewable by all, postable by super_admin/admin/manager
+router.get(
+  '/:id/messages',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  projectController.getMessages,
+);
+
+router.post(
+  '/:id/messages',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  upload.array('images', 5),
+  projectController.addMessage,
+);
+
+router.delete(
+  '/:id/messages/:messageId',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  projectController.deleteMessage,
 );
 
 // Activities - viewable by all project roles

@@ -71,6 +71,21 @@ const milestoneSchema = new mongoose.Schema(
   { _id: true },
 );
 
+const messageSchema = new mongoose.Schema(
+  {
+    text: { type: String, default: '' },
+    images: [{
+      url: String,
+      fileId: String,
+      name: String,
+    }],
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    taskId: mongoose.Schema.Types.ObjectId,
+    taskTitle: String,
+  },
+  { _id: true, timestamps: true },
+);
+
 const teamMemberSchema = new mongoose.Schema(
   {
     user: {
@@ -127,6 +142,7 @@ const projectSchema = new mongoose.Schema(
     milestones: [milestoneSchema],
     tasks: [taskSchema],
     activities: [activitySchema],
+    messages: [messageSchema],
     tags: [String],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

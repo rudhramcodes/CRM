@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Plus, Trash2, Edit2, CheckSquare, Circle } from 'lucide-react';
-import TaskPriorityBadge from '../../tasks/components/TaskPriorityBadge';
 import Button from '../../../components/ui/Button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
@@ -44,7 +43,14 @@ export default function ProjectTasks({ tasks = [], canManage, onAdd, onUpdate, o
                     {task.title}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    {task.priority && <TaskPriorityBadge priority={task.priority} />}
+                    {task.priority && (
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                        task.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                        task.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                        task.priority === 'medium' ? 'bg-blue-100 text-blue-700' :
+                        'bg-zinc-100 text-zinc-600'
+                      }`}>{task.priority}</span>
+                    )}
                     {task.assignedTo?.name && <span className="text-xs text-zinc-400">{task.assignedTo.name}</span>}
                     {task.dueDate && <span className="text-xs text-zinc-400">Due {formatDate(task.dueDate)}</span>}
                   </div>

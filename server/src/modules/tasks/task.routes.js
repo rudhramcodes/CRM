@@ -1,79 +1,53 @@
 import { Router } from 'express';
-import * as taskController from './task.controller.js';
+import { verifyToken } from '../../middleware/auth.js';
+import { authorize } from '../../middleware/auth.js';
 import validate, { validateQuery } from '../../middleware/validate.js';
-import { verifyToken, authorize } from '../../middleware/auth.js';
 import { ROLES } from '../../constants/index.js';
 import {
-  createTaskSchema,
-  updateTaskSchema,
-  tasksQuerySchema,
-  addCommentSchema,
-  bulkActionSchema,
-  reorderSchema,
+  createTaskSchema, updateTaskSchema, tasksQuerySchema,
+  addDependencySchema, addTimeEntrySchema, addChecklistSchema,
+  updateChecklistSchema, reorderChecklistSchema, reorderTasksSchema,
+  bulkUpdateSchema, addCommentSchema,
 } from './task.validation.js';
+import * as ctrl from './task.controller.js';
 
 const router = Router();
-
 router.use(verifyToken);
 
-router.get(
-  '/stats',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
-  taskController.stats,
-);
+// Must be before /:id routes to avoid Express matching as id param
+router.get('/watching', ctrl.getWatchedTasks);
+router.patch('/reorder', validate(reorderTasksSchema), ctrl.reorderTasks);
+router.patch('/bulk', validate(bulkUpdateSchema), ctrl.bulkUpdate);
 
-router.get(
-  '/',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
-  validateQuery(tasksQuerySchema),
-  taskController.list,
-);
+// Core CRUD
+router.get('/', validateQuery(tasksQuerySchema), ctrl.list);
+router.get('/:id', ctrl.getById);
+router.post('/', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER), validate(createTaskSchema), ctrl.create);
+router.patch('/:id', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER), validate(updateTaskSchema), ctrl.update);
+router.delete('/:id', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), ctrl.remove);
 
-router.get(
-  '/:id',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
-  taskController.getById,
-);
+// Subtasks
+router.get('/:id/subtasks', ctrl.getSubtasks);
 
-router.post(
-  '/',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
-  validate(createTaskSchema),
-  taskController.create,
-);
+// Dependencies
+router.get('/:id/dependencies', ctrl.getDependencies);
+router.post('/:id/dependencies', validate(addDependencySchema), ctrl.addDependency);
+router.delete('/:id/dependencies/:depId', ctrl.removeDependency);
 
-router.patch(
-  '/bulk',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
-  validate(bulkActionSchema),
-  taskController.bulkUpdate,
-);
+// Comments
+router.post('/:id/comments', validate(addCommentSchema), ctrl.addComment);
 
-router.patch(
-  '/reorder',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
-  validate(reorderSchema),
-  taskController.reorder,
-);
+// Checklists
+router.post('/:id/checklist', validate(addChecklistSchema), ctrl.addChecklistItem);
+router.patch('/:id/checklist/:itemId', validate(updateChecklistSchema), ctrl.updateChecklistItem);
+router.delete('/:id/checklist/:itemId', ctrl.removeChecklistItem);
 
-router.patch(
-  '/:id',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
-  validate(updateTaskSchema),
-  taskController.update,
-);
+// Watchers
+router.post('/:id/watch', ctrl.watchTask);
+router.delete('/:id/watch', ctrl.unwatchTask);
 
-router.delete(
-  '/:id',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
-  taskController.remove,
-);
-
-router.post(
-  '/:id/comments',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
-  validate(addCommentSchema),
-  taskController.addComment,
-);
+// Time Tracking
+router.post('/:id/time', validate(addTimeEntrySchema), ctrl.addTimeEntry);
+router.delete('/:id/time/:entryId', ctrl.removeTimeEntry);
 
 export default router;

@@ -28,6 +28,7 @@ import ProjectForm from '../components/ProjectForm';
 import ProjectMilestones from '../components/ProjectMilestones';
 import ProjectTasks from '../components/ProjectTasks';
 import ProjectActivityLog from '../components/ProjectActivityLog';
+import ProjectMessageFeed from '../components/ProjectMessageFeed';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
@@ -289,7 +290,7 @@ export default function ProjectDetail() {
         onDelete={handleDeleteTask}
       />
 
-      <ProjectActivityLog activities={activities} loading={activitiesLoading} />
+      <ProjectMessageFeed projectId={id} />
 
       <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Project">
         <ProjectForm

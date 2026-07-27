@@ -22,6 +22,7 @@ import invoiceRoutes from './modules/invoices/invoice.routes.js';
 import paymentRoutes from './modules/payments/payment.routes.js';
 import templateRoutes from './modules/templates/template.routes.js';
 import reportRoutes from './modules/reports/reports.routes.js';
+import notificationRoutes from './modules/notifications/notification.routes.js';
 
 const app = express();
 
@@ -87,6 +88,7 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use((_req, _res, next) => {
   next(ApiError.notFound('Route not found'));
