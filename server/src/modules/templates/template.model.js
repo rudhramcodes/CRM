@@ -46,8 +46,6 @@ const templateSchema = new mongoose.Schema(
   },
 );
 
-templateSchema.index({ venture: 1 });
-
 const Template = mongoose.model('Template', templateSchema);
 
 export default Template;

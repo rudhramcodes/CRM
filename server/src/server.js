@@ -10,7 +10,7 @@ const startServer = async () => {
 
     startOverdueCron();
 
-    app.listen(config.port, () => {
+    app.listen(config.port, '0.0.0.0', () => {
       logger.info(`Server running on port ${config.port} in ${config.nodeEnv} mode`);
       logger.info(`Health check: http://localhost:${config.port}/api/health`);
     });
