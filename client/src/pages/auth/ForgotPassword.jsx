@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { forgotPassword } from '../../app/store/authSlice';
+import { AlertCircle } from 'lucide-react';
+import { forgotPassword, clearError } from '../../app/store/authSlice';
+import { cn } from '../../utils/cn';
 
 export default function ForgotPassword() {
   const dispatch = useDispatch();
@@ -9,8 +11,13 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
+  useEffect(() => {
+    return () => { dispatch(clearError()); };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (error) dispatch(clearError());
     const result = await dispatch(forgotPassword(email));
     if (forgotPassword.fulfilled.match(result)) {
       setSubmitted(true);
@@ -20,6 +27,9 @@ export default function ForgotPassword() {
   if (submitted) {
     return (
       <div className="text-center">
+        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-6 h-6 text-green-600" strokeWidth={1.5} />
+        </div>
         <h2 className="font-heading text-lg font-semibold text-primary-900 mb-3">Check your email</h2>
         <p className="text-zinc-500 text-sm mb-6">
           If an account with <strong className="text-primary-900">{email}</strong> exists, we&apos;ve sent password reset instructions.
@@ -42,12 +52,16 @@ export default function ForgotPassword() {
       </p>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          {error}
+        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2.5" role="alert">
+          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" strokeWidth={1.5} />
+          <p className="text-sm text-red-700 flex-1">{error}</p>
+          <button onClick={() => dispatch(clearError())} className="text-red-400 hover:text-red-600 p-0.5 shrink-0">
+            <AlertCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
+          </button>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div>
           <label htmlFor="reset-email" className="block text-sm font-medium text-zinc-700 mb-1.5">
             Email
@@ -56,9 +70,10 @@ export default function ForgotPassword() {
             id="reset-email"
             type="email"
             required
+            autoComplete="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-primary-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900 transition-colors"
+            onChange={(e) => { if (error) dispatch(clearError()); setEmail(e.target.value); }}
+            className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-primary-900 placeholder-zinc-400 outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900 transition-colors"
             placeholder="you@company.com"
           />
         </div>
@@ -66,9 +81,24 @@ export default function ForgotPassword() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 bg-primary-900 text-white rounded-lg text-sm font-medium hover:bg-primary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={cn(
+            'w-full py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
+            loading
+              ? 'bg-primary-900/70 text-white/80 cursor-not-allowed'
+              : 'bg-primary-900 text-white hover:bg-primary-800 active:bg-primary-700',
+          )}
         >
-          {loading ? 'Sending...' : 'Send instructions'}
+          {loading ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Sending...
+            </>
+          ) : (
+            'Send instructions'
+          )}
         </button>
       </form>
 

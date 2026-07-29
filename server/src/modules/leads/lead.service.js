@@ -1,6 +1,7 @@
 import ApiError from '../../utils/ApiError.js';
 import * as leadRepository from './lead.repository.js';
 import * as clientRepository from '../clients/client.repository.js';
+import * as notificationService from '../notifications/notification.service.js';
 
 export const createLead = async (data, user) => {
   const existing = await leadRepository.findByEmail(data.email);
@@ -25,7 +26,19 @@ export const createLead = async (data, user) => {
     leadData.followUpDate = new Date(data.followUpDate);
   }
 
-  return leadRepository.create(leadData);
+  const lead = await leadRepository.create(leadData);
+
+  if (data.assignedTo && String(data.assignedTo) !== String(user._id)) {
+    const notif = notificationService.buildNotification('lead_created', {
+      leadName: lead.name, source: lead.source || 'manual',
+    });
+    notificationService.createAndSend({
+      recipient: data.assignedTo, referenceId: lead._id, referenceModel: 'Lead',
+      actionBy: user._id, link: `/leads/${lead._id}`, ...notif,
+    }).catch(() => {});
+  }
+
+  return lead;
 };
 
 export const getLeads = async (query) => {
@@ -84,11 +97,36 @@ export const updateLead = async (id, data, user) => {
     }
   }
 
+  if (data.assignedTo && lead.assignedTo &&
+      String(data.assignedTo) !== String(lead.assignedTo._id || lead.assignedTo) &&
+      String(data.assignedTo) !== String(user._id)) {
+    const notif = notificationService.buildNotification('lead_assigned', {
+      leadName: lead.name, actorName: user.name,
+    });
+    notificationService.createAndSend({
+      recipient: data.assignedTo, referenceId: lead._id, referenceModel: 'Lead',
+      actionBy: user._id, link: `/leads/${lead._id}`,
+      ...notif,
+    }).catch(() => {});
+  }
+
   if (data.followUpDate) {
     data.followUpDate = new Date(data.followUpDate);
   }
 
-  return leadRepository.updateById(id, data);
+  const updated = await leadRepository.updateById(id, data);
+
+  if (data.status === 'won' && lead.assignedTo && !lead.assignedTo.equals(user._id)) {
+    const notif = notificationService.buildNotification('lead_converted', {
+      leadName: lead.name,
+    });
+    notificationService.createAndSend({
+      recipient: lead.assignedTo, referenceId: updated._id, referenceModel: 'Lead',
+      actionBy: user._id, link: `/clients/${updated.convertedToClient}`, ...notif,
+    }).catch(() => {});
+  }
+
+  return updated;
 };
 
 export const addNote = async (id, noteData, user) => {

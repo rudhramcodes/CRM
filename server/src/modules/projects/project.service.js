@@ -2,6 +2,7 @@ import ApiError from '../../utils/ApiError.js';
 import * as projectRepository from './project.repository.js';
 import { uploadBuffer } from '../../services/cloudinaryService.js';
 import Task from '../tasks/task.model.js';
+import * as notificationService from '../notifications/notification.service.js';
 
 export const createProject = async (data, user) => {
   const payload = {
@@ -32,7 +33,24 @@ export const createProject = async (data, user) => {
     payload.completedAt = new Date();
   }
 
-  return projectRepository.create(payload);
+  const project = await projectRepository.create(payload);
+
+  // Notify team members
+  const members = data.teamMembers || [];
+  if (members.length > 0) {
+    const notif = notificationService.buildNotification('project_assigned', {
+      projectName: project.title, actorName: user.name,
+    });
+    notificationService.createAndSendBulk(
+      members.filter((m) => String(m) !== String(user._id)),
+      {
+        referenceId: project._id, referenceModel: 'Project',
+        actionBy: user._id, link: `/projects/${project._id}`, ...notif,
+      },
+    ).catch(() => {});
+  }
+
+  return project;
 };
 
 export const getProjects = async (query, user) => {
@@ -99,7 +117,25 @@ export const updateProject = async (id, data, user) => {
     updateData.completedAt = null;
   }
 
-  return projectRepository.updateById(id, updateData, activities);
+  const updated = await projectRepository.updateById(id, updateData, activities);
+
+  if (data.status && data.status !== project.status && project.teamMembers?.length) {
+    const notif = notificationService.buildNotification('project_status_change', {
+      projectName: project.title, actorName: user.name, newStatus: data.status,
+    });
+    const memberIds = project.teamMembers
+      .map((m) => (m.user?._id || m.user))
+      .filter((uid) => String(uid) !== String(user._id));
+    if (memberIds.length > 0) {
+      notificationService.createAndSendBulk(memberIds, {
+        referenceId: project._id, referenceModel: 'Project',
+        actionBy: user._id, link: `/projects/${project._id}`,
+        ...notif,
+      }).catch(() => {});
+    }
+  }
+
+  return updated;
 };
 
 export const deleteProject = async (id) => {
@@ -140,7 +176,18 @@ export const addTask = async (projectId, data, user) => {
   project.tasks.push(task);
   project.activities.push({ action: 'task_added', performedBy: user._id });
   await project.save();
-  return project.tasks[project.tasks.length - 1];
+  const saved = project.tasks[project.tasks.length - 1];
+  if (data.assignedTo && String(data.assignedTo) !== String(user._id)) {
+    const notif = notificationService.buildNotification('task_assigned', {
+      taskTitle: task.title, actorName: user.name,
+    });
+    notificationService.createAndSend({
+      recipient: data.assignedTo, referenceId: saved._id, referenceModel: 'Task',
+      actionBy: user._id, link: `/projects/${projectId}`,
+      ...notif,
+    }).catch(() => {});
+  }
+  return saved;
 };
 
 export const updateTask = async (projectId, taskId, data, user) => {
@@ -263,4 +310,4 @@ export const getActivities = async (projectId) => {
   const project = await projectRepository.findById(projectId);
   if (!project) throw ApiError.notFound('Project not found');
   return (project.activities || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-};
+}

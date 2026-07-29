@@ -7,6 +7,7 @@ const initialState = {
   isAuthenticated: !!JSON.parse(localStorage.getItem('user') || 'null'),
   loading: false,
   error: null,
+  fieldErrors: [],
 };
 
 export const loginUser = createAsyncThunk(
@@ -16,12 +17,16 @@ export const loginUser = createAsyncThunk(
       const response = await axios.post(`${API_BASE_URL}/auth/login`, credentials, {
         withCredentials: true,
       });
-      const { user } = response.data.data;
+      const { user, accessToken } = response.data.data;
       localStorage.setItem('user', JSON.stringify(user));
+      if (accessToken) localStorage.setItem('accessToken', accessToken);
       return { user };
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
-      return rejectWithValue(message);
+      const data = error.response?.data || {};
+      return rejectWithValue({
+        message: data.message || 'Login failed',
+        errors: data.errors || [],
+      });
     }
   },
 );
@@ -33,12 +38,16 @@ export const registerUser = createAsyncThunk(
       const response = await axios.post(`${API_BASE_URL}/auth/register`, userData, {
         withCredentials: true,
       });
-      const { user } = response.data.data;
+      const { user, accessToken } = response.data.data;
       localStorage.setItem('user', JSON.stringify(user));
+      if (accessToken) localStorage.setItem('accessToken', accessToken);
       return { user };
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed';
-      return rejectWithValue(message);
+      const data = error.response?.data || {};
+      return rejectWithValue({
+        message: data.message || 'Registration failed',
+        errors: data.errors || [],
+      });
     }
   },
 );
@@ -54,7 +63,11 @@ export const forgotPassword = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to send reset email');
+      const data = error.response?.data || {};
+      return rejectWithValue({
+        message: data.message || 'Failed to send reset email',
+        errors: data.errors || [],
+      });
     }
   },
 );
@@ -70,7 +83,11 @@ export const resetPassword = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to reset password');
+      const data = error.response?.data || {};
+      return rejectWithValue({
+        message: data.message || 'Failed to reset password',
+        errors: data.errors || [],
+      });
     }
   },
 );
@@ -84,6 +101,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.error = null;
       localStorage.removeItem('user');
+      localStorage.removeItem('accessToken');
     },
     setUser(state, action) {
       state.user = action.payload;
@@ -96,6 +114,7 @@ const authSlice = createSlice({
     },
     clearError(state) {
       state.error = null;
+      state.fieldErrors = [];
     },
   },
   extraReducers: (builder) => {
@@ -103,50 +122,62 @@ const authSlice = createSlice({
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.fieldErrors = [];
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
         state.isAuthenticated = true;
+        state.fieldErrors = [];
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload?.message || 'Login failed';
+        state.fieldErrors = action.payload?.errors || [];
       })
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.fieldErrors = [];
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
         state.isAuthenticated = true;
+        state.fieldErrors = [];
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload?.message || 'Registration failed';
+        state.fieldErrors = action.payload?.errors || [];
       })
       .addCase(forgotPassword.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.fieldErrors = [];
       })
       .addCase(forgotPassword.fulfilled, (state) => {
         state.loading = false;
+        state.fieldErrors = [];
       })
       .addCase(forgotPassword.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload?.message || 'Failed to send reset email';
+        state.fieldErrors = action.payload?.errors || [];
       })
       .addCase(resetPassword.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.fieldErrors = [];
       })
       .addCase(resetPassword.fulfilled, (state) => {
         state.loading = false;
+        state.fieldErrors = [];
       })
       .addCase(resetPassword.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload?.message || 'Failed to reset password';
+        state.fieldErrors = action.payload?.errors || [];
       });
   },
 });

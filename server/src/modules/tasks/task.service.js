@@ -2,6 +2,7 @@ import Task from './task.model.js';
 import User from '../auth/auth.model.js';
 import * as taskRepo from './task.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
+import { emitEntityUpdate } from '../../sockets/index.js';
 
 const checkCircularDependency = async (taskId, depId, visited = new Set()) => {
   if (taskId === depId) return true;
@@ -28,7 +29,18 @@ export const createTask = async (data, user) => {
       await Task.findByIdAndUpdate(depId, { $addToSet: { blockedBy: task._id } });
     }
   }
-  return taskRepo.findById(task._id);
+  const created = await taskRepo.findById(task._id);
+  if (data.assignedTo) {
+    const notif = notificationService.buildNotification('task_assigned', {
+      taskTitle: created.title, actorName: user.name,
+    });
+    notificationService.createAndSend({
+      recipient: data.assignedTo, referenceId: created._id, referenceModel: 'Task',
+      actionBy: user._id, link: `/tasks/${created._id}`, channels: { inApp: true, email: true },
+      ...notif,
+    }).catch(() => {});
+  }
+  return created;
 };
 
 export const getTasks = async (query) => taskRepo.findAll(query);
@@ -75,10 +87,47 @@ export const updateTask = async (id, data, user) => {
       await taskRepo.addActivity(id, { ...activity, performedBy: user._id });
     }
   }
+
+  if (user) {
+    const statusChange = changedFields.find((c) => c.action === 'status_changed');
+    if (statusChange) {
+      const notif = notificationService.buildNotification('task_status_change', {
+        taskTitle: updated.title, actorName: user.name, newStatus: statusChange.newValue,
+      });
+      // Notify assignee
+      if (updated.assignedTo) {
+        notificationService.createAndSend({
+          recipient: updated.assignedTo._id, referenceId: updated._id, referenceModel: 'Task',
+          actionBy: user._id, link: `/tasks/${updated._id}`, ...notif,
+        }).catch(() => {});
+      }
+      // Notify creator (skip if same as assignee — prevents duplicate)
+      if (updated.createdBy && (
+          !updated.assignedTo || String(updated.createdBy._id) !== String(updated.assignedTo._id))) {
+        notificationService.createAndSend({
+          recipient: updated.createdBy._id, referenceId: updated._id, referenceModel: 'Task',
+          actionBy: user._id, link: `/tasks/${updated._id}`, ...notif,
+        }).catch(() => {});
+      }
+    }
+    const assignChange = changedFields.find((c) => c.action === 'assigned');
+    if (assignChange && data.assignedTo && String(data.assignedTo) !== String(user._id)) {
+      const notif = notificationService.buildNotification('task_assigned', {
+        taskTitle: updated.title, actorName: user.name,
+      });
+      notificationService.createAndSend({
+        recipient: data.assignedTo, referenceId: updated._id, referenceModel: 'Task',
+        actionBy: user._id, link: `/tasks/${updated._id}`, channels: { inApp: true, email: true },
+        ...notif,
+      }).catch(() => {});
+    }
+  }
+
+  emitEntityUpdate('task', id, 'task_updated');
   return updated;
 };
 
-export const deleteTask = async (id) => {
+export const deleteTask = async (id, user) => {
   const task = await taskRepo.findById(id);
   if (!task) throw { status: 404, message: 'Task not found' };
   if (task.dependsOn?.length) {
@@ -86,6 +135,16 @@ export const deleteTask = async (id) => {
       await Task.findByIdAndUpdate(depId, { $pull: { blockedBy: id } });
     }
   }
+  if (task.assignedTo && user && String(task.assignedTo._id) !== String(user._id)) {
+    notificationService.createAndSend({
+      recipient: task.assignedTo._id, type: 'task_deleted', title: 'Task Deleted',
+      message: `"${task.title}" was deleted by ${user.name}`,
+      referenceId: task._id, referenceModel: 'Task',
+      actionBy: user._id, link: '',
+    }).catch(() => {});
+  }
+
+  emitEntityUpdate('task', id, 'task_deleted');
   return taskRepo.deleteById(id);
 };
 
@@ -123,26 +182,48 @@ export const getDependencies = async (taskId) => {
 };
 
 // Comments
-const MENTION_RE = /@(\w[\w\s.-]+?)(?=\s|$|[.,!?])/g;
+// Matches @[Name](userId) markdown-style and plain @Name
+const MENTION_MD_RE = /@\[([^\]]+)\]\(([a-fA-F0-9]+)\)/g;
+const MENTION_PLAIN_RE = /@(\w[\w.\-']*(?:\s+\w[\w.\-']*)?)/g;
+
+const sendMentionNotif = (mentioned, commenter, taskId, taskTitle) => {
+  if (String(mentioned._id) === String(commenter._id)) return;
+  const notif = notificationService.buildNotification('mention', {
+    actorName: commenter.name,
+    entityTitle: taskTitle,
+  });
+  notificationService.createAndSend({
+    recipient: mentioned._id,
+    referenceId: taskId, referenceModel: 'Task',
+    actionBy: commenter._id,
+    link: `/tasks/${taskId}`,
+    ...notif,
+  }).catch(() => {});
+};
 
 const processMentions = async (text, commenter, taskId, taskTitle) => {
-  const matches = [...text.matchAll(MENTION_RE)];
-  if (!matches.length) return;
-
-  const usernames = [...new Set(matches.map((m) => m[1].trim()))];
-  const matched = await User.find({ name: { $in: usernames.map((n) => new RegExp(`^${n}$`, 'i')) } });
-
-  for (const mentioned of matched) {
-    if (mentioned._id.equals(commenter._id)) continue;
-    await notificationService.createNotification({
-      recipient: mentioned._id,
-      type: 'mention',
-      message: `${commenter.name} mentioned you in "${taskTitle}"`,
-      link: `/tasks/${taskId}`,
-      referenceId: taskId,
-      referenceModel: 'Task',
-    });
+  // 1) Parse @[Name](userId) — exact ID match, no ambiguity
+  const mdMatches = [...text.matchAll(MENTION_MD_RE)];
+  const mdUserIds = [...new Set(mdMatches.map((m) => m[2]))];
+  if (mdUserIds.length) {
+    const matched = await User.find({ _id: { $in: mdUserIds } });
+    matched.forEach((u) => sendMentionNotif(u, commenter, taskId, taskTitle));
+    // Skip plain mentions for users already notified
+    const remaining = [...text.matchAll(MENTION_PLAIN_RE)]
+      .map((m) => m[1].trim())
+      .filter((name) => !matched.some((u) => u.name === name || u.email?.split('@')[0] === name));
+    if (!remaining.length) return;
+    const plainMatched = await User.find({ name: { $in: remaining } });
+    plainMatched.forEach((u) => sendMentionNotif(u, commenter, taskId, taskTitle));
+    return;
   }
+
+  // 2) Plain @Name only
+  const plainMatches = [...text.matchAll(MENTION_PLAIN_RE)];
+  if (!plainMatches.length) return;
+  const usernames = [...new Set(plainMatches.map((m) => m[1].trim()))];
+  const matched = await User.find({ name: { $in: usernames } });
+  matched.forEach((u) => sendMentionNotif(u, commenter, taskId, taskTitle));
 };
 
 export const addComment = async (taskId, text, user) => {
@@ -152,6 +233,18 @@ export const addComment = async (taskId, text, user) => {
   await taskRepo.addActivity(taskId, { action: 'commented', field: 'comment', performedBy: user._id });
 
   processMentions(text, user, taskId, task.title).catch(() => {});
+
+  if (task.assignedTo && !task.assignedTo._id.equals(user._id)) {
+    const notif = notificationService.buildNotification('task_comment', {
+      taskTitle: task.title, actorName: user.name,
+    });
+    notificationService.createAndSend({
+      recipient: task.assignedTo._id, referenceId: task._id, referenceModel: 'Task',
+      actionBy: user._id, link: `/tasks/${task._id}`, ...notif,
+    }).catch(() => {});
+  }
+
+  emitEntityUpdate('task', taskId, 'comment_added');
 
   return task;
 };

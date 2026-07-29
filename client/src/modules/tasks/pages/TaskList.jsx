@@ -32,8 +32,8 @@ export default function TaskList() {
     { limit: 100 },
     { skip: view !== 'board' },
   );
-  const { data: usersData } = useGetUsersQuery({ limit: 200 });
-  const { data: projectsData } = useGetProjectsQuery({ limit: 200 });
+  const { data: usersData } = useGetUsersQuery({ limit: 100 });
+  const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
@@ -42,10 +42,10 @@ export default function TaskList() {
   const tasks = data?.data || [];
   const boardTasks = boardData?.data || [];
   const pagination = data?.pagination;
-  const users = usersData?.data || [];
-  const projects = projectsData?.data || [];
+const users = usersData?.data?.users || usersData?.data || [];
+const projects = projectsData?.data?.projects || projectsData?.data || [];
 
-  const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
+  const canManage = user && !['client'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
   const handleFilterChange = useCallback((filters) => {

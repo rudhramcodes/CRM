@@ -1,16 +1,29 @@
+import { createServer } from 'http';
 import app from './app.js';
 import config from './config/index.js';
 import connectDB from './config/db.js';
 import logger from './utils/logger.js';
+import { initSocketIO } from './sockets/index.js';
 import { startOverdueCron } from './jobs/invoiceOverdue.job.js';
+import { startMeetingReminderCron } from './jobs/meetingReminder.job.js';
+import { startTaskDueCron } from './jobs/taskDueSoon.job.js';
+import { startCleanupCron } from './jobs/cleanupNotifications.job.js';
 
 const startServer = async () => {
   try {
     await connectDB();
 
-    startOverdueCron();
+    const httpServer = createServer(app);
 
-    app.listen(config.port, '0.0.0.0', () => {
+    // Initialize Socket.io
+    initSocketIO(httpServer);
+
+    startOverdueCron();
+    startMeetingReminderCron();
+    startTaskDueCron();
+    startCleanupCron();
+
+    httpServer.listen(config.port, '0.0.0.0', () => {
       logger.info(`Server running on port ${config.port} in ${config.nodeEnv} mode`);
       logger.info(`Health check: http://localhost:${config.port}/api/health`);
     });

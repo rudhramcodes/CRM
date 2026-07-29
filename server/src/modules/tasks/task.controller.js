@@ -31,7 +31,7 @@ export const update = async (req, res, next) => {
 
 export const remove = async (req, res, next) => {
   try {
-    await taskService.deleteTask(req.params.id);
+    await taskService.deleteTask(req.params.id, req.user);
     ApiResponse.success(res, 200, null, 'Task deleted successfully');
   } catch (err) { next(err); }
 };

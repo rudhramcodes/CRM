@@ -1,5 +1,6 @@
 import ApiError from '../../utils/ApiError.js';
 import * as meetingRepository from './meeting.repository.js';
+import * as notificationService from '../notifications/notification.service.js';
 
 function computeDuration(startTime, endTime) {
   const [sh, sm] = startTime.split(':').map(Number);
@@ -28,7 +29,23 @@ export const createMeeting = async (data, user) => {
     status: data.status || 'scheduled',
   };
 
-  return meetingRepository.create(payload);
+  const meeting = await meetingRepository.create(payload);
+
+  if (data.lead) {
+    const Lead = (await import('../leads/lead.model.js')).default;
+    const lead = await Lead.findById(data.lead).select('assignedTo');
+    if (lead?.assignedTo && !lead.assignedTo.equals(user._id)) {
+      const notif = notificationService.buildNotification('meeting_scheduled', {
+        meetingTitle: data.title, date: data.date,
+      });
+      notificationService.createAndSend({
+        recipient: lead.assignedTo, referenceId: meeting._id, referenceModel: 'Meeting',
+        actionBy: user._id, link: `/meetings/${meeting._id}`, ...notif,
+      }).catch(() => {});
+    }
+  }
+
+  return meeting;
 };
 
 export const getMeetings = async (query) => {

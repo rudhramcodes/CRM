@@ -2,6 +2,7 @@ import ApiError from '../../utils/ApiError.js';
 import generateClientId from '../../utils/generateClientId.js';
 import * as clientRepository from './client.repository.js';
 import * as leadRepository from '../leads/lead.repository.js';
+import * as notificationService from '../notifications/notification.service.js';
 
 export const create = async (data, user) => {
   const existing = await clientRepository.findByEmail(data.email);
@@ -73,6 +74,16 @@ export const convertFromLead = async (leadId, user) => {
     convertedToClient: client._id,
     convertedAt: new Date(),
   });
+
+  if (lead.assignedTo && !lead.assignedTo.equals(user._id)) {
+    const notif = notificationService.buildNotification('lead_converted', {
+      leadName: lead.name,
+    });
+    notificationService.createAndSend({
+      recipient: lead.assignedTo, referenceId: client._id, referenceModel: 'Client',
+      actionBy: user._id, link: `/clients/${client._id}`, ...notif,
+    }).catch(() => {});
+  }
 
   return client;
 };

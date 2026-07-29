@@ -1,13 +1,17 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Menu, Bell, Search, User, Settings, LogOut } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { toggleSidebar } from '../app/store/uiSlice';
 import { logout } from '../app/store/authSlice';
 import { useGetUnreadCountQuery, useGetNotificationsQuery, useMarkAllNotificationsReadMutation } from '../services/notificationApi';
+import { NOTIFICATION_CONFIG } from '../modules/notifications/constants';
+import useSocketNotifications from '../modules/notifications/hooks/useSocketNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import axios from 'axios';
 import { API_BASE_URL } from '../constants';
+import { cn } from '../utils/cn';
 
 export default function Header({ onMobileMenuOpen }) {
   const dispatch = useDispatch();
@@ -18,12 +22,41 @@ export default function Header({ onMobileMenuOpen }) {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
+  const [liveUnreadCount, setLiveUnreadCount] = useState(null);
 
   const { data: unreadData } = useGetUnreadCountQuery(undefined, { skip: !user, pollingInterval: 30000 });
-  const { data: notifData } = useGetNotificationsQuery({ limit: 5, unread: true }, { skip: !user || !showNotifDropdown });
+  const { data: notifData } = useGetNotificationsQuery({ limit: 5, read: 'false' }, { skip: !user || !showNotifDropdown });
   const [markAllRead] = useMarkAllNotificationsReadMutation();
 
-  const unreadCount = unreadData?.data?.count || 0;
+  const handleNewNotification = useCallback((notification) => {
+    const cfg = NOTIFICATION_CONFIG[notification.type] || NOTIFICATION_CONFIG.system;
+    const Icon = cfg.icon;
+    toast.custom((t) => (
+      <div onClick={() => { toast.dismiss(t.id); if (notification.link) navigate(notification.link); }}
+        className={cn('flex items-start gap-3 px-4 py-3 bg-white rounded-lg shadow-lg border border-zinc-200 cursor-pointer hover:bg-zinc-50 transition-all w-80')}>
+        <div className={cn('w-8 h-8 rounded-full flex items-center justify-center shrink-0', cfg.iconBg)}>
+          <Icon className="w-4 h-4" strokeWidth={1.5} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-zinc-700 leading-snug">{notification.message}</p>
+          <p className="text-[11px] text-zinc-400 mt-0.5">
+            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+          </p>
+        </div>
+      </div>
+    ), { duration: 4000, position: 'top-right' });
+  }, [navigate]);
+
+  const handleUnreadChange = useCallback((count) => {
+    setLiveUnreadCount(count);
+  }, []);
+
+  const { markRead: socketMarkRead } = useSocketNotifications({
+    onNew: handleNewNotification,
+    onUnreadChange: handleUnreadChange,
+  });
+
+  const unreadCount = liveUnreadCount !== null ? liveUnreadCount : (unreadData?.data?.count || 0);
   const notifications = notifData?.data || [];
 
   useEffect(() => {
@@ -104,15 +137,28 @@ export default function Header({ onMobileMenuOpen }) {
                 {notifications.length === 0 ? (
                   <p className="text-sm text-zinc-400 text-center py-6">No new notifications</p>
                 ) : (
-                  notifications.map((n) => (
-                    <button key={n._id} onClick={() => { navigate(n.link); setShowNotifDropdown(false); }}
-                      className="w-full text-left px-3 py-2.5 hover:bg-zinc-50 border-b border-zinc-50 last:border-0">
-                      <p className="text-sm text-zinc-700">{n.message}</p>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
-                        {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
-                      </p>
-                    </button>
-                  ))
+                  notifications.map((n) => {
+                    const cfg = NOTIFICATION_CONFIG[n.type] || NOTIFICATION_CONFIG.system;
+                    const Icon = cfg.icon;
+                    return (
+                      <button key={n._id} onClick={() => { if (!n.read) socketMarkRead(n._id); navigate(n.link); setShowNotifDropdown(false); }}
+                        className={cn('w-full text-left px-3 py-2.5 hover:bg-zinc-50 border-b border-zinc-50 last:border-0 flex items-start gap-2.5',
+                          !n.read && 'bg-blue-50/30')}>
+                        <div className={cn('w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5', cfg.iconBg)}>
+                          <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn('text-sm leading-snug', !n.read ? 'text-zinc-900 font-medium' : 'text-zinc-600')}>
+                            {n.message}
+                          </p>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">
+                            {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                          </p>
+                        </div>
+                        {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-2" />}
+                      </button>
+                    );
+                  })
                 )}
               </div>
               {notifications.length > 0 && (

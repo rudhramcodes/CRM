@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 export function useAuth() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading, error } = useSelector((state) => state.auth);
+  const { user, isAuthenticated, loading, error, fieldErrors } = useSelector((state) => state.auth);
 
   const login = async (credentials) => {
     const result = await dispatch(loginUser(credentials));
@@ -33,6 +33,7 @@ export function useAuth() {
     isAuthenticated,
     loading,
     error,
+    fieldErrors,
     login,
     register,
     logout,

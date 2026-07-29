@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { ArrowLeft, Edit2, Trash2, MessageSquare, Clock, User, Calendar, Eye, EyeOff, CheckSquare, Square, Plus, X, ListTodo, GitBranch, AtSign } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, MessageSquare, Clock, User, Calendar, Eye, EyeOff, CheckSquare, Square, Plus, X, ListTodo, GitBranch, AtSign, Mail } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   useGetTaskByIdQuery, useUpdateTaskMutation, useDeleteTaskMutation, useAddTaskCommentMutation,
   useAddChecklistItemMutation, useUpdateChecklistItemMutation, useRemoveChecklistItemMutation,
@@ -14,6 +15,7 @@ import { useGetProjectsQuery } from '../../../services/projectApi';
 import TaskStatusBadge from '../components/TaskStatusBadge';
 import TaskPriorityBadge from '../components/TaskPriorityBadge';
 import TaskComment from '../components/TaskComment';
+import useSocketEntity from '../../../hooks/useSocketEntity';
 import TaskForm from '../components/TaskForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -36,10 +38,11 @@ export default function TaskDetail() {
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
   const commentInputRef = useRef(null);
+  const selectedMentionsRef = useRef({}); // name → { _id, name } from dropdown selection
 
   const { data: taskData, isLoading, error, refetch } = useGetTaskByIdQuery(id);
-  const { data: usersData } = useGetUsersQuery({ limit: 200 }, { skip: !user });
-  const { data: projectsData } = useGetProjectsQuery({ limit: 200 }, { skip: !user });
+  const { data: usersData } = useGetUsersQuery({ limit: 100 }, { skip: !user });
+  const { data: projectsData } = useGetProjectsQuery({ limit: 100 }, { skip: !user });
   const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
   const [addComment, { isLoading: isAddingComment }] = useAddTaskCommentMutation();
@@ -52,14 +55,23 @@ export default function TaskDetail() {
   const [removeTimeEntry] = useRemoveTimeEntryMutation();
 
   const task = taskData?.data?.task || taskData?.task;
-  const users = usersData?.data || [];
-  const projects = projectsData?.data || [];
+  const users = usersData?.data?.users || usersData?.data || [];
+  useSocketEntity('task', id, {
+    onUpdate: useMemo(() => (data) => {
+      if (data.action !== 'task_deleted') refetch();
+    }, [refetch]),
+  });
+  const projects = projectsData?.data?.projects || projectsData?.data || [];
+  const mentionUsers = users.filter((u) => u._id !== user?._id);
+  const filteredMentions = mentionQuery
+    ? mentionUsers.filter((u) => u.name?.toLowerCase().includes(mentionQuery.toLowerCase()))
+    : mentionUsers;
 
   useEffect(() => {
     if (task) dispatch(setPageTitle(task.title));
   }, [task, dispatch]);
 
-  const canEdit = user && ['super_admin', 'admin', 'manager'].includes(user.role);
+  const canEdit = user && !['client'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
   const isWatching = task?.watchers?.some((w) => (w._id || w) === user?._id);
 
@@ -83,15 +95,28 @@ export default function TaskDetail() {
     }
   }, [id, deleteTask, navigate]);
 
+  const preprocessMentions = useCallback((text) => {
+    return text.replace(/@(\w[\w.\-']*(?:\s+\w[\w.\-']*)?)/g, (match, name) => {
+      // First check the exact user from dropdown selection (handles duplicate names)
+      const selected = selectedMentionsRef.current[name];
+      if (selected) return `@[${selected.name}](${selected._id})`;
+      // Fallback: search in users list
+      const user = mentionUsers.find((u) => u.name === name || u.email?.split('@')[0] === name);
+      return user ? `@[${user.name}](${user._id})` : match;
+    });
+  }, [mentionUsers]);
+
   const handleAddComment = useCallback(async () => {
     if (!commentText.trim()) return;
     try {
-      await addComment({ id, text: commentText.trim() }).unwrap();
+      const text = preprocessMentions(commentText.trim());
+      await addComment({ id, text }).unwrap();
       setCommentText('');
+      selectedMentionsRef.current = {};
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to add comment');
     }
-  }, [id, commentText, addComment]);
+  }, [id, commentText, addComment, preprocessMentions]);
 
   const handleToggleWatch = useCallback(async () => {
     try {
@@ -147,19 +172,16 @@ export default function TaskDetail() {
     }
   }, [id, removeTimeEntry]);
 
-  const mentionUsers = users.filter((u) => u._id !== user?._id);
-  const filteredMentions = mentionQuery
-    ? mentionUsers.filter((u) => u.name?.toLowerCase().includes(mentionQuery.toLowerCase()))
-    : mentionUsers;
-
   const handleCommentChange = useCallback((e) => {
     const val = e.target.value;
     setCommentText(val);
 
-    const lastAtIndex = val.lastIndexOf('@');
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
     if (lastAtIndex !== -1) {
-      const afterAt = val.slice(lastAtIndex + 1);
-      if (!afterAt.includes(' ') && afterAt.length > 0) {
+      const afterAt = textBeforeCursor.slice(lastAtIndex + 1);
+      if (afterAt.length > 0 && !/\s/.test(afterAt) && !afterAt.includes(']')) {
         setMentionQuery(afterAt);
         setMentionOpen(true);
         setMentionIndex(0);
@@ -169,13 +191,27 @@ export default function TaskDetail() {
     setMentionOpen(false);
   }, []);
 
-  const insertMention = useCallback((username) => {
-    const lastAtIndex = commentText.lastIndexOf('@');
+  const insertMention = useCallback((user) => {
+    const cursorPos = commentInputRef.current?.selectionStart ?? commentText.length;
+    const textBeforeCursor = commentText.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
     const before = commentText.slice(0, lastAtIndex);
-    const text = `${before}@${username} `;
+    const after = commentText.slice(cursorPos);
+    // Store exact user to resolve duplicate names on submit
+    selectedMentionsRef.current[user.name] = user;
+    // Show clean @Name in textarea, convert to @[Name](id) on submit
+    const text = `${before}@${user.name} ${after}`;
     setCommentText(text);
     setMentionOpen(false);
     commentInputRef.current?.focus();
+    setTimeout(() => {
+      const el = commentInputRef.current;
+      if (el) {
+        const pos = before.length + user.name.length + 2;
+        el.setSelectionRange(pos, pos);
+        el.focus();
+      }
+    }, 0);
   }, [commentText]);
 
   const handleCommentKeyDown = useCallback((e) => {
@@ -185,17 +221,27 @@ export default function TaskDetail() {
       if (e.key === 'Enter' || e.key === 'Tab') {
         if (filteredMentions[mentionIndex]) {
           e.preventDefault();
-          insertMention(filteredMentions[mentionIndex].name);
+          insertMention(filteredMentions[mentionIndex]);
           return;
         }
       }
       if (e.key === 'Escape') { setMentionOpen(false); return; }
     }
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !mentionOpen) {
       e.preventDefault();
       handleAddComment();
     }
   }, [mentionOpen, filteredMentions, mentionIndex, insertMention, handleAddComment]);
+
+  const mentionListRef = useRef(null);
+
+  // Scroll selected mention into view
+  useEffect(() => {
+    if (mentionOpen && mentionListRef.current) {
+      const el = mentionListRef.current.children[mentionIndex];
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    }
+  }, [mentionIndex, mentionOpen]);
 
   if (isLoading) return <div className="p-8 text-sm text-zinc-400">Loading...</div>;
 
@@ -301,7 +347,7 @@ export default function TaskDetail() {
                 {item.checked ? <CheckSquare className="w-4 h-4 text-green-500" /> : <Square className="w-4 h-4 text-zinc-300" />}
               </button>
               <span className={`flex-1 text-sm ${item.checked ? 'text-zinc-400 line-through' : 'text-zinc-700'}`}>{item.text}</span>
-              {canEdit && (
+              {canDelete && (
                 <button onClick={() => handleRemoveChecklist(item._id)} className="p-0.5 rounded text-zinc-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -422,20 +468,42 @@ export default function TaskDetail() {
         {canEdit && (
           <div className="flex gap-2 mb-4 relative">
             <div className="flex-1 relative">
-              <input ref={commentInputRef} type="text" value={commentText} onChange={handleCommentChange}
+              <textarea ref={commentInputRef} value={commentText} onChange={handleCommentChange}
                 onKeyDown={handleCommentKeyDown}
-                placeholder="Type @ to mention someone..." className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900" />
-              {mentionOpen && filteredMentions.length > 0 && (
-                <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-zinc-200 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
-                  {filteredMentions.slice(0, 8).map((u, i) => (
-                    <button key={u._id} onClick={() => insertMention(u.name)}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-zinc-50 ${i === mentionIndex ? 'bg-zinc-50 text-primary-900' : 'text-zinc-700'}`}>
-                      <AtSign className="w-3 h-3 text-zinc-400 shrink-0" />
-                      <span className="font-medium">{u.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+                rows={2}
+                placeholder="Write a comment... Type @ to mention someone"
+                className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900 resize-none min-h-[38px]" />
+              <AnimatePresence>
+                {mentionOpen && filteredMentions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute bottom-full left-0 mb-1.5 w-72 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 max-h-56 overflow-y-auto py-1"
+                    ref={mentionListRef}>
+                    <div className="px-3 py-1.5 text-[10px] font-medium text-zinc-400 uppercase tracking-wider border-b border-zinc-100">Mentions</div>
+                    {filteredMentions.slice(0, 8).map((u, i) => (
+                      <button key={u._id} onClick={() => insertMention(u)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${i === mentionIndex ? 'bg-primary-50 text-primary-900' : 'text-zinc-700 hover:bg-zinc-50'}`}>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-medium ${i === mentionIndex ? 'bg-primary-900 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
+                          {u.name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{u.name}</div>
+                          {u.email && <div className="text-[11px] text-zinc-400 truncate flex items-center gap-1"><Mail className="w-2.5 h-2.5" />{u.email}</div>}
+                        </div>
+                        <AtSign className={`w-3.5 h-3.5 shrink-0 ${i === mentionIndex ? 'text-primary-600' : 'text-zinc-300'}`} />
+                      </button>
+                    ))}
+                    {filteredMentions.length > 8 && (
+                      <div className="px-3 py-1.5 text-[11px] text-zinc-400 text-center border-t border-zinc-100">
+                        +{filteredMentions.length - 8} more — keep typing to narrow
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <Button size="sm" onClick={handleAddComment} loading={isAddingComment} disabled={!commentText.trim()}>Send</Button>
           </div>

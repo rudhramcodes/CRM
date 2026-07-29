@@ -3,6 +3,7 @@ import * as paymentRepository from './payment.repository.js';
 import Invoice from '../invoices/invoice.model.js';
 import { INVOICE_STATUS } from '../../constants/index.js';
 import { sendEmail } from '../../services/emailService.js';
+import * as notificationService from '../notifications/notification.service.js';
 import logger from '../../utils/logger.js';
 
 const markOverdueIfPastDue = async (invoice) => {
@@ -113,6 +114,28 @@ export const createPayment = async (data, user) => {
     sendPaymentConfirmation(payment, updatedInvoice, outstanding).catch((err) =>
       logger.error(`Payment email send failed: ${err.message}`),
     );
+
+    // 🔔 Notify invoice creator that payment was received
+    const notif = notificationService.buildNotification('payment_received', {
+      amount: payment.amount, invoiceNumber: updatedInvoice.invoiceNumber,
+    });
+    if (updatedInvoice.createdBy) {
+      notificationService.createAndSend({
+        recipient: updatedInvoice.createdBy, referenceId: updatedInvoice._id, referenceModel: 'Invoice',
+        ...notif,
+      }).catch(() => {});
+    }
+
+    // 🔔 If invoice is fully paid, send invoice_paid notification
+    if (updatedInvoice.status === 'paid' && updatedInvoice.createdBy) {
+      const paidNotif = notificationService.buildNotification('invoice_paid', {
+        invoiceNumber: updatedInvoice.invoiceNumber,
+      });
+      notificationService.createAndSend({
+        recipient: updatedInvoice.createdBy, referenceId: updatedInvoice._id, referenceModel: 'Invoice',
+        ...paidNotif,
+      }).catch(() => {});
+    }
   }
 
   return paymentRepository.findById(payment._id);

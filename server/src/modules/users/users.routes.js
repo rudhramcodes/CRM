@@ -22,7 +22,7 @@ router.get(
 
 router.get(
   '/',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
   validateQuery(usersQuerySchema),
   usersController.list,
 );
