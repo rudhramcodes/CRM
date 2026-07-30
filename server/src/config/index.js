@@ -20,7 +20,9 @@ const config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
+      : ['http://localhost:5173', 'https://crm-rb3f.onrender.com'],
   },
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   smtp: {

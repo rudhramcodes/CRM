@@ -135,4 +135,4 @@ export const NAV_ITEMS = [
   { label: 'Settings', path: '/settings', icon: Settings, roles: ['super_admin', 'admin', 'manager', 'employee'] },
 ];
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
