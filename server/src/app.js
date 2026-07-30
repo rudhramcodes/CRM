@@ -27,13 +27,14 @@ import paymentRoutes from './modules/payments/payment.routes.js';
 import templateRoutes from './modules/templates/template.routes.js';
 import reportRoutes from './modules/reports/reports.routes.js';
 import notificationRoutes from './modules/notifications/notification.routes.js';
+import settingsRoutes from './modules/settings/settings.routes.js';
 
 const app = express();
 
 app.use(helmet());
 app.use(cors({
   origin: config.cors.origin,
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
@@ -93,6 +94,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Serve frontend build in production
 if (config.nodeEnv === 'production') {

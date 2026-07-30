@@ -138,3 +138,21 @@ export const resendVerification = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const user = await authService.updateProfile(req.user._id, req.body);
+    ApiResponse.success(res, 200, { user }, 'Profile updated');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePassword = async (req, res, next) => {
+  try {
+    await authService.changePassword(req.user._id, req.body.currentPassword, req.body.newPassword);
+    ApiResponse.success(res, 200, null, 'Password changed');
+  } catch (error) {
+    next(error);
+  }
+};

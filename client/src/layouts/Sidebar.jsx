@@ -3,10 +3,14 @@ import { useSelector } from 'react-redux';
 import { X } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { NAV_ITEMS } from '../constants';
+import { useGetOrgSettingsQuery } from '../services/settingsApi';
 
 export default function Sidebar({ open, onClose }) {
   const user = useSelector((state) => state.auth.user);
   const sidebarOpen = useSelector((state) => state.ui.sidebarOpen);
+  const { data: orgSettings } = useGetOrgSettingsQuery();
+  const companyName = orgSettings?.companyName || 'Rudhram';
+  const logo = orgSettings?.logo;
 
   const visibleNavItems = NAV_ITEMS.filter(
     (item) => user && item.roles.includes(user.role),
@@ -29,15 +33,19 @@ export default function Sidebar({ open, onClose }) {
           sidebarOpen ? 'lg:w-56' : 'lg:w-16',
         )}
       >
-        <div className="flex items-center justify-between h-14 px-3 border-b border-zinc-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-primary-900 rounded-lg flex items-center justify-center shrink-0">
-              <span className="text-white font-heading font-bold text-sm">R</span>
+          <div className="flex items-center justify-between h-14 px-3 border-b border-zinc-100">
+            <div className="flex items-center gap-2.5">
+              {logo ? (
+                <img src={logo} alt={companyName} className="w-8 h-8 rounded-lg object-contain shrink-0" />
+              ) : (
+                <div className="w-8 h-8 bg-primary-900 rounded-lg flex items-center justify-center shrink-0">
+                  <span className="text-white font-heading font-bold text-sm">{companyName[0]}</span>
+                </div>
+              )}
+              {sidebarOpen && (
+                <span className="font-heading font-semibold text-sm text-primary-900 truncate max-w-[120px]">{companyName}</span>
+              )}
             </div>
-            {sidebarOpen && (
-              <span className="font-heading font-semibold text-sm text-primary-900">Rudhram</span>
-            )}
-          </div>
           <button
             onClick={onClose}
             className="lg:hidden p-1 rounded-md hover:bg-zinc-100"

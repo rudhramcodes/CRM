@@ -2,6 +2,7 @@ import * as notifRepo from './notification.repository.js';
 import { NOTIFICATION_TEMPLATES } from './notification.constants.js';
 import { getIO } from '../../sockets/index.js';
 import logger from '../../utils/logger.js';
+import { shouldNotify } from '../settings/settings.service.js';
 
 // ponytail: simple in-memory dedup window, upgrade to Redis if scaling
 const dedupCache = new Map();
@@ -45,6 +46,21 @@ export const createAndSend = async ({
   // Dedup: same type + same reference + same recipient within 5 min
   if (isDuplicate(recipient, type, referenceId)) return null;
 
+  // Resolve actual channels from user preferences
+  let allowedInApp = true;
+  let allowedEmail = true;
+  if (type) {
+    allowedInApp = await shouldNotify(recipient, type, 'inApp');
+    allowedEmail = await shouldNotify(recipient, type, 'email');
+  }
+  // If user explicitly disabled both, skip entirely
+  if (!allowedInApp && !allowedEmail) return null;
+
+  const finalChannels = {
+    inApp: allowedInApp && (!channels || channels.inApp !== false),
+    email: allowedEmail && (!channels || channels.email !== false),
+  };
+
   const notification = await notifRepo.create({
     recipient,
     type,
@@ -56,23 +72,25 @@ export const createAndSend = async ({
     referenceModel: referenceModel || undefined,
     actionBy: actionBy || undefined,
     metadata: metadata || undefined,
-    channels: channels || { inApp: true, email: false },
+    channels: channels || { inApp: true, email: true },
   });
 
-  // Real-time via Socket.io
-  try {
-    const io = getIO();
-    if (io) {
-      const unreadCount = await notifRepo.countUnreadByRecipient(recipient);
-      io.to(`user:${recipient}`).emit('notification:new', notification);
-      io.to(`user:${recipient}`).emit('notification:unread', { count: unreadCount });
+  // Real-time via Socket.io (only if inApp is allowed)
+  if (finalChannels.inApp) {
+    try {
+      const io = getIO();
+      if (io) {
+        const unreadCount = await notifRepo.countUnreadByRecipient(recipient);
+        io.to(`user:${recipient}`).emit('notification:new', notification);
+        io.to(`user:${recipient}`).emit('notification:unread', { count: unreadCount });
+      }
+    } catch (err) {
+      logger.error(`Socket emit failed for notification: ${err.message}`);
     }
-  } catch (err) {
-    logger.error(`Socket emit failed for notification: ${err.message}`);
   }
 
-  // ponytail: email channel — basic for now, upgrade to queue if volume grows
-  if (channels?.email) {
+  // Send email (only if email channel is allowed)
+  if (finalChannels.email) {
     try {
       const { default: User } = await import('../auth/auth.model.js');
       const user = await User.findById(recipient).select('email name');

@@ -31,16 +31,27 @@ export const createMeeting = async (data, user) => {
 
   const meeting = await meetingRepository.create(payload);
 
+  const notif = notificationService.buildNotification('meeting_scheduled', {
+    meetingTitle: data.title, date: data.date,
+  });
+  const basePayload = {
+    referenceId: meeting._id, referenceModel: 'Meeting',
+    actionBy: user._id, link: `/meetings/${meeting._id}`,
+    ...notif,
+  };
+
+  // Notify the meeting creator
+  notificationService.createAndSend({
+    recipient: user._id, ...basePayload,
+  }).catch(() => {});
+
+  // Notify lead assignee if different from creator
   if (data.lead) {
     const Lead = (await import('../leads/lead.model.js')).default;
     const lead = await Lead.findById(data.lead).select('assignedTo');
     if (lead?.assignedTo && !lead.assignedTo.equals(user._id)) {
-      const notif = notificationService.buildNotification('meeting_scheduled', {
-        meetingTitle: data.title, date: data.date,
-      });
       notificationService.createAndSend({
-        recipient: lead.assignedTo, referenceId: meeting._id, referenceModel: 'Meeting',
-        actionBy: user._id, link: `/meetings/${meeting._id}`, ...notif,
+        recipient: lead.assignedTo, ...basePayload,
       }).catch(() => {});
     }
   }

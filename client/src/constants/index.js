@@ -131,7 +131,8 @@ export const NAV_ITEMS = [
   { label: 'Payments', path: '/payments', icon: CreditCard, roles: ['super_admin', 'admin'] },
   { label: 'Reports', path: '/reports', icon: BarChart3, roles: ['super_admin', 'admin'] },
   { label: 'Notifications', path: '/notifications', icon: Bell, roles: ['super_admin', 'admin', 'manager', 'employee'] },
-  { label: 'Settings', path: '/settings', icon: Settings, roles: ['super_admin'] },
+  { label: 'Users', path: '/users', icon: Users, roles: ['super_admin', 'admin'] },
+  { label: 'Settings', path: '/settings', icon: Settings, roles: ['super_admin', 'admin', 'manager', 'employee'] },
 ];
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';

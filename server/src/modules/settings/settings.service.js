@@ -1,0 +1,177 @@
+import ApiError from '../../utils/ApiError.js';
+import { UserPreference, Setting } from './settings.model.js';
+import * as authRepository from '../auth/auth.repository.js';
+import { ROLE_PERMISSIONS } from '../../constants/index.js';
+
+// ── User Notification Preferences ──
+
+export const getNotifPrefs = async (userId) => {
+  let prefs = await UserPreference.findOne({ user: userId });
+  if (!prefs) prefs = { user: userId, notify: {} };
+  return prefs;
+};
+
+export const updateNotifPrefs = async (userId, notify) => {
+  const prefs = await UserPreference.findOneAndUpdate(
+    { user: userId },
+    { $set: { notify } },
+    { upsert: true, new: true },
+  );
+  return prefs;
+};
+
+// ── Organization Settings ──
+
+const ORG_KEYS = ['companyName', 'logo', 'address', 'timezone', 'dateFormat', 'currency', 'language'];
+
+export const getOrgSettings = async () => {
+  const settings = await Setting.find({ key: { $in: ORG_KEYS } });
+  const result = {};
+  for (const s of settings) result[s.key] = s.value;
+  return result;
+};
+
+export const updateOrgSettings = async (data) => {
+  const ops = Object.entries(data)
+    .filter(([k]) => ORG_KEYS.includes(k))
+    .map(([key, value]) => ({
+      updateOne: {
+        filter: { key },
+        update: { $set: { key, value } },
+        upsert: true,
+      },
+    }));
+  if (!ops.length) throw ApiError.badRequest('No valid org settings provided');
+  await Setting.bulkWrite(ops);
+  return getOrgSettings();
+};
+
+export const getRolesPermissions = () => ROLE_PERMISSIONS;
+
+export const updateRolePermissions = async (role, permissions) => {
+  if (!ROLE_PERMISSIONS[role]) throw ApiError.notFound(`Role "${role}" not found`);
+  await Setting.findOneAndUpdate(
+    { key: `role_permissions:${role}` },
+    { $set: { key: `role_permissions:${role}`, value: permissions } },
+    { upsert: true, new: true },
+  );
+  const { users } = await authRepository.findAllUsers({ role });
+  for (const user of users) {
+    await authRepository.updateUser(user._id, { permissions });
+  }
+  return { [role]: permissions };
+};
+
+export const shouldNotify = async (userId, type, channel = 'inApp') => {
+  const prefs = await UserPreference.findOne({ user: userId });
+  if (!prefs) return true;
+  const channels = prefs.notify?.get?.(type) || prefs.notify?.[type];
+  if (!channels) return true;
+  return channels[channel] !== false;
+};
+
+// ── Security Settings (password policy, login lockout) ──
+
+const SECURITY_KEYS = [
+  'passwordMinLength', 'passwordRequireUpper', 'passwordRequireLower',
+  'passwordRequireNumber', 'passwordRequireSpecial',
+  'loginMaxAttempts', 'loginLockoutMinutes',
+];
+
+const SECURITY_DEFAULTS = {
+  passwordMinLength: 8,
+  passwordRequireUpper: true,
+  passwordRequireLower: true,
+  passwordRequireNumber: true,
+  passwordRequireSpecial: false,
+  loginMaxAttempts: 5,
+  loginLockoutMinutes: 15,
+};
+
+export const getSecuritySettings = async () => {
+  const settings = await Setting.find({ key: { $in: SECURITY_KEYS } });
+  const result = { ...SECURITY_DEFAULTS };
+  for (const s of settings) result[s.key] = s.value;
+  return result;
+};
+
+export const updateSecuritySettings = async (data) => {
+  const ops = Object.entries(data)
+    .filter(([k]) => SECURITY_KEYS.includes(k))
+    .map(([key, value]) => ({
+      updateOne: {
+        filter: { key },
+        update: { $set: { key, value } },
+        upsert: true,
+      },
+    }));
+  if (!ops.length) throw ApiError.badRequest('No valid security settings');
+  await Setting.bulkWrite(ops);
+  return getSecuritySettings();
+};
+
+// ── Integration Settings (SMTP, third-party keys) ──
+
+const INTEGRATION_KEYS = [
+  'smtpHost', 'smtpPort', 'smtpUser', 'smtpPass',
+  'smtpSenderName', 'smtpSenderEmail',
+];
+
+const INTEGRATION_DEFAULTS = {
+  smtpHost: '',
+  smtpPort: 587,
+  smtpUser: '',
+  smtpPass: '',
+  smtpSenderName: '',
+  smtpSenderEmail: '',
+};
+
+export const getIntegrationSettings = async () => {
+  const settings = await Setting.find({ key: { $in: INTEGRATION_KEYS } });
+  const result = { ...INTEGRATION_DEFAULTS };
+  for (const s of settings) result[s.key] = s.value;
+  // Fallback to .env values if not set in DB
+  if (!result.smtpHost) result.smtpHost = config.smtp.host;
+  if (!result.smtpPort) result.smtpPort = config.smtp.port;
+  if (!result.smtpUser) result.smtpUser = config.smtp.user;
+  if (!result.smtpPass) result.smtpPass = config.smtp.pass;
+  if (!result.smtpSenderName) result.smtpSenderName = 'Rudhram CRM';
+  if (!result.smtpSenderEmail) result.smtpSenderEmail = result.smtpUser;
+  return result;
+};
+
+export const updateIntegrationSettings = async (data) => {
+  const ops = Object.entries(data)
+    .filter(([k]) => INTEGRATION_KEYS.includes(k))
+    .map(([key, value]) => ({
+      updateOne: {
+        filter: { key },
+        update: { $set: { key, value } },
+        upsert: true,
+      },
+    }));
+  if (!ops.length) throw ApiError.badRequest('No valid integration settings');
+  await Setting.bulkWrite(ops);
+  return getIntegrationSettings();
+};
+
+export const validatePasswordAgainstPolicy = async (password) => {
+  const policy = await getSecuritySettings();
+  const errors = [];
+  if (password.length < policy.passwordMinLength) {
+    errors.push(`Password must be at least ${policy.passwordMinLength} characters`);
+  }
+  if (policy.passwordRequireUpper && !/[A-Z]/.test(password)) {
+    errors.push('Password must contain an uppercase letter');
+  }
+  if (policy.passwordRequireLower && !/[a-z]/.test(password)) {
+    errors.push('Password must contain a lowercase letter');
+  }
+  if (policy.passwordRequireNumber && !/[0-9]/.test(password)) {
+    errors.push('Password must contain a number');
+  }
+  if (policy.passwordRequireSpecial && !/[^A-Za-z0-9]/.test(password)) {
+    errors.push('Password must contain a special character');
+  }
+  return errors;
+};

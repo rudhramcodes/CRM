@@ -10,6 +10,8 @@ import {
   resetPasswordSchema,
   verifyEmailSchema,
   resendVerificationSchema,
+  updateProfileSchema,
+  changePasswordSchema,
 } from './auth.validation.js';
 
 const router = Router();
@@ -23,7 +25,8 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Too many attempts, please try again later' },
 });
 
-router.post('/register', authLimiter, validate(registerSchema), authController.register);
+// Registration disabled — admins create users via POST /api/users
+// router.post('/register', authLimiter, validate(registerSchema), authController.register);
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authController.resetPassword);
@@ -32,5 +35,8 @@ router.post('/refresh-token', authController.refresh);
 router.get('/me', verifyToken, authController.getMe);
 router.post('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
 router.post('/resend-verification', validate(resendVerificationSchema), authController.resendVerification);
+
+router.patch('/profile', verifyToken, validate(updateProfileSchema), authController.updateProfile);
+router.put('/password', verifyToken, validate(changePasswordSchema), authController.changePassword);
 
 export default router;

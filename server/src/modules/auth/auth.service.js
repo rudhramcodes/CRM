@@ -4,6 +4,7 @@ import config from '../../config/index.js';
 import ApiError from '../../utils/ApiError.js';
 import * as authRepository from './auth.repository.js';
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from '../../services/emailService.js';
+import { validatePasswordAgainstPolicy } from '../settings/settings.service.js';
 
 const generateTokens = async (user) => {
   const accessToken = user.generateAccessToken();
@@ -18,6 +19,11 @@ export const registerUser = async (userData) => {
   const existingUser = await authRepository.findByEmail(userData.email);
   if (existingUser) {
     throw ApiError.conflict('Email already registered');
+  }
+
+  const policyErrors = await validatePasswordAgainstPolicy(userData.password);
+  if (policyErrors.length) {
+    throw ApiError.badRequest(policyErrors.join('; '));
   }
 
   const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -122,6 +128,11 @@ export const resetPassword = async (token, newPassword) => {
     throw ApiError.badRequest('Reset token has expired');
   }
 
+  const policyErrors = await validatePasswordAgainstPolicy(newPassword);
+  if (policyErrors.length) {
+    throw ApiError.badRequest(policyErrors.join('; '));
+  }
+
   user.password = newPassword;
   user.passwordResetToken = undefined;
   user.passwordResetExpires = undefined;
@@ -170,4 +181,40 @@ export const resendVerification = async (email) => {
   });
 
   await sendVerificationEmail(email, verificationToken);
+};
+
+export const updateProfile = async (userId, data) => {
+  const allowed = ['name', 'phone', 'avatar'];
+  const updates = {};
+  for (const key of allowed) {
+    if (data[key] !== undefined) updates[key] = data[key];
+  }
+  if (!Object.keys(updates).length) throw ApiError.badRequest('Nothing to update');
+
+  // If email is being changed, check it's not taken
+  if (data.email && data.email !== (await authRepository.findById(userId)).email) {
+    const existing = await authRepository.findByEmail(data.email);
+    if (existing) throw ApiError.conflict('Email already in use');
+    updates.email = data.email;
+  }
+
+  const user = await authRepository.updateUser(userId, updates);
+  if (!user) throw ApiError.notFound('User not found');
+  return user;
+};
+
+export const changePassword = async (userId, currentPassword, newPassword) => {
+  const user = await authRepository.findByIdWithPassword(userId);
+  if (!user) throw ApiError.notFound('User not found');
+
+  const isValid = await user.comparePassword(currentPassword);
+  if (!isValid) throw ApiError.badRequest('Current password is incorrect');
+
+  const policyErrors = await validatePasswordAgainstPolicy(newPassword);
+  if (policyErrors.length) {
+    throw ApiError.badRequest(policyErrors.join('; '));
+  }
+
+  user.password = newPassword;
+  await user.save();
 };

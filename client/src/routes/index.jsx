@@ -4,7 +4,6 @@ import AuthLayout from '../layouts/AuthLayout';
 import ProtectedRoute from './ProtectedRoute';
 
 import Login from '../pages/auth/Login';
-import Register from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
 import VerifyEmail from '../pages/auth/VerifyEmail';
@@ -29,6 +28,8 @@ import PaymentList from '../modules/payments/pages/PaymentList';
 import PaymentDetail from '../modules/payments/pages/PaymentDetail';
 import ReportsPage from '../modules/reports/pages/ReportsPage';
 import NotificationList from '../modules/notifications/pages/NotificationList';
+import SettingsPage from '../modules/settings/pages/SettingsPage';
+import UserManagement from '../modules/users/pages/UserManagement';
 
 const router = createBrowserRouter([
   {
@@ -37,7 +38,6 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/auth/login" replace /> },
       { path: 'login', element: <Login /> },
-      { path: 'register', element: <Register /> },
       { path: 'forgot-password', element: <ForgotPassword /> },
       { path: 'reset-password', element: <ResetPassword /> },
       { path: 'verify-email', element: <VerifyEmail /> },
@@ -72,7 +72,8 @@ const router = createBrowserRouter([
       { path: 'payments/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><PaymentDetail /></ProtectedRoute> },
       { path: 'reports', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><ReportsPage /></ProtectedRoute> },
       { path: 'notifications', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><NotificationList /></ProtectedRoute> },
-      { path: 'settings', element: <div>Settings (Coming Soon)</div> },
+      { path: 'users', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><UserManagement /></ProtectedRoute> },
+      { path: 'settings', element: <SettingsPage /> },
     ],
   },
   {
