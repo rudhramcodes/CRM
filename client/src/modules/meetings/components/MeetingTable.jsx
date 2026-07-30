@@ -1,6 +1,9 @@
 import { Edit2, Trash2, Calendar, Clock, ExternalLink } from 'lucide-react';
 import MeetingStatusBadge from './MeetingStatusBadge';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
+import { cn } from '../../../utils/cn';
+import { MEETING_STATUS } from '../../../constants';
 import { TableSkeleton } from '../../../components/ui/Skeleton';
 
 export default function MeetingTable({
@@ -12,6 +15,7 @@ export default function MeetingTable({
   canDelete,
   onEdit,
   onDelete,
+  onStatusChange,
 }) {
   if (loading) {
     return (
@@ -98,7 +102,28 @@ export default function MeetingTable({
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <MeetingStatusBadge status={meeting.status} />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    {canEdit && onStatusChange ? (
+                      <Select value={meeting.status} onValueChange={(val) => onStatusChange(meeting._id, val)}>
+                        <SelectTrigger
+                          className={cn(
+                            'w-auto gap-1 border-0 bg-transparent p-0 shadow-none',
+                            'hover:bg-transparent focus:ring-0',
+                            '[&>svg]:text-zinc-400 [&>svg]:w-3 [&>svg]:h-3',
+                          )}
+                        >
+                          <MeetingStatusBadge status={meeting.status} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MEETING_STATUS.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <MeetingStatusBadge status={meeting.status} />
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="text-sm text-zinc-700">

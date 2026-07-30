@@ -230,6 +230,7 @@ export default function LeadList() {
             canDelete={canDelete}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
             serverPagination
             page={pagination?.page || 1}
             pageSize={pagination?.limit || 10}

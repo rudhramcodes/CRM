@@ -1,7 +1,10 @@
 import { FolderKanban, Edit2, Trash2 } from 'lucide-react';
 import ProjectStatusBadge from './ProjectStatusBadge';
 import ProjectPriorityBadge from './ProjectPriorityBadge';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
+import { cn } from '../../../utils/cn';
+import { PROJECT_STATUS } from '../../../constants';
 import { TableSkeleton } from '../../../components/ui/Skeleton';
 
 const formatCurrency = (amount, currency = 'INR') => {
@@ -22,6 +25,7 @@ export default function ProjectTable({
   canDelete,
   onEdit,
   onDelete,
+  onStatusChange,
 }) {
   if (loading) {
     return (
@@ -109,7 +113,28 @@ export default function ProjectTable({
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <ProjectStatusBadge status={project.status} />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    {canEdit && onStatusChange ? (
+                      <Select value={project.status} onValueChange={(val) => onStatusChange(project._id, val)}>
+                        <SelectTrigger
+                          className={cn(
+                            'w-auto gap-1 border-0 bg-transparent p-0 shadow-none',
+                            'hover:bg-transparent focus:ring-0',
+                            '[&>svg]:text-zinc-400 [&>svg]:w-3 [&>svg]:h-3',
+                          )}
+                        >
+                          <ProjectStatusBadge status={project.status} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROJECT_STATUS.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <ProjectStatusBadge status={project.status} />
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <ProjectPriorityBadge priority={project.priority} />

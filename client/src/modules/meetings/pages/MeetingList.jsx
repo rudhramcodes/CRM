@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
 import { Plus, RefreshCw } from 'lucide-react';
-import { useGetMeetingsQuery, useDeleteMeetingMutation } from '../../../services/meetingApi';
+import { useGetMeetingsQuery, useUpdateMeetingMutation, useDeleteMeetingMutation } from '../../../services/meetingApi';
 import MeetingTable from '../components/MeetingTable';
 import MeetingFilters from '../components/MeetingFilters';
 import MeetingForm from '../components/MeetingForm';
@@ -25,6 +25,7 @@ export default function MeetingList() {
   }, [dispatch]);
 
   const { data: meetingsData, isLoading, error, refetch: refetchMeetings, isFetching: isFetchingMeetings } = useGetMeetingsQuery(queryParams);
+  const [updateMeeting] = useUpdateMeetingMutation();
   const [deleteMeeting] = useDeleteMeetingMutation();
 
   const meetings = meetingsData?.data || [];
@@ -49,6 +50,14 @@ export default function MeetingList() {
     },
     [navigate],
   );
+
+  const handleStatusChange = useCallback(async (meetingId, status) => {
+    try {
+      await updateMeeting({ id: meetingId, status }).unwrap();
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to update status');
+    }
+  }, [updateMeeting]);
 
   const handleDelete = useCallback((row) => setDeleteTarget(row), []);
 
@@ -108,6 +117,7 @@ export default function MeetingList() {
         canDelete={canDelete}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onStatusChange={handleStatusChange}
       />
 
       {/* Pagination */}

@@ -144,6 +144,7 @@ const projects = projectsData?.data?.projects || projectsData?.data || [];
           <TaskTable
             tasks={tasks} loading={false} error={null} onRowClick={handleRowClick}
             canEdit={canManage} canDelete={canDelete} onEdit={handleEdit} onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
             serverPagination page={pagination?.page || 1} pageSize={pagination?.limit || 10}
             total={pagination?.total} totalPages={pagination?.pages}
             hasNextPage={pagination?.hasNextPage} hasPrevPage={pagination?.hasPrevPage}

@@ -37,6 +37,12 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
   const { data: usersData } = useGetUsersQuery({ limit: 100 });
 
   const allUsers = (usersData?.data?.users || []).filter((u) => u.role !== 'client');
+  const nameCounts = {};
+  allUsers.forEach((u) => { nameCounts[u.name] = (nameCounts[u.name] || 0) + 1; });
+  const userOptions = allUsers.map((u) => ({
+    value: u._id,
+    label: nameCounts[u.name] > 1 ? `${u.name} <${u.email}>` : u.name,
+  }));
   const isEditing = !!lead;
 
   const {
@@ -193,7 +199,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
           placeholder="Myself"
           options={[
             { value: '', label: 'Myself' },
-              ...allUsers.map((u) => ({ value: u._id, label: u.name })),
+            ...userOptions,
           ]}
           error={errors.assignedTo?.message}
         />

@@ -147,6 +147,7 @@ export default function ProjectList() {
             projects={projects} loading={isLoading} error={error}
             onRowClick={handleRowClick} canEdit={canEdit} canDelete={canDelete}
             onEdit={handleEdit} onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
           />
           {pagination && pagination.pages > 1 && (
             <div className="flex items-center justify-center gap-2">

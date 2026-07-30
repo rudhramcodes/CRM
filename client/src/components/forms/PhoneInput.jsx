@@ -87,13 +87,13 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
       {label && (
         <label className="block text-sm font-medium text-zinc-700">{label}</label>
       )}
-      <div className="flex" ref={dropdownRef}>
+      <div className="flex w-full" ref={dropdownRef}>
         <div className="relative">
           <button
             type="button"
             onClick={() => setOpen(!open)}
             className={cn(
-              'flex items-center gap-1 px-2.5 py-2.5 border rounded-l-lg text-sm bg-zinc-50',
+              'flex items-center gap-1 px-2.5 h-10 border rounded-l-lg text-sm bg-zinc-50',
               'hover:bg-zinc-100 transition-colors min-w-[80px]',
               error ? 'border-red-300' : 'border-zinc-200',
             )}
@@ -104,7 +104,7 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
           </button>
 
           {open && (
-            <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-zinc-200 rounded-lg shadow-lg z-50 overflow-hidden">
+            <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-zinc-200 rounded-lg shadow-lg z-[60] overflow-hidden">
               <div className="p-2 border-b border-zinc-100">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
@@ -152,7 +152,7 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
           placeholder={placeholder || '98765 43210'}
           maxLength={PHONE_MAX_LENGTH}
           className={cn(
-            'flex-1 px-3 py-2.5 border border-l-0 rounded-r-lg text-sm transition-colors bg-zinc-50',
+            'flex-1 px-3 h-10 border border-l-0 rounded-r-lg text-sm transition-colors bg-zinc-50',
             'focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900',
             'placeholder:text-zinc-400 text-primary-900',
             error ? 'border-red-300' : 'border-zinc-200',

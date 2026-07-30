@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
 import { Plus, UserCheck, RefreshCw } from 'lucide-react';
-import { useGetClientsQuery, useGetClientStatsQuery, useDeleteClientMutation } from '../../../services/clientApi';
+import { useGetClientsQuery, useGetClientStatsQuery, useUpdateClientMutation, useDeleteClientMutation } from '../../../services/clientApi';
 import ClientTable from '../components/ClientTable';
 import ClientFilters from '../components/ClientFilters';
 import Button from '../../../components/ui/Button';
@@ -25,6 +25,7 @@ export default function ClientList() {
 
   const { data: clientsData, isLoading, error, refetch: refetchClients, isFetching: isFetchingClients } = useGetClientsQuery(queryParams);
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetClientStatsQuery();
+  const [updateClient] = useUpdateClientMutation();
   const [deleteClient] = useDeleteClientMutation();
 
   const clients = clientsData?.data || [];
@@ -42,6 +43,14 @@ export default function ClientList() {
   const handleEdit = useCallback((row) => {
     navigate(`/clients/${row._id}`);
   }, [navigate]);
+
+  const handleStatusChange = useCallback(async (clientId, status) => {
+    try {
+      await updateClient({ id: clientId, status }).unwrap();
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to update status');
+    }
+  }, [updateClient]);
 
   const handleDelete = useCallback((row) => setDeleteTarget(row), []);
 
@@ -130,16 +139,17 @@ export default function ClientList() {
           />
         </div>
       ) : (
-        <ClientTable
-          clients={clients}
-          loading={false}
-          error={null}
-          onRowClick={(row) => navigate(`/clients/${row._id}`)}
-          canEdit={canEdit}
-          canDelete={canDelete}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          serverPagination
+          <ClientTable
+            clients={clients}
+            loading={false}
+            error={null}
+            onRowClick={(row) => navigate(`/clients/${row._id}`)}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
+            serverPagination
           page={pagination?.page || 1}
           pageSize={pagination?.limit || 10}
           total={pagination?.total}

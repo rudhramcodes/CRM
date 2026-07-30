@@ -1,9 +1,12 @@
 import DataTable from '../../../components/tables/DataTable';
 import ClientStatusBadge from './ClientStatusBadge';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
+import { CLIENT_STATUS } from '../../../constants';
+import { cn } from '../../../utils/cn';
 import { Edit2, Trash2 } from 'lucide-react';
 
-export default function ClientTable({ clients, loading, error, onRowClick, canEdit, canDelete, onEdit, onDelete, serverPagination, page, pageSize, total, totalPages, hasNextPage, hasPrevPage, onPageChange, onPageSizeChange }) {
+export default function ClientTable({ clients, loading, error, onRowClick, canEdit, canDelete, onEdit, onDelete, onStatusChange, serverPagination, page, pageSize, total, totalPages, hasNextPage, hasPrevPage, onPageChange, onPageSizeChange }) {
   const columns = [
     {
       header: 'Company',
@@ -45,7 +48,31 @@ export default function ClientTable({ clients, loading, error, onRowClick, canEd
     {
       header: 'Status',
       accessor: 'status',
-      cell: ({ value }) => <ClientStatusBadge status={value} />,
+      cell: ({ row }) =>
+        canEdit && onStatusChange ? (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Select value={row.status} onValueChange={(val) => onStatusChange(row._id, val)}>
+              <SelectTrigger
+                className={cn(
+                  'w-auto gap-1 border-0 bg-transparent p-0 shadow-none',
+                  'hover:bg-transparent focus:ring-0',
+                  '[&>svg]:text-zinc-400 [&>svg]:w-3 [&>svg]:h-3',
+                )}
+              >
+                <ClientStatusBadge status={row.status} />
+              </SelectTrigger>
+              <SelectContent>
+                {CLIENT_STATUS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <ClientStatusBadge status={row.status} />
+        ),
     },
     {
       header: 'Created',

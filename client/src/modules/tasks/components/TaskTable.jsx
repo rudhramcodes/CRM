@@ -1,10 +1,19 @@
 import DataTable from '../../../components/tables/DataTable';
 import TaskStatusBadge from './TaskStatusBadge';
 import TaskPriorityBadge from './TaskPriorityBadge';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
+import { cn } from '../../../utils/cn';
 import { Edit2, Trash2 } from 'lucide-react';
 
-export default function TaskTable({ tasks, loading, error, onRowClick, canEdit, canDelete, onEdit, onDelete,
+const TASK_STATUS_OPTIONS = [
+  { value: 'todo', label: 'To Do' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'review', label: 'Review' },
+  { value: 'done', label: 'Done' },
+];
+
+export default function TaskTable({ tasks, loading, error, onRowClick, canEdit, canDelete, onEdit, onDelete, onStatusChange,
   serverPagination, page, pageSize, total, totalPages, hasNextPage, hasPrevPage, onPageChange, onPageSizeChange }) {
   const columns = [
     {
@@ -25,7 +34,29 @@ export default function TaskTable({ tasks, loading, error, onRowClick, canEdit, 
     {
       header: 'Status',
       accessor: 'status',
-      cell: ({ value }) => <TaskStatusBadge status={value} />,
+      cell: ({ row }) =>
+        canEdit && onStatusChange ? (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Select value={row.status} onValueChange={(val) => onStatusChange(row._id, val)}>
+              <SelectTrigger
+                className={cn(
+                  'w-auto gap-1 border-0 bg-transparent p-0 shadow-none',
+                  'hover:bg-transparent focus:ring-0',
+                  '[&>svg]:text-zinc-400 [&>svg]:w-3 [&>svg]:h-3',
+                )}
+              >
+                <TaskStatusBadge status={row.status} />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <TaskStatusBadge status={row.status} />
+        ),
     },
     {
       header: 'Priority',
