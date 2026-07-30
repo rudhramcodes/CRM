@@ -110,33 +110,24 @@ export const updateSecuritySettings = async (data) => {
   return getSecuritySettings();
 };
 
-// ── Integration Settings (SMTP, third-party keys) ──
+// ── Integration Settings (Resend, third-party keys) ──
 
 const INTEGRATION_KEYS = [
-  'smtpHost', 'smtpPort', 'smtpUser', 'smtpPass',
-  'smtpSenderName', 'smtpSenderEmail',
+  'resendFromEmail', 'resendFromName',
 ];
 
 const INTEGRATION_DEFAULTS = {
-  smtpHost: '',
-  smtpPort: 587,
-  smtpUser: '',
-  smtpPass: '',
-  smtpSenderName: '',
-  smtpSenderEmail: '',
+  resendFromEmail: '',
+  resendFromName: '',
 };
 
 export const getIntegrationSettings = async () => {
   const settings = await Setting.find({ key: { $in: INTEGRATION_KEYS } });
   const result = { ...INTEGRATION_DEFAULTS };
   for (const s of settings) result[s.key] = s.value;
-  // Fallback to .env values if not set in DB
-  if (!result.smtpHost) result.smtpHost = config.smtp.host;
-  if (!result.smtpPort) result.smtpPort = config.smtp.port;
-  if (!result.smtpUser) result.smtpUser = config.smtp.user;
-  if (!result.smtpPass) result.smtpPass = config.smtp.pass;
-  if (!result.smtpSenderName) result.smtpSenderName = 'Rudhram CRM';
-  if (!result.smtpSenderEmail) result.smtpSenderEmail = result.smtpUser;
+  if (!result.resendFromEmail) result.resendFromEmail = config.resend.fromEmail;
+  if (!result.resendFromName) result.resendFromName = config.resend.fromName;
+  result.resendConfigured = !!config.resend.apiKey;
   return result;
 };
 

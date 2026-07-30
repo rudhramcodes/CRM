@@ -42,10 +42,6 @@ export const updateSecuritySchema = z.object({
 });
 
 export const updateIntegrationSchema = z.object({
-  smtpHost: z.string().optional(),
-  smtpPort: z.number().int().min(1).max(65535).optional(),
-  smtpUser: z.string().optional(),
-  smtpPass: z.string().optional(),
-  smtpSenderName: z.string().optional(),
-  smtpSenderEmail: z.string().optional(),
+  resendFromEmail: z.string().email().optional(),
+  resendFromName: z.string().max(100).optional(),
 });

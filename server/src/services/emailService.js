@@ -1,79 +1,42 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import config from '../config/index.js';
 import logger from '../utils/logger.js';
-import { Setting } from '../modules/settings/settings.model.js';
 
-const createTransporter = (smtpConfig) => {
-  const host = smtpConfig?.host || config.smtp.host;
-  const port = smtpConfig?.port || config.smtp.port;
-  const user = smtpConfig?.user || config.smtp.user;
-  const pass = smtpConfig?.pass || config.smtp.pass;
-  const isSecure = port === 465;
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: isSecure,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: false },
-  });
+let resend = null;
+
+const getClient = () => {
+  if (resend) return resend;
+  if (!config.resend.apiKey) return null;
+  resend = new Resend(config.resend.apiKey);
+  return resend;
 };
 
-const resolveSmtpConfig = async () => {
-  const keys = ['smtpHost', 'smtpPort', 'smtpUser', 'smtpPass', 'smtpSenderName', 'smtpSenderEmail'];
-  const settings = await Setting.find({ key: { $in: keys } });
-  if (!settings.length) return null;
-  const db = {};
-  for (const s of settings) db[s.key] = s.value;
-  if (!db.smtpHost || !db.smtpUser) return null;
-  return {
-    host: db.smtpHost,
-    port: db.smtpPort || config.smtp.port,
-    user: db.smtpUser,
-    pass: db.smtpPass || config.smtp.pass,
-    senderName: db.smtpSenderName || 'Rudhram CRM',
-    senderEmail: db.smtpSenderEmail || db.smtpUser,
-  };
-};
+export const sendEmail = async ({ to, subject, html }) => {
+  const client = getClient();
 
-export const sendEmail = async ({ to, subject, html, attachments }) => {
-  const dbSmtp = await resolveSmtpConfig();
-  const smtp = dbSmtp || config.smtp;
-  const hasCredentials = smtp.user && smtp.pass;
-
-  if (!hasCredentials) {
+  if (!client) {
     logger.info(`[EMAIL FALLBACK] To: ${to} | Subject: ${subject}`);
-    if (attachments) logger.info(`[EMAIL FALLBACK] Attachments: ${attachments.length} file(s)`);
-    return { messageId: 'dev-fallback', accepted: [to] };
-  }
-
-  const transport = createTransporter(smtp);
-
-  try {
-    await transport.verify();
-    logger.info('SMTP connection verified successfully');
-  } catch (verifyError) {
-    logger.warn(`SMTP verify() failed (non-fatal, trying to send anyway): ${verifyError.message}`);
+    return { id: 'dev-fallback' };
   }
 
   try {
-    const mailOptions = {
-      from: `"${smtp.senderName || 'Rudhram CRM'}" <${smtp.senderEmail || smtp.user}>`,
-      to,
+    const { data, error } = await client.emails.send({
+      from: `${config.resend.fromName} <${config.resend.fromEmail}>`,
+      to: Array.isArray(to) ? to : [to],
       subject,
       html,
-    };
-    if (attachments && attachments.length > 0) {
-      mailOptions.attachments = attachments;
+    });
+
+    if (error) {
+      logger.error(`Resend failed: ${error.message}`);
+      throw error;
     }
-    const info = await transport.sendMail(mailOptions);
-    logger.info(`Email sent successfully: ${info.messageId} | to: ${to} | subject: ${subject}`);
-    transport.close();
-    return info;
-  } catch (error) {
-    logger.error(`Email send failed: ${error.message}`);
-    logger.error(`SMTP config used - host: ${smtp.host}, port: ${smtp.port}, user: ${smtp.user}`);
-    transport.close();
-    throw error;
+
+    logger.info(`Email sent: ${data?.id} | to: ${to} | subject: ${subject}`);
+    return data;
+  } catch (err) {
+    logger.error(`Email send failed: ${err.message}`);
+    throw err;
   }
 };
 
