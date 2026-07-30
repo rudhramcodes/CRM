@@ -8,10 +8,38 @@ import { startOverdueCron } from './jobs/invoiceOverdue.job.js';
 import { startMeetingReminderCron } from './jobs/meetingReminder.job.js';
 import { startTaskDueCron } from './jobs/taskDueSoon.job.js';
 import { startCleanupCron } from './jobs/cleanupNotifications.job.js';
+import User from './modules/auth/auth.model.js';
+import { ROLES, ROLE_PERMISSIONS } from './constants/index.js';
+
+const autoSeed = async () => {
+  try {
+    const existing = await User.findOne({ role: ROLES.SUPER_ADMIN });
+    if (existing) return;
+
+    const email = process.env.SEED_EMAIL || 'fizzzydev@gmail.com';
+    const password = process.env.SEED_PASSWORD || 'Test@123';
+    const name = process.env.SEED_NAME || 'Faizal Shaikh';
+
+    await User.create({
+      name,
+      email,
+      password,
+      role: ROLES.SUPER_ADMIN,
+      permissions: ROLE_PERMISSIONS[ROLES.SUPER_ADMIN],
+      isEmailVerified: true,
+      isActive: true,
+    });
+
+    logger.info(`[auto-seed] Super admin created: ${email}`);
+  } catch (err) {
+    logger.warn(`[auto-seed] Skipped (${err.message})`);
+  }
+};
 
 const startServer = async () => {
   try {
     await connectDB();
+    await autoSeed();
 
     const httpServer = createServer(app);
 
