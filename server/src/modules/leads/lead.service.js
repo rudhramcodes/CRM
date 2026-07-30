@@ -87,6 +87,7 @@ export const updateLead = async (id, data, user) => {
             contactPerson: lead.name,
             email: lead.email,
             phone: lead.phone,
+            brand: lead.brand || 'panigrahna',
             convertedFrom: lead._id,
             status: 'active',
             createdBy: user._id,

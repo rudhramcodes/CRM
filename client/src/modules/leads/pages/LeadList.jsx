@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, Users, Columns3, LayoutList, RefreshCw } from 'lucide-react';
+import { Plus, Users, Columns3, LayoutList, RefreshCw, XCircle } from 'lucide-react';
 import { useGetLeadsQuery, useGetLeadStatsQuery, useDeleteLeadMutation, useUpdateLeadMutation } from '../../../services/leadApi';
 import LeadTable from '../components/LeadTable';
 import LeadKanbanBoard from '../components/LeadKanbanBoard';
@@ -12,6 +12,7 @@ import Button from '../../../components/ui/Button';
 import EmptyState from '../../../components/ui/EmptyState';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import Modal from '../../../components/ui/Modal';
 import { LEAD_STATUS, LEAD_BRANDS } from '../../../constants';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,8 @@ export default function LeadList() {
   const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 });
   const [view, setView] = useState('table');
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [lostReasonTarget, setLostReasonTarget] = useState(null);
+  const [lostReasonInput, setLostReasonInput] = useState('');
 
   useEffect(() => {
     dispatch(setPageTitle('Leads'));
@@ -73,12 +76,32 @@ export default function LeadList() {
   }, [navigate]);
 
   const handleStatusChange = useCallback(async (leadId, newStatus) => {
+    if (newStatus === 'lost') {
+      setLostReasonTarget(leadId);
+      setLostReasonInput('');
+      return;
+    }
     try {
       await updateLead({ id: leadId, status: newStatus }).unwrap();
+      if (newStatus === 'won') {
+        toast.success('Lead converted to client successfully');
+        navigate('/clients');
+      }
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update lead status');
     }
-  }, [updateLead]);
+  }, [updateLead, navigate]);
+
+  const confirmLostReason = useCallback(async () => {
+    if (!lostReasonTarget) return;
+    try {
+      await updateLead({ id: lostReasonTarget, status: 'lost', lostReason: lostReasonInput.trim() || undefined }).unwrap();
+      setLostReasonTarget(null);
+      setLostReasonInput('');
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to update lead status');
+    }
+  }, [lostReasonTarget, lostReasonInput, updateLead]);
 
   const handleDelete = useCallback((row) => setDeleteTarget(row), []);
 
@@ -252,6 +275,37 @@ export default function LeadList() {
           />
         </div>
       )}
+
+      <Modal
+        open={!!lostReasonTarget}
+        onClose={() => setLostReasonTarget(null)}
+        title="Mark Lead as Lost"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-red-600">
+            <XCircle className="w-5 h-5" />
+            <p className="text-sm text-zinc-600">Please provide a reason for marking this lead as lost.</p>
+          </div>
+          <textarea
+            value={lostReasonInput}
+            onChange={(e) => setLostReasonInput(e.target.value)}
+            placeholder="e.g. Price too high, went with competitor, not interested..."
+            className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-900 resize-none"
+            rows={3}
+            maxLength={500}
+            autoFocus
+          />
+          <div className="flex items-center justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setLostReasonTarget(null)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={confirmLostReason}>
+              Confirm Lost
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <ConfirmDialog
         open={!!deleteTarget}

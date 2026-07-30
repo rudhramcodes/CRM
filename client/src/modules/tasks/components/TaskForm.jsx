@@ -1,7 +1,7 @@
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
 import FormInput from '../../../components/forms/FormInput';
 import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
@@ -22,30 +22,26 @@ const taskFormSchema = z.object({
 });
 
 export default function TaskForm({ initialData, projects = [], users = [], tasks = [], onSubmit, onCancel, loading }) {
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
-    resolver: zodResolver(taskFormSchema),
-    defaultValues: {
-      title: '', description: '', status: 'todo', priority: 'medium',
-      assignedTo: '', project: '', parent: '', dueDate: '', estimatedHours: '', tags: '',
-    },
-  });
+  const formValues = useMemo(() => initialData ? ({
+    title: initialData.title || '',
+    description: initialData.description || '',
+    status: initialData.status || 'todo',
+    priority: initialData.priority || 'medium',
+    assignedTo: initialData.assignedTo?._id || initialData.assignedTo || '',
+    project: initialData.project?._id || initialData.project || '',
+    parent: initialData.parent?._id || initialData.parent || '',
+    dueDate: initialData.dueDate ? initialData.dueDate.slice(0, 10) : '',
+    estimatedHours: initialData.estimatedHours || '',
+    tags: initialData.tags?.join(', ') || '',
+  }) : {
+    title: '', description: '', status: 'todo', priority: 'medium',
+    assignedTo: '', project: '', parent: '', dueDate: '', estimatedHours: '', tags: '',
+  }, [initialData]);
 
-  useEffect(() => {
-    if (initialData) {
-      reset({
-        title: initialData.title || '',
-        description: initialData.description || '',
-        status: initialData.status || 'todo',
-        priority: initialData.priority || 'medium',
-        assignedTo: initialData.assignedTo?._id || '',
-        project: initialData.project?._id || '',
-        parent: initialData.parent?._id || initialData.parent || '',
-        dueDate: initialData.dueDate ? initialData.dueDate.slice(0, 10) : '',
-        estimatedHours: initialData.estimatedHours || '',
-        tags: initialData.tags?.join(', ') || '',
-      });
-    }
-  }, [initialData, reset]);
+  const { register, handleSubmit, control, formState: { errors } } = useForm({
+    resolver: zodResolver(taskFormSchema),
+    values: formValues,
+  });
 
   const otherTasks = tasks.filter((t) => t._id !== initialData?._id);
 

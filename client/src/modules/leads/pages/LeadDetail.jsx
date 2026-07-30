@@ -14,6 +14,7 @@ import {
   Phone,
   Calendar,
   Globe,
+  XCircle,
 } from 'lucide-react';
 import {
   useGetLeadByIdQuery,
@@ -177,6 +178,15 @@ export default function LeadDetail() {
                 </p>
               </div>
             </div>
+            {lead.status === 'lost' && lead.lostReason && (
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-4 h-4 text-zinc-400 shrink-0" />
+                <div>
+                  <p className="text-xs text-red-500 font-medium">Lost Reason</p>
+                  <p className="text-sm text-primary-900">{lead.lostReason}</p>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <Building2 className="w-4 h-4 text-zinc-400 shrink-0" />
               <div>

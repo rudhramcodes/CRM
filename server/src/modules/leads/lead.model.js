@@ -79,6 +79,12 @@ const leadSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    lostReason: {
+      type: String,
+      trim: true,
+      default: null,
+      maxlength: 500,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

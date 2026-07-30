@@ -1,7 +1,7 @@
+import { useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -20,6 +20,10 @@ const leadFormSchema = z.object({
   phone: z
     .string()
     .regex(/^$|^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
+    .refine(
+      (val) => val === '' || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
+      { message: 'Phone number must have at least 10 digits' }
+    )
     .optional()
     .or(z.literal('')),
   brand: z.string().optional().or(z.literal('')),
@@ -27,6 +31,7 @@ const leadFormSchema = z.object({
   source: z.string().optional(),
   status: z.string().optional(),
   assignedTo: z.string().optional(),
+  lostReason: z.string().max(500).optional().or(z.literal('')),
   notes: z.string().optional(),
 });
 
@@ -45,42 +50,42 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
   }));
   const isEditing = !!lead;
 
+  const formValues = useMemo(() => lead ? ({
+    name: lead.name || '',
+    email: lead.email || '',
+    phone: lead.phone || '',
+    brand: lead.brand || '',
+    company: lead.company || '',
+    source: lead.source || 'other',
+    status: lead.status || 'new',
+    assignedTo: lead.assignedTo?._id || lead.assignedTo || '',
+    lostReason: lead.lostReason || '',
+    notes: '',
+  }) : {
+    name: '',
+    email: '',
+    phone: '',
+    brand: '',
+    company: '',
+    source: 'other',
+    status: 'new',
+    assignedTo: '',
+    lostReason: '',
+    notes: '',
+  }, [lead]);
+
   const {
     register,
     handleSubmit,
     control,
-    reset,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(leadFormSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      phone: '',
-      brand: '',
-      company: '',
-      source: 'other',
-      status: 'new',
-      assignedTo: '',
-      notes: '',
-    },
+    values: formValues,
   });
 
-  useEffect(() => {
-    if (lead) {
-      reset({
-        name: lead.name || '',
-        email: lead.email || '',
-        phone: lead.phone || '',
-        brand: lead.brand || '',
-        company: lead.company || '',
-        source: lead.source || 'other',
-        status: lead.status || 'new',
-        assignedTo: lead.assignedTo?._id || lead.assignedTo || '',
-        notes: '',
-      });
-    }
-  }, [lead, reset]);
+  const watchedStatus = watch('status');
 
   const getFieldErrors = (err) => {
     if (err?.data?.errors && Array.isArray(err.data.errors)) {
@@ -100,6 +105,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         source: data.source || 'other',
         status: data.status || 'new',
         assignedTo: data.assignedTo || undefined,
+        lostReason: data.lostReason || undefined,
       };
 
       if (data.notes && !isEditing) {
@@ -204,6 +210,15 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
           error={errors.assignedTo?.message}
         />
       </div>
+
+      {watchedStatus === 'lost' && (
+        <FormTextarea
+          label="Lost Reason"
+          placeholder="Why was this lead lost?"
+          error={errors.lostReason?.message}
+          {...register('lostReason')}
+        />
+      )}
 
       {!isEditing && (
         <FormTextarea

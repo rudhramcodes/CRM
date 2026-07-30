@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,40 +34,35 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
   const [updateMeeting, { isLoading: isUpdating }] = useUpdateMeetingMutation();
   const isEditing = !!meeting;
 
+  const formValues = useMemo(() => meeting ? ({
+    title: meeting.title || '',
+    date: meeting.date ? meeting.date.split('T')[0] : '',
+    startTime: meeting.startTime || '',
+    endTime: meeting.endTime || '',
+    meetingLink: meeting.meetingLink || '',
+    location: meeting.location || '',
+    notes: meeting.notes || '',
+    status: meeting.status || 'scheduled',
+  }) : {
+    title: '',
+    date: '',
+    startTime: '',
+    endTime: '',
+    meetingLink: '',
+    location: '',
+    notes: '',
+    status: 'scheduled',
+  }, [meeting]);
+
   const {
     register,
     handleSubmit,
     control,
-    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(meetingFormSchema),
-    defaultValues: {
-      title: '',
-      date: '',
-      startTime: '',
-      endTime: '',
-      meetingLink: '',
-      location: '',
-      notes: '',
-      status: 'scheduled',
-    },
+    values: formValues,
   });
-
-  useEffect(() => {
-    if (meeting) {
-      reset({
-        title: meeting.title || '',
-        date: meeting.date ? meeting.date.split('T')[0] : '',
-        startTime: meeting.startTime || '',
-        endTime: meeting.endTime || '',
-        meetingLink: meeting.meetingLink || '',
-        location: meeting.location || '',
-        notes: meeting.notes || '',
-        status: meeting.status || 'scheduled',
-      });
-    }
-  }, [meeting, reset]);
 
   const onSubmit = async (data) => {
     try {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -36,40 +36,35 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
   const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();
   const isEditing = !!project;
 
+  const formValues = useMemo(() => project ? ({
+    title: project.title || '',
+    description: project.description || '',
+    status: project.status || 'planning',
+    priority: project.priority || 'medium',
+    budget: project.budget || '',
+    startDate: project.startDate ? project.startDate.split('T')[0] : '',
+    deadline: project.deadline ? project.deadline.split('T')[0] : '',
+    tags: project.tags?.join(', ') || '',
+  }) : {
+    title: '',
+    description: '',
+    status: 'planning',
+    priority: 'medium',
+    budget: '',
+    startDate: '',
+    deadline: '',
+    tags: '',
+  }, [project]);
+
   const {
     register,
     handleSubmit,
     control,
-    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(projectFormSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      status: 'planning',
-      priority: 'medium',
-      budget: '',
-      startDate: '',
-      deadline: '',
-      tags: '',
-    },
+    values: formValues,
   });
-
-  useEffect(() => {
-    if (project) {
-      reset({
-        title: project.title || '',
-        description: project.description || '',
-        status: project.status || 'planning',
-        priority: project.priority || 'medium',
-        budget: project.budget || '',
-        startDate: project.startDate ? project.startDate.split('T')[0] : '',
-        deadline: project.deadline ? project.deadline.split('T')[0] : '',
-        tags: project.tags?.join(', ') || '',
-      });
-    }
-  }, [project, reset]);
 
   const onSubmit = async (data) => {
     try {

@@ -23,6 +23,10 @@ export const createLeadSchema = z.object({
   phone: z
     .string()
     .regex(/^[+]?[\d\s()-]{7,15}$/, 'Please enter a valid phone number')
+    .refine(
+      (val) => !val || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
+      { message: 'Phone number must have at least 10 digits' }
+    )
     .optional()
     .nullable()
     .or(z.literal('')),
@@ -36,6 +40,7 @@ export const createLeadSchema = z.object({
   source: z.enum(LEAD_SOURCES, { errorMap: () => ({ message: 'Please select a valid source' }) }).optional().default('other'),
   status: z.enum(LEAD_STATUS_LIST, { message: 'Invalid lead status' }).optional().default(LEAD_STATUS.NEW),
   assignedTo: z.string().optional().nullable(),
+  lostReason: z.string().max(500).optional().nullable().or(z.literal('')),
   followUpDate: z.string().datetime({ offset: true }).optional().nullable().or(z.literal('')),
   notes: z
     .array(
@@ -57,6 +62,10 @@ export const updateLeadSchema = z.object({
   phone: z
     .string()
     .regex(/^[+]?[\d\s()-]{7,15}$/, 'Please enter a valid phone number')
+    .refine(
+      (val) => !val || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
+      { message: 'Phone number must have at least 10 digits' }
+    )
     .optional()
     .nullable()
     .or(z.literal('')),
@@ -70,6 +79,7 @@ export const updateLeadSchema = z.object({
   source: z.enum(LEAD_SOURCES, { message: 'Invalid lead source' }).optional(),
   status: z.enum(LEAD_STATUS_LIST, { message: 'Invalid lead status' }).optional(),
   assignedTo: z.string().optional().nullable(),
+  lostReason: z.string().max(500).optional().nullable().or(z.literal('')),
   followUpDate: z.string().datetime({ offset: true }).optional().nullable().or(z.literal('')),
 });
 

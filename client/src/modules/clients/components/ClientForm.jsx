@@ -21,6 +21,10 @@ const clientFormSchema = z.object({
   phone: z
     .string()
     .regex(/^$|^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
+    .refine(
+      (val) => val === '' || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
+      { message: 'Phone number must have at least 10 digits' }
+    )
     .optional()
     .or(z.literal('')),
   gstNumber: z
