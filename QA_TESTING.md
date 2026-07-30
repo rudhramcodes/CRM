@@ -1,11 +1,11 @@
-# 🧪 CRM — QA Testing Guide
+# CRM — QA Testing
 
 > A simple step-by-step guide to test all features of the CRM.
 > No coding knowledge needed — just open the website and follow the steps.
 
 ---
 
-## 📋 Before You Start
+## Before You Start
 
 ### Open the App
 - **Frontend (what you see):** `http://localhost:5173`
@@ -22,7 +22,7 @@
 
 ---
 
-## 📑 1 — Login / Logout
+## 1 — Login / Logout
 
 ### How to test:
 
@@ -35,7 +35,7 @@
 | 5 | Click profile icon (top-right corner) → **Logout** | Goes back to login page |
 | 6 | After logout, try opening `http://localhost:5173/dashboard` directly | Redirects to login page |
 
-### 🔑 Forgot / Reset Password
+### Forgot / Reset Password
 
 | # | What to do | What should happen |
 |---|-----------|-------------------|
@@ -46,7 +46,7 @@
 | 5 | Enter new password → Submit | Success message shows, redirects to login |
 | 6 | Login with new password | Should work |
 
-### 📧 Email Verification
+### Email Verification
 
 | # | What to do | What should happen |
 |---|-----------|-------------------|
@@ -58,7 +58,7 @@
 
 ---
 
-## 📊 2 — Dashboard
+## 2 — Dashboard
 
 | # | What to do | What should happen |
 |---|-----------|-------------------|
@@ -68,7 +68,7 @@
 
 ---
 
-## 👥 3 — Leads
+## 3 — Leads
 
 ### 3A — Leads List
 
@@ -104,7 +104,7 @@
 
 ---
 
-## 🏢 4 — Clients
+## 4 — Clients
 
 ### 4A — Clients List
 
@@ -140,7 +140,7 @@
 
 ---
 
-## 📅 5 — Meetings
+## 5 — Meetings
 
 ### 5A — Meetings List
 
@@ -168,7 +168,7 @@
 
 ---
 
-## 📁 6 — Projects
+## 6 — Projects
 
 | # | What to do | What should happen |
 |---|-----------|-------------------|
@@ -178,7 +178,7 @@
 
 ---
 
-## ✅ 7 — Tasks
+## 7 — Tasks
 
 | # | What to do | What should happen |
 |---|-----------|-------------------|
@@ -188,7 +188,7 @@
 
 ---
 
-## 🧾 8 — Invoices
+## 8 — Invoices
 
 | # | What to do | What should happen |
 |---|-----------|-------------------|
@@ -200,7 +200,7 @@
 
 ---
 
-## 💳 9 — Payments
+## 9 — Payments
 
 | # | What to do | What should happen |
 |---|-----------|-------------------|
@@ -210,7 +210,7 @@
 
 ---
 
-## 📈 10 — Reports
+## 10 — Reports
 
 | # | What to do | What should happen |
 |---|-----------|-------------------|
@@ -219,7 +219,7 @@
 
 ---
 
-## 🔔 11 — Notifications
+## 11 — Notifications
 
 ### 11A — In-App Notifications
 
@@ -240,7 +240,7 @@
 
 ---
 
-## ⚙️ 12 — Settings
+## 12 — Settings
 
 ### 12A — Profile Tab
 
@@ -313,7 +313,7 @@
 
 ---
 
-## 👤 13 — User Management
+## 13 — User Management
 
 > Only visible to super_admin and admin
 
@@ -337,7 +337,7 @@
 
 ---
 
-## 🔐 14 — Role-Based Access Testing
+## 14 — Role-Based Access Testing
 
 > **What this means:** Each role should only see / do what's allowed for them.
 
@@ -388,7 +388,7 @@
 
 ---
 
-## 📝 15 — Edge Cases (check these too)
+## 15 — Edge Cases (check these too)
 
 ### 15A — Forms & Input
 
@@ -490,7 +490,7 @@
 
 ---
 
-## 🐛 16 — Bug Report Template
+## 16 — Bug Report Template
 
 Found a problem? Report it like this:
 
@@ -515,7 +515,7 @@ Screenshot: [Yes / No]
 
 ---
 
-## ✅ 17 — Final Checklist
+## 17 — Final Checklist
 
 > Mark ✅ as you test each feature
 
