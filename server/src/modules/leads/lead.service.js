@@ -2,6 +2,7 @@ import ApiError from '../../utils/ApiError.js';
 import * as leadRepository from './lead.repository.js';
 import * as clientRepository from '../clients/client.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
+import generateClientId from '../../utils/generateClientId.js';
 
 export const createLead = async (data, user) => {
   const existing = await leadRepository.findByEmail(data.email);
@@ -82,12 +83,14 @@ export const updateLead = async (id, data, user) => {
       if (!lead.convertedToClient) {
         const existingClient = await clientRepository.findByEmail(lead.email);
         if (!existingClient) {
+          const brand = lead.brand || 'panigrahna';
           const client = await clientRepository.create({
+            clientId: await generateClientId(brand),
             companyName: lead.company || `${lead.name}'s Company`,
             contactPerson: lead.name,
             email: lead.email,
             phone: lead.phone,
-            brand: lead.brand || 'panigrahna',
+            brand,
             convertedFrom: lead._id,
             status: 'active',
             createdBy: user._id,

@@ -266,7 +266,7 @@ export default function LeadList() {
           />
         )
       ) : (
-        <div className="bg-white rounded-xl border border-zinc-200 p-4">
+        <div className="bg-white rounded-xl border border-zinc-200 p-4 min-h-[500px]">
           <LeadKanbanBoard
             leads={kanbanLeads}
             loading={kanbanLoading}
