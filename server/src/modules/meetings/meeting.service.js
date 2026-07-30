@@ -1,6 +1,7 @@
 import ApiError from '../../utils/ApiError.js';
 import * as meetingRepository from './meeting.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
+import config from '../../config/index.js';
 
 function computeDuration(startTime, endTime) {
   const [sh, sm] = startTime.split(':').map(Number);
@@ -36,7 +37,7 @@ export const createMeeting = async (data, user) => {
   });
   const basePayload = {
     referenceId: meeting._id, referenceModel: 'Meeting',
-    actionBy: user._id, link: `/meetings/${meeting._id}`,
+    actionBy: user._id, link: `${config.clientUrl}/meetings/${meeting._id}`,
     ...notif,
   };
 

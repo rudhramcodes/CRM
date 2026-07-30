@@ -2,6 +2,7 @@ import * as notifRepo from './notification.repository.js';
 import { NOTIFICATION_TEMPLATES } from './notification.constants.js';
 import { getIO } from '../../sockets/index.js';
 import logger from '../../utils/logger.js';
+import config from '../../config/index.js';
 import { shouldNotify } from '../settings/settings.service.js';
 
 // ponytail: simple in-memory dedup window, upgrade to Redis if scaling
@@ -168,8 +169,9 @@ export const deleteOldNotifications = async (daysOld = 90) => {
 };
 
 function buildEmailHtml({ title, message, link }) {
-  const linkHtml = link
-    ? `<a href="${link}" style="display:inline-block;padding:10px 20px;background:#1e40af;color:#fff;text-decoration:none;border-radius:6px;margin-top:12px;">View Details</a>`
+  const fullUrl = link && link.startsWith('/') ? `${config.clientUrl}${link}` : link;
+  const linkHtml = fullUrl
+    ? `<a href="${fullUrl}" style="display:inline-block;padding:10px 20px;background:#1e40af;color:#fff;text-decoration:none;border-radius:6px;margin-top:12px;">View Details</a>`
     : '';
   return `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">

@@ -12,6 +12,7 @@ import PhoneInput from '../../../components/forms/PhoneInput';
 import Button from '../../../components/ui/Button';
 import { LEAD_STATUS, LEAD_SOURCES, LEAD_BRANDS } from '../../../constants';
 import { useCreateLeadMutation, useUpdateLeadMutation } from '../../../services/leadApi';
+import { useGetUsersQuery } from '../../../services/userApi';
 
 const leadFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(200),
@@ -25,6 +26,7 @@ const leadFormSchema = z.object({
   company: z.string().max(200).optional().or(z.literal('')),
   source: z.string().optional(),
   status: z.string().optional(),
+  assignedTo: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -32,7 +34,9 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
   const navigate = useNavigate();
   const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
   const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
+  const { data: usersData } = useGetUsersQuery({ limit: 100 });
 
+  const allUsers = (usersData?.data?.users || []).filter((u) => u.role !== 'client');
   const isEditing = !!lead;
 
   const {
@@ -51,6 +55,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
       company: '',
       source: 'other',
       status: 'new',
+      assignedTo: '',
       notes: '',
     },
   });
@@ -65,6 +70,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         company: lead.company || '',
         source: lead.source || 'other',
         status: lead.status || 'new',
+        assignedTo: lead.assignedTo?._id || lead.assignedTo || '',
         notes: '',
       });
     }
@@ -87,6 +93,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         company: data.company || undefined,
         source: data.source || 'other',
         status: data.status || 'new',
+        assignedTo: data.assignedTo || undefined,
       };
 
       if (data.notes && !isEditing) {
@@ -178,6 +185,17 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
           label="Status"
           options={LEAD_STATUS}
           error={errors.status?.message}
+        />
+        <FormSelect
+          name="assignedTo"
+          control={control}
+          label="Assigned To"
+          placeholder="Myself"
+          options={[
+            { value: '', label: 'Myself' },
+              ...allUsers.map((u) => ({ value: u._id, label: u.name })),
+          ]}
+          error={errors.assignedTo?.message}
         />
       </div>
 
