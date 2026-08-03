@@ -51,9 +51,10 @@ const BG = '#f4f4f5';
 const fmtINR = (val) =>
   `\u20B9${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
-export const renderEmail = ({ preheader = '', heading, subtext = '', bodyHtml = '', cta = null, footerNote = '' }) => {
-  const ctaHtml = cta
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto 0;"><tr><td align="center" style="background:${INK};border-radius:10px;"><a href="${cta.url}" style="display:inline-block;padding:13px 30px;font-family:${FONT};font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">${cta.text}</a></td></tr></table>`
+export const renderEmail = ({ preheader = '', heading, subtext = '', bodyHtml = '', cta = null, ctas = null, footerNote = '' }) => {
+  const buttons = cta ? [cta] : (Array.isArray(ctas) ? ctas : []);
+  const ctaHtml = buttons.length
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto 0;border-collapse:separate;border-spacing:0 0;"><tr>${buttons.map((b) => `<td align="center"><a href="${b.url}" style="display:inline-block;margin:0 6px;padding:13px 30px;font-family:${FONT};font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;background:${INK};border-radius:10px;white-space:nowrap;">${b.text}</a></td>`).join('')}</tr></table>`
     : '';
 
   return `<!DOCTYPE html>
@@ -144,6 +145,57 @@ export const renderNotificationEmail = ({ title, message, link }) => {
     bodyHtml,
     cta: fullUrl ? { url: fullUrl, text: 'View details' } : null,
     footerNote: 'You\u2019re receiving this because you have notifications enabled in Rudhram.',
+  });
+};
+
+const meetingRow = (label, value) =>
+  `<tr><td style="padding:12px 18px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};width:110px;">${label}</td><td style="padding:12px 18px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};text-align:right;">${value}</td></tr>`;
+
+export const renderMeetingEmail = ({ type, title, date, startTime, endTime, location, meetingLink, detailsUrl }) => {
+  const isReminder = type === 'reminder';
+  const rows = [
+    meetingRow('Date', date),
+    meetingRow('Time', `${startTime} &ndash; ${endTime}`),
+    location ? meetingRow('Location', location) : '',
+    meetingLink ? meetingRow('Link', `<a href="${meetingLink}" style="color:${INK};">${meetingLink}</a>`) : '',
+  ].filter(Boolean).join('');
+
+  return renderEmail({
+    preheader: isReminder
+      ? `${title} starts in 1 hour.`
+      : `A new meeting has been scheduled: ${title}.`,
+    heading: title,
+    subtext: isReminder
+      ? 'Friendly reminder &mdash; this meeting starts in <strong>1 hour</strong>.'
+      : 'A new meeting has been scheduled for you.',
+    bodyHtml: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:12px;overflow:hidden;">
+      <tr><td style="padding:14px 18px;background:${BG};font-family:${FONT};font-size:14px;font-weight:700;color:${INK};">${title}</td></tr>
+      ${rows}
+    </table>`,
+    ctas: [
+      { url: detailsUrl, text: 'View meeting details' },
+      meetingLink ? { url: meetingLink, text: 'Direct join' } : null,
+    ].filter(Boolean),
+    footerNote: 'Rudhram &middot; Meeting notification',
+  });
+};
+
+export const sendMeetingEmail = async (to, meeting, type = 'scheduled') => {
+  const detailsUrl = `${config.clientUrl}/meetings/${meeting._id}`;
+  const subject = `${type === 'reminder' ? 'Reminder: ' : 'Meeting scheduled: '}${meeting.title}`;
+  return sendEmail({
+    to,
+    subject,
+    html: renderMeetingEmail({
+      type,
+      title: meeting.title,
+      date: new Date(meeting.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+      startTime: meeting.startTime,
+      endTime: meeting.endTime,
+      location: meeting.location || null,
+      meetingLink: meeting.meetingLink || null,
+      detailsUrl,
+    }),
   });
 };
 
