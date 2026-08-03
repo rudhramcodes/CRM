@@ -111,6 +111,7 @@ export const createPayment = async (data, user) => {
     if (updatedInvoice.createdBy) {
       notificationService.createAndSend({
         recipient: updatedInvoice.createdBy, referenceId: updatedInvoice._id, referenceModel: 'Invoice',
+        link: `/invoices/${updatedInvoice._id}`,
         ...notif,
       }).catch(() => {});
     }
@@ -122,6 +123,7 @@ export const createPayment = async (data, user) => {
       });
       notificationService.createAndSend({
         recipient: updatedInvoice.createdBy, referenceId: updatedInvoice._id, referenceModel: 'Invoice',
+        link: `/invoices/${updatedInvoice._id}`,
         ...paidNotif,
       }).catch(() => {});
     }

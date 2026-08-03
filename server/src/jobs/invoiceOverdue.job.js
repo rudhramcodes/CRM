@@ -27,6 +27,7 @@ const markOverdueInvoices = async () => {
         recipient: invoice.createdBy._id,
         referenceId: invoice._id,
         referenceModel: 'Invoice',
+        link: `/invoices/${invoice._id}`,
         ...notif,
       }).catch(() => {});
     }

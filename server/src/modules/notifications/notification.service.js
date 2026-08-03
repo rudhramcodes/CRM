@@ -99,8 +99,8 @@ export const createAndSend = async ({
         const { sendEmail, renderNotificationEmail } = await import('../../services/emailService.js');
         await sendEmail({
           to: user.email,
-          subject: message.substring(0, 100),
-          html: renderNotificationEmail({ title: message, message, link }),
+          subject: title || message.substring(0, 100),
+          html: renderNotificationEmail({ title: title || 'Notification', message, link }),
         });
       }
     } catch (err) {

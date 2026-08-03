@@ -3,7 +3,6 @@ import * as meetingRepository from './meeting.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
 import { sendMeetingEmail } from '../../services/emailService.js';
 import { ROLES } from '../../constants/index.js';
-import config from '../../config/index.js';
 
 const STAFF_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE];
 
@@ -53,7 +52,7 @@ export const createMeeting = async (data, user) => {
   const notif = notificationService.buildNotification('meeting_scheduled', {
     meetingTitle: data.title, date: data.date,
   });
-  const detailLink = `${config.clientUrl}/meetings/${meeting._id}`;
+  const detailLink = `/meetings/${meeting._id}`;
   const basePayload = {
     referenceId: meeting._id,
     referenceModel: 'Meeting',
