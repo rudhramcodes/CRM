@@ -35,7 +35,8 @@ router.post('/:id/dependencies', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES
 router.delete('/:id/dependencies/:depId', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE), ctrl.removeDependency);
 
 // Comments — all except client
-router.post('/:id/comments', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE), validate(addCommentSchema), ctrl.addComment);
+  router.post('/:id/comments', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE), validate(addCommentSchema), ctrl.addComment);
+  router.delete('/:id/comments/:commentId', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE), ctrl.removeComment);
 
 // Checklists — all except client (delete restricted to admin+)
 router.post('/:id/checklist', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE), validate(addChecklistSchema), ctrl.addChecklistItem);

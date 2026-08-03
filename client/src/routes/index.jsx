@@ -19,8 +19,6 @@ import MeetingList from '../modules/meetings/pages/MeetingList';
 import MeetingDetail from '../modules/meetings/pages/MeetingDetail';
 import ProjectList from '../modules/projects/pages/ProjectList';
 import ProjectDetail from '../modules/projects/pages/ProjectDetail';
-import TaskList from '../modules/tasks/pages/TaskList';
-import TaskDetail from '../modules/tasks/pages/TaskDetail';
 import InvoiceList from '../modules/invoices/pages/InvoiceList';
 import InvoiceCreate from '../modules/invoices/pages/InvoiceCreate';
 import InvoiceDetail from '../modules/invoices/pages/InvoiceDetail';
@@ -63,8 +61,6 @@ const router = createBrowserRouter([
       { path: 'meetings/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><MeetingDetail /></ProtectedRoute> },
       { path: 'projects', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ProjectList /></ProtectedRoute> },
       { path: 'projects/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ProjectDetail /></ProtectedRoute> },
-      { path: 'tasks', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><TaskList /></ProtectedRoute> },
-      { path: 'tasks/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><TaskDetail /></ProtectedRoute> },
       { path: 'invoices', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceList /></ProtectedRoute> },
       { path: 'invoices/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceCreate /></ProtectedRoute> },
       { path: 'invoices/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceDetail /></ProtectedRoute> },

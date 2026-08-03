@@ -3,7 +3,7 @@ import Task from './task.model.js';
 const POPULATE_FIELDS = [
   { path: 'assignedTo', select: 'name email avatar' },
   { path: 'createdBy', select: 'name email avatar' },
-  { path: 'project', select: 'name' },
+  { path: 'project', select: 'title' },
   { path: 'parent', select: 'title status' },
   { path: 'dependsOn', select: 'title status' },
   { path: 'blockedBy', select: 'title status' },
@@ -69,6 +69,9 @@ export const addActivity = (taskId, activity) =>
 
 export const addComment = (taskId, comment) =>
   Task.findByIdAndUpdate(taskId, { $push: { comments: comment } }, { new: true }).populate(POPULATE_FIELDS);
+
+export const removeComment = (taskId, commentId) =>
+  Task.findByIdAndUpdate(taskId, { $pull: { comments: { _id: commentId } } }, { new: true }).populate(POPULATE_FIELDS);
 
 export const addChecklistItem = (taskId, item) =>
   Task.findByIdAndUpdate(taskId, { $push: { checklists: item } }, { new: true }).populate(POPULATE_FIELDS);

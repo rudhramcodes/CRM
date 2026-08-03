@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { MessageSquare, Send, Paperclip, X, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { MessageSquare, Send, Paperclip, X, Image as ImageIcon, Trash2, AtSign, Mail } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGetProjectMessagesQuery, useAddProjectMessageMutation, useDeleteProjectMessageMutation } from '../../../services/projectApi';
+import { useGetUsersQuery } from '../../../services/userApi';
 import Button from '../../../components/ui/Button';
 import ImageViewer from './ImageViewer';
+import { renderText } from './TaskComment';
 
 export default function ProjectMessageFeed({ projectId }) {
   const user = useSelector((state) => state.auth.user);
@@ -13,14 +16,26 @@ export default function ProjectMessageFeed({ projectId }) {
   const [previews, setPreviews] = useState([]);
   const [viewerImage, setViewerImage] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(0);
   const fileInputRef = useRef(null);
   const listRef = useRef(null);
+  const textInputRef = useRef(null);
+  const mentionListRef = useRef(null);
+  const selectedMentionsRef = useRef({});
 
   const { data: messagesData, isLoading } = useGetProjectMessagesQuery({ id: projectId });
   const [addMessage, { isLoading: isSending }] = useAddProjectMessageMutation();
   const [deleteMessage] = useDeleteProjectMessageMutation();
+  const { data: usersData } = useGetUsersQuery({ limit: 100 }, { skip: !user });
 
   const messages = messagesData?.data || [];
+  const users = usersData?.data?.users || usersData?.data || [];
+  const mentionUsers = users.filter((u) => u._id !== user?._id);
+  const filteredMentions = mentionQuery
+    ? mentionUsers.filter((u) => u.name?.toLowerCase().includes(mentionQuery.toLowerCase()))
+    : mentionUsers;
 
   const canPost = user && ['super_admin', 'admin', 'manager'].includes(user.role);
 
@@ -65,27 +80,95 @@ export default function ProjectMessageFeed({ projectId }) {
   const handleDragOver = (e) => { e.preventDefault(); setDragOver(true); };
   const handleDragLeave = () => setDragOver(false);
 
+  const preprocessMentions = useCallback((raw) => {
+    return raw.replace(/@(\w[\w.\-']*(?:\s+\w[\w.\-']*)?)/g, (match, name) => {
+      const selected = selectedMentionsRef.current[name];
+      if (selected) return `@[${selected.name}](${selected._id})`;
+      const u = mentionUsers.find((x) => x.name === name || x.email?.split('@')[0] === name);
+      return u ? `@[${u.name}](${u._id})` : match;
+    });
+  }, [mentionUsers]);
+
   const handleSend = async () => {
     if (!text.trim() && files.length === 0) return;
     const formData = new FormData();
-    if (text.trim()) formData.append('text', text.trim());
+    if (text.trim()) formData.append('text', preprocessMentions(text.trim()));
     files.forEach((f) => formData.append('images', f));
     try {
       await addMessage({ id: projectId, formData }).unwrap();
       setText('');
       setFiles([]);
       setPreviews([]);
+      selectedMentionsRef.current = {};
     } catch (err) {
       // toast handled by default
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (mentionOpen && filteredMentions.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex((i) => Math.min(i + 1, filteredMentions.length - 1)); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex((i) => Math.max(i - 1, 0)); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        if (filteredMentions[mentionIndex]) {
+          e.preventDefault();
+          insertMention(filteredMentions[mentionIndex]);
+          return;
+        }
+      }
+      if (e.key === 'Escape') { setMentionOpen(false); return; }
+    }
+    if (e.key === 'Enter' && !e.shiftKey && !mentionOpen) {
       e.preventDefault();
       handleSend();
     }
   };
+
+  const handleTextChange = (e) => {
+    const val = e.target.value;
+    setText(val);
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const afterAt = textBeforeCursor.slice(lastAtIndex + 1);
+      if (afterAt.length > 0 && !/\s/.test(afterAt) && !afterAt.includes(']')) {
+        setMentionQuery(afterAt);
+        setMentionOpen(true);
+        setMentionIndex(0);
+        return;
+      }
+    }
+    setMentionOpen(false);
+  };
+
+  const insertMention = useCallback((u) => {
+    const cursorPos = textInputRef.current?.selectionStart ?? text.length;
+    const textBeforeCursor = text.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    const before = text.slice(0, lastAtIndex);
+    const after = text.slice(cursorPos);
+    selectedMentionsRef.current[u.name] = u;
+    const newText = `${before}@${u.name} ${after}`;
+    setText(newText);
+    setMentionOpen(false);
+    textInputRef.current?.focus();
+    setTimeout(() => {
+      const el = textInputRef.current;
+      if (el) {
+        const pos = before.length + u.name.length + 2;
+        el.setSelectionRange(pos, pos);
+        el.focus();
+      }
+    }, 0);
+  }, [text]);
+
+  useEffect(() => {
+    if (mentionOpen && mentionListRef.current) {
+      const el = mentionListRef.current.children[mentionIndex];
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    }
+  }, [mentionIndex, mentionOpen]);
 
   const handleDeleteMessage = async (messageId) => {
     try {
@@ -141,10 +224,10 @@ export default function ProjectMessageFeed({ projectId }) {
                     {msg.text.startsWith('/task ') ? (
                       <>
                         <span className="text-xs font-mono text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded mr-1">/task</span>
-                        {msg.text.replace('/task', '')}
+                        {renderText(msg.text.replace('/task', ''))}
                       </>
                     ) : (
-                      msg.text
+                      renderText(msg.text)
                     )}
                   </p>
                 )}
@@ -209,13 +292,39 @@ export default function ProjectMessageFeed({ projectId }) {
             </button>
             <input ref={fileInputRef} type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
             <div className="flex-1 relative">
-              <textarea value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown}
+              <textarea ref={textInputRef} value={text} onChange={handleTextChange} onKeyDown={handleKeyDown}
                 placeholder={files.length > 0 ? 'Add a message...' : 'Type a message... (use /task to create a task)'}
                 rows={1}
                 className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900 resize-none min-h-[36px] max-h-24"
                 style={{ height: 'auto' }}
                 onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = `${e.target.scrollHeight}px`; }}
               />
+              <AnimatePresence>
+                {mentionOpen && filteredMentions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute bottom-full left-0 mb-1.5 w-72 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 max-h-56 overflow-y-auto py-1"
+                    ref={mentionListRef}>
+                    <div className="px-3 py-1.5 text-[10px] font-medium text-zinc-400 uppercase tracking-wider border-b border-zinc-100">Mentions</div>
+                    {filteredMentions.slice(0, 8).map((u, i) => (
+                      <button key={u._id} onClick={() => insertMention(u)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${i === mentionIndex ? 'bg-primary-50 text-primary-900' : 'text-zinc-700 hover:bg-zinc-50'}`}>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-medium ${i === mentionIndex ? 'bg-primary-900 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
+                          {u.name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{u.name}</div>
+                          {u.email && <div className="text-[11px] text-zinc-400 truncate flex items-center gap-1"><Mail className="w-2.5 h-2.5" />{u.email}</div>}
+                        </div>
+                        <AtSign className={`w-3.5 h-3.5 shrink-0 ${i === mentionIndex ? 'text-primary-600' : 'text-zinc-300'}`} />
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <Button size="sm" onClick={handleSend} loading={isSending} disabled={!text.trim() && files.length === 0}>
               <Send className="w-3.5 h-3.5" />

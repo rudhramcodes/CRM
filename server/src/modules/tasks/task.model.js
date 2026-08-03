@@ -62,6 +62,8 @@ const taskSchema = new mongoose.Schema(
     },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    // ponytail: milestone lives embedded in Project.milestones; store its subdoc _id only
+    milestone: { type: mongoose.Schema.Types.ObjectId },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     dueDate: Date,
     startDate: Date,

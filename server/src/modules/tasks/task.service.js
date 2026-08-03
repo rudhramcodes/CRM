@@ -250,6 +250,13 @@ export const addComment = async (taskId, text, user) => {
 };
 
 // Checklists
+export const removeComment = async (taskId, commentId, user) => {
+  const task = await taskRepo.removeComment(taskId, commentId);
+  if (!task) throw { status: 404, message: 'Task not found' };
+  await taskRepo.addActivity(taskId, { action: 'removed_comment', field: 'comment', performedBy: user._id });
+  return task;
+};
+
 export const addChecklistItem = async (taskId, text, user) => {
   const task = await taskRepo.findById(taskId);
   if (!task) throw { status: 404, message: 'Task not found' };

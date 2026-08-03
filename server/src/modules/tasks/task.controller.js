@@ -74,6 +74,13 @@ export const addComment = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const removeComment = async (req, res, next) => {
+  try {
+    const task = await taskService.removeComment(req.params.id, req.params.commentId, req.user);
+    ApiResponse.success(res, 200, { task }, 'Comment removed');
+  } catch (err) { next(err); }
+};
+
 // Checklists
 export const addChecklistItem = async (req, res, next) => {
   try {

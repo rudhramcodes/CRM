@@ -19,10 +19,15 @@ import {
   useDeleteProjectMutation,
   useUpdateProjectMutation,
   useGetProjectActivitiesQuery,
-  useAddProjectTaskMutation,
-  useUpdateProjectTaskMutation,
-  useDeleteProjectTaskMutation,
 } from '../../../services/projectApi';
+import {
+  useGetTasksQuery,
+  useCreateTaskMutation,
+  useUpdateTaskMutation,
+  useDeleteTaskMutation,
+} from '../../../services/taskApi';
+import { useGetUsersQuery } from '../../../services/userApi';
+import TaskForm from '../components/TaskForm';
 import ProjectStatusBadge from '../components/ProjectStatusBadge';
 import ProjectPriorityBadge from '../components/ProjectPriorityBadge';
 import ProjectForm from '../components/ProjectForm';
@@ -56,17 +61,22 @@ export default function ProjectDetail() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
 
   const { data: projectData, isLoading, error } = useGetProjectByIdQuery(id);
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
   const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();
   const { data: activitiesData, isLoading: activitiesLoading } = useGetProjectActivitiesQuery(id, { skip: !id });
-  const [addTask] = useAddProjectTaskMutation();
-  const [updateTask] = useUpdateProjectTaskMutation();
-  const [deleteTask] = useDeleteProjectTaskMutation();
+  const { data: tasksData } = useGetTasksQuery({ project: id, limit: 100 }, { skip: !id });
+  const { data: usersData } = useGetUsersQuery({ limit: 100 });
+  const [createTask] = useCreateTaskMutation();
+  const [updateTask] = useUpdateTaskMutation();
+  const [deleteTask] = useDeleteTaskMutation();
 
   const project = projectData?.data?.project;
   const activities = activitiesData?.data || [];
+  const projectTasks = tasksData?.data || [];
+  const users = usersData?.data?.users || usersData?.data || [];
 
   useEffect(() => {
     if (project) {
@@ -74,7 +84,6 @@ export default function ProjectDetail() {
     }
   }, [project, dispatch]);
 
-  const canEditAll = user && ['super_admin', 'admin'].includes(user.role);
   const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
@@ -104,33 +113,34 @@ export default function ProjectDetail() {
 
   const handleAddTask = useCallback(async (data) => {
     try {
-      await addTask({ id, ...data }).unwrap();
+      await createTask({ project: id, ...data }).unwrap();
       toast.success('Task added');
+      setShowTaskModal(false);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to add task');
     }
-  }, [id, addTask]);
+  }, [id, createTask]);
 
   const handleUpdateTask = useCallback(async (taskId, data) => {
     try {
-      await updateTask({ id, taskId, ...data }).unwrap();
+      await updateTask({ id: taskId, ...data }).unwrap();
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update task');
     }
-  }, [id, updateTask]);
+  }, [updateTask]);
 
   const handleDeleteTask = useCallback((taskId) => setDeleteTaskId(taskId), []);
 
   const confirmDeleteTask = useCallback(async () => {
     if (!deleteTaskId) return;
     try {
-      await deleteTask({ id, taskId: deleteTaskId }).unwrap();
+      await deleteTask(deleteTaskId).unwrap();
       toast.success('Task removed');
       setDeleteTaskId(null);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to remove task');
     }
-  }, [deleteTaskId, id, deleteTask]);
+  }, [deleteTaskId, deleteTask]);
 
   if (isLoading) {
     return <DetailSkeleton />;
@@ -293,19 +303,27 @@ export default function ProjectDetail() {
       />
 
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-primary-900">Tasks ({project.tasks?.length || 0})</h3>
-        <button onClick={() => navigate(`/tasks?project=${project._id}`)}
-          className="text-xs text-primary-900 hover:underline font-medium">
-          Manage in Tasks →
-        </button>
+        <h3 className="text-sm font-semibold text-primary-900">Tasks ({projectTasks.length})</h3>
       </div>
       <ProjectTasks
-        tasks={project.tasks || []}
-        canManage={canEditAll}
-        onAdd={handleAddTask}
+        tasks={projectTasks}
+        milestones={project.milestones || []}
+        users={users}
+        canManage={canManage}
         onUpdate={handleUpdateTask}
         onDelete={handleDeleteTask}
+        onAddClick={() => setShowTaskModal(true)}
       />
+
+      <Modal open={showTaskModal} onClose={() => setShowTaskModal(false)} title="Add Task" size="lg">
+        <TaskForm
+          projects={[project]}
+          users={users}
+          defaultProject={project._id}
+          onSubmit={handleAddTask}
+          onCancel={() => setShowTaskModal(false)}
+        />
+      </Modal>
 
       <ProjectMessageFeed projectId={id} />
 

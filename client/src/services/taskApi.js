@@ -41,7 +41,11 @@ export const taskApi = api.injectEndpoints({
     }),
     addTaskComment: builder.mutation({
       query: ({ id, text }) => ({ url: `/tasks/${id}/comments`, method: 'POST', body: { text } }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
+    }),
+    deleteTaskComment: builder.mutation({
+      query: ({ id, commentId }) => ({ url: `/tasks/${id}/comments/${commentId}`, method: 'DELETE' }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
     addChecklistItem: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/tasks/${id}/checklist`, method: 'POST', body }),

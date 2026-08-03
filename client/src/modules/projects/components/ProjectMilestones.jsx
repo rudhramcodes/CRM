@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, CheckCircle2, PlayCircle, Loader2, Calendar } from 'lucide-react';
+import { Plus, CheckCircle2, PlayCircle, Loader2, Calendar, Edit2 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import DatePicker from '../../../components/forms/DatePicker';
 
@@ -34,6 +34,9 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
   const [updatingIndex, setUpdatingIndex] = useState(null);
   const [newTitle, setNewTitle] = useState('');
   const [newDueDate, setNewDueDate] = useState('');
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
 
   const handleAdd = () => {
     if (!newTitle.trim()) return;
@@ -60,6 +63,27 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
   };
 
   const handleRemove = (index) => onUpdate(milestones.filter((_, i) => i !== index));
+
+  const handleStartEdit = (index) => {
+    const m = milestones[index];
+    setEditingIndex(index);
+    setEditTitle(m.title);
+    setEditDueDate(m.dueDate || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setEditTitle('');
+    setEditDueDate('');
+  };
+
+  const handleSaveEdit = (index) => {
+    if (!editTitle.trim()) return;
+    onUpdate(milestones.map((x, i) =>
+      i !== index ? x : { ...x, title: editTitle.trim(), dueDate: editDueDate || undefined }
+    ));
+    handleCancelEdit();
+  };
 
   const completed = milestones.filter((m) => m.status === 'completed').length;
   const total = milestones.length;
@@ -112,34 +136,60 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
 
                     {/* Content */}
                     <div className={`flex-1 min-w-0 pt-0.5 group ${isUpdating ? 'opacity-50' : ''}`}>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className={`text-sm font-medium ${m.status === 'completed' ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
-                            {m.title}
-                          </p>
-                          {m.dueDate && (
-                            <p className="text-xs text-zinc-400 mt-0.5 flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {new Date(m.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </p>
-                          )}
+                      {editingIndex === i ? (
+                        <div className="flex flex-col gap-2">
+                          <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+                            placeholder="Milestone title" autoFocus
+                            className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900"
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(i)} />
+                          <div className="flex items-center gap-2">
+                            <DatePicker value={editDueDate} onChange={setEditDueDate} placeholder="Due date" className="w-40" />
+                            <Button type="button" size="sm" onClick={() => handleSaveEdit(i)} disabled={!editTitle.trim()}>
+                              Save
+                            </Button>
+                            <button onClick={handleCancelEdit} className="text-sm text-zinc-400 hover:text-zinc-700">
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                        {canManage && !isUpdating && (
-                          <button onClick={() => handleRemove(i)}
-                            className="text-[10px] uppercase tracking-wider text-zinc-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
-                            Remove
-                          </button>
-                        )}
-                      </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className={`text-sm font-medium ${m.status === 'completed' ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                                {m.title}
+                              </p>
+                              {m.dueDate && (
+                                <p className="text-xs text-zinc-400 mt-0.5 flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {new Date(m.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </p>
+                              )}
+                            </div>
+                            {canManage && !isUpdating && (
+                              <div className="flex items-center gap-2 shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                                <button onClick={() => handleStartEdit(i)}
+                                  className="text-[10px] uppercase tracking-wider text-zinc-300 hover:text-primary-900">
+                                  Edit
+                                </button>
+                                <button onClick={() => handleRemove(i)}
+                                  className="text-[10px] uppercase tracking-wider text-zinc-300 hover:text-red-500">
+                                  Remove
+                                </button>
+                              </div>
+                            )}
+                          </div>
 
-                      {/* Status chip */}
-                      <span className={`inline-block mt-1.5 text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                        m.status === 'completed' ? 'text-green-700 bg-green-50' :
-                        m.status === 'in_progress' ? 'text-blue-700 bg-blue-50' :
-                        'text-zinc-400 bg-zinc-50'
-                      }`}>
-                        {m.status === 'in_progress' ? 'In Progress' : m.status}
-                      </span>
+                          {/* Status chip */}
+                          <span className={`inline-block mt-1.5 text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                            m.status === 'completed' ? 'text-green-700 bg-green-50' :
+                            m.status === 'in_progress' ? 'text-blue-700 bg-blue-50' :
+                            'text-zinc-400 bg-zinc-50'
+                          }`}>
+                            {m.status === 'in_progress' ? 'In Progress' : m.status}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 );

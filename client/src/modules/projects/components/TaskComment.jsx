@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { Trash2 } from 'lucide-react';
 
-function renderText(text) {
+export function renderText(text) {
   // Split on @[Name](id) markdown mentions AND plain @Name mentions
   const parts = text.split(/(@\[[^\]]+\]\([a-f0-9]+\))/g);
   return parts.map((part, i) => {
