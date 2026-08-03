@@ -5,9 +5,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGetProjectMessagesQuery, useAddProjectMessageMutation, useDeleteProjectMessageMutation } from '../../../services/projectApi';
 import { useGetUsersQuery } from '../../../services/userApi';
+import toast from 'react-hot-toast';
 import Button from '../../../components/ui/Button';
 import ImageViewer from './ImageViewer';
 import { renderText } from './TaskComment';
+
+// ponytail: mirrors server/src/modules/projects/project.routes.js multer limit
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export default function ProjectMessageFeed({ projectId }) {
   const user = useSelector((state) => state.auth.user);
@@ -37,7 +41,7 @@ export default function ProjectMessageFeed({ projectId }) {
     ? mentionUsers.filter((u) => u.name?.toLowerCase().includes(mentionQuery.toLowerCase()))
     : mentionUsers;
 
-  const canPost = user && ['super_admin', 'admin', 'manager'].includes(user.role);
+  const canPost = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
 
   const scrollToBottom = useCallback(() => {
     if (listRef.current) {
@@ -49,14 +53,21 @@ export default function ProjectMessageFeed({ projectId }) {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  const handleFileSelect = (e) => {
-    const selected = Array.from(e.target.files || []);
-    setFiles((prev) => [...prev, ...selected]);
+  const addFiles = (selected) => {
     selected.forEach((file) => {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`${file.name}: File too large (max 10MB)`);
+        return;
+      }
+      setFiles((prev) => [...prev, file]);
       const reader = new FileReader();
       reader.onload = (ev) => setPreviews((p) => [...p, ev.target.result]);
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleFileSelect = (e) => {
+    addFiles(Array.from(e.target.files || []));
     e.target.value = '';
   };
 
@@ -69,12 +80,7 @@ export default function ProjectMessageFeed({ projectId }) {
     e.preventDefault();
     setDragOver(false);
     const dropped = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
-    setFiles((prev) => [...prev, ...dropped]);
-    dropped.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreviews((p) => [...p, ev.target.result]);
-      reader.readAsDataURL(file);
-    });
+    addFiles(dropped);
   };
 
   const handleDragOver = (e) => { e.preventDefault(); setDragOver(true); };
@@ -101,7 +107,7 @@ export default function ProjectMessageFeed({ projectId }) {
       setPreviews([]);
       selectedMentionsRef.current = {};
     } catch (err) {
-      // toast handled by default
+      toast.error(err?.data?.message || 'Failed to send message');
     }
   };
 

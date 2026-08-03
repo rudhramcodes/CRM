@@ -66,14 +66,14 @@ router.get(
 
 router.post(
   '/:id/messages',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
   upload.array('images', 5),
   projectController.addMessage,
 );
 
 router.delete(
   '/:id/messages/:messageId',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
   projectController.deleteMessage,
 );
 
