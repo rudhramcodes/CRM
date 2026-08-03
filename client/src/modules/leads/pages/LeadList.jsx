@@ -67,8 +67,8 @@ export default function LeadList() {
     });
   }, []);
 
-  const canCreate = user && ['super_admin', 'admin', 'manager'].includes(user.role);
-  const canEdit = user && ['super_admin', 'admin', 'manager'].includes(user.role);
+  const canCreate = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
+  const canEdit = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
   const handleEdit = useCallback((row) => {

@@ -78,7 +78,7 @@ export default function LeadDetail() {
   };
 
   const sourceLabel = LEAD_SOURCES.find((s) => s.value === lead?.source)?.label || lead?.source || 'Other';
-  const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
+  const canManage = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
   if (isLoading) {

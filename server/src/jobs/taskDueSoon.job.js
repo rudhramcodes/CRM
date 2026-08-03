@@ -23,7 +23,7 @@ const sendTaskDueReminders = async () => {
         recipient: task.assignedTo._id,
         referenceId: task._id,
         referenceModel: 'Task',
-        link: `/tasks/${task._id}`,
+        link: `/projects/${task.project}`,
         ...notif,
       }).catch(() => {});
     }

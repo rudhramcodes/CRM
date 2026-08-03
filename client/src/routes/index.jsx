@@ -9,6 +9,7 @@ import ResetPassword from '../pages/auth/ResetPassword';
 import VerifyEmail from '../pages/auth/VerifyEmail';
 import Dashboard from '../pages/Dashboard';
 import NotFound from '../pages/NotFound';
+import TaskRedirect from './TaskRedirect';
 import LeadList from '../modules/leads/pages/LeadList';
 import LeadDetail from '../modules/leads/pages/LeadDetail';
 import LeadForm from '../modules/leads/components/LeadForm';
@@ -52,7 +53,7 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'leads', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><LeadList /></ProtectedRoute> },
-      { path: 'leads/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><LeadForm /></ProtectedRoute> },
+      { path: 'leads/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><LeadForm /></ProtectedRoute> },
       { path: 'leads/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><LeadDetail /></ProtectedRoute> },
       { path: 'clients', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ClientList /></ProtectedRoute> },
       { path: 'clients/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><ClientForm /></ProtectedRoute> },
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
       { path: 'meetings/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><MeetingDetail /></ProtectedRoute> },
       { path: 'projects', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ProjectList /></ProtectedRoute> },
       { path: 'projects/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><ProjectDetail /></ProtectedRoute> },
+      { path: 'tasks/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><TaskRedirect /></ProtectedRoute> },
       { path: 'invoices', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceList /></ProtectedRoute> },
       { path: 'invoices/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceCreate /></ProtectedRoute> },
       { path: 'invoices/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><InvoiceDetail /></ProtectedRoute> },
@@ -75,7 +77,7 @@ const router = createBrowserRouter([
   {
     path: '*',
     element: <NotFound />,
-  },
+  }, 
 ]);
 
 export default router;
