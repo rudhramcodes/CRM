@@ -69,7 +69,7 @@ export default function IntegrationsTab() {
             <label className={labelClass}>From Name</label>
             <input type="text" value={form.resendFromName}
               onChange={(e) => setForm((p) => ({ ...p, resendFromName: e.target.value }))}
-              className={inputClass} placeholder="Rudhram CRM" />
+              className={inputClass} placeholder="Rudhram" />
           </div>
         </div>
       </div>

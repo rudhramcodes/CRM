@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import config from '../../config/index.js';
 import ApiError from '../../utils/ApiError.js';
+import logger from '../../utils/logger.js';
 import * as authRepository from './auth.repository.js';
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from '../../services/emailService.js';
 import { validatePasswordAgainstPolicy } from '../settings/settings.service.js';
@@ -15,6 +16,29 @@ const generateTokens = async (user) => {
   return { accessToken, refreshToken };
 };
 
+const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+const OTP_MAX_ATTEMPTS = 5;
+
+const generateOtp = () => {
+  const bytes = crypto.randomBytes(3);
+  const otp = (bytes.readUIntBE(0, 3) % 1000000).toString().padStart(6, '0');
+  return otp;
+};
+
+const hashOtp = (otp) => crypto.createHash('sha256').update(otp).digest('hex');
+
+export const issueVerificationOtp = async (user) => {
+  const otp = generateOtp();
+  if (config.nodeEnv === 'development') logger.info(`[DEV OTP] ${user.email}: ${otp}`);
+  await authRepository.updateUser(user._id, {
+    emailVerificationToken: hashOtp(otp),
+    emailVerificationExpires: new Date(Date.now() + OTP_EXPIRY_MS),
+    emailVerificationAttempts: 0,
+  });
+  sendVerificationEmail(user.email, otp).catch((err) => logger.error(`Verification email failed: ${err.message}`));
+  return otp;
+};
+
 export const registerUser = async (userData) => {
   const existingUser = await authRepository.findByEmail(userData.email);
   if (existingUser) {
@@ -26,20 +50,17 @@ export const registerUser = async (userData) => {
     throw ApiError.badRequest(policyErrors.join('; '));
   }
 
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-
   const user = await authRepository.createUser({
     ...userData,
-    emailVerificationToken: hashedToken,
-    emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    emailVerificationToken: hashOtp(generateOtp()),
+    emailVerificationExpires: new Date(Date.now() + OTP_EXPIRY_MS),
   });
 
   const tokens = await generateTokens(user);
 
   // Fire-and-forget emails
   sendWelcomeEmail(userData.email, userData.name);
-  sendVerificationEmail(userData.email, verificationToken);
+  issueVerificationOtp(user).catch(() => {});
 
   const userObj = user.toJSON();
   return { user: userObj, ...tokens };
@@ -162,6 +183,41 @@ export const verifyEmail = async (token) => {
   return user;
 };
 
+export const verifyEmailOtp = async (email, otp) => {
+  const user = await authRepository.findByEmailWithSecrets(email);
+  if (!user) {
+    throw ApiError.badRequest('Invalid verification code');
+  }
+
+  if (user.isEmailVerified) {
+    throw ApiError.badRequest('Email is already verified');
+  }
+
+  if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+    throw ApiError.badRequest('Verification code has expired. Request a new one.');
+  }
+
+  if (user.emailVerificationAttempts >= OTP_MAX_ATTEMPTS) {
+    throw ApiError.badRequest('Too many failed attempts. Request a new code.');
+  }
+
+  const hashed = hashOtp(otp);
+  if (!user.emailVerificationToken || user.emailVerificationToken !== hashed) {
+    await authRepository.updateUser(user._id, {
+      emailVerificationAttempts: (user.emailVerificationAttempts || 0) + 1,
+    });
+    throw ApiError.badRequest('Incorrect verification code');
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+  user.emailVerificationAttempts = undefined;
+  await user.save();
+
+  return user;
+};
+
 export const resendVerification = async (email) => {
   const user = await authRepository.findByEmailWithSecrets(email);
   if (!user) {
@@ -172,15 +228,7 @@ export const resendVerification = async (email) => {
     throw ApiError.badRequest('Email is already verified');
   }
 
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-
-  await authRepository.updateUser(user._id, {
-    emailVerificationToken: hashedToken,
-    emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-  });
-
-  await sendVerificationEmail(email, verificationToken);
+  await issueVerificationOtp(user);
 };
 
 export const updateProfile = async (userId, data) => {

@@ -20,7 +20,7 @@ router.use(verifyToken);
 
 router.get(
   '/stats',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
   projectController.stats,
 );
 
@@ -73,7 +73,7 @@ router.post(
 
 router.delete(
   '/:id/messages/:messageId',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
   projectController.deleteMessage,
 );
 
@@ -84,17 +84,25 @@ router.get(
   projectController.getActivities,
 );
 
-// Tasks - only super_admin/admin can create/edit/delete
+// Milestones - embedded in the project; editable by employees too (create/edit), delete only by admin
+router.patch(
+  '/:id/milestones',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  validate(updateProjectSchema),
+  projectController.update,
+);
+
+// Tasks - employees can create/edit, only admin deletes
 router.post(
   '/:id/tasks',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
   validate(addTaskSchema),
   projectController.addTask,
 );
 
 router.patch(
   '/:id/tasks/:taskId',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
   validate(updateTaskSchema),
   projectController.updateTask,
 );

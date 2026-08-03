@@ -1,9 +1,9 @@
-import crypto from 'crypto';
 import ApiError from '../../utils/ApiError.js';
 import { escapeRegex } from '../../utils/pagination.js';
 import * as authRepository from '../auth/auth.repository.js';
+import { issueVerificationOtp } from '../auth/auth.service.js';
 import { ROLE_PERMISSIONS } from '../../constants/index.js';
-import { sendWelcomeEmail, sendVerificationEmail } from '../../services/emailService.js';
+import { sendWelcomeEmail } from '../../services/emailService.js';
 
 export const listUsers = async (query, options) => {
   const filter = {};
@@ -43,20 +43,15 @@ export const createUser = async (userData, createdBy) => {
   // Assign default permissions for the role
   const permissions = ROLE_PERMISSIONS[role] || [];
 
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-
   const user = await authRepository.createUser({
     ...userData,
     role,
     permissions,
     createdBy: createdBy?._id,
-    emailVerificationToken: hashedToken,
-    emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
   });
 
   sendWelcomeEmail(userData.email, userData.name);
-  sendVerificationEmail(userData.email, verificationToken);
+  issueVerificationOtp(user).catch(() => {});
 
   return user;
 };

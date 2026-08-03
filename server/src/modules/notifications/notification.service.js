@@ -179,7 +179,7 @@ function buildEmailHtml({ title, message, link }) {
       <p style="color:#475569;font-size:14px;line-height:1.6;">${message}</p>
       ${linkHtml}
       <hr style="border:none;border-top:1px solid #e2e8f0;margin-top:20px;" />
-      <p style="color:#94a3b8;font-size:12px;">Rudhram CRM</p>
+      <p style="color:#94a3b8;font-size:12px;">Rudhram</p>
     </div>
   `;
 }

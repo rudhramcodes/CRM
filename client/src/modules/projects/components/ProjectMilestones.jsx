@@ -30,7 +30,7 @@ function getNextStatus(current) {
   return 'pending';
 }
 
-export default function ProjectMilestones({ milestones = [], onUpdate, canManage }) {
+export default function ProjectMilestones({ milestones = [], onUpdate, canManage, canDelete }) {
   const [updatingIndex, setUpdatingIndex] = useState(null);
   const [newTitle, setNewTitle] = useState('');
   const [newDueDate, setNewDueDate] = useState('');
@@ -172,10 +172,12 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
                                   className="text-[10px] uppercase tracking-wider text-zinc-300 hover:text-primary-900">
                                   Edit
                                 </button>
-                                <button onClick={() => handleRemove(i)}
-                                  className="text-[10px] uppercase tracking-wider text-zinc-300 hover:text-red-500">
-                                  Remove
-                                </button>
+                                {canDelete && (
+                                  <button onClick={() => handleRemove(i)}
+                                    className="text-[10px] uppercase tracking-wider text-zinc-300 hover:text-red-500">
+                                    Remove
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>

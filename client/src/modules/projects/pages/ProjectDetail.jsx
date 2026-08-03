@@ -18,6 +18,7 @@ import {
   useGetProjectByIdQuery,
   useDeleteProjectMutation,
   useUpdateProjectMutation,
+  useUpdateProjectMilestonesMutation,
   useGetProjectActivitiesQuery,
 } from '../../../services/projectApi';
 import {
@@ -66,6 +67,7 @@ export default function ProjectDetail() {
   const { data: projectData, isLoading, error } = useGetProjectByIdQuery(id);
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
   const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();
+  const [updateProjectMilestones] = useUpdateProjectMilestonesMutation();
   const { data: activitiesData, isLoading: activitiesLoading } = useGetProjectActivitiesQuery(id, { skip: !id });
   const { data: tasksData } = useGetTasksQuery({ project: id, limit: 100 }, { skip: !id });
   const { data: usersData } = useGetUsersQuery({ limit: 100 });
@@ -86,6 +88,7 @@ export default function ProjectDetail() {
 
   const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
+  const canEditTasks = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
 
   const handleDelete = () => setShowDeleteConfirm(true);
 
@@ -102,13 +105,13 @@ export default function ProjectDetail() {
   const handleMilestonesUpdate = useCallback(
     async (milestones) => {
       try {
-        await updateProject({ id, milestones }).unwrap();
+        await updateProjectMilestones({ id, milestones }).unwrap();
         toast.success('Milestones updated');
       } catch (err) {
         toast.error(err?.data?.message || 'Failed to update milestones');
       }
     },
-    [id, updateProject],
+    [id, updateProjectMilestones],
   );
 
   const handleAddTask = useCallback(async (data) => {
@@ -299,7 +302,8 @@ export default function ProjectDetail() {
       <ProjectMilestones
         milestones={project.milestones || []}
         onUpdate={handleMilestonesUpdate}
-        canManage={canManage}
+        canManage={canEditTasks}
+        canDelete={canDelete}
       />
 
       <div className="flex items-center justify-between">
@@ -309,7 +313,8 @@ export default function ProjectDetail() {
         tasks={projectTasks}
         milestones={project.milestones || []}
         users={users}
-        canManage={canManage}
+        canManage={canEditTasks}
+        canDelete={canDelete}
         onUpdate={handleUpdateTask}
         onDelete={handleDeleteTask}
         onAddClick={() => setShowTaskModal(true)}

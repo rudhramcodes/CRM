@@ -28,7 +28,7 @@ const config = {
   resend: {
     apiKey: process.env.RESEND_API_KEY || '',
     fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@rudhramenterprises.com',
-    fromName: process.env.RESEND_FROM_NAME || 'Rudhram CRM',
+    fromName: process.env.RESEND_FROM_NAME || 'Rudhram',
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',

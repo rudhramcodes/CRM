@@ -64,13 +64,9 @@ export const createProject = async (data, user) => {
   return project;
 };
 
-export const getProjects = async (query, user) => {
+export const getProjects = async (query, _user) => {
   const { page, limit, sortBy, sortOrder, ...filters } = query;
   const options = { page, limit, sortBy, sortOrder };
-
-  if (user.role === 'employee') {
-    filters.employeeFilter = user._id;
-  }
 
   return projectRepository.findAll(filters, options);
 };

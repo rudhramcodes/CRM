@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -8,6 +8,11 @@ import { cn } from '../utils/cn';
 export default function MainLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarOpen = useSelector((state) => state.ui.sidebarOpen);
+  const user = useSelector((state) => state.auth.user);
+
+  if (user && !user.isEmailVerified) {
+    return <Navigate to="/verify-email" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex">

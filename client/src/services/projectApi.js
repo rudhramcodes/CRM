@@ -5,7 +5,6 @@ export const projectApi = api.injectEndpoints({
     getProjects: builder.query({
       query: (params) => ({ url: '/projects', params }),
       providesTags: ['Project'],
-      keepUnusedDataFor: 0,
     }),
     getProjectById: builder.query({
       query: (id) => `/projects/${id}`,
@@ -30,6 +29,10 @@ export const projectApi = api.injectEndpoints({
     getProjectActivities: builder.query({
       query: (id) => `/projects/${id}/activities`,
       providesTags: (result, error, id) => [{ type: 'ProjectActivities', id }],
+    }),
+    updateProjectMilestones: builder.mutation({
+      query: ({ id, milestones }) => ({ url: `/projects/${id}/milestones`, method: 'PATCH', body: { milestones } }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, 'Project', 'ProjectStats'],
     }),
     addProjectTask: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/projects/${id}/tasks`, method: 'POST', body }),
@@ -76,6 +79,7 @@ export const {
   useAddProjectTaskMutation,
   useUpdateProjectTaskMutation,
   useDeleteProjectTaskMutation,
+  useUpdateProjectMilestonesMutation,
   useAddProjectMessageMutation,
   useGetProjectMessagesQuery,
   useDeleteProjectMessageMutation,

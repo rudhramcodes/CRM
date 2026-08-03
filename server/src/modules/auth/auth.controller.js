@@ -129,6 +129,16 @@ export const verifyEmail = async (req, res, next) => {
   }
 };
 
+export const verifyEmailOtp = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    await authService.verifyEmailOtp(email, otp);
+    ApiResponse.success(res, 200, null, 'Email verified successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const resendVerification = async (req, res, next) => {
   try {
     const { email } = req.body;

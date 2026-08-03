@@ -9,7 +9,7 @@ export default function AuthLayout() {
             <span className="text-white font-heading font-bold text-lg">R</span>
           </div>
           <h1 className="font-heading text-2xl font-semibold text-primary-900">
-            Rudhram CRM
+            Rudhram
           </h1>
           <p className="text-zinc-500 text-sm mt-1.5">
             Manage your business, grow your revenue.

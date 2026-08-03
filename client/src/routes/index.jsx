@@ -6,7 +6,7 @@ import ProtectedRoute from './ProtectedRoute';
 import Login from '../pages/auth/Login';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
-import VerifyEmail from '../pages/auth/VerifyEmail';
+import VerifyEmailScreen from '../pages/VerifyEmailScreen';
 import Dashboard from '../pages/Dashboard';
 import NotFound from '../pages/NotFound';
 import TaskRedirect from './TaskRedirect';
@@ -39,8 +39,15 @@ const router = createBrowserRouter([
       { path: 'login', element: <Login /> },
       { path: 'forgot-password', element: <ForgotPassword /> },
       { path: 'reset-password', element: <ResetPassword /> },
-      { path: 'verify-email', element: <VerifyEmail /> },
     ],
+  },
+  {
+    path: '/verify-email',
+    element: (
+      <ProtectedRoute>
+        <VerifyEmailScreen />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/',

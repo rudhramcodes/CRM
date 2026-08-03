@@ -12,7 +12,7 @@ import TaskStatusBadge from './TaskStatusBadge';
 import TaskComment from './TaskComment';
 import toast from 'react-hot-toast';
 
-export default function ProjectTasks({ tasks = [], milestones = [], users = [], canManage, onUpdate, onDelete, onAddClick }) {
+export default function ProjectTasks({ tasks = [], milestones = [], users = [], canManage, canDelete, onUpdate, onDelete, onAddClick }) {
   const user = useSelector((state) => state.auth.user);
   const [expandedId, setExpandedId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
@@ -204,10 +204,12 @@ export default function ProjectTasks({ tasks = [], milestones = [], users = [], 
                         className="p-1 rounded text-zinc-300 hover:text-primary-900 hover:bg-zinc-100" title="Edit">
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); onDelete?.(task._id); }}
-                        className="p-1 rounded text-zinc-300 hover:text-red-500 hover:bg-red-50" title="Remove">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {canDelete && (
+                        <button onClick={(e) => { e.stopPropagation(); onDelete?.(task._id); }}
+                          className="p-1 rounded text-zinc-300 hover:text-red-500 hover:bg-red-50" title="Remove">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   )}
                   <ChevronDown className={`w-4 h-4 text-zinc-300 shrink-0 transition-transform ${expandedId === task._id ? 'rotate-180' : ''}`} />

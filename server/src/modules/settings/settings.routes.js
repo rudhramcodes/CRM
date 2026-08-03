@@ -14,7 +14,7 @@ router.get('/notifications', settingsController.getNotifPrefs);
 router.put('/notifications', validate(updateNotifPrefsSchema), settingsController.updateNotifPrefs);
 
 // Organization settings (admin+)
-router.get('/organization', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), settingsController.getOrgSettings);
+router.get('/organization', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPLOYEE), settingsController.getOrgSettings);
 router.put('/organization', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), validate(updateOrgSchema), settingsController.updateOrgSettings);
 
 // Roles & Permissions (super_admin only)

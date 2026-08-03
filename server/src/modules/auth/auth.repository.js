@@ -22,19 +22,19 @@ export const findByIdWithPassword = async (id) => {
 
 export const findByEmailWithSecrets = async (email) => {
   return User.findOne({ email }).select(
-    '+password +refreshToken +emailVerificationToken +emailVerificationExpires +passwordResetToken +passwordResetExpires',
+    '+password +refreshToken +emailVerificationToken +emailVerificationExpires +emailVerificationAttempts +passwordResetToken +passwordResetExpires',
   );
 };
 
 export const findByIdWithSecrets = async (id) => {
   return User.findById(id).select(
-    '+password +refreshToken +emailVerificationToken +emailVerificationExpires +passwordResetToken +passwordResetExpires',
+    '+password +refreshToken +emailVerificationToken +emailVerificationExpires +emailVerificationAttempts +passwordResetToken +passwordResetExpires',
   );
 };
 
 export const findOneByToken = async (field, token) => {
   return User.findOne({ [field]: token }).select(
-    '+password +refreshToken +emailVerificationToken +emailVerificationExpires +passwordResetToken +passwordResetExpires',
+    '+password +refreshToken +emailVerificationToken +emailVerificationExpires +emailVerificationAttempts +passwordResetToken +passwordResetExpires',
   );
 };
 
