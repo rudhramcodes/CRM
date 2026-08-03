@@ -124,9 +124,9 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
         toast.success('Client updated successfully');
         onSuccess?.();
       } else {
-        await createClient(payload).unwrap();
+        const created = await createClient(payload).unwrap();
         toast.success('Client created successfully');
-        onSuccess ? onSuccess() : navigate('/clients');
+        onSuccess ? onSuccess(created?.data?.client) : navigate('/clients');
       }
     } catch (error) {
       toast.error(getFieldErrors(error));

@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Edit2,
   Trash2,
+  Building2,
   Calendar,
   Users,
   DollarSign,
@@ -211,6 +212,22 @@ export default function ProjectDetail() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {project.client && (
+          <div className="bg-white rounded-xl border border-zinc-200 p-4">
+            <div className="flex items-center gap-2 text-zinc-400 mb-1">
+              <Building2 className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase tracking-wider">Client</span>
+            </div>
+            <p className="text-sm font-medium text-primary-900">{project.client.companyName}</p>
+            {project.client.contactPerson && (
+              <p className="text-xs text-zinc-500 mt-0.5">{project.client.contactPerson}</p>
+            )}
+            {project.client.email && (
+              <p className="text-xs text-zinc-500">{project.client.email}</p>
+            )}
+          </div>
+        )}
+
         <div className="bg-white rounded-xl border border-zinc-200 p-4">
           <div className="flex items-center gap-2 text-zinc-400 mb-1">
             <DollarSign className="w-4 h-4" />

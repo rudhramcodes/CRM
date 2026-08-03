@@ -7,6 +7,7 @@ export const create = async (data) => {
 
 export const findById = async (id) => {
   return Project.findById(id)
+    .populate('client', 'companyName contactPerson email brand status')
     .populate('teamMembers.user', 'name email avatar')
     .populate('tasks.assignedTo', 'name email avatar')
     .populate('tasks.createdBy', 'name email avatar')
@@ -33,6 +34,7 @@ export const findAll = async (query = {}, options = {}) => {
       .sort(sort)
       .skip(skip)
       .limit(limit)
+      .populate('client', 'companyName contactPerson email brand status')
       .populate('teamMembers.user', 'name email avatar')
       .populate('createdBy', 'name email'),
     Project.countDocuments(filter),
@@ -48,6 +50,7 @@ export const updateById = async (id, data, activities = []) => {
     delete update.activities;
   }
   return Project.findByIdAndUpdate(id, update, { new: true, runValidators: true })
+    .populate('client', 'companyName contactPerson email brand status')
     .populate('teamMembers.user', 'name email avatar')
     .populate('tasks.assignedTo', 'name email avatar')
     .populate('tasks.createdBy', 'name email avatar')

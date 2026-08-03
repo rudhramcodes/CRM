@@ -2,11 +2,22 @@ import ApiError from '../../utils/ApiError.js';
 import * as projectRepository from './project.repository.js';
 import { uploadBuffer } from '../../services/cloudinaryService.js';
 import Task from '../tasks/task.model.js';
+import Client from '../clients/client.model.js';
 import * as notificationService from '../notifications/notification.service.js';
 
+const assertClientExists = async (clientId) => {
+  const client = await Client.findById(clientId).select('_id');
+  if (!client) {
+    throw ApiError.badRequest('Selected client does not exist');
+  }
+};
+
 export const createProject = async (data, user) => {
+  await assertClientExists(data.client);
+
   const payload = {
     title: data.title,
+    client: data.client,
     description: data.description || '',
     status: data.status || 'planning',
     priority: data.priority || 'medium',
@@ -76,6 +87,10 @@ export const updateProject = async (id, data, user) => {
   const project = await projectRepository.findById(id);
   if (!project) {
     throw ApiError.notFound('Project not found');
+  }
+
+  if (data.client) {
+    await assertClientExists(data.client);
   }
 
   const updateData = { ...data };

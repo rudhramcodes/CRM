@@ -17,7 +17,17 @@ const FormSelect = ({ name, control, label, options = [], error, placeholder }) 
         name={name}
         control={control}
         render={({ field }) => (
-          <Select onValueChange={field.onChange} value={field.value || ''}>
+          <Select
+            onValueChange={(v) => {
+              // ponytail: Radix renders a hidden native <select> (SelectBubbleInput)
+              // inside the trigger. When a value is set programmatically (RHF setValue)
+              // before the new option registers there, it syncs the native select and
+              // dispatches a synthetic `change` with '' — wiping the form value.
+              // Radix Select has no user path to '' (no clear affordance), so drop it.
+              if (v !== '') field.onChange(v);
+            }}
+            value={field.value || ''}
+          >
             <SelectTrigger className={error ? 'border-red-300 focus:ring-red-500' : ''}>
               <SelectValue placeholder={placeholder || `Select ${label?.toLowerCase() || '...'}`} />
             </SelectTrigger>

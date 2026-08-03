@@ -15,6 +15,7 @@ const taskSchema = z.object({
 export const createProjectSchema = z
   .object({
     title: z.string().min(2).max(200),
+    client: z.string().min(1, 'Please select a client'),
     description: z.string().max(2000).optional().or(z.literal('')),
     status: z.enum(PROJECT_STATUS_LIST).optional(),
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
@@ -51,6 +52,7 @@ export const createProjectSchema = z
 export const updateProjectSchema = z
   .object({
     title: z.string().min(2).max(200).optional(),
+    client: z.string().min(1, 'Please select a client').optional(),
     description: z.string().max(2000).optional().or(z.literal('')),
     status: z.enum(PROJECT_STATUS_LIST).optional(),
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),

@@ -1,4 +1,4 @@
-import { FolderKanban, Edit2, Trash2 } from 'lucide-react';
+import { FolderKanban, Building2, Edit2, Trash2 } from 'lucide-react';
 import ProjectStatusBadge from './ProjectStatusBadge';
 import ProjectPriorityBadge from './ProjectPriorityBadge';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
@@ -67,6 +67,9 @@ export default function ProjectTable({
                 Project
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Client
+              </th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
@@ -111,6 +114,16 @@ export default function ProjectTable({
                       )}
                     </div>
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  {project.client ? (
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                      <span className="text-sm text-zinc-700">{project.client.companyName}</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-zinc-300">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div onClick={(e) => e.stopPropagation()}>

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -11,13 +12,11 @@ export default function Modal({
   showClose = true,
 }) {
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = prev;
     };
   }, [open]);
 
@@ -38,7 +37,9 @@ export default function Modal({
     xl: 'max-w-4xl',
   };
 
-  return (
+  // Portal to body so nested modals never render inside a parent form/modal
+  // (nested <form>s and transform-based containing blocks break overlays).
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div
@@ -62,6 +63,7 @@ export default function Modal({
         )}
         <div className="p-6 overflow-y-auto">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

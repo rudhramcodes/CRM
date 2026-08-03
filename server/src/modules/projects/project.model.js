@@ -138,6 +138,11 @@ const projectSchema = new mongoose.Schema(
     startDate: Date,
     deadline: Date,
     completedAt: Date,
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Client',
+      required: [true, 'Client is required'],
+    },
     teamMembers: [teamMemberSchema],
     milestones: [milestoneSchema],
     tasks: [taskSchema],
@@ -165,6 +170,7 @@ projectSchema.index({ status: 1 });
 projectSchema.index({ priority: 1 });
 projectSchema.index({ deadline: 1 });
 projectSchema.index({ tags: 1 });
+projectSchema.index({ client: 1 });
 projectSchema.index({ createdAt: -1 });
 
 const Project = mongoose.model('Project', projectSchema);
