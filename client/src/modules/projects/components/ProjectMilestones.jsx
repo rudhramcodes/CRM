@@ -210,7 +210,7 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
               onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
             <DatePicker value={newDueDate} onChange={setNewDueDate} placeholder="Due date" className="w-40" />
             <Button type="button" size="sm" onClick={handleAdd} disabled={!newTitle.trim()}>
-              <Plus className="w-3.5 h-3.5" /> Add
+              Add
             </Button>
           </div>
         </div>
