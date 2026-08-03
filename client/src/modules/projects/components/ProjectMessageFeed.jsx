@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { MessageSquare, Send, Paperclip, X, Image as ImageIcon, Trash2, AtSign, Mail } from 'lucide-react';
+import { MessageSquare, Send, Paperclip, X, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGetProjectMessagesQuery, useAddProjectMessageMutation, useDeleteProjectMessageMutation } from '../../../services/projectApi';
@@ -286,7 +286,7 @@ export default function ProjectMessageFeed({ projectId }) {
           )}
 
           <div onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}
-            className={`relative flex items-end gap-2 ${dragOver ? 'ring-2 ring-primary-500 rounded-lg' : ''}`}>
+            className="relative flex items-center gap-2">
             {dragOver && (
               <div className="absolute inset-0 bg-primary-900/5 rounded-lg flex items-center justify-center z-10">
                 <p className="text-sm text-primary-900 font-medium">Drop images here</p>
@@ -297,44 +297,46 @@ export default function ProjectMessageFeed({ projectId }) {
               <Paperclip className="w-4 h-4" />
             </button>
             <input ref={fileInputRef} type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
-            <div className="flex-1 relative">
-              <textarea ref={textInputRef} value={text} onChange={handleTextChange} onKeyDown={handleKeyDown}
-                placeholder={files.length > 0 ? 'Add a message...' : 'Type a message... (use /task to create a task)'}
-                rows={1}
-                className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900 resize-none min-h-[36px] max-h-24"
-                style={{ height: 'auto' }}
-                onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = `${e.target.scrollHeight}px`; }}
-              />
-              <AnimatePresence>
-                {mentionOpen && filteredMentions.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 4, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 4, scale: 0.96 }}
-                    transition={{ duration: 0.12 }}
-                    className="absolute bottom-full left-0 mb-1.5 w-72 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 max-h-56 overflow-y-auto py-1"
-                    ref={mentionListRef}>
-                    <div className="px-3 py-1.5 text-[10px] font-medium text-zinc-400 uppercase tracking-wider border-b border-zinc-100">Mentions</div>
-                    {filteredMentions.slice(0, 8).map((u, i) => (
-                      <button key={u._id} onClick={() => insertMention(u)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${i === mentionIndex ? 'bg-primary-50 text-primary-900' : 'text-zinc-700 hover:bg-zinc-50'}`}>
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-medium ${i === mentionIndex ? 'bg-primary-900 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
-                          {u.name?.charAt(0)?.toUpperCase() || '?'}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium truncate">{u.name}</div>
-                          {u.email && <div className="text-[11px] text-zinc-400 truncate flex items-center gap-1"><Mail className="w-2.5 h-2.5" />{u.email}</div>}
-                        </div>
-                        <AtSign className={`w-3.5 h-3.5 shrink-0 ${i === mentionIndex ? 'text-primary-600' : 'text-zinc-300'}`} />
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <textarea ref={textInputRef} value={text} onChange={handleTextChange} onKeyDown={handleKeyDown}
+              placeholder={files.length > 0 ? 'Add a message...' : 'Type a message... @username to mention'}
+              rows={1}
+              className="flex-1 px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900 resize-none min-h-[36px] max-h-24 overflow-hidden scrollbar-hide"
+              style={{ height: 'auto' }}
+              onInput={(e) => {
+                e.target.style.height = 'auto';
+                const maxH = 96;
+                const newH = Math.min(e.target.scrollHeight, maxH);
+                e.target.style.height = `${newH}px`;
+                e.target.style.overflowY = e.target.scrollHeight > maxH ? 'auto' : 'hidden';
+              }}
+            />
             <Button size="sm" onClick={handleSend} loading={isSending} disabled={!text.trim() && files.length === 0}>
               <Send className="w-3.5 h-3.5" />
             </Button>
+            <AnimatePresence>
+              {mentionOpen && filteredMentions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: 0.1 }}
+                  className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-zinc-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto"
+                  ref={mentionListRef}>
+                  <div className="px-3 py-1.5 text-[10px] font-medium text-zinc-400 uppercase tracking-wider border-b border-zinc-100">Mention someone</div>
+                  {filteredMentions.slice(0, 6).map((u, i) => (
+                    <button key={u._id} onClick={() => insertMention(u)}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors ${i === mentionIndex ? 'bg-primary-50 text-primary-900' : 'text-zinc-700 hover:bg-zinc-50'}`}>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-medium ${i === mentionIndex ? 'bg-primary-900 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
+                        {u.name?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate text-xs">{u.name}</div>
+                      </div>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       )}
