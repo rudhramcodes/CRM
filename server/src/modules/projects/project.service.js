@@ -4,6 +4,7 @@ import { uploadBuffer } from '../../services/cloudinaryService.js';
 import Task from '../tasks/task.model.js';
 import Client from '../clients/client.model.js';
 import * as notificationService from '../notifications/notification.service.js';
+import logger from '../../utils/logger.js';
 
 const assertClientExists = async (clientId) => {
   const client = await Client.findById(clientId).select('_id');
@@ -293,6 +294,35 @@ export const addMessage = async (projectId, data, user, files = []) => {
   await project.save();
 
   const saved = project.messages[project.messages.length - 1];
+
+  if (data.text) {
+    const mentionRegex = /@\[([^\]]+)\]\(([a-fA-F0-9]+)\)/g;
+    let mentionMatch;
+    const mentionedIds = new Set();
+    while ((mentionMatch = mentionRegex.exec(data.text)) !== null) {
+      const userId = mentionMatch[2];
+      if (userId !== String(user._id)) mentionedIds.add(userId);
+    }
+    if (mentionedIds.size > 0) {
+      logger.info(`Mention notifications: ${mentionedIds.size} users mentioned in project ${project._id}`);
+      const notif = notificationService.buildNotification('mention', {
+        actorName: user.name,
+        entityTitle: project.title,
+      });
+      try {
+        await notificationService.createAndSendBulk([...mentionedIds], {
+          referenceId: project._id,
+          referenceModel: 'Project',
+          actionBy: user._id,
+          link: `/projects/${project._id}`,
+          ...notif,
+        });
+      } catch (err) {
+        logger.error(`Mention notification failed: ${err.message}`);
+      }
+    }
+  }
+
   return saved;
 };
 
@@ -301,7 +331,7 @@ export const getMessages = async (projectId) => {
   if (!project) throw ApiError.notFound('Project not found');
 
   await project.populate('messages.createdBy', 'name email avatar');
-  return (project.messages || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return (project.messages || []).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 };
 
 export const deleteMessage = async (projectId, messageId, user) => {

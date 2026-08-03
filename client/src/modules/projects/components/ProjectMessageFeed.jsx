@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { MessageSquare, Send, Paperclip, X, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { MessageSquare, Send, Paperclip, X, Image as ImageIcon, Trash2, ArrowDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGetProjectMessagesQuery, useAddProjectMessageMutation, useDeleteProjectMessageMutation } from '../../../services/projectApi';
@@ -23,6 +23,7 @@ export default function ProjectMessageFeed({ projectId }) {
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const fileInputRef = useRef(null);
   const listRef = useRef(null);
   const textInputRef = useRef(null);
@@ -43,15 +44,35 @@ export default function ProjectMessageFeed({ projectId }) {
 
   const canPost = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
 
-  const scrollToBottom = useCallback(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+  const isNearBottom = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  }, []);
+
+  const scrollToBottom = useCallback((smooth = true) => {
+    const el = listRef.current;
+    if (!el) return;
+    if (smooth) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    } else {
+      el.scrollTop = el.scrollHeight;
     }
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    if (isNearBottom()) {
+      scrollToBottom();
+    }
+  }, [messages, scrollToBottom, isNearBottom]);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => setShowScrollBtn(!isNearBottom());
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isNearBottom]);
 
   const addFiles = (selected) => {
     selected.forEach((file) => {
@@ -106,6 +127,7 @@ export default function ProjectMessageFeed({ projectId }) {
       setFiles([]);
       setPreviews([]);
       selectedMentionsRef.current = {};
+      setTimeout(() => scrollToBottom(), 50);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to send message');
     }
@@ -190,7 +212,8 @@ export default function ProjectMessageFeed({ projectId }) {
         </h3>
       </div>
 
-      <div ref={listRef} className="max-h-[500px] overflow-y-auto px-6 py-4 space-y-1">
+      <div className="relative">
+        <div ref={listRef} className="max-h-[500px] overflow-y-auto px-6 py-4 space-y-1">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -267,6 +290,13 @@ export default function ProjectMessageFeed({ projectId }) {
             </div>
           ))
         )}
+        </div>
+        {showScrollBtn && (
+          <button onClick={() => scrollToBottom()}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 p-2 bg-white border border-zinc-200 rounded-full shadow-lg hover:bg-zinc-50 transition-all z-10">
+            <ArrowDown className="w-4 h-4 text-zinc-500" />
+          </button>
+        )}
       </div>
 
       {canPost && (
@@ -320,7 +350,7 @@ export default function ProjectMessageFeed({ projectId }) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 6 }}
                   transition={{ duration: 0.1 }}
-                  className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-zinc-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto"
+                  className="absolute bottom-full left-0 mb-2 w-72 bg-white border border-zinc-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto"
                   ref={mentionListRef}>
                   <div className="px-3 py-1.5 text-[10px] font-medium text-zinc-400 uppercase tracking-wider border-b border-zinc-100">Mention someone</div>
                   {filteredMentions.slice(0, 6).map((u, i) => (
@@ -331,6 +361,7 @@ export default function ProjectMessageFeed({ projectId }) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="font-medium truncate text-xs">{u.name}</div>
+                        {u.email && <div className="text-[10px] text-zinc-400 truncate">{u.email}</div>}
                       </div>
                     </button>
                   ))}
