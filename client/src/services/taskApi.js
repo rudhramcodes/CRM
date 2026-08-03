@@ -95,7 +95,7 @@ export const {
   useUpdateTaskMutation, useDeleteTaskMutation,
   useGetSubtasksQuery, useGetDependenciesQuery,
   useAddDependencyMutation, useRemoveDependencyMutation,
-  useAddTaskCommentMutation,
+  useAddTaskCommentMutation, useDeleteTaskCommentMutation,
   useAddChecklistItemMutation, useUpdateChecklistItemMutation, useRemoveChecklistItemMutation,
   useWatchTaskMutation, useUnwatchTaskMutation, useGetWatchedTasksQuery,
   useAddTimeEntryMutation, useRemoveTimeEntryMutation,
