@@ -24,3 +24,5 @@ qa-testing-checklist.md
 QA-TESTING-REPORT.md
 advanced-task-management.md
 .playwright-mcp
+# local email preview (never shipped)
+server/scripts/email-preview/

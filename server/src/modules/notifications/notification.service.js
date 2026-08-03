@@ -96,11 +96,11 @@ export const createAndSend = async ({
       const { default: User } = await import('../auth/auth.model.js');
       const user = await User.findById(recipient).select('email name');
       if (user?.email) {
-        const { sendEmail } = await import('../../services/emailService.js');
+        const { sendEmail, renderNotificationEmail } = await import('../../services/emailService.js');
         await sendEmail({
           to: user.email,
           subject: message.substring(0, 100),
-          html: buildEmailHtml({ title: message, message, link }),
+          html: renderNotificationEmail({ title: message, message, link }),
         });
       }
     } catch (err) {
@@ -167,19 +167,3 @@ export const deleteOldNotifications = async (daysOld = 90) => {
   const beforeDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
   return notifRepo.deleteOldNotifications(beforeDate);
 };
-
-function buildEmailHtml({ title, message, link }) {
-  const fullUrl = link && link.startsWith('/') ? `${config.clientUrl}${link}` : link;
-  const linkHtml = fullUrl
-    ? `<a href="${fullUrl}" style="display:inline-block;padding:10px 20px;background:#1e40af;color:#fff;text-decoration:none;border-radius:6px;margin-top:12px;">View Details</a>`
-    : '';
-  return `
-    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
-      <h2 style="color:#1e293b;">${title}</h2>
-      <p style="color:#475569;font-size:14px;line-height:1.6;">${message}</p>
-      ${linkHtml}
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin-top:20px;" />
-      <p style="color:#94a3b8;font-size:12px;">Rudhram</p>
-    </div>
-  `;
-}

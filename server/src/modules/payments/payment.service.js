@@ -2,7 +2,7 @@ import ApiError from '../../utils/ApiError.js';
 import * as paymentRepository from './payment.repository.js';
 import Invoice from '../invoices/invoice.model.js';
 import { INVOICE_STATUS } from '../../constants/index.js';
-import { sendEmail } from '../../services/emailService.js';
+import { sendEmail, renderPaymentEmail } from '../../services/emailService.js';
 import * as notificationService from '../notifications/notification.service.js';
 import logger from '../../utils/logger.js';
 
@@ -51,24 +51,13 @@ const sendPaymentConfirmation = async (payment, invoice, outstanding) => {
     logger.warn(`Cannot send payment confirmation: invoice ${invoice.invoiceNumber} has no client email`);
     return;
   }
-  const fmt = (val) => `\u20B9${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px">
-      <p style="font-size:15px;color:#374151;line-height:1.7">Dear ${invoice.client?.contactPerson || 'Client'},</p>
-      <p style="font-size:15px;color:#374151;line-height:1.7">
-        We have received a payment of <strong style="color:#059669">${fmt(payment.amount)}</strong> towards invoice <strong>${invoice.invoiceNumber}</strong>.
-      </p>
-      <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;color:#374151">
-        <tr><td style="padding:6px 12px;border:1px solid #e5e7eb">Amount</td><td style="padding:6px 12px;border:1px solid #e5e7eb;font-weight:bold">${fmt(payment.amount)}</td></tr>
-        <tr><td style="padding:6px 12px;border:1px solid #e5e7eb">Invoice</td><td style="padding:6px 12px;border:1px solid #e5e7eb">${invoice.invoiceNumber}</td></tr>
-        <tr><td style="padding:6px 12px;border:1px solid #e5e7eb">Date</td><td style="padding:6px 12px;border:1px solid #e5e7eb">${new Date(payment.paymentDate).toLocaleDateString('en-IN')}</td></tr>
-        <tr><td style="padding:6px 12px;border:1px solid #e5e7eb">Outstanding</td><td style="padding:6px 12px;border:1px solid #e5e7eb">${fmt(Math.max(0, outstanding))}</td></tr>
-      </table>
-      <p style="font-size:15px;color:#374151;line-height:1.7">Thank you for your payment.</p>
-      <br>
-      <p style="font-size:15px;color:#374151;line-height:1.7">Best regards,<br><strong style="color:#B3752F">Rudhram Enterprises</strong></p>
-    </div>
-  `;
+  const html = renderPaymentEmail({
+    clientName: invoice.client?.contactPerson || 'Client',
+    invoiceNumber: invoice.invoiceNumber,
+    amount: payment.amount,
+    date: payment.paymentDate,
+    outstanding,
+  });
   try {
     await sendEmail({ to: clientEmail, subject: `Payment Received — ${invoice.invoiceNumber}`, html });
     logger.info(`Payment confirmation email sent for ${invoice.invoiceNumber}`);

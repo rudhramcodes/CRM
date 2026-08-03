@@ -1,6 +1,6 @@
 import ApiError from '../../utils/ApiError.js';
 import * as invoiceRepository from './invoice.repository.js';
-import { sendEmail } from '../../services/emailService.js';
+import { sendEmail, renderInvoiceEmail } from '../../services/emailService.js';
 import { generateInvoicePdf, generateInvoiceHtml } from '../../services/pdfService.js';
 import logger from '../../utils/logger.js';
 import Client from '../clients/client.model.js';
@@ -26,9 +26,6 @@ export const generateInvoiceNumber = async (brand) => {
   const seq = String(count + 1).padStart(4, '0');
   return `${prefix}${seq}`;
 };
-
-const fmtCurrency = (val) => `INR ${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
 
 const validateStatusTransition = (currentStatus, newStatus) => {
   if (currentStatus === newStatus) return;
@@ -171,18 +168,12 @@ const sendInvoiceEmail = async (invoice) => {
 
   const client = invoice.client || {};
 
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px">
-      <p style="font-size:15px;color:#374151;line-height:1.7">Dear ${client.contactPerson || 'Client'},</p>
-      <p style="font-size:15px;color:#374151;line-height:1.7">
-        Please find attached the invoice <strong>${invoice.invoiceNumber}</strong> for <strong>${fmtCurrency(invoice.total)}</strong>, due by <strong>${fmtDate(invoice.dueDate)}</strong>.
-      </p>
-      <p style="font-size:15px;color:#374151;line-height:1.7">The PDF copy of the invoice is attached to this email for your records.</p>
-      <p style="font-size:15px;color:#374151;line-height:1.7">If you have any questions, feel free to reach out.</p>
-      <br>
-      <p style="font-size:15px;color:#374151;line-height:1.7">Best regards,<br><strong style="color:#B3752F">Rudhram Enterprises</strong></p>
-    </div>
-  `;
+  const html = renderInvoiceEmail({
+    clientName: client.contactPerson || 'Client',
+    invoiceNumber: invoice.invoiceNumber,
+    total: invoice.total,
+    dueDate: invoice.dueDate,
+  });
 
   await sendEmail({
     to: clientEmail,

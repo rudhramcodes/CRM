@@ -7,7 +7,8 @@
     "install-all": "npm install --include=dev && cd ../client && npm install --include=dev",
     "build": "cd ../client && npm install --include=dev && npm run build",
     "start": "node src/server.js",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "email:preview": "node scripts/email-preview/server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
