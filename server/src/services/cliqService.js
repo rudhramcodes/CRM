@@ -15,7 +15,11 @@ export const sendCliqMessage = async ({ title, message, link, emoji = '' }) => {
         title: head,
         thumbnail: 'https://www.zoho.com/cliq/images/cliq-icon.png',
         fields: [{ text: message }],
-        buttons: [{ type: '+', label: 'Open in CRM', action: { type: 'open.url', url: link } }],
+        button: {
+          label: 'Open in CRM',
+          type: '+',
+          action: { type: 'open.url', url: link },
+        },
       };
     } else {
       payload.text = `${head} — ${message}`;
