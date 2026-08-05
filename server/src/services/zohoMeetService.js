@@ -3,16 +3,16 @@ import config from '../config/index.js';
 import { Setting } from '../modules/settings/settings.model.js';
 
 const SCOPES = ['ZohoMeeting.meeting.CREATE', 'ZohoMeeting.meeting.READ'];
-const ZOHO_ACCOUNTS_URL = config.zoho.accountsUrl;
-const ZOHO_MEETING_API = config.zoho.meetingApi;
 
 const getOAuthCreds = async () => {
-  const [clientId, clientSecret, refreshToken, orgName, orgId] = await Promise.all([
+  const [clientId, clientSecret, refreshToken, orgName, orgId, accountsUrl, apiDomain] = await Promise.all([
     Setting.findOne({ key: 'zohoClientId' }),
     Setting.findOne({ key: 'zohoClientSecret' }),
     Setting.findOne({ key: 'zohoRefreshToken' }),
     Setting.findOne({ key: 'zohoOrgName' }),
     Setting.findOne({ key: 'zohoOrgId' }),
+    Setting.findOne({ key: 'zohoAccountsUrl' }),
+    Setting.findOne({ key: 'zohoApiDomain' }),
   ]);
   return {
     clientId: clientId?.value || process.env.ZOHO_CLIENT_ID || '',
@@ -20,7 +20,23 @@ const getOAuthCreds = async () => {
     refreshToken: refreshToken?.value || process.env.ZOHO_REFRESH_TOKEN || '',
     orgName: orgName?.value || process.env.ZOHO_ORG_NAME || 'Rudhram CRM',
     orgId: orgId?.value || process.env.ZOHO_ORG_ID || '',
+    accountsUrl: accountsUrl?.value || process.env.ZOHO_ACCOUNTS_URL || config.zoho.accountsUrl,
+    apiDomain: apiDomain?.value || '',
   };
+};
+
+// Token API DC: stored accounts URL (set during connect) > env override > config default
+const getAccountsUrl = async () => (await getOAuthCreds()).accountsUrl;
+
+// Meeting API DC: derive from token api_domain (e.g. "https://www.zohoapis.in" -> "https://meeting.zoho.in/api/v2")
+const deriveMeetingApi = (apiDomain) => {
+  const m = apiDomain?.match(/zohoapis\.([a-z.]+)/);
+  return m ? `https://meeting.zoho.${m[1]}/api/v2` : null;
+};
+
+const getMeetingApi = async () => {
+  const { apiDomain } = await getOAuthCreds();
+  return deriveMeetingApi(apiDomain) || process.env.ZOHO_MEETING_API || config.zoho.meetingApi;
 };
 
 const postForm = async (url, params) => {
@@ -56,7 +72,7 @@ export const isOAuthConfigured = async () => {
 };
 
 export const buildAuthUrl = async (redirectUri) => {
-  const { clientId, clientSecret } = await getOAuthCreds();
+  const { clientId, clientSecret, accountsUrl } = await getOAuthCreds();
   if (!clientId || !clientSecret) return null;
 
   const params = new URLSearchParams({
@@ -68,14 +84,18 @@ export const buildAuthUrl = async (redirectUri) => {
     prompt: 'consent',
   });
 
-  return `${ZOHO_ACCOUNTS_URL}/auth?${params.toString()}`;
+  return `${accountsUrl}/auth?${params.toString()}`;
 };
 
-export const exchangeCode = async (code, redirectUri) => {
+export const exchangeCode = async (code, redirectUri, accountsServer = '') => {
   const { clientId, clientSecret } = await getOAuthCreds();
   if (!clientId || !clientSecret) throw new Error('Zoho OAuth client not configured');
 
-  const data = await postForm(`${ZOHO_ACCOUNTS_URL}/token`, {
+  // Zoho multi-DC: callback includes accounts-server (e.g. https://accounts.zoho.in) when
+  // the user's org lives in a non-default DC — use it or token exchange fails with invalid_client
+  const accountsUrl = accountsServer ? `${accountsServer}/oauth/v2` : await getAccountsUrl();
+
+  const data = await postForm(`${accountsUrl}/token`, {
     code,
     client_id: clientId,
     client_secret: clientSecret,
@@ -94,6 +114,14 @@ export const exchangeCode = async (code, redirectUri) => {
     { $set: { key: 'zohoRefreshToken', value: refresh_token } },
     { upsert: true, new: true },
   );
+
+  if (accountsServer) {
+    await Setting.findOneAndUpdate(
+      { key: 'zohoAccountsUrl' },
+      { $set: { key: 'zohoAccountsUrl', value: accountsServer } },
+      { upsert: true, new: true },
+    );
+  }
 
   if (api_domain) {
     await Setting.findOneAndUpdate(
@@ -128,7 +156,7 @@ const refreshAccessToken = async (force = false) => {
     throw new Error('Zoho OAuth not fully configured');
   }
 
-  const data = await postForm(`${ZOHO_ACCOUNTS_URL}/token`, {
+  const data = await postForm(`${await getAccountsUrl()}/token`, {
     client_id: clientId,
     client_secret: clientSecret,
     refresh_token: refreshToken,
@@ -152,7 +180,7 @@ const getAuthHeaders = async () => {
 
 export const getOrgInfo = async (accessToken) => {
   const { orgName } = await getOAuthCreds();
-  const res = await fetch(`${ZOHO_MEETING_API}/user.json`, {
+  const res = await fetch(`${await getMeetingApi()}/user.json`, {
     headers: {
       Authorization: `Zoho-oauthtoken ${accessToken}`,
       'X-ZSOURCE': orgName,
@@ -166,6 +194,7 @@ export const disconnectOAuth = async () => {
   await Setting.findOneAndDelete({ key: 'zohoRefreshToken' });
   await Setting.findOneAndDelete({ key: 'zohoOrgId' });
   await Setting.findOneAndDelete({ key: 'zohoApiDomain' });
+  await Setting.findOneAndDelete({ key: 'zohoAccountsUrl' });
   cachedAccessToken = '';
   cachedTokenExpiry = 0;
 };
@@ -234,7 +263,7 @@ export const generateMeetLink = async ({ title, date, startTime, endTime, attend
       },
     };
 
-    const res = await fetch(`${ZOHO_MEETING_API}/${creds.orgId}/sessions.json`, {
+    const res = await fetch(`${await getMeetingApi()}/${creds.orgId}/sessions.json`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),

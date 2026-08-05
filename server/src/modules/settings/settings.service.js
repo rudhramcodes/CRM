@@ -111,12 +111,12 @@ export const updateSecuritySettings = async (data) => {
   return getSecuritySettings();
 };
 
-// ── Integration Settings (Resend, Google Meet, third-party keys) ──
+// ── Integration Settings (Resend, Zoho Meetings, third-party keys) ──
 
 const INTEGRATION_KEYS = [
   'resendFromEmail', 'resendFromName',
   'zohoClientId', 'zohoClientSecret',
-  'zohoOrgName', 'zohoOrgId', 'zohoApiDomain',
+  'zohoOrgName', 'zohoOrgId', 'zohoApiDomain', 'zohoAccountsUrl',
 ];
 
 const INTEGRATION_DEFAULTS = {
@@ -127,6 +127,7 @@ const INTEGRATION_DEFAULTS = {
   zohoOrgName: '',
   zohoOrgId: '',
   zohoApiDomain: '',
+  zohoAccountsUrl: '',
 };
 
 export const getIntegrationSettings = async () => {
@@ -145,7 +146,7 @@ export const getIntegrationSettings = async () => {
   result.zohoConfigured = !!(result.zohoClientId && result.zohoClientSecret);
   const hasZohoOAuth = await Setting.findOne({ key: 'zohoRefreshToken' });
   result.zohoConnected = Boolean(hasZohoOAuth?.value);
-  result.zohoAccountsUrl = config.zoho.accountsUrl;
+  result.zohoAccountsUrl = result.zohoAccountsUrl || config.zoho.accountsUrl;
   result.zohoMeetingApi = config.zoho.meetingApi;
   return result;
 };
