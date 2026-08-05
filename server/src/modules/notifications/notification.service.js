@@ -47,6 +47,10 @@ export const createAndSend = async ({
   // Dedup: same type + same reference + same recipient within 5 min
   if (isDuplicate(recipient, type, referenceId)) return null;
 
+  const template = type ? NOTIFICATION_TEMPLATES[type] : null;
+  // Template routing gates the channels this type is allowed on
+  const templateChannels = template?.channels || { email: true, cliq: false };
+
   // Resolve actual channels from user preferences
   let allowedInApp = true;
   let allowedEmail = true;
@@ -59,7 +63,7 @@ export const createAndSend = async ({
 
   const finalChannels = {
     inApp: allowedInApp && (!channels || channels.inApp !== false),
-    email: allowedEmail && (!channels || channels.email !== false),
+    email: allowedEmail && templateChannels.email !== false && (!channels || channels.email !== false),
   };
 
   const notification = await notifRepo.create({
@@ -109,23 +113,32 @@ export const createAndSend = async ({
   }
 
   // Zoho Cliq team channel — one broadcast per event, not per recipient.
-  // Dedup key is reference-scoped so a bulk send (e.g. meeting to 5 staff) posts once.
-  if (type && referenceId && !dedupCache.has(`cliq_${referenceId}`)) {
-    dedupCache.set(`cliq_${referenceId}`, true);
-    setTimeout(() => dedupCache.delete(`cliq_${referenceId}`), DEDUP_TTL);
-    try {
-      const { sendCliqMessage } = await import('../../services/cliqService.js');
-      await sendCliqMessage({ title, message, link });
-    } catch (err) {
-      logger.error(`Cliq send failed for notification: ${err.message}`);
-    }
-  }
+  await broadcastCliq({ type, referenceId, title, message, link });
 
   return notification;
 };
 
+// Zoho Cliq team channel — one broadcast per event (reference-scoped dedup),
+// fired even when there are no recipients (e.g. unassigned lead / no members).
+export const broadcastCliq = async ({ type, referenceId, title, message, link }) => {
+  const template = type ? NOTIFICATION_TEMPLATES[type] : null;
+  if (template?.channels?.cliq !== true) return;
+  if (!referenceId || dedupCache.has(`cliq_${referenceId}`)) return;
+  dedupCache.set(`cliq_${referenceId}`, true);
+  setTimeout(() => dedupCache.delete(`cliq_${referenceId}`), DEDUP_TTL);
+  try {
+    const { sendCliqMessage } = await import('../../services/cliqService.js');
+    await sendCliqMessage({ title, message, link, emoji: template.emoji });
+  } catch (err) {
+    logger.error(`Cliq send failed for notification: ${err.message}`);
+  }
+};
+
 export const createAndSendBulk = async (recipients, data) => {
-  if (!recipients?.length) return [];
+  if (!recipients?.length) {
+    await broadcastCliq(data);
+    return [];
+  }
   const results = await Promise.allSettled(
     recipients.map((recipient) => createAndSend({ ...data, recipient })),
   );

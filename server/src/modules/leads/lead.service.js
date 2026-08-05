@@ -29,15 +29,17 @@ export const createLead = async (data, user) => {
 
   const lead = await leadRepository.create(leadData);
 
-  if (data.assignedTo && String(data.assignedTo) !== String(user._id)) {
-    const notif = notificationService.buildNotification('lead_created', {
-      leadName: lead.name, source: lead.source || 'manual',
-    });
-    notificationService.createAndSend({
-      recipient: data.assignedTo, referenceId: lead._id, referenceModel: 'Lead',
-      actionBy: user._id, link: `/leads/${lead._id}`, ...notif,
-    }).catch(() => {});
-  }
+  const notif = notificationService.buildNotification('lead_created', {
+    leadName: lead.name, source: lead.source || 'manual',
+  });
+  const recipients = data.assignedTo && String(data.assignedTo) !== String(user._id)
+    ? [data.assignedTo]
+    : [];
+  // Empty recipients → Cliq team broadcast still fires; assignee gets in-app/email.
+  notificationService.createAndSendBulk(recipients, {
+    referenceId: lead._id, referenceModel: 'Lead',
+    actionBy: user._id, link: `/leads/${lead._id}`, ...notif,
+  }).catch(() => {});
 
   return lead;
 };

@@ -47,20 +47,16 @@ export const createProject = async (data, user) => {
 
   const project = await projectRepository.create(payload);
 
-  // Notify team members
-  const members = data.teamMembers || [];
-  if (members.length > 0) {
-    const notif = notificationService.buildNotification('project_assigned', {
-      projectName: project.title, actorName: user.name,
-    });
-    notificationService.createAndSendBulk(
-      members.filter((m) => String(m) !== String(user._id)),
-      {
-        referenceId: project._id, referenceModel: 'Project',
-        actionBy: user._id, link: `/projects/${project._id}`, ...notif,
-      },
-    ).catch(() => {});
-  }
+  // Notify team members (empty members → Cliq team broadcast still fires)
+  const members = (data.teamMembers || [])
+    .filter((m) => String(m) !== String(user._id));
+  const notif = notificationService.buildNotification('project_assigned', {
+    projectName: project.title, actorName: user.name,
+  });
+  notificationService.createAndSendBulk(members, {
+    referenceId: project._id, referenceModel: 'Project',
+    actionBy: user._id, link: `/projects/${project._id}`, ...notif,
+  }).catch(() => {});
 
   return project;
 };
@@ -131,20 +127,19 @@ export const updateProject = async (id, data, user) => {
 
   const updated = await projectRepository.updateById(id, updateData, activities);
 
-  if (data.status && data.status !== project.status && project.teamMembers?.length) {
+  if (data.status && data.status !== project.status) {
     const notif = notificationService.buildNotification('project_status_change', {
       projectName: project.title, actorName: user.name, newStatus: data.status,
     });
-    const memberIds = project.teamMembers
+    const memberIds = (project.teamMembers || [])
       .map((m) => (m.user?._id || m.user))
       .filter((uid) => String(uid) !== String(user._id));
-    if (memberIds.length > 0) {
-      notificationService.createAndSendBulk(memberIds, {
-        referenceId: project._id, referenceModel: 'Project',
-        actionBy: user._id, link: `/projects/${project._id}`,
-        ...notif,
-      }).catch(() => {});
-    }
+    // Empty memberIds → Cliq team broadcast still fires
+    notificationService.createAndSendBulk(memberIds, {
+      referenceId: project._id, referenceModel: 'Project',
+      actionBy: user._id, link: `/projects/${project._id}`,
+      ...notif,
+    }).catch(() => {});
   }
 
   return updated;
