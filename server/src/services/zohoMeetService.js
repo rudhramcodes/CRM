@@ -1,9 +1,10 @@
 import logger from '../utils/logger.js';
+import config from '../config/index.js';
 import { Setting } from '../modules/settings/settings.model.js';
 
 const SCOPES = ['ZohoMeeting.meeting.CREATE', 'ZohoMeeting.meeting.READ'];
-const ZOHO_ACCOUNTS_URL = 'https://accounts.zoho.com/oauth/v2';
-const ZOHO_MEETING_API = 'https://meeting.zoho.com/api/v2';
+const ZOHO_ACCOUNTS_URL = config.zoho.accountsUrl;
+const ZOHO_MEETING_API = config.zoho.meetingApi;
 
 const getOAuthCreds = async () => {
   const [clientId, clientSecret, refreshToken, orgName, orgId] = await Promise.all([
@@ -31,9 +32,22 @@ const postForm = async (url, params) => {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
-    throw new Error(data.error_description || data.error || `Zoho token request failed: ${res.status}`);
+    logger.error('Zoho token request failed', { url, status: res.status, response: data });
+    throw new Error(mapZohoError(data.error, data.error_description, res.status));
   }
   return data;
+};
+
+const mapZohoError = (code, description, status) => {
+  const map = {
+    invalid_client: 'Invalid Zoho Client ID or Client Secret — verify both in Zoho API Console, and confirm they are from the same client.',
+    invalid_grant: 'The Zoho authorization code was already used or expired — click Connect again.',
+    redirect_uri_mismatch: 'Zoho redirect URI mismatch — register the exact callback URL in Zoho API Console.',
+    invalid_scope: 'Zoho scope not allowed — enable ZohoMeeting scopes on the client in Zoho API Console.',
+    'invalid code': 'The Zoho authorization code is invalid or expired — click Connect again.',
+  };
+  if (map[code]) return map[code];
+  return description || `Zoho error: ${code || status}`;
 };
 
 export const isOAuthConfigured = async () => {

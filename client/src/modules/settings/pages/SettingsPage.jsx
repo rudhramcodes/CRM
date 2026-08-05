@@ -17,7 +17,10 @@ const TABS = [
 ];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    return TABS.some((t) => t.id === tab) ? tab : 'profile';
+  });
 
   const userRole = useMemo(() => {
     try {
@@ -26,6 +29,13 @@ export default function SettingsPage() {
   }, []);
 
   const visibleTabs = TABS.filter((t) => t.roles.includes(userRole));
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tabId);
+    window.history.replaceState({}, '', url);
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -41,7 +51,7 @@ export default function SettingsPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors text-left ${
                   activeTab === tab.id
                     ? 'bg-primary-900 text-white'

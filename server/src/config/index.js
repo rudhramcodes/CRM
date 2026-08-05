@@ -28,6 +28,12 @@ const config = {
   zohoOAuth: {
     callbackUrl: process.env.ZOHO_OAUTH_CALLBACK_URL || '',
   },
+  zoho: {
+    // Data center URLs — override when the Zoho client lives in a non-US DC.
+    // e.g. India: ZOHO_ACCOUNTS_URL=https://accounts.zoho.in/oauth/v2, ZOHO_MEETING_API=https://meeting.zoho.in/api/v2
+    accountsUrl: process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho.com/oauth/v2',
+    meetingApi: process.env.ZOHO_MEETING_API || 'https://meeting.zoho.com/api/v2',
+  },
   resend: {
     apiKey: process.env.RESEND_API_KEY || '',
     fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@rudhramenterprises.com',

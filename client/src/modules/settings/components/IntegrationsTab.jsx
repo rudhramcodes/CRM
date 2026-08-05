@@ -29,17 +29,31 @@ export default function IntegrationsTab() {
     if (settings) setForm((prev) => ({ ...prev, ...settings }));
   }, [settings]);
 
-  // After the OAuth popup closes, refresh to pick up the new connected state.
+  // OAuth popup runs the SPA too — detect it via window.opener, hand the
+  // result back through localStorage, then close without rendering the CRM.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (!window.opener) return;
+
+    if (params.get('zoho') === 'connected') {
+      localStorage.setItem('zohoOAuthResult', 'connected');
+    } else if (params.get('zoho') === 'error') {
+      localStorage.setItem('zohoOAuthResult', `error:${params.get('message') || 'Unknown error'}`);
+    }
+    window.close();
+  }, []);
+
+  // Main window: handle direct navigation (rare) with ?zoho= in the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (window.opener || !params.get('zoho')) return;
     if (params.get('zoho') === 'connected') {
       toast.success('Zoho Meetings connected');
-      refetch();
-      window.history.replaceState({}, '', window.location.pathname);
     } else if (params.get('zoho') === 'error') {
       toast.error(params.get('message') || 'Zoho connection failed — check client ID/secret');
-      window.history.replaceState({}, '', window.location.pathname);
     }
+    refetch();
+    window.history.replaceState({}, '', window.location.pathname);
   }, [refetch]);
 
   const getChangedData = () => {
@@ -74,10 +88,16 @@ export default function IntegrationsTab() {
       const url = await getZohoAuthUrl().unwrap();
       if (!url) { toast.error('Add Zoho Client ID and Secret first'); return; }
       const popup = window.open(url, 'zoho-oauth', 'width=520,height=640');
+      localStorage.removeItem('zohoOAuthResult');
       const timer = setInterval(() => {
         if (popup && popup.closed) {
           clearInterval(timer);
+          const result = localStorage.getItem('zohoOAuthResult');
+          localStorage.removeItem('zohoOAuthResult');
           refetch();
+          if (result === 'connected') toast.success('Zoho Meetings connected');
+          else if (result?.startsWith('error:')) toast.error(result.slice(6));
+          else toast.error('Zoho connection window closed without completing login');
         }
       }, 500);
     } catch (err) {

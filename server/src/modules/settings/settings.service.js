@@ -145,6 +145,8 @@ export const getIntegrationSettings = async () => {
   result.zohoConfigured = !!(result.zohoClientId && result.zohoClientSecret);
   const hasZohoOAuth = await Setting.findOne({ key: 'zohoRefreshToken' });
   result.zohoConnected = Boolean(hasZohoOAuth?.value);
+  result.zohoAccountsUrl = config.zoho.accountsUrl;
+  result.zohoMeetingApi = config.zoho.meetingApi;
   return result;
 };
 

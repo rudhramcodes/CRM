@@ -90,10 +90,10 @@ export const getZohoAuthUrl = async (req, res, next) => {
 export const zohoCallback = async (req, res) => {
   try {
     await zohoMeetService.exchangeCode(req.query.code, getZohoCallbackUri(req));
-    res.redirect(`${config.clientUrl}/settings?zoho=connected`);
+    res.redirect(`${config.clientUrl}/settings?tab=integrations&zoho=connected`);
   } catch (err) {
     logger.error('Zoho OAuth callback failed', { error: err.message });
-    res.redirect(`${config.clientUrl}/settings?zoho=error&message=${encodeURIComponent(err.message)}`);
+    res.redirect(`${config.clientUrl}/settings?tab=integrations&zoho=error&message=${encodeURIComponent(err.message)}`);
   }
 };
 
