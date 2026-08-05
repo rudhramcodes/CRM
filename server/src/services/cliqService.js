@@ -4,26 +4,14 @@ import logger from '../utils/logger.js';
 export const isCliqConfigured = () => Boolean(config.cliq.webhookUrl);
 
 // Zoho Cliq incoming webhook — one POST, no OAuth needed.
-// Card renders the emoji title, message field and an "Open in CRM" button.
+// Channel webhook supports plain text reliably; card/buttons keep getting
+// rejected by the schema, so format everything inline instead.
 export const sendCliqMessage = async ({ title, message, link, emoji = '' }) => {
   if (!isCliqConfigured()) return false;
   try {
     const head = emoji ? `${emoji} ${title}` : title;
-    const payload = { text: head };
-    if (link) {
-      payload.card = {
-        title: head,
-        thumbnail: 'https://www.zoho.com/cliq/images/cliq-icon.png',
-        fields: [{ text: message }],
-      };
-      payload.buttons = [{
-        label: 'Open in CRM',
-        type: '+',
-        action: { type: 'open.url', url: link },
-      }];
-    } else {
-      payload.text = `${head} — ${message}`;
-    }
+    const text = link ? `${head} — ${message}\n\n${link}` : `${head} — ${message}`;
+    const payload = { text };
     const res = await fetch(config.cliq.webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
