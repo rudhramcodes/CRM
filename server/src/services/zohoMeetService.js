@@ -9,12 +9,13 @@ const SCOPES = ['ZohoMeeting.meeting.CREATE', 'ZohoMeeting.meeting.READ', 'ZohoM
 const normalizeAccountsUrl = (url) => (url && !url.includes('/oauth/v2') ? `${url}/oauth/v2` : url);
 
 const getOAuthCreds = async () => {
-  const [clientId, clientSecret, refreshToken, orgName, orgId, accountsUrl, apiDomain] = await Promise.all([
+  const [clientId, clientSecret, refreshToken, orgName, orgId, userId, accountsUrl, apiDomain] = await Promise.all([
     Setting.findOne({ key: 'zohoClientId' }),
     Setting.findOne({ key: 'zohoClientSecret' }),
     Setting.findOne({ key: 'zohoRefreshToken' }),
     Setting.findOne({ key: 'zohoOrgName' }),
     Setting.findOne({ key: 'zohoOrgId' }),
+    Setting.findOne({ key: 'zohoUserId' }),
     Setting.findOne({ key: 'zohoAccountsUrl' }),
     Setting.findOne({ key: 'zohoApiDomain' }),
   ]);
@@ -24,6 +25,7 @@ const getOAuthCreds = async () => {
     refreshToken: refreshToken?.value || process.env.ZOHO_REFRESH_TOKEN || '',
     orgName: orgName?.value || process.env.ZOHO_ORG_NAME || 'Rudhram CRM',
     orgId: orgId?.value || process.env.ZOHO_ORG_ID || '',
+    userId: userId?.value || process.env.ZOHO_USER_ID || '',
     accountsUrl: normalizeAccountsUrl(accountsUrl?.value || process.env.ZOHO_ACCOUNTS_URL || config.zoho.accountsUrl),
     apiDomain: apiDomain?.value || '',
   };
@@ -139,6 +141,7 @@ export const exchangeCode = async (code, redirectUri, accountsServer = '') => {
     const orgInfo = await getOrgInfo(access_token);
     // Zoho returns org id as userDetails.zsoid (number, not top-level)
     const zsoid = orgInfo?.userDetails?.zsoid;
+    const zuid = orgInfo?.userDetails?.zuid;
     if (zsoid) {
       await Setting.findOneAndUpdate(
         { key: 'zohoOrgId' },
@@ -147,6 +150,14 @@ export const exchangeCode = async (code, redirectUri, accountsServer = '') => {
       );
     } else {
       logger.warn('Zoho user API returned no zsoid', { response: orgInfo });
+    }
+    // presenter ZUID is required when creating sessions — save it at connect time
+    if (zuid) {
+      await Setting.findOneAndUpdate(
+        { key: 'zohoUserId' },
+        { $set: { key: 'zohoUserId', value: String(zuid) } },
+        { upsert: true, new: true },
+      );
     }
   } catch (err) {
     logger.warn('Could not fetch Zoho org ID', { error: err.message });
@@ -206,6 +217,7 @@ export const getOrgInfo = async (accessToken) => {
 export const disconnectOAuth = async () => {
   await Setting.findOneAndDelete({ key: 'zohoRefreshToken' });
   await Setting.findOneAndDelete({ key: 'zohoOrgId' });
+  await Setting.findOneAndDelete({ key: 'zohoUserId' });
   await Setting.findOneAndDelete({ key: 'zohoApiDomain' });
   await Setting.findOneAndDelete({ key: 'zohoAccountsUrl' });
   cachedAccessToken = '';
@@ -255,13 +267,15 @@ export const generateMeetLink = async ({ title, date, startTime, endTime, attend
     return null;
   }
 
-  // Self-heal: if org ID missing (e.g. OAuth connected before zsoid parsing was fixed), fetch it now
+  // Self-heal: if org ID or presenter ZUID missing (e.g. OAuth connected before parsing was fixed), fetch both now
   let orgId = creds.orgId;
-  if (!orgId) {
+  let userId = creds.userId;
+  if (!orgId || !userId) {
     try {
       const accessToken = await refreshAccessToken();
       const orgInfo = await getOrgInfo(accessToken);
       const zsoid = orgInfo?.userDetails?.zsoid;
+      const zuid = orgInfo?.userDetails?.zuid;
       if (zsoid) {
         orgId = String(zsoid);
         await Setting.findOneAndUpdate(
@@ -270,13 +284,21 @@ export const generateMeetLink = async ({ title, date, startTime, endTime, attend
           { upsert: true, new: true },
         );
       }
+      if (zuid) {
+        userId = String(zuid);
+        await Setting.findOneAndUpdate(
+          { key: 'zohoUserId' },
+          { $set: { key: 'zohoUserId', value: userId } },
+          { upsert: true, new: true },
+        );
+      }
     } catch (err) {
       logger.warn('Zoho org ID self-heal failed', { error: err.message });
     }
   }
 
-  if (!orgId) {
-    logger.warn('Zoho org ID not found — run OAuth flow first');
+  if (!orgId || !userId) {
+    logger.warn('Zoho org ID or presenter ZUID not found — run OAuth flow first');
     return null;
   }
 
@@ -289,6 +311,7 @@ export const generateMeetLink = async ({ title, date, startTime, endTime, attend
       session: {
         topic: title,
         agenda,
+        presenter: Number(userId),
         startTime: startTimeZoho,
         duration: durationMs,
         timezone: 'Asia/Kolkata',

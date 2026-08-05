@@ -116,7 +116,7 @@ export const updateSecuritySettings = async (data) => {
 const INTEGRATION_KEYS = [
   'resendFromEmail', 'resendFromName',
   'zohoClientId', 'zohoClientSecret',
-  'zohoOrgName', 'zohoOrgId', 'zohoApiDomain', 'zohoAccountsUrl',
+  'zohoOrgName', 'zohoOrgId', 'zohoUserId', 'zohoApiDomain', 'zohoAccountsUrl',
 ];
 
 const INTEGRATION_DEFAULTS = {
@@ -126,6 +126,7 @@ const INTEGRATION_DEFAULTS = {
   zohoClientSecret: '',
   zohoOrgName: '',
   zohoOrgId: '',
+  zohoUserId: '',
   zohoApiDomain: '',
   zohoAccountsUrl: '',
 };
