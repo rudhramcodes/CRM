@@ -2,7 +2,8 @@ import logger from '../utils/logger.js';
 import config from '../config/index.js';
 import { Setting } from '../modules/settings/settings.model.js';
 
-const SCOPES = ['ZohoMeeting.meeting.CREATE', 'ZohoMeeting.meeting.READ'];
+// manageOrg.READ is required by the user.json (org-id) endpoint — without it the API returns 400
+const SCOPES = ['ZohoMeeting.meeting.CREATE', 'ZohoMeeting.meeting.READ', 'ZohoMeeting.manageOrg.READ'];
 
 // Callback stores "https://accounts.zoho.in" (no path); token/auth endpoints need ".../oauth/v2"
 const normalizeAccountsUrl = (url) => (url && !url.includes('/oauth/v2') ? `${url}/oauth/v2` : url);
@@ -187,13 +188,18 @@ const getAuthHeaders = async () => {
 
 export const getOrgInfo = async (accessToken) => {
   const { orgName } = await getOAuthCreds();
-  const res = await fetch(`${await getMeetingApi()}/user.json`, {
+  const url = `${await getMeetingApi()}/user.json`;
+  const res = await fetch(url, {
     headers: {
       Authorization: `Zoho-oauthtoken ${accessToken}`,
       'X-ZSOURCE': orgName,
     },
   });
-  if (!res.ok) throw new Error(`Zoho user API failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    logger.error('Zoho user API failed', { url, status: res.status, response: body });
+    throw new Error(`Zoho user API failed: ${res.status}`);
+  }
   return res.json();
 };
 
