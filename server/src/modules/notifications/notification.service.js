@@ -108,6 +108,19 @@ export const createAndSend = async ({
     }
   }
 
+  // Zoho Cliq team channel — one broadcast per event, not per recipient.
+  // Dedup key is reference-scoped so a bulk send (e.g. meeting to 5 staff) posts once.
+  if (type && referenceId && !dedupCache.has(`cliq_${referenceId}`)) {
+    dedupCache.set(`cliq_${referenceId}`, true);
+    setTimeout(() => dedupCache.delete(`cliq_${referenceId}`), DEDUP_TTL);
+    try {
+      const { sendCliqMessage } = await import('../../services/cliqService.js');
+      await sendCliqMessage({ title, message, link });
+    } catch (err) {
+      logger.error(`Cliq send failed for notification: ${err.message}`);
+    }
+  }
+
   return notification;
 };
 

@@ -39,6 +39,9 @@ const config = {
     fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@rudhramenterprises.com',
     fromName: process.env.RESEND_FROM_NAME || 'Rudhram',
   },
+  cliq: {
+    webhookUrl: process.env.ZOHO_CLIQ_WEBHOOK_URL || '',
+  },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',
