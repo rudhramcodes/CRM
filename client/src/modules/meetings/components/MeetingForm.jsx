@@ -11,7 +11,7 @@ import TimePicker from '../../../components/forms/TimePicker';
 import LinkInput from '../../../components/forms/LinkInput';
 import Button from '../../../components/ui/Button';
 import { MEETING_STATUS } from '../../../constants';
-import { useCreateMeetingMutation, useUpdateMeetingMutation } from '../../../services/meetingApi';
+import { useCreateMeetingMutation, useGenerateMeetingLinkMutation, useUpdateMeetingMutation } from '../../../services/meetingApi';
 import { useGetUsersQuery } from '../../../services/userApi';
 
 const REPEAT_OPTIONS = [
@@ -43,6 +43,7 @@ const meetingFormSchema = z
 export default function MeetingForm({ meeting, onSuccess, onCancel }) {
   const [createMeeting, { isLoading: isCreating }] = useCreateMeetingMutation();
   const [updateMeeting, { isLoading: isUpdating }] = useUpdateMeetingMutation();
+  const [generateMeetingLink, { isLoading: isGeneratingLink }] = useGenerateMeetingLinkMutation();
   const { data: usersData } = useGetUsersQuery({ limit: 100 });
   const isEditing = !!meeting;
 
@@ -77,11 +78,27 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(meetingFormSchema),
     values: formValues,
   });
+
+  const onAutoGenerateLink = async () => {
+    const { title, date, startTime, endTime } = watch();
+    if (!title || !date || !startTime || !endTime) {
+      toast.error('Fill title, date and time first to auto-generate a Zoho Meeting link');
+      return;
+    }
+    try {
+      const { link } = await generateMeetingLink({ title, date, startTime, endTime }).unwrap();
+      setValue('meetingLink', link, { shouldValidate: true });
+      toast.success('Zoho Meeting link generated');
+    } catch (error) {
+      toast.error(error?.data?.message || 'Could not generate link');
+    }
+  };
 
   const onSubmit = async (data) => {
     try {
@@ -179,13 +196,23 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
             <div>
               <LinkInput
                 label="Meeting Link"
-                placeholder="https://meet.google.com/abc-defg-hij"
+                placeholder="https://meet.zoho.com/abc123"
                 value={field.value}
                 onChange={field.onChange}
                 error={errors.meetingLink?.message}
               />
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={onAutoGenerateLink}
+                  disabled={isGeneratingLink}
+                  className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGeneratingLink ? 'Generating...' : '⚡ Auto-generate Zoho Meeting link'}
+                </button>
+              </div>
               <p className="text-[11px] text-zinc-400 mt-1">
-                Leave blank to auto-generate a Google Meet link when Google Calendar is configured.
+                Leave blank to auto-generate a Zoho Meeting link when Zoho is connected.
               </p>
             </div>
           )}

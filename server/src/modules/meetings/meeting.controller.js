@@ -62,6 +62,15 @@ export const remove = async (req, res, next) => {
   }
 };
 
+export const generateLink = async (req, res, next) => {
+  try {
+    const link = await meetingService.generateLinkPreview(req.body);
+    ApiResponse.success(res, 200, { link }, 'Zoho Meeting link generated');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const regenerateMeetLink = async (req, res, next) => {
   try {
     const meeting = await meetingService.regenerateMeetLink(req.params.id);

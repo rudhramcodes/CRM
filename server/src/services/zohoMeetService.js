@@ -133,12 +133,16 @@ export const exchangeCode = async (code, redirectUri, accountsServer = '') => {
 
   try {
     const orgInfo = await getOrgInfo(access_token);
-    if (orgInfo?.zsoid) {
+    // Zoho returns org id as userDetails.zsoid (number, not top-level)
+    const zsoid = orgInfo?.userDetails?.zsoid;
+    if (zsoid) {
       await Setting.findOneAndUpdate(
         { key: 'zohoOrgId' },
-        { $set: { key: 'zohoOrgId', value: orgInfo.zsoid } },
+        { $set: { key: 'zohoOrgId', value: String(zsoid) } },
         { upsert: true, new: true },
       );
+    } else {
+      logger.warn('Zoho user API returned no zsoid', { response: orgInfo });
     }
   } catch (err) {
     logger.warn('Could not fetch Zoho org ID', { error: err.message });
@@ -242,7 +246,27 @@ export const generateMeetLink = async ({ title, date, startTime, endTime, attend
     return null;
   }
 
-  if (!creds.orgId) {
+  // Self-heal: if org ID missing (e.g. OAuth connected before zsoid parsing was fixed), fetch it now
+  let orgId = creds.orgId;
+  if (!orgId) {
+    try {
+      const accessToken = await refreshAccessToken();
+      const orgInfo = await getOrgInfo(accessToken);
+      const zsoid = orgInfo?.userDetails?.zsoid;
+      if (zsoid) {
+        orgId = String(zsoid);
+        await Setting.findOneAndUpdate(
+          { key: 'zohoOrgId' },
+          { $set: { key: 'zohoOrgId', value: orgId } },
+          { upsert: true, new: true },
+        );
+      }
+    } catch (err) {
+      logger.warn('Zoho org ID self-heal failed', { error: err.message });
+    }
+  }
+
+  if (!orgId) {
     logger.warn('Zoho org ID not found — run OAuth flow first');
     return null;
   }
@@ -263,7 +287,7 @@ export const generateMeetLink = async ({ title, date, startTime, endTime, attend
       },
     };
 
-    const res = await fetch(`${await getMeetingApi()}/${creds.orgId}/sessions.json`, {
+    const res = await fetch(`${await getMeetingApi()}/${orgId}/sessions.json`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),

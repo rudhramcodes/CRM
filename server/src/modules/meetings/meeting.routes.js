@@ -10,6 +10,7 @@ import {
   addActionItemSchema,
   updateActionItemSchema,
   convertActionItemSchema,
+  generateLinkSchema,
   meetingsQuerySchema,
 } from './meeting.validation.js';
 
@@ -76,6 +77,13 @@ router.post(
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
   validate(convertActionItemSchema),
   meetingController.convertActionItem,
+);
+
+router.post(
+  '/generate-link',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  validate(generateLinkSchema),
+  meetingController.generateLink,
 );
 
 router.post(

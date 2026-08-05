@@ -25,6 +25,14 @@ export const meetingApi = api.injectEndpoints({
       invalidatesTags: ['Meeting'],
     }),
 
+    generateMeetingLink: builder.mutation({
+      query: (body) => ({
+        url: '/meetings/generate-link',
+        method: 'POST',
+        body,
+      }),
+    }),
+
     updateMeeting: builder.mutation({
       query: ({ id, ...body }) => ({
         url: `/meetings/${id}`,
@@ -112,6 +120,7 @@ export const {
   useGetMeetingsQuery,
   useGetMeetingByIdQuery,
   useCreateMeetingMutation,
+  useGenerateMeetingLinkMutation,
   useUpdateMeetingMutation,
   useUpdateMeetingNotesMutation,
   useDeleteMeetingMutation,

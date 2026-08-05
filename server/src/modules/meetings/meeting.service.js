@@ -217,6 +217,22 @@ export const getMeetingById = async (id) => {
   return meeting;
 };
 
+export const generateLinkPreview = async (data) => {
+  const link = await generateMeetLink({
+    title: data.title,
+    date: data.date,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    attendees: [],
+  });
+  if (!link) {
+    throw ApiError.badRequest(
+      'Could not generate a Zoho Meeting link. Connect Zoho Meetings in Settings first.',
+    );
+  }
+  return link;
+};
+
 export const regenerateMeetLink = async (id) => {
   const meeting = await meetingRepository.findById(id);
   if (!meeting) {

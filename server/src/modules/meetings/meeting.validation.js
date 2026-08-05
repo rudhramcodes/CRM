@@ -92,6 +92,13 @@ export const updateMeetingSchema = z
     { message: 'End time must be after start time', path: ['endTime'] },
   );
 
+export const generateLinkSchema = z.object({
+  title: z.string().min(2, 'Title must be at least 2 characters').max(200),
+  date: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date'),
+  startTime: z.string().regex(TIME_REGEX, 'Start time must be in HH:mm format'),
+  endTime: z.string().regex(TIME_REGEX, 'End time must be in HH:mm format'),
+});
+
 export const meetingNotesSchema = z.object({
   notes: z.string().max(5000, 'Notes must not exceed 5000 characters'),
 });
