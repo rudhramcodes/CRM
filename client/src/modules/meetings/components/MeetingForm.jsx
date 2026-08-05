@@ -12,6 +12,14 @@ import LinkInput from '../../../components/forms/LinkInput';
 import Button from '../../../components/ui/Button';
 import { MEETING_STATUS } from '../../../constants';
 import { useCreateMeetingMutation, useUpdateMeetingMutation } from '../../../services/meetingApi';
+import { useGetUsersQuery } from '../../../services/userApi';
+
+const REPEAT_OPTIONS = [
+  { value: 'none', label: 'Does not repeat' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+];
 
 const meetingFormSchema = z
   .object({
@@ -23,6 +31,9 @@ const meetingFormSchema = z
     location: z.string().max(200).optional().or(z.literal('')),
     notes: z.string().max(5000).optional().or(z.literal('')),
     status: z.string().optional(),
+    attendees: z.array(z.string()).default([]),
+    recurrenceType: z.string().optional(),
+    recurrenceOccurrences: z.coerce.number().int().min(2).max(100).optional(),
   })
   .refine((data) => data.startTime < data.endTime, {
     message: 'End time must be after start time',
@@ -32,7 +43,10 @@ const meetingFormSchema = z
 export default function MeetingForm({ meeting, onSuccess, onCancel }) {
   const [createMeeting, { isLoading: isCreating }] = useCreateMeetingMutation();
   const [updateMeeting, { isLoading: isUpdating }] = useUpdateMeetingMutation();
+  const { data: usersData } = useGetUsersQuery({ limit: 100 });
   const isEditing = !!meeting;
+
+  const users = (usersData?.data?.users || []).filter((u) => u.role !== 'client');
 
   const formValues = useMemo(() => meeting ? ({
     title: meeting.title || '',
@@ -43,6 +57,8 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
     location: meeting.location || '',
     notes: meeting.notes || '',
     status: meeting.status || 'scheduled',
+    attendees: (meeting.attendees || []).map((a) => a?._id || a),
+    recurrenceType: 'none',
   }) : {
     title: '',
     date: '',
@@ -52,12 +68,15 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
     location: '',
     notes: '',
     status: 'scheduled',
+    attendees: [],
+    recurrenceType: 'none',
   }, [meeting]);
 
   const {
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(meetingFormSchema),
@@ -75,7 +94,15 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
         location: data.location || undefined,
         notes: data.notes || undefined,
         status: data.status || 'scheduled',
+        attendees: data.attendees || [],
       };
+      if (!isEditing && data.recurrenceType && data.recurrenceType !== 'none') {
+        payload.recurrence = {
+          type: data.recurrenceType,
+          interval: 1,
+          occurrences: data.recurrenceOccurrences || 3,
+        };
+      }
 
       if (isEditing) {
         await updateMeeting({ id: meeting._id, ...payload }).unwrap();
@@ -149,13 +176,18 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
           name="meetingLink"
           control={control}
           render={({ field }) => (
-            <LinkInput
-              label="Meeting Link"
-              placeholder="https://meet.google.com/abc-defg-hij"
-              value={field.value}
-              onChange={field.onChange}
-              error={errors.meetingLink?.message}
-            />
+            <div>
+              <LinkInput
+                label="Meeting Link"
+                placeholder="https://meet.google.com/abc-defg-hij"
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.meetingLink?.message}
+              />
+              <p className="text-[11px] text-zinc-400 mt-1">
+                Leave blank to auto-generate a Google Meet link when Google Calendar is configured.
+              </p>
+            </div>
           )}
         />
 
@@ -173,7 +205,72 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
           options={MEETING_STATUS}
           error={errors.status?.message}
         />
+
+        {!isEditing && (
+          <>
+            <FormSelect
+              name="recurrenceType"
+              control={control}
+              label="Repeat"
+              options={REPEAT_OPTIONS}
+              error={errors.recurrenceType?.message}
+            />
+            {watch('recurrenceType') !== 'none' && (
+              <FormInput
+                type="number"
+                label="Occurrences"
+                placeholder="3"
+                min={2}
+                max={100}
+                error={errors.recurrenceOccurrences?.message}
+                {...register('recurrenceOccurrences')}
+              />
+            )}
+          </>
+        )}
       </div>
+
+      <Controller
+        name="attendees"
+        control={control}
+        render={({ field }) => (
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-zinc-700">
+              Attendees {users.length > 0 && <span className="text-xs text-zinc-400">({field.value.length} selected)</span>}
+            </label>
+            {users.length === 0 ? (
+              <p className="text-xs text-zinc-400">No staff users available</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 p-3">
+                {users.map((u) => {
+                  const checked = field.value.includes(u._id);
+                  return (
+                    <label
+                      key={u._id}
+                      className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-zinc-50"
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-zinc-300 accent-indigo-600"
+                        checked={checked}
+                        onChange={() =>
+                          field.onChange(
+                            checked
+                              ? field.value.filter((id) => id !== u._id)
+                              : [...field.value, u._id]
+                          )
+                        }
+                      />
+                      <span className="truncate">{u.name || u.email}</span>
+                      <span className="ml-auto text-[11px] uppercase tracking-wide text-zinc-400">{u.role}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      />
 
       <FormTextarea
         label="Discussion Notes"

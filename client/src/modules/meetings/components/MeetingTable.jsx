@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Calendar, Clock, ExternalLink } from 'lucide-react';
+import { Edit2, Trash2, Calendar, Clock, ExternalLink, Repeat } from 'lucide-react';
 import MeetingStatusBadge from './MeetingStatusBadge';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
@@ -73,7 +73,18 @@ export default function MeetingTable({
                       <Calendar className="w-4 h-4 text-primary-900" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-primary-900">{meeting.title}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-primary-900">{meeting.title}</p>
+                        {meeting.seriesId && (
+                          <span
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary-50 text-primary-900/70 text-[10px] font-medium"
+                            title="Part of a recurring series"
+                          >
+                            <Repeat className="w-2.5 h-2.5" />
+                            Repeats
+                          </span>
+                        )}
+                      </div>
                       {meeting.meetingLink && (
                         <a
                           href={meeting.meetingLink}

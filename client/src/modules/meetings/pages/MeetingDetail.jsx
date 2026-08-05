@@ -13,12 +13,22 @@ import {
   FileText,
   Save,
   X,
+  Users,
+  CheckCircle2,
+  Circle,
+  Plus,
+  RefreshCcw,
 } from 'lucide-react';
 import {
   useGetMeetingByIdQuery,
   useDeleteMeetingMutation,
   useUpdateMeetingNotesMutation,
+  useAddActionItemMutation,
+  useUpdateActionItemMutation,
+  useRemoveActionItemMutation,
+  useConvertActionItemMutation,
 } from '../../../services/meetingApi';
+import { useGetProjectsQuery } from '../../../services/projectApi';
 import MeetingStatusBadge from '../components/MeetingStatusBadge';
 import MeetingForm from '../components/MeetingForm';
 import Button from '../../../components/ui/Button';
@@ -38,10 +48,20 @@ export default function MeetingDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState('');
+  const [newItemText, setNewItemText] = useState('');
+  const [convertTargets, setConvertTargets] = useState({});
+  const [busyItem, setBusyItem] = useState(null);
 
   const { data: meetingData, isLoading, error } = useGetMeetingByIdQuery(id);
   const [deleteMeeting, { isLoading: isDeleting }] = useDeleteMeetingMutation();
   const [updateNotes, { isLoading: isSavingNotes }] = useUpdateMeetingNotesMutation();
+  const [addActionItem, { isLoading: isAddingItem }] = useAddActionItemMutation();
+  const [updateActionItem] = useUpdateActionItemMutation();
+  const [removeActionItem] = useRemoveActionItemMutation();
+  const [convertActionItem] = useConvertActionItemMutation();
+  const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
+
+  const projects = projectsData?.data?.projects || projectsData?.data || [];
 
   const meeting = meetingData?.data?.meeting;
 
@@ -56,7 +76,7 @@ export default function MeetingDetail() {
 
   const confirmDelete = useCallback(async () => {
     try {
-      await deleteMeeting(id).unwrap();
+      await deleteMeeting({ id }).unwrap();
       toast.success('Meeting deleted successfully');
       navigate('/meetings');
     } catch (error) {
@@ -71,6 +91,62 @@ export default function MeetingDetail() {
       setEditingNotes(false);
     } catch (error) {
       toast.error(error?.data?.message || 'Failed to update notes');
+    }
+  };
+
+  const handleAddItem = async (e) => {
+    e.preventDefault();
+    if (!newItemText.trim()) return;
+    try {
+      await addActionItem({ id, text: newItemText.trim() }).unwrap();
+      setNewItemText('');
+      toast.success('Action item added');
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to add action item');
+    }
+  };
+
+  const handleToggleItem = async (item) => {
+    setBusyItem(item._id);
+    try {
+      await updateActionItem({
+        id,
+        itemId: item._id,
+        status: item.status === 'done' ? 'pending' : 'done',
+      }).unwrap();
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to update action item');
+    } finally {
+      setBusyItem(null);
+    }
+  };
+
+  const handleRemoveItem = async (itemId) => {
+    setBusyItem(itemId);
+    try {
+      await removeActionItem({ id, itemId }).unwrap();
+      toast.success('Action item removed');
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to remove action item');
+    } finally {
+      setBusyItem(null);
+    }
+  };
+
+  const handleConvert = async (item) => {
+    const projectId = convertTargets[item._id];
+    if (!projectId) {
+      toast.error('Select a project to convert to');
+      return;
+    }
+    setBusyItem(item._id);
+    try {
+      await convertActionItem({ id, itemId: item._id, projectId }).unwrap();
+      toast.success('Action item converted to task');
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to convert to task');
+    } finally {
+      setBusyItem(null);
     }
   };
 
@@ -209,6 +285,31 @@ export default function MeetingDetail() {
             </div>
           )}
 
+          {/* Attendees */}
+          {meeting.attendees?.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-zinc-100">
+              <div className="flex items-center gap-3">
+                <Users className="w-4 h-4 text-zinc-400 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-zinc-400">Attendees ({meeting.attendees.length})</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {meeting.attendees.map((a) => (
+                      <span
+                        key={a?._id || a}
+                        className="inline-flex items-center gap-1.5 text-xs text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-full px-2.5 py-1"
+                      >
+                        <span className="w-5 h-5 rounded-full bg-primary-50 text-primary-900 flex items-center justify-center text-[10px] font-semibold uppercase">
+                          {(a?.name || '?')[0]}
+                        </span>
+                        {a?.name || a?.email || '—'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Meeting Link */}
           {meeting.meetingLink && (
             <div className="mt-4 pt-4 border-t border-zinc-100">
@@ -307,6 +408,124 @@ export default function MeetingDetail() {
                 <span className="text-zinc-400 italic">No discussion notes yet.</span>
               )}
             </p>
+          )}
+        </div>
+      </div>
+
+      {/* Action Items */}
+      <div className="bg-white rounded-xl border border-zinc-200">
+        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-primary-900 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            Action Items
+            {meeting.actionItems?.length > 0 && (
+              <span className="text-xs font-normal text-zinc-400">
+                ({meeting.actionItems.filter((i) => i.status === 'done').length}/{meeting.actionItems.length} done)
+              </span>
+            )}
+          </h3>
+        </div>
+        <div className="px-6 py-4 space-y-3">
+          {(meeting.actionItems || []).length === 0 && (
+            <p className="text-sm text-zinc-400 italic">No action items yet.</p>
+          )}
+
+          <ul className="space-y-2">
+            {meeting.actionItems?.map((item) => {
+              const done = item.status === 'done';
+              const isBusy = busyItem === item._id;
+              return (
+                <li
+                  key={item._id}
+                  className="flex items-start gap-3 rounded-lg border border-zinc-100 px-3 py-2.5"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleToggleItem(item)}
+                    disabled={isBusy}
+                    className="mt-0.5 shrink-0 text-zinc-400 hover:text-primary-900 disabled:opacity-50"
+                    title={done ? 'Mark pending' : 'Mark done'}
+                  >
+                    {done ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <Circle className="w-5 h-5" />
+                    )}
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm ${done ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                      {item.text}
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {item.assignee?.name && <>Assignee: {item.assignee.name} · </>}
+                      {item.dueDate && <>Due: {formatDate(item.dueDate)} · </>}
+                      {item.convertedToTask && (
+                        <span className="inline-flex items-center gap-1 text-primary-900">
+                          <RefreshCcw className="w-3 h-3" /> Converted to task
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {canManage && !item.convertedToTask && (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={convertTargets[item._id] || ''}
+                          onChange={(e) =>
+                            setConvertTargets((prev) => ({ ...prev, [item._id]: e.target.value }))
+                          }
+                          className="text-xs border border-zinc-200 rounded-md px-2 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-1 focus:ring-primary-900"
+                        >
+                          <option value="">To project…</option>
+                          {projects.map((p) => (
+                            <option key={p._id} value={p._id}>{p.title}</option>
+                          ))}
+                        </select>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleConvert(item)}
+                          loading={isBusy}
+                          disabled={!convertTargets[item._id]}
+                        >
+                          Convert
+                        </Button>
+                      </div>
+                    )}
+                    {canManage && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveItem(item._id)}
+                        loading={isBusy}
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {canManage && (
+            <form onSubmit={handleAddItem} className="flex items-center gap-2 pt-1">
+              <input
+                value={newItemText}
+                onChange={(e) => setNewItemText(e.target.value)}
+                placeholder="Add an action item…"
+                className="flex-1 text-sm px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900"
+              />
+              <Button type="submit" size="sm" loading={isAddingItem}>
+                <Plus className="w-3.5 h-3.5" />
+                Add
+              </Button>
+            </form>
           )}
         </div>
       </div>

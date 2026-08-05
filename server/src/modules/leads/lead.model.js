@@ -90,6 +90,10 @@ const leadSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -106,6 +110,7 @@ leadSchema.index({ phone: 1 });
 leadSchema.index({ status: 1 });
 leadSchema.index({ assignedTo: 1 });
 leadSchema.index({ source: 1 });
+leadSchema.index({ isDeleted: 1 });
 leadSchema.index({ createdAt: -1 });
 leadSchema.index({ name: 'text', email: 'text', company: 'text' });
 

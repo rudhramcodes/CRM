@@ -21,8 +21,12 @@ export const getById = async (req, res, next) => {
 
 export const create = async (req, res, next) => {
   try {
-    const meeting = await meetingService.createMeeting(req.body, req.user);
-    ApiResponse.created(res, { meeting }, 'Meeting scheduled successfully');
+    const result = await meetingService.createMeeting(req.body, req.user);
+    if (result.meetings) {
+      ApiResponse.created(res, result, 'Meeting series scheduled successfully');
+    } else {
+      ApiResponse.created(res, { meeting: result }, 'Meeting scheduled successfully');
+    }
   } catch (error) {
     next(error);
   }
@@ -48,8 +52,61 @@ export const updateNotes = async (req, res, next) => {
 
 export const remove = async (req, res, next) => {
   try {
-    await meetingService.deleteMeeting(req.params.id);
-    ApiResponse.success(res, 200, null, 'Meeting deleted successfully');
+    const { allSeries } = req.query;
+    const result = await meetingService.deleteMeeting(req.params.id, {
+      allSeries: allSeries === 'true',
+    });
+    ApiResponse.success(res, 200, result, 'Meeting deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const regenerateMeetLink = async (req, res, next) => {
+  try {
+    const meeting = await meetingService.regenerateMeetLink(req.params.id);
+    ApiResponse.success(res, 200, { meeting }, 'Meeting link regenerated');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addActionItem = async (req, res, next) => {
+  try {
+    const meeting = await meetingService.addActionItem(req.params.id, req.body);
+    ApiResponse.success(res, 201, { meeting, actionItems: meeting.actionItems }, 'Action item added');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateActionItem = async (req, res, next) => {
+  try {
+    const meeting = await meetingService.updateActionItem(req.params.id, req.params.itemId, req.body);
+    ApiResponse.success(res, 200, { meeting }, 'Action item updated');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeActionItem = async (req, res, next) => {
+  try {
+    const meeting = await meetingService.removeActionItem(req.params.id, req.params.itemId);
+    ApiResponse.success(res, 200, { meeting }, 'Action item removed');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const convertActionItem = async (req, res, next) => {
+  try {
+    const result = await meetingService.convertActionItemToTask(
+      req.params.id,
+      req.params.itemId,
+      req.body.projectId,
+      req.user,
+    );
+    ApiResponse.success(res, 200, result, 'Action item converted to task');
   } catch (error) {
     next(error);
   }

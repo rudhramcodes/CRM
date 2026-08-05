@@ -1,6 +1,41 @@
 import mongoose from 'mongoose';
 import { MEETING_STATUS } from '../../constants/index.js';
 
+const actionItemSchema = new mongoose.Schema(
+  {
+    text: {
+      type: String,
+      required: [true, 'Action item text is required'],
+      trim: true,
+      maxlength: 500,
+    },
+    assignee: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    dueDate: {
+      type: Date,
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'done'],
+      default: 'pending',
+    },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+    convertedToTask: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Task',
+      default: null,
+    },
+  },
+  { timestamps: true },
+);
+
 const meetingSchema = new mongoose.Schema(
   {
     title: {
@@ -61,6 +96,26 @@ const meetingSchema = new mongoose.Schema(
       ref: 'Client',
       default: null,
     },
+    attendees: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    actionItems: [actionItemSchema],
+    seriesId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    seriesType: {
+      type: String,
+      enum: ['none', 'daily', 'weekly', 'monthly'],
+      default: 'none',
+    },
+    occurrenceIndex: {
+      type: Number,
+      default: 0,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -91,6 +146,7 @@ meetingSchema.index({ status: 1 });
 meetingSchema.index({ lead: 1 });
 meetingSchema.index({ client: 1 });
 meetingSchema.index({ date: 1, startTime: 1 });
+meetingSchema.index({ seriesId: 1 });
 
 const Meeting = mongoose.model('Meeting', meetingSchema);
 

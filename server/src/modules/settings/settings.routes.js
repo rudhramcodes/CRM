@@ -7,7 +7,14 @@ import { ROLES } from '../../constants/index.js';
 
 const router = Router();
 
+// Public: Google OAuth callback (Google redirects here with ?code=, no app JWT)
+router.get('/google/callback', settingsController.googleCallback);
+
 router.use(verifyToken);
+
+// Google Meet OAuth 2.0 (admin+)
+router.get('/google/auth-url', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), settingsController.getGoogleAuthUrl);
+router.post('/google/disconnect', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), settingsController.disconnectGoogle);
 
 // Notification preferences (any authenticated user)
 router.get('/notifications', settingsController.getNotifPrefs);

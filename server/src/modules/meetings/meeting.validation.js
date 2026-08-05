@@ -4,6 +4,35 @@ import { MEETING_STATUS } from '../../constants/index.js';
 const MEETING_STATUS_LIST = Object.values(MEETING_STATUS);
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid ID');
+
+const actionItemInputSchema = z.object({
+  text: z.string().trim().min(1, 'Action item text is required').max(500, 'Action item must not exceed 500 characters'),
+  assignee: objectId.optional().nullable(),
+  dueDate: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid due date').optional().nullable(),
+});
+
+const recurrenceSchema = z
+  .object({
+    type: z.enum(['none', 'daily', 'weekly', 'monthly']).default('none'),
+    interval: z.coerce.number().int().min(1).max(30).default(1),
+    occurrences: z.coerce.number().int().min(2).max(60).optional(),
+    endDate: z
+      .string()
+      .refine((val) => !isNaN(Date.parse(val)), 'Invalid end date')
+      .optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (val.type === 'none') return;
+    if (!val.occurrences && !val.endDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Recurring meetings need either occurrences or an end date',
+        path: ['recurrence'],
+      });
+    }
+  });
+
 export const createMeetingSchema = z
   .object({
     title: z
@@ -20,6 +49,9 @@ export const createMeetingSchema = z
     lead: z.string().optional().nullable(),
     client: z.string().optional().nullable(),
     status: z.enum(MEETING_STATUS_LIST).optional(),
+    attendees: z.array(objectId).optional(),
+    actionItems: z.array(actionItemInputSchema).optional(),
+    recurrence: recurrenceSchema.optional(),
   })
   .refine(
     (data) => {
@@ -47,6 +79,8 @@ export const updateMeetingSchema = z
     lead: z.string().optional().nullable(),
     client: z.string().optional().nullable(),
     status: z.enum(MEETING_STATUS_LIST).optional(),
+    attendees: z.array(objectId).optional(),
+    actionItems: z.array(actionItemInputSchema).optional(),
   })
   .refine(
     (data) => {
@@ -60,6 +94,19 @@ export const updateMeetingSchema = z
 
 export const meetingNotesSchema = z.object({
   notes: z.string().max(5000, 'Notes must not exceed 5000 characters'),
+});
+
+export const addActionItemSchema = actionItemInputSchema;
+
+export const updateActionItemSchema = z.object({
+  text: z.string().trim().min(1).max(500).optional(),
+  assignee: objectId.optional().nullable(),
+  dueDate: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid due date').optional().nullable(),
+  status: z.enum(['pending', 'done']).optional(),
+});
+
+export const convertActionItemSchema = z.object({
+  projectId: objectId,
 });
 
 export const meetingsQuerySchema = z.object({

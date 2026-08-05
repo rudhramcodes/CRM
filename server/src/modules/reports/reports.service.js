@@ -82,7 +82,7 @@ export const getRevenueReport = async (from, to) => {
 // ── Pipeline Report ──
 export const getPipelineReport = async (from, to) => {
   const dateFilter = buildDateFilter(from, to);
-  const matchStage = dateFilter ? { createdAt: dateFilter } : {};
+  const matchStage = { isDeleted: false, ...(dateFilter ? { createdAt: dateFilter } : {}) };
 
   // Leads by status
   const byStatus = await Lead.aggregate([

@@ -1,22 +1,44 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Clock, ChevronDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const HOURS12 = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')); // 01..12
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+const PERIODS = ['AM', 'PM'];
+
+// 24h "HH:mm" -> display parts (hour 1-12, minute 2-digit, period)
+const toParts = (value) => {
+  if (!value) return { hour: '09', minute: '00', period: 'AM' };
+  const [h, m] = value.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return { hour: '09', minute: '00', period: 'AM' };
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return {
+    hour: String(hour12).padStart(2, '0'),
+    minute: String(m).padStart(2, '0'),
+    period: h >= 12 ? 'PM' : 'AM',
+  };
+};
+
+// display parts -> 24h "HH:mm"
+const to24 = (hour, minute, period) => {
+  let h = Number(hour) % 12; // 12 -> 0
+  if (period === 'PM') h += 12;
+  return `${String(h).padStart(2, '0')}:${minute}`;
+};
 
 export default function TimePicker({ value, onChange, label, error }) {
   const [open, setOpen] = useState(false);
-  const [hours, setHours] = useState('10');
-  const [minutes, setMinutes] = useState('00');
   const dropdownRef = useRef(null);
+  const initial = useMemo(() => toParts(value), [value]);
+  const [hour, setHour] = useState(initial.hour);
+  const [minute, setMinute] = useState(initial.minute);
+  const [period, setPeriod] = useState(initial.period);
 
   useEffect(() => {
-    if (value) {
-      const [h, m] = value.split(':');
-      if (h) setHours(h);
-      if (m) setMinutes(m);
-    }
+    const parts = toParts(value);
+    setHour(parts.hour);
+    setMinute(parts.minute);
+    setPeriod(parts.period);
   }, [value]);
 
   useEffect(() => {
@@ -30,17 +52,26 @@ export default function TimePicker({ value, onChange, label, error }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  const emit = (h, m, p) => onChange?.(to24(h, m, p));
+
   const handleHourChange = (h) => {
-    setHours(h);
-    onChange?.(`${h}:${minutes}`);
+    setHour(h);
+    emit(h, period === 'PM' ? minute : minute, period);
   };
 
   const handleMinuteChange = (m) => {
-    setMinutes(m);
-    onChange?.(`${hours}:${m}`);
+    setMinute(m);
+    emit(hour, m, period);
   };
 
-  const displayTime = value || `${hours}:${minutes}`;
+  const handlePeriodChange = (p) => {
+    setPeriod(p);
+    emit(hour, minute, p);
+  };
+
+  const displayTime = value
+    ? `${toParts(value).hour}:${toParts(value).minute} ${toParts(value).period}`
+    : `${hour}:${minute} ${period}`;
 
   return (
     <div className="space-y-1.5" ref={dropdownRef}>
@@ -65,20 +96,20 @@ export default function TimePicker({ value, onChange, label, error }) {
         {open && (
           <div className="absolute top-full left-0 mt-1 w-full bg-white border border-zinc-200 rounded-lg shadow-lg z-50 overflow-hidden">
             <div className="flex divide-x divide-zinc-100">
-              {/* Hours */}
+              {/* Hours 1-12 */}
               <div className="flex-1">
                 <div className="px-2 py-1.5 text-[11px] font-medium text-zinc-400 text-center border-b border-zinc-100 bg-zinc-50/50">
                   HH
                 </div>
                 <div className="overflow-y-auto max-h-48 scroll-smooth">
-                  {HOURS.map((h) => (
+                  {HOURS12.map((h) => (
                     <button
                       key={h}
                       type="button"
                       onClick={() => handleHourChange(h)}
                       className={cn(
                         'w-full px-2 py-1.5 text-sm text-center font-mono transition-colors hover:bg-zinc-50',
-                        hours === h
+                        hour === h
                           ? 'bg-primary-50 text-primary-900 font-semibold'
                           : 'text-zinc-600',
                       )}
@@ -102,12 +133,36 @@ export default function TimePicker({ value, onChange, label, error }) {
                       onClick={() => handleMinuteChange(m)}
                       className={cn(
                         'w-full px-2 py-1.5 text-sm text-center font-mono transition-colors hover:bg-zinc-50',
-                        minutes === m
+                        minute === m
                           ? 'bg-primary-50 text-primary-900 font-semibold'
                           : 'text-zinc-600',
                       )}
                     >
                       {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* AM/PM */}
+              <div className="flex-1">
+                <div className="px-2 py-1.5 text-[11px] font-medium text-zinc-400 text-center border-b border-zinc-100 bg-zinc-50/50">
+                  &
+                </div>
+                <div className="overflow-y-auto max-h-48 scroll-smooth">
+                  {PERIODS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handlePeriodChange(p)}
+                      className={cn(
+                        'w-full px-2 py-1.5 text-sm text-center font-mono transition-colors hover:bg-zinc-50',
+                        period === p
+                          ? 'bg-primary-50 text-primary-900 font-semibold'
+                          : 'text-zinc-600',
+                      )}
+                    >
+                      {p}
                     </button>
                   ))}
                 </div>

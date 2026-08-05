@@ -1,4 +1,5 @@
 import ApiError from '../../utils/ApiError.js';
+import config from '../../config/index.js';
 import { UserPreference, Setting } from './settings.model.js';
 import * as authRepository from '../auth/auth.repository.js';
 import { ROLE_PERMISSIONS } from '../../constants/index.js';
@@ -110,15 +111,22 @@ export const updateSecuritySettings = async (data) => {
   return getSecuritySettings();
 };
 
-// ── Integration Settings (Resend, third-party keys) ──
+// ── Integration Settings (Resend, Google Meet, third-party keys) ──
 
 const INTEGRATION_KEYS = [
   'resendFromEmail', 'resendFromName',
+  'googleClientEmail', 'googlePrivateKey', 'googleCalendarId',
+  'googleClientId', 'googleClientSecret',
 ];
 
 const INTEGRATION_DEFAULTS = {
   resendFromEmail: '',
   resendFromName: '',
+  googleClientEmail: '',
+  googlePrivateKey: '',
+  googleCalendarId: '',
+  googleClientId: '',
+  googleClientSecret: '',
 };
 
 export const getIntegrationSettings = async () => {
@@ -128,6 +136,9 @@ export const getIntegrationSettings = async () => {
   if (!result.resendFromEmail) result.resendFromEmail = config.resend.fromEmail;
   if (!result.resendFromName) result.resendFromName = config.resend.fromName;
   result.resendConfigured = !!config.resend.apiKey;
+  result.googleConfigured = !!(result.googleClientEmail && result.googlePrivateKey);
+  const hasOAuth = await Setting.findOne({ key: 'googleRefreshToken' });
+  result.googleConnected = Boolean(hasOAuth?.value);
   return result;
 };
 

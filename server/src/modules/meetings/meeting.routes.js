@@ -7,6 +7,9 @@ import {
   createMeetingSchema,
   updateMeetingSchema,
   meetingNotesSchema,
+  addActionItemSchema,
+  updateActionItemSchema,
+  convertActionItemSchema,
   meetingsQuerySchema,
 } from './meeting.validation.js';
 
@@ -46,6 +49,39 @@ router.patch(
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
   validate(meetingNotesSchema),
   meetingController.updateNotes,
+);
+
+router.post(
+  '/:id/action-items',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  validate(addActionItemSchema),
+  meetingController.addActionItem,
+);
+
+router.patch(
+  '/:id/action-items/:itemId',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  validate(updateActionItemSchema),
+  meetingController.updateActionItem,
+);
+
+router.delete(
+  '/:id/action-items/:itemId',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  meetingController.removeActionItem,
+);
+
+router.post(
+  '/:id/action-items/:itemId/convert',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  validate(convertActionItemSchema),
+  meetingController.convertActionItem,
+);
+
+router.post(
+  '/:id/regenerate-meet-link',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  meetingController.regenerateMeetLink,
 );
 
 router.delete(

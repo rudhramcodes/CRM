@@ -8,7 +8,9 @@ export default function ConfirmDialog({ open, onClose, onConfirm, title, message
       {children}
       <div className="flex justify-end gap-2 mt-4">
         <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-        <Button variant={variant} size="sm" onClick={onConfirm}>{confirmLabel}</Button>
+        {onConfirm && (
+          <Button variant={variant} size="sm" onClick={onConfirm}>{confirmLabel}</Button>
+        )}
       </div>
     </Modal>
   );

@@ -44,4 +44,9 @@ export const updateSecuritySchema = z.object({
 export const updateIntegrationSchema = z.object({
   resendFromEmail: z.string().email().optional(),
   resendFromName: z.string().max(100).optional(),
+  googleClientEmail: z.string().email().optional().or(z.literal('')),
+  googlePrivateKey: z.string().min(10).optional().or(z.literal('')),
+  googleCalendarId: z.string().optional(),
+  googleClientId: z.string().min(10).optional().or(z.literal('')),
+  googleClientSecret: z.string().min(10).optional().or(z.literal('')),
 });

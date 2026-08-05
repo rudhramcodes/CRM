@@ -26,3 +26,4 @@ advanced-task-management.md
 .playwright-mcp
 # local email preview (never shipped)
 server/scripts/email-preview/
+QA_BUG_REPORT.md

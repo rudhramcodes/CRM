@@ -6,7 +6,7 @@ export const create = async (data) => {
 };
 
 export const findById = async (id) => {
-  return Lead.findById(id)
+  return Lead.findOne({ _id: id, isDeleted: false })
     .populate('assignedTo', 'name email avatar')
     .populate('notes.createdBy', 'name email avatar role')
     .populate('createdBy', 'name email')
@@ -14,13 +14,15 @@ export const findById = async (id) => {
 };
 
 export const findByEmail = async (email) => {
+  // Keep deleted leads in the check — email has a unique index, so a hidden lead
+  // still reserves it; letting this pass would surface an E11000 500 instead of a clean 409.
   return Lead.findOne({ email });
 };
 
 export const findAll = async (query = {}, options = {}) => {
   const { page, limit, skip, sort } = paginate(options);
 
-  const filter = {};
+  const filter = { isDeleted: false };
 
   if (query.search) {
     const searchRegex = new RegExp(escapeRegex(query.search), 'i');
@@ -64,11 +66,12 @@ export const updateById = async (id, data) => {
 };
 
 export const deleteById = async (id) => {
-  return Lead.findByIdAndDelete(id);
+  return Lead.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
 };
 
 export const countByStatus = async () => {
   return Lead.aggregate([
+    { $match: { isDeleted: false } },
     {
       $group: {
         _id: '$status',

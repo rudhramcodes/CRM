@@ -9,6 +9,7 @@ export const findById = async (id) => {
   return Meeting.findById(id)
     .populate('lead', 'name email company')
     .populate('client', 'companyName contactPerson email')
+    .populate('attendees', 'name email avatar')
     .populate('createdBy', 'name email');
 };
 
@@ -46,6 +47,7 @@ export const findAll = async (query = {}, options = {}) => {
       .limit(limit)
       .populate('lead', 'name email')
       .populate('client', 'companyName contactPerson')
+      .populate('attendees', 'name email avatar')
       .populate('createdBy', 'name email'),
     Meeting.countDocuments(filter),
   ]);
@@ -57,6 +59,7 @@ export const updateById = async (id, data) => {
   return Meeting.findByIdAndUpdate(id, data, { new: true, runValidators: true })
     .populate('lead', 'name email company')
     .populate('client', 'companyName contactPerson email')
+    .populate('attendees', 'name email avatar')
     .populate('createdBy', 'name email');
 };
 
@@ -64,11 +67,62 @@ export const updateNotesById = async (id, notes) => {
   return Meeting.findByIdAndUpdate(id, { notes }, { new: true, runValidators: true })
     .populate('lead', 'name email company')
     .populate('client', 'companyName contactPerson email')
+    .populate('attendees', 'name email avatar')
     .populate('createdBy', 'name email');
 };
 
 export const deleteById = async (id) => {
   return Meeting.findByIdAndDelete(id);
+};
+
+export const findBySeriesId = async (seriesId) => {
+  return Meeting.find({ seriesId }).select('_id title date startTime endTime status');
+};
+
+export const deleteSeries = async (seriesId) => {
+  const res = await Meeting.deleteMany({ seriesId });
+  return res.deletedCount;
+};
+
+export const addActionItem = async (id, item) => {
+  return Meeting.findByIdAndUpdate(
+    id,
+    { $push: { actionItems: item } },
+    { new: true, runValidators: true },
+  ).populate('actionItems.assignee', 'name email avatar');
+};
+
+export const updateActionItem = async (id, itemId, data) => {
+  const set = {};
+  if (data.text !== undefined) set['actionItems.$.text'] = data.text;
+  if (data.assignee !== undefined) set['actionItems.$.assignee'] = data.assignee;
+  if (data.dueDate !== undefined) set['actionItems.$.dueDate'] = data.dueDate ?? null;
+  if (data.status !== undefined) {
+    set['actionItems.$.status'] = data.status;
+    set['actionItems.$.completedAt'] = data.status === 'done' ? new Date() : null;
+  }
+
+  return Meeting.findOneAndUpdate(
+    { _id: id, 'actionItems._id': itemId },
+    { $set: set },
+    { new: true, runValidators: true },
+  ).populate('actionItems.assignee', 'name email avatar');
+};
+
+export const removeActionItem = async (id, itemId) => {
+  return Meeting.findByIdAndUpdate(
+    id,
+    { $pull: { actionItems: { _id: itemId } } },
+    { new: true },
+  ).populate('actionItems.assignee', 'name email avatar');
+};
+
+export const markActionItemConverted = async (id, itemId, taskId) => {
+  return Meeting.findOneAndUpdate(
+    { _id: id, 'actionItems._id': itemId },
+    { $set: { 'actionItems.$.convertedToTask': taskId } },
+    { new: true },
+  ).populate('actionItems.assignee', 'name email avatar');
 };
 
 export const countByStatus = async () => {
@@ -84,4 +138,17 @@ export const countUpcoming = async () => {
     status: 'scheduled',
     date: { $gte: startOfToday },
   });
+};
+
+export const findConflicting = async (date, excludeId) => {
+  const start = new Date(date);
+  const endOfDay = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+
+  const filter = {
+    date: { $gte: start, $lt: endOfDay },
+    status: { $ne: 'cancelled' },
+  };
+  if (excludeId) filter._id = { $ne: excludeId };
+
+  return Meeting.find(filter).select('_id title date startTime endTime attendees createdBy status');
 };

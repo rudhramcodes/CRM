@@ -26,6 +26,7 @@ export default function ProjectMessageFeed({ projectId }) {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const fileInputRef = useRef(null);
   const listRef = useRef(null);
+  const isFirstLoadRef = useRef(true);
   const textInputRef = useRef(null);
   const mentionListRef = useRef(null);
   const selectedMentionsRef = useRef({});
@@ -61,10 +62,10 @@ export default function ProjectMessageFeed({ projectId }) {
   }, []);
 
   useEffect(() => {
-    if (isNearBottom()) {
-      scrollToBottom();
-    }
-  }, [messages, scrollToBottom, isNearBottom]);
+    // Always show the latest message: instant jump on first load, smooth scroll on updates.
+    scrollToBottom(!isFirstLoadRef.current);
+    isFirstLoadRef.current = false;
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     const el = listRef.current;
@@ -272,6 +273,7 @@ export default function ProjectMessageFeed({ projectId }) {
                       <button key={i} onClick={() => setViewerImage(img)}
                         className="group/img relative">
                         <img src={img.url} alt={img.name || 'Image'}
+                          onLoad={() => scrollToBottom(false)}
                           className="w-24 h-24 object-cover rounded-lg border border-zinc-200 hover:opacity-80 transition-opacity" />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 bg-black/20 rounded-lg transition-opacity">
                           <ImageIcon className="w-6 h-6 text-white" />

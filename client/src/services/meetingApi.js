@@ -50,11 +50,60 @@ export const meetingApi = api.injectEndpoints({
     }),
 
     deleteMeeting: builder.mutation({
-      query: (id) => ({
+      query: ({ id, allSeries }) => ({
         url: `/meetings/${id}`,
         method: 'DELETE',
+        params: allSeries ? { allSeries: true } : undefined,
       }),
       invalidatesTags: ['Meeting'],
+    }),
+
+    addActionItem: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/meetings/${id}/action-items`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Meeting', id },
+        'Meeting',
+      ],
+    }),
+
+    updateActionItem: builder.mutation({
+      query: ({ id, itemId, ...body }) => ({
+        url: `/meetings/${id}/action-items/${itemId}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Meeting', id },
+        'Meeting',
+      ],
+    }),
+
+    removeActionItem: builder.mutation({
+      query: ({ id, itemId }) => ({
+        url: `/meetings/${id}/action-items/${itemId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Meeting', id },
+        'Meeting',
+      ],
+    }),
+
+    convertActionItem: builder.mutation({
+      query: ({ id, itemId, projectId }) => ({
+        url: `/meetings/${id}/action-items/${itemId}/convert`,
+        method: 'POST',
+        body: { projectId },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Meeting', id },
+        'Meeting',
+        'Task',
+      ],
     }),
   }),
 });
@@ -66,4 +115,8 @@ export const {
   useUpdateMeetingMutation,
   useUpdateMeetingNotesMutation,
   useDeleteMeetingMutation,
+  useAddActionItemMutation,
+  useUpdateActionItemMutation,
+  useRemoveActionItemMutation,
+  useConvertActionItemMutation,
 } = meetingApi;
