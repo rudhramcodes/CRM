@@ -115,18 +115,18 @@ export const updateSecuritySettings = async (data) => {
 
 const INTEGRATION_KEYS = [
   'resendFromEmail', 'resendFromName',
-  'googleClientEmail', 'googlePrivateKey', 'googleCalendarId',
-  'googleClientId', 'googleClientSecret',
+  'zohoClientId', 'zohoClientSecret',
+  'zohoOrgName', 'zohoOrgId', 'zohoApiDomain',
 ];
 
 const INTEGRATION_DEFAULTS = {
   resendFromEmail: '',
   resendFromName: '',
-  googleClientEmail: '',
-  googlePrivateKey: '',
-  googleCalendarId: '',
-  googleClientId: '',
-  googleClientSecret: '',
+  zohoClientId: '',
+  zohoClientSecret: '',
+  zohoOrgName: '',
+  zohoOrgId: '',
+  zohoApiDomain: '',
 };
 
 export const getIntegrationSettings = async () => {
@@ -136,9 +136,15 @@ export const getIntegrationSettings = async () => {
   if (!result.resendFromEmail) result.resendFromEmail = config.resend.fromEmail;
   if (!result.resendFromName) result.resendFromName = config.resend.fromName;
   result.resendConfigured = !!config.resend.apiKey;
-  result.googleConfigured = !!(result.googleClientEmail && result.googlePrivateKey);
-  const hasOAuth = await Setting.findOne({ key: 'googleRefreshToken' });
-  result.googleConnected = Boolean(hasOAuth?.value);
+
+  // Env creds are the source of truth for display; DB overrides when set via UI
+  if (!result.zohoClientId) result.zohoClientId = process.env.ZOHO_CLIENT_ID || '';
+  if (!result.zohoClientSecret) result.zohoClientSecret = process.env.ZOHO_CLIENT_SECRET || '';
+  if (!result.zohoOrgName) result.zohoOrgName = process.env.ZOHO_ORG_NAME || 'Rudhram CRM';
+
+  result.zohoConfigured = !!(result.zohoClientId && result.zohoClientSecret);
+  const hasZohoOAuth = await Setting.findOne({ key: 'zohoRefreshToken' });
+  result.zohoConnected = Boolean(hasZohoOAuth?.value);
   return result;
 };
 

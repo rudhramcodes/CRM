@@ -53,12 +53,12 @@ export const settingsApi = api.injectEndpoints({
       query: (data) => ({ url: '/settings/integrations', method: 'PUT', body: data }),
       invalidatesTags: ['IntegrationSettings'],
     }),
-    getGoogleAuthUrl: builder.mutation({
-      query: () => ({ url: '/settings/google/auth-url', method: 'GET' }),
+    getZohoAuthUrl: builder.mutation({
+      query: () => ({ url: '/settings/zoho/auth-url', method: 'GET' }),
       transformResponse: (r) => r.data?.url,
     }),
-    disconnectGoogle: builder.mutation({
-      query: () => ({ url: '/settings/google/disconnect', method: 'POST' }),
+    disconnectZoho: builder.mutation({
+      query: () => ({ url: '/settings/zoho/disconnect', method: 'POST' }),
       invalidatesTags: ['IntegrationSettings'],
     }),
   }),
@@ -77,6 +77,6 @@ export const {
   useUpdateSecuritySettingsMutation,
   useGetIntegrationSettingsQuery,
   useUpdateIntegrationSettingsMutation,
-  useGetGoogleAuthUrlMutation,
-  useDisconnectGoogleMutation,
+  useGetZohoAuthUrlMutation,
+  useDisconnectZohoMutation,
 } = settingsApi;

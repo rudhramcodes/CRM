@@ -2,7 +2,7 @@ import ApiResponse from '../../utils/ApiResponse.js';
 import config from '../../config/index.js';
 import logger from '../../utils/logger.js';
 import * as settingsService from './settings.service.js';
-import * as googleMeetService from '../../services/googleMeetService.js';
+import * as zohoMeetService from '../../services/zohoMeetService.js';
 
 export const getNotifPrefs = async (req, res, next) => {
   try {
@@ -74,32 +74,33 @@ export const updateIntegrationSettings = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-const getCallbackUri = (req) =>
-  `${req.protocol}://${req.get('host')}/api/settings/google/callback`;
+const getZohoCallbackUri = (req) => {
+  if (config.zohoOAuth.callbackUrl) return config.zohoOAuth.callbackUrl;
+  if (process.env.CLIENT_URL) return `${config.clientUrl.replace(/\/$/, '')}/api/settings/zoho/callback`;
+  return `${req.protocol}://${req.get('host')}/api/settings/zoho/callback`;
+};
 
-export const getGoogleAuthUrl = async (req, res, next) => {
+export const getZohoAuthUrl = async (req, res, next) => {
   try {
-    const url = await googleMeetService.buildAuthUrl(getCallbackUri(req));
-    if (!url) throw new Error('Google OAuth client not configured — add Client ID and Secret first');
+    const url = await zohoMeetService.buildAuthUrl(getZohoCallbackUri(req));
+    if (!url) throw new Error('Zoho OAuth client not configured — add Client ID and Secret first');
     ApiResponse.success(res, 200, { url });
   } catch (err) { next(err); }
 };
 
-// Public callback: Google redirects here with ?code=. Exchanges it, then
-// bounces back to the client settings page.
-export const googleCallback = async (req, res) => {
+export const zohoCallback = async (req, res) => {
   try {
-    await googleMeetService.exchangeCode(req.query.code, getCallbackUri(req));
-    res.redirect(`${config.clientUrl}/settings?google=connected`);
+    await zohoMeetService.exchangeCode(req.query.code, getZohoCallbackUri(req));
+    res.redirect(`${config.clientUrl}/settings?zoho=connected`);
   } catch (err) {
-    logger.error('Google OAuth callback failed', { error: err.message });
-    res.redirect(`${config.clientUrl}/settings?google=error`);
+    logger.error('Zoho OAuth callback failed', { error: err.message });
+    res.redirect(`${config.clientUrl}/settings?zoho=error`);
   }
 };
 
-export const disconnectGoogle = async (req, res, next) => {
+export const disconnectZoho = async (req, res, next) => {
   try {
-    await googleMeetService.disconnectOAuth();
-    ApiResponse.success(res, 200, {}, 'Google Calendar disconnected');
+    await zohoMeetService.disconnectOAuth();
+    ApiResponse.success(res, 200, {}, 'Zoho Meetings disconnected');
   } catch (err) { next(err); }
 };

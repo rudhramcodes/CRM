@@ -3,7 +3,7 @@ import ApiError from '../../utils/ApiError.js';
 import * as meetingRepository from './meeting.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
 import { sendMeetingEmail } from '../../services/emailService.js';
-import { generateMeetLink } from '../../services/googleMeetService.js';
+import { generateMeetLink } from '../../services/zohoMeetService.js';
 import { ROLES } from '../../constants/index.js';
 
 const STAFF_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE];
@@ -231,7 +231,7 @@ export const regenerateMeetLink = async (id) => {
   });
   if (!link) {
     throw ApiError.badRequest(
-      'Google Meet is not configured. Add GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY to .env, or paste a link manually.',
+      'No meeting provider configured. Connect Zoho Meetings in Settings, or paste a link manually.',
     );
   }
   return meetingRepository.updateById(id, { meetingLink: link });

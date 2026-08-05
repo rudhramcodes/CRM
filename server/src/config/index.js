@@ -25,6 +25,9 @@ const config = {
       : ['http://localhost:5173', 'https://crm-rb3f.onrender.com'],
   },
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  zohoOAuth: {
+    callbackUrl: process.env.ZOHO_OAUTH_CALLBACK_URL || '',
+  },
   resend: {
     apiKey: process.env.RESEND_API_KEY || '',
     fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@rudhramenterprises.com',

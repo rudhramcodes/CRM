@@ -7,14 +7,14 @@ import { ROLES } from '../../constants/index.js';
 
 const router = Router();
 
-// Public: Google OAuth callback (Google redirects here with ?code=, no app JWT)
-router.get('/google/callback', settingsController.googleCallback);
+// Public: Zoho OAuth callback (Zoho redirects here with ?code=, no app JWT)
+router.get('/zoho/callback', settingsController.zohoCallback);
 
 router.use(verifyToken);
 
-// Google Meet OAuth 2.0 (admin+)
-router.get('/google/auth-url', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), settingsController.getGoogleAuthUrl);
-router.post('/google/disconnect', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), settingsController.disconnectGoogle);
+// Zoho Meetings OAuth 2.0 (admin+)
+router.get('/zoho/auth-url', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), settingsController.getZohoAuthUrl);
+router.post('/zoho/disconnect', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), settingsController.disconnectZoho);
 
 // Notification preferences (any authenticated user)
 router.get('/notifications', settingsController.getNotifPrefs);

@@ -31,6 +31,9 @@ import settingsRoutes from './modules/settings/settings.routes.js';
 
 const app = express();
 
+// Trust proxy (required for Render/Heroku/AWS ALB to get correct req.protocol)
+app.set('trust proxy', 1);
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
