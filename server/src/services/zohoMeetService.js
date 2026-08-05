@@ -4,6 +4,9 @@ import { Setting } from '../modules/settings/settings.model.js';
 
 const SCOPES = ['ZohoMeeting.meeting.CREATE', 'ZohoMeeting.meeting.READ'];
 
+// Callback stores "https://accounts.zoho.in" (no path); token/auth endpoints need ".../oauth/v2"
+const normalizeAccountsUrl = (url) => (url && !url.includes('/oauth/v2') ? `${url}/oauth/v2` : url);
+
 const getOAuthCreds = async () => {
   const [clientId, clientSecret, refreshToken, orgName, orgId, accountsUrl, apiDomain] = await Promise.all([
     Setting.findOne({ key: 'zohoClientId' }),
@@ -20,7 +23,7 @@ const getOAuthCreds = async () => {
     refreshToken: refreshToken?.value || process.env.ZOHO_REFRESH_TOKEN || '',
     orgName: orgName?.value || process.env.ZOHO_ORG_NAME || 'Rudhram CRM',
     orgId: orgId?.value || process.env.ZOHO_ORG_ID || '',
-    accountsUrl: accountsUrl?.value || process.env.ZOHO_ACCOUNTS_URL || config.zoho.accountsUrl,
+    accountsUrl: normalizeAccountsUrl(accountsUrl?.value || process.env.ZOHO_ACCOUNTS_URL || config.zoho.accountsUrl),
     apiDomain: apiDomain?.value || '',
   };
 };

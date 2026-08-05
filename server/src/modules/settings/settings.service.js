@@ -146,8 +146,12 @@ export const getIntegrationSettings = async () => {
   result.zohoConfigured = !!(result.zohoClientId && result.zohoClientSecret);
   const hasZohoOAuth = await Setting.findOne({ key: 'zohoRefreshToken' });
   result.zohoConnected = Boolean(hasZohoOAuth?.value);
+  // Mirror zohoMeetService: meeting API DC follows the token api_domain (zohoapis.in -> meeting.zoho.in)
+  const domainMatch = result.zohoApiDomain?.match(/zohoapis\.([a-z.]+)/);
+  result.zohoMeetingApi = domainMatch
+    ? `https://meeting.zoho.${domainMatch[1]}/api/v2`
+    : config.zoho.meetingApi;
   result.zohoAccountsUrl = result.zohoAccountsUrl || config.zoho.accountsUrl;
-  result.zohoMeetingApi = config.zoho.meetingApi;
   return result;
 };
 
