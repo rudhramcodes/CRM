@@ -128,7 +128,7 @@ export const broadcastCliq = async ({ type, referenceId, title, message, link })
   setTimeout(() => dedupCache.delete(`cliq_${referenceId}`), DEDUP_TTL);
   try {
     const { sendCliqMessage } = await import('../../services/cliqService.js');
-    await sendCliqMessage({ title, message, link, emoji: template.emoji });
+    await sendCliqMessage({ title, message, link });
   } catch (err) {
     logger.error(`Cliq send failed for notification: ${err.message}`);
   }

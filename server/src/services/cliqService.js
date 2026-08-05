@@ -6,11 +6,12 @@ export const isCliqConfigured = () => Boolean(config.cliq.webhookUrl);
 // Zoho Cliq incoming webhook — one POST, no OAuth needed.
 // Channel webhook supports plain text reliably; card/buttons keep getting
 // rejected by the schema, so format everything inline instead.
-export const sendCliqMessage = async ({ title, message, link, emoji = '' }) => {
+export const sendCliqMessage = async ({ title, message, link }) => {
   if (!isCliqConfigured()) return false;
   try {
-    const head = emoji ? `${emoji} ${title}` : title;
-    const text = link ? `${head} — ${message}\n\n${link}` : `${head} — ${message}`;
+    // Resolve relative links (e.g. /leads/123) to absolute URLs the team can click
+    const fullLink = link && !link.startsWith('http') ? `${config.appUrl}${link}` : link || '';
+    const text = fullLink ? `${title} — ${message}\n\n${fullLink}` : `${title} — ${message}`;
     const payload = { text };
     const res = await fetch(config.cliq.webhookUrl, {
       method: 'POST',

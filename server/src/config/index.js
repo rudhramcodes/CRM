@@ -25,6 +25,11 @@ const config = {
       : ['http://localhost:5173', 'https://crm-rb3f.onrender.com'],
   },
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  // Production app URL for absolute links in Cliq/email (CORS_ORIGIN first entry is the frontend)
+  appUrl: process.env.APP_URL
+    || process.env.CLIENT_URL
+    || (process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',')[0].trim() : '')
+    || 'http://localhost:5173',
   zohoOAuth: {
     callbackUrl: process.env.ZOHO_OAUTH_CALLBACK_URL || '',
   },
