@@ -37,7 +37,7 @@ export default function IntegrationsTab() {
       refetch();
       window.history.replaceState({}, '', window.location.pathname);
     } else if (params.get('zoho') === 'error') {
-      toast.error('Zoho connection failed — check client ID/secret');
+      toast.error(params.get('message') || 'Zoho connection failed — check client ID/secret');
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [refetch]);

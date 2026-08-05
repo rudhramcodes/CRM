@@ -76,7 +76,6 @@ export const updateIntegrationSettings = async (req, res, next) => {
 
 const getZohoCallbackUri = (req) => {
   if (config.zohoOAuth.callbackUrl) return config.zohoOAuth.callbackUrl;
-  if (process.env.CLIENT_URL) return `${config.clientUrl.replace(/\/$/, '')}/api/settings/zoho/callback`;
   return `${req.protocol}://${req.get('host')}/api/settings/zoho/callback`;
 };
 
@@ -94,7 +93,7 @@ export const zohoCallback = async (req, res) => {
     res.redirect(`${config.clientUrl}/settings?zoho=connected`);
   } catch (err) {
     logger.error('Zoho OAuth callback failed', { error: err.message });
-    res.redirect(`${config.clientUrl}/settings?zoho=error`);
+    res.redirect(`${config.clientUrl}/settings?zoho=error&message=${encodeURIComponent(err.message)}`);
   }
 };
 

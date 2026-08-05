@@ -29,8 +29,11 @@ const postForm = async (url, params) => {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
   });
-  if (!res.ok) throw new Error(`Zoho token request failed: ${res.status} ${await res.text()}`);
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) {
+    throw new Error(data.error_description || data.error || `Zoho token request failed: ${res.status}`);
+  }
+  return data;
 };
 
 export const isOAuthConfigured = async () => {
