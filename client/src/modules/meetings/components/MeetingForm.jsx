@@ -1,13 +1,16 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import { Loader2, CheckCircle2, Zap } from 'lucide-react';
+import { cn } from '../../../utils/cn';
 import FormInput from '../../../components/forms/FormInput';
 import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
 import DatePicker from '../../../components/forms/DatePicker';
-import TimePicker from '../../../components/forms/TimePicker';
+import StartTimePicker from '../../../components/forms/StartTimePicker';
+import DurationPicker from '../../../components/forms/DurationPicker';
 import LinkInput from '../../../components/forms/LinkInput';
 import Button from '../../../components/ui/Button';
 import { MEETING_STATUS } from '../../../constants';
@@ -35,7 +38,14 @@ const meetingFormSchema = z
     recurrenceType: z.string().optional(),
     recurrenceOccurrences: z.coerce.number().int().min(2).max(100).optional(),
   })
-  .refine((data) => data.startTime < data.endTime, {
+  .refine((data) => {
+    const toMin = (t) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const diff = (toMin(data.endTime) - toMin(data.startTime) + 24 * 60) % (24 * 60);
+    return diff > 0;
+  }, {
     message: 'End time must be after start time',
     path: ['endTime'],
   });
@@ -85,6 +95,15 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
     values: formValues,
   });
 
+  const startTimeValue = watch('startTime');
+  const prevStartTime = useRef(startTimeValue);
+  useEffect(() => {
+    if (prevStartTime.current && startTimeValue !== prevStartTime.current) {
+      setValue('endTime', '', { shouldValidate: true });
+    }
+    prevStartTime.current = startTimeValue;
+  }, [startTimeValue, setValue]);
+
   const onAutoGenerateLink = async () => {
     const { title, date, startTime, endTime } = watch();
     if (!title || !date || !startTime || !endTime) {
@@ -92,7 +111,7 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
       return;
     }
     try {
-      const { link } = await generateMeetingLink({ title, date, startTime, endTime }).unwrap();
+      const link = await generateMeetingLink({ title, date, startTime, endTime }).unwrap();
       setValue('meetingLink', link, { shouldValidate: true });
       toast.success('Zoho Meeting link generated');
     } catch (error) {
@@ -167,7 +186,7 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
           name="startTime"
           control={control}
           render={({ field }) => (
-            <TimePicker
+            <StartTimePicker
               label="Start Time *"
               value={field.value}
               onChange={field.onChange}
@@ -180,11 +199,12 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
           name="endTime"
           control={control}
           render={({ field }) => (
-            <TimePicker
+            <DurationPicker
               label="End Time *"
               value={field.value}
               onChange={field.onChange}
               error={errors.endTime?.message}
+              startTime={startTimeValue}
             />
           )}
         />
@@ -201,18 +221,44 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
                 onChange={field.onChange}
                 error={errors.meetingLink?.message}
               />
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1.5">
                 <button
                   type="button"
                   onClick={onAutoGenerateLink}
                   disabled={isGeneratingLink}
-                  className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={cn(
+                    'inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border transition-colors',
+                    field.value
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100',
+                    isGeneratingLink && 'opacity-50 cursor-not-allowed',
+                  )}
                 >
-                  {isGeneratingLink ? 'Generating...' : '⚡ Auto-generate Zoho Meeting link'}
+                  {isGeneratingLink ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : field.value ? (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  ) : (
+                    <Zap className="w-3.5 h-3.5" />
+                  )}
+                  {isGeneratingLink
+                    ? 'Generating link...'
+                    : field.value
+                      ? 'Link generated'
+                      : 'Generate Zoho Meeting link'}
                 </button>
+                {field.value && (
+                  <button
+                    type="button"
+                    onClick={() => field.onChange('')}
+                    className="text-[11px] text-zinc-400 hover:text-zinc-600 underline"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
-              <p className="text-[11px] text-zinc-400 mt-1">
-                Leave blank to auto-generate a Zoho Meeting link when Zoho is connected.
+              <p className="text-[11px] text-zinc-400 mt-1.5">
+                Optional. For online meetings, generate or paste a link. Leave blank for office or in-person meetings.
               </p>
             </div>
           )}

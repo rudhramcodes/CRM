@@ -99,14 +99,8 @@ export const createMeeting = async (data, user) => {
   }
 
   const { recurrence } = data;
-  const meetLink = data.meetingLink ||
-    (await generateMeetLink({
-      title: data.title,
-      date: data.date,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      attendees: [],
-    }));
+  // deliberate: no auto-generate on create — office meetings have no link
+  const meetLink = data.meetingLink || '';
 
   const { staff, clientEmail } = await getMeetingContacts(data);
 

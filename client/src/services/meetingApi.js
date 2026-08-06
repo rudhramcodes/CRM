@@ -31,6 +31,7 @@ export const meetingApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: (r) => r.data?.link,
     }),
 
     updateMeeting: builder.mutation({
