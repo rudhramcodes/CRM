@@ -47,6 +47,24 @@ export const leadApi = api.injectEndpoints({
       invalidatesTags: ['Lead', 'LeadStats'],
     }),
 
+    bulkDeleteLeads: builder.mutation({
+      query: (ids) => ({
+        url: '/leads/bulk',
+        method: 'DELETE',
+        body: { ids },
+      }),
+      invalidatesTags: ['Lead', 'LeadStats'],
+    }),
+
+    bulkUpdateLeads: builder.mutation({
+      query: ({ ids, data }) => ({
+        url: '/leads/bulk',
+        method: 'PATCH',
+        body: { ids, data },
+      }),
+      invalidatesTags: ['Lead', 'LeadStats'],
+    }),
+
     addLeadNote: builder.mutation({
       query: ({ id, text }) => ({
         url: `/leads/${id}/notes`,
@@ -54,6 +72,15 @@ export const leadApi = api.injectEndpoints({
         body: { text },
       }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Lead', id }],
+    }),
+
+    importLeads: builder.mutation({
+      query: (formData) => ({
+        url: '/leads/import',
+        method: 'POST',
+        body: formData,
+      }),
+      invalidatesTags: ['Lead', 'LeadStats'],
     }),
 
     getLeadStats: builder.query({
@@ -70,6 +97,9 @@ export const {
   useCreateLeadMutation,
   useUpdateLeadMutation,
   useDeleteLeadMutation,
+  useBulkDeleteLeadsMutation,
+  useBulkUpdateLeadsMutation,
   useAddLeadNoteMutation,
   useGetLeadStatsQuery,
+  useImportLeadsMutation,
 } = leadApi;

@@ -5,6 +5,10 @@ export const create = async (data) => {
   return Lead.create(data);
 };
 
+export const insertMany = async (leads) => {
+  return Lead.insertMany(leads);
+};
+
 export const findById = async (id) => {
   return Lead.findOne({ _id: id, isDeleted: false })
     .populate('assignedTo', 'name email avatar')
@@ -17,6 +21,11 @@ export const findByEmail = async (email) => {
   // Keep deleted leads in the check — email has a unique index, so a hidden lead
   // still reserves it; letting this pass would surface an E11000 500 instead of a clean 409.
   return Lead.findOne({ email });
+};
+
+export const findEmails = async (emails) => {
+  if (!emails.length) return [];
+  return Lead.find({ email: { $in: emails } }, { email: 1 });
 };
 
 export const findAll = async (query = {}, options = {}) => {
@@ -67,6 +76,14 @@ export const updateById = async (id, data) => {
 
 export const deleteById = async (id) => {
   return Lead.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
+};
+
+export const deleteMany = async (ids) => {
+  return Lead.updateMany({ _id: { $in: ids }, isDeleted: false }, { isDeleted: true });
+};
+
+export const updateMany = async (ids, data) => {
+  return Lead.updateMany({ _id: { $in: ids }, isDeleted: false }, data);
 };
 
 export const countByStatus = async () => {

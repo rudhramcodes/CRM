@@ -3,6 +3,65 @@ import * as leadRepository from './lead.repository.js';
 import * as clientRepository from '../clients/client.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
 import generateClientId from '../../utils/generateClientId.js';
+import * as XLSX from 'xlsx';
+import { LEAD_STATUS, LEAD_BRANDS } from '../../constants/index.js';
+
+const LEAD_SOURCES = ['google_ads', 'referral', 'instagram', 'linkedin', 'website', 'email', 'call', 'other'];
+const MAX_IMPORT_ROWS = 1000;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^[+]?[\d\s()-]{7,15}$/;
+
+const HEADER_ALIASES = {
+  name: ['name', 'leadname', 'fullname', 'lead_name', 'full_name'],
+  email: ['email', 'emailaddress', 'email_address'],
+  phone: ['phone', 'phonenumber', 'phone_number', 'mobile', 'contactnumber', 'contact_number'],
+  company: ['company', 'companyname', 'company_name', 'organization', 'organisation'],
+  brand: ['brand', 'venture'],
+  source: ['source', 'leadsource', 'lead_source'],
+  status: ['status', 'leadstatus', 'lead_status'],
+  notes: ['notes', 'note', 'comments', 'comment'],
+  followUpDate: ['followupdate', 'follow_up_date', 'followup', 'follow_up'],
+};
+
+const normalizeHeader = (header) =>
+  String(header || '').trim().toLowerCase().replace(/[\s-]+/g, '_').replace(/_+/g, '_');
+
+const buildHeaderMap = (rawRow) => {
+  const aliasToField = {};
+  for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
+    for (const alias of aliases) aliasToField[normalizeHeader(alias)] = field;
+  }
+  const map = {};
+  for (const rawHeader of Object.keys(rawRow)) {
+    const field = aliasToField[normalizeHeader(rawHeader)];
+    if (field) map[field] = rawRow[rawHeader];
+  }
+  return map;
+};
+
+const normalizeEnum = (value, allowed) => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return undefined;
+  const normalized = raw.toLowerCase().replace(/[\s-]+/g, '_');
+  if (allowed.includes(normalized)) return normalized;
+  return null;
+};
+
+const isValidPhone = (value) => {
+  if (!value) return true;
+  if (!PHONE_RE.test(value)) return false;
+  const raw = String(value);
+  const national = raw.startsWith('+') ? raw.replace(/^\+?\d{1,3}\s*/, '') : raw;
+  const digits = national.replace(/[^\d]/g, '');
+  return digits.length >= 10;
+};
+
+const parseDate = (value) => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return undefined;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+};
 
 export const createLead = async (data, user) => {
   const existing = await leadRepository.findByEmail(data.email);
@@ -157,6 +216,105 @@ export const deleteLead = async (id) => {
   }
 
   await leadRepository.deleteById(id);
+};
+
+export const bulkDelete = async (ids) => {
+  return leadRepository.deleteMany(ids);
+};
+
+export const bulkUpdateStatus = async (ids, data, user) => {
+  return leadRepository.updateMany(ids, {
+    status: data.status,
+    statusChangedAt: new Date(),
+    statusChangedBy: user._id,
+  });
+};
+
+export const importLeads = async (file, user) => {
+  let workbook;
+  try {
+    workbook = XLSX.read(file.buffer, { type: 'buffer' });
+  } catch {
+    throw ApiError.badRequest('Could not read the file. Please upload a valid .xlsx, .xls or .csv file.');
+  }
+
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!sheet) throw ApiError.badRequest('The file has no data sheet.');
+
+  const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+  if (rawRows.length === 0) throw ApiError.badRequest('The file has no data rows.');
+  if (rawRows.length > MAX_IMPORT_ROWS) {
+    throw ApiError.badRequest(`Too many rows (${rawRows.length}). Maximum is ${MAX_IMPORT_ROWS} leads per file.`);
+  }
+
+  const fileEmails = rawRows
+    .map((r) => buildHeaderMap(r).email)
+    .filter(Boolean)
+    .map((e) => String(e).trim().toLowerCase());
+  const existing = await leadRepository.findEmails(fileEmails);
+  const existingEmails = new Set(existing.map((l) => l.email.toLowerCase()));
+
+  const errors = [];
+  const validLeads = [];
+  const seenEmails = new Set();
+
+  rawRows.forEach((rawRow, index) => {
+    const row = buildHeaderMap(rawRow);
+    const rowNumber = index + 2;
+    const skip = (reason) => errors.push({ row: rowNumber, reason });
+
+    if (Object.values(row).every((v) => String(v ?? '').trim() === '')) return;
+
+    const name = String(row.name ?? '').trim();
+    if (!name) return skip('Name is required');
+
+    const email = String(row.email ?? '').trim().toLowerCase();
+    if (!email) return skip('Email is required');
+    if (!EMAIL_RE.test(email)) return skip('Invalid email address');
+    if (seenEmails.has(email)) return skip('Duplicate email within the file');
+    if (existingEmails.has(email)) return skip('Email already exists in the CRM');
+    seenEmails.add(email);
+
+    const phone = String(row.phone ?? '').trim();
+    if (phone && !isValidPhone(phone)) return skip('Invalid phone number');
+
+    const brand = normalizeEnum(row.brand, LEAD_BRANDS);
+    if (brand === null) return skip(`Invalid brand. Allowed: ${LEAD_BRANDS.join(', ')}`);
+
+    const source = normalizeEnum(row.source, LEAD_SOURCES);
+    if (source === null) return skip(`Invalid source. Allowed: ${LEAD_SOURCES.join(', ')}`);
+
+    const status = normalizeEnum(row.status, Object.values(LEAD_STATUS));
+    if (status === null) return skip('Invalid status');
+
+    const followUpDate = parseDate(row.followUpDate);
+    if (followUpDate === null) return skip('Invalid follow up date. Use YYYY-MM-DD');
+
+    const notes = String(row.notes ?? '').trim();
+    if (notes.length > 2000) return skip('Notes must not exceed 2000 characters');
+
+    validLeads.push({
+      name,
+      email,
+      phone: phone || null,
+      company: String(row.company ?? '').trim() || null,
+      brand: brand || null,
+      source: source || 'other',
+      status: status || LEAD_STATUS.NEW,
+      notes: notes ? [{ text: notes, createdBy: user._id }] : [],
+      followUpDate: followUpDate || null,
+      assignedTo: null,
+      createdBy: user._id,
+    });
+  });
+
+  let imported = 0;
+  if (validLeads.length > 0) {
+    const result = await leadRepository.insertMany(validLeads);
+    imported = result.length;
+  }
+
+  return { imported, skipped: errors.length, errors };
 };
 
 export const getLeadStats = async () => {

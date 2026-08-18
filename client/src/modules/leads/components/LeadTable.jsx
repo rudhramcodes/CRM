@@ -6,7 +6,7 @@ import { LEAD_STATUS, LEAD_BRANDS } from '../../../constants';
 import { cn } from '../../../utils/cn';
 import { Edit2, Trash2 } from 'lucide-react';
 
-export default function LeadTable({ leads, loading, error, onRowClick, searchable, canEdit, canDelete, onEdit, onDelete, onStatusChange, serverPagination, page, pageSize, total, totalPages, hasNextPage, hasPrevPage, onPageChange, onPageSizeChange }) {
+export default function LeadTable({ leads, loading, error, onRowClick, searchable, canEdit, canDelete, onEdit, onDelete, onStatusChange, serverPagination, page, pageSize, total, totalPages, hasNextPage, hasPrevPage, onPageChange, onPageSizeChange, selectable, selectedIds, onSelectionChange }) {
   const columns = [
     {
       header: 'Name',
@@ -158,6 +158,9 @@ export default function LeadTable({ leads, loading, error, onRowClick, searchabl
       hasPrevPage={hasPrevPage}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
+      selectable={selectable}
+      selectedIds={selectedIds}
+      onSelectionChange={onSelectionChange}
     />
   );
 }

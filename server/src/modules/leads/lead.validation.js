@@ -3,6 +3,10 @@ import { LEAD_STATUS, LEAD_BRANDS } from '../../constants/index.js';
 
 const LEAD_STATUS_LIST = Object.values(LEAD_STATUS);
 
+// Bulk status changes intentionally exclude 'won' (auto-converts to client)
+// and 'lost' (requires a per-lead reason).
+const BULK_STATUS_LIST = LEAD_STATUS_LIST.filter((s) => s !== 'won' && s !== 'lost');
+
 const LEAD_SOURCES = [
   'google_ads',
   'referral',
@@ -100,4 +104,20 @@ export const leadsQuerySchema = z.object({
   assignedTo: z.string().optional(),
   sortBy: z.string().optional().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+});
+
+const bulkIdsSchema = z
+  .array(z.string().min(1))
+  .min(1, 'Select at least one lead')
+  .max(500, 'Cannot select more than 500 leads');
+
+export const bulkDeleteSchema = z.object({
+  ids: bulkIdsSchema,
+});
+
+export const bulkUpdateSchema = z.object({
+  ids: bulkIdsSchema,
+  data: z.object({
+    status: z.enum(BULK_STATUS_LIST, { message: 'Invalid lead status' }),
+  }),
 });

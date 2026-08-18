@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Search } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Loader from '../ui/Loader';
@@ -26,10 +26,14 @@ export default function DataTable({
   hasPrevPage,
   onPageChange,
   onPageSizeChange,
+  selectable = false,
+  selectedIds = [],
+  onSelectionChange = () => {},
 }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const selectAllRef = useRef(null);
 
   // Disable internal search in server mode — server handles it via external filters
   const showSearch = searchable && !serverPagination;
@@ -104,6 +108,32 @@ export default function DataTable({
     );
   };
 
+  const displayedIds = useMemo(() => displayData.map((row) => row._id).filter(Boolean), [displayData]);
+  const allDisplayedSelected = displayedIds.length > 0 && displayedIds.every((id) => selectedIds.includes(id));
+  const someDisplayedSelected = displayedIds.some((id) => selectedIds.includes(id));
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someDisplayedSelected && !allDisplayedSelected;
+    }
+  }, [someDisplayedSelected, allDisplayedSelected]);
+
+  const handleSelectAll = () => {
+    if (allDisplayedSelected) {
+      onSelectionChange(selectedIds.filter((id) => !displayedIds.includes(id)));
+    } else {
+      onSelectionChange([...new Set([...selectedIds, ...displayedIds])]);
+    }
+  };
+
+  const handleSelectRow = (row) => {
+    if (selectedIds.includes(row._id)) {
+      onSelectionChange(selectedIds.filter((id) => id !== row._id));
+    } else {
+      onSelectionChange([...selectedIds, row._id]);
+    }
+  };
+
   if (loading) {
     return (
       <div className="card p-12">
@@ -147,6 +177,18 @@ export default function DataTable({
         <table className="w-full">
           <thead>
             <tr className="border-b border-zinc-200">
+              {selectable && (
+                <th className="w-10 px-4 py-3">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    aria-label="Select all rows"
+                    checked={allDisplayedSelected}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-zinc-300 text-primary-900 focus:ring-primary-900 cursor-pointer"
+                  />
+                </th>
+              )}
               {columns.map((col) => (
                 <th
                   key={col.accessor || col.header}
@@ -167,7 +209,7 @@ export default function DataTable({
           <tbody className="divide-y divide-zinc-100">
             {displayData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12">
+                <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-12">
                   <EmptyState title={emptyTitle} description={emptyDescription} />
                 </td>
               </tr>
@@ -179,8 +221,21 @@ export default function DataTable({
                   className={cn(
                     'hover:bg-zinc-50 transition-colors',
                     onRowClick && 'cursor-pointer',
+                    selectable && selectedIds.includes(row._id) && 'bg-primary-50/50 hover:bg-primary-50/70',
                   )}
                 >
+                  {selectable && (
+                    <td className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${row.name || row._id}`}
+                        checked={selectedIds.includes(row._id)}
+                        onChange={() => handleSelectRow(row)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 rounded border-zinc-300 text-primary-900 focus:ring-primary-900 cursor-pointer"
+                      />
+                    </td>
+                  )}
                   {columns.map((col) => (
                     <td key={col.accessor || col.header} className="px-4 py-3 text-sm text-zinc-700">
                       {col.cell

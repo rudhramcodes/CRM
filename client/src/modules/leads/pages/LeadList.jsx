@@ -2,19 +2,25 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, Users, Columns3, LayoutList, RefreshCw, XCircle } from 'lucide-react';
-import { useGetLeadsQuery, useGetLeadStatsQuery, useDeleteLeadMutation, useUpdateLeadMutation } from '../../../services/leadApi';
+import { Plus, Users, Columns3, LayoutList, RefreshCw, XCircle, Trash2, X, CheckSquare, Download, Upload } from 'lucide-react';
+import { useGetLeadsQuery, useGetLeadStatsQuery, useDeleteLeadMutation, useUpdateLeadMutation, useBulkDeleteLeadsMutation, useBulkUpdateLeadsMutation } from '../../../services/leadApi';
 import LeadTable from '../components/LeadTable';
 import LeadKanbanBoard from '../components/LeadKanbanBoard';
 import LeadFilters from '../components/LeadFilters';
 import LeadStatusBadge from '../components/LeadStatusBadge';
+import LeadImportModal from '../components/LeadImportModal';
 import Button from '../../../components/ui/Button';
 import EmptyState from '../../../components/ui/EmptyState';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Modal from '../../../components/ui/Modal';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { LEAD_STATUS, LEAD_BRANDS } from '../../../constants';
+import { downloadLeadsCsv, downloadLeadsExcel, downloadLeadsPdf } from '../../../utils/exportLeads';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+
+const BULK_STATUS_OPTIONS = LEAD_STATUS.filter((s) => !['won', 'lost'].includes(s.value));
 
 export default function LeadList() {
   const dispatch = useDispatch();
@@ -25,6 +31,9 @@ export default function LeadList() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [lostReasonTarget, setLostReasonTarget] = useState(null);
   const [lostReasonInput, setLostReasonInput] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     dispatch(setPageTitle('Leads'));
@@ -38,6 +47,8 @@ export default function LeadList() {
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetLeadStatsQuery();
   const [deleteLead] = useDeleteLeadMutation();
   const [updateLead] = useUpdateLeadMutation();
+  const [bulkDeleteLeads, { isLoading: isBulkDeleting }] = useBulkDeleteLeadsMutation();
+  const [bulkUpdateLeads, { isLoading: isBulkUpdating }] = useBulkUpdateLeadsMutation();
 
   const leads = leadsData?.data || [];
   const kanbanLeads = kanbanData?.data || [];
@@ -48,6 +59,7 @@ export default function LeadList() {
 
   const handleBrandChange = useCallback((brand) => {
     setActiveBrand(brand);
+    setSelectedIds([]);
     setQueryParams((prev) => {
       const next = { ...prev, page: 1 };
       if (brand) next.brand = brand;
@@ -57,6 +69,7 @@ export default function LeadList() {
   }, []);
 
   const handleFilterChange = useCallback((filters) => {
+    setSelectedIds([]);
     setQueryParams((prev) => {
       const next = { ...prev, page: 1 };
       for (const [key, val] of Object.entries(filters)) {
@@ -70,6 +83,7 @@ export default function LeadList() {
   const canCreate = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
   const canEdit = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
+  const canImport = user && ['super_admin', 'admin'].includes(user.role);
 
   const handleEdit = useCallback((row) => {
     navigate(`/leads/${row._id}`);
@@ -106,12 +120,46 @@ export default function LeadList() {
   const handleDelete = useCallback((row) => setDeleteTarget(row), []);
 
   const handlePageChange = useCallback((newPage) => {
+    setSelectedIds([]);
     setQueryParams((prev) => ({ ...prev, page: newPage }));
   }, []);
 
   const handlePageSizeChange = useCallback((newLimit) => {
+    setSelectedIds([]);
     setQueryParams((prev) => ({ ...prev, page: 1, limit: newLimit }));
   }, []);
+
+  const handleSelectionChange = useCallback((ids) => setSelectedIds(ids), []);
+
+  const selectedLeads = leads.filter((l) => selectedIds.includes(l._id));
+
+  const confirmBulkDelete = useCallback(async () => {
+    try {
+      await bulkDeleteLeads(selectedIds).unwrap();
+      toast.success(`${selectedIds.length} ${selectedIds.length === 1 ? 'lead' : 'leads'} deleted successfully`);
+      setBulkDeleteOpen(false);
+      setSelectedIds([]);
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to delete leads');
+    }
+  }, [bulkDeleteLeads, selectedIds]);
+
+  const handleBulkStatusChange = useCallback(async (status) => {
+    try {
+      await bulkUpdateLeads({ ids: selectedIds, data: { status } }).unwrap();
+      toast.success('Leads updated successfully');
+      setSelectedIds([]);
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to update leads');
+    }
+  }, [bulkUpdateLeads, selectedIds]);
+
+  const handleDownload = useCallback((format) => {
+    if (!selectedLeads.length) return;
+    if (format === 'csv') downloadLeadsCsv(selectedLeads);
+    else if (format === 'excel') downloadLeadsExcel(selectedLeads);
+    else if (format === 'pdf') downloadLeadsPdf(selectedLeads);
+  }, [selectedLeads]);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -169,6 +217,12 @@ export default function LeadList() {
               <Columns3 className="w-4 h-4" />
             </button>
           </div>
+          {canImport && (
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="w-4 h-4" />
+              Import
+            </Button>
+          )}
           {canCreate && (
             <Button onClick={() => navigate('/leads/new')}>
               <Plus className="w-4 h-4" />
@@ -229,6 +283,73 @@ export default function LeadList() {
       {/* Filters */}
       <LeadFilters onFilterChange={handleFilterChange} />
 
+      {/* Bulk actions bar */}
+      <AnimatePresence>
+        {view === 'table' && selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
+            className="flex flex-wrap items-center gap-3 rounded-xl border border-primary-100 bg-primary-50/80 px-4 py-2.5 shadow-sm"
+          >
+            <div className="flex items-center gap-2 mr-auto">
+              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-primary-900/10">
+                <CheckSquare className="w-3.5 h-3.5 text-primary-900" />
+              </span>
+              <span className="text-sm font-medium text-primary-900">
+                {selectedIds.length} {selectedIds.length === 1 ? 'lead' : 'leads'} selected
+              </span>
+            </div>
+
+            {canDelete && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setBulkDeleteOpen(true)}
+                loading={isBulkDeleting}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </Button>
+            )}
+
+            <Select onValueChange={(val) => handleBulkStatusChange(val)} disabled={isBulkUpdating}>
+              <SelectTrigger className="h-8 w-auto gap-1.5 text-xs">
+                <SelectValue placeholder="Change status" />
+              </SelectTrigger>
+              <SelectContent>
+                {BULK_STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select onValueChange={(val) => handleDownload(val)}>
+              <SelectTrigger className="h-8 w-auto gap-1.5 text-xs">
+                <Download className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <SelectValue placeholder="Download" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="csv">CSV</SelectItem>
+                <SelectItem value="excel">Excel</SelectItem>
+                <SelectItem value="pdf">PDF</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <button
+              onClick={() => setSelectedIds([])}
+              className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+              title="Clear selection"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Table / Board */}
       {view === 'table' ? (
         isLoading ? (
@@ -263,6 +384,9 @@ export default function LeadList() {
             hasPrevPage={pagination?.hasPrevPage}
             onPageChange={handlePageChange}
             onPageSizeChange={handlePageSizeChange}
+            selectable
+            selectedIds={selectedIds}
+            onSelectionChange={handleSelectionChange}
           />
         )
       ) : (
@@ -314,6 +438,17 @@ export default function LeadList() {
         title="Delete Lead?"
         message={deleteTarget ? `Delete lead "${deleteTarget.name}"? This cannot be undone.` : ''}
       />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={confirmBulkDelete}
+        title="Delete Leads?"
+        message={`Delete ${selectedIds.length} selected ${selectedIds.length === 1 ? 'lead' : 'leads'}? This cannot be undone.`}
+        confirmLabel={isBulkDeleting ? 'Deleting...' : 'Delete'}
+      />
+
+      <LeadImportModal open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 }

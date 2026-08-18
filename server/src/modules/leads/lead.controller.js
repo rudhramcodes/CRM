@@ -1,4 +1,5 @@
 import ApiResponse from '../../utils/ApiResponse.js';
+import ApiError from '../../utils/ApiError.js';
 import * as leadService from './lead.service.js';
 
 export const list = async (req, res, next) => {
@@ -41,6 +42,36 @@ export const remove = async (req, res, next) => {
   try {
     await leadService.deleteLead(req.params.id);
     ApiResponse.success(res, 200, null, 'Lead deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const bulkDelete = async (req, res, next) => {
+  try {
+    const result = await leadService.bulkDelete(req.body.ids);
+    ApiResponse.success(res, 200, { deleted: result.deletedCount }, 'Leads deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const bulkUpdate = async (req, res, next) => {
+  try {
+    const result = await leadService.bulkUpdateStatus(req.body.ids, req.body.data, req.user);
+    ApiResponse.success(res, 200, { updated: result.modifiedCount }, 'Leads updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const importLeads = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw ApiError.badRequest('Please upload a .xlsx, .xls or .csv file');
+    }
+    const result = await leadService.importLeads(req.file, req.user);
+    ApiResponse.success(res, 200, result, `Import complete: ${result.imported} imported, ${result.skipped} skipped`);
   } catch (error) {
     next(error);
   }
