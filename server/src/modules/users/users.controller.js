@@ -68,3 +68,12 @@ export const stats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getPortalStaff = async (req, res, next) => {
+  try {
+    const staff = await usersService.getPortalStaff();
+    ApiResponse.success(res, 200, { staff });
+  } catch (error) {
+    next(error);
+  }
+};

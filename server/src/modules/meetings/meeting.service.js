@@ -77,14 +77,34 @@ const findConflicts = async ({ date, startTime, endTime, people, excludeId }) =>
   });
 };
 
-export const createMeeting = async (data, user) => {
+export const createMeeting = async (data, user, clientProfile) => {
   const duration = computeDuration(data.startTime, data.endTime);
   if (duration <= 0) {
     throw ApiError.badRequest('End time must be after start time');
   }
 
+  if (clientProfile) {
+    data.client = clientProfile._id;
+    data.lead = null;
+    delete data.recurrence;
+    if (data.actionItems?.length) {
+      throw ApiError.badRequest('Action items are managed by staff only');
+    }
+  }
+
   const attendees = [...new Set((data.attendees || []).map((a) => a.toString()))];
   const people = [...new Set([user._id.toString(), ...attendees])];
+
+  if (clientProfile && attendees.length > 0) {
+    const User = (await import('../auth/auth.model.js')).default;
+    const staffCount = await User.countDocuments({
+      _id: { $in: attendees },
+      role: { $in: STAFF_ROLES },
+    });
+    if (staffCount !== attendees.length) {
+      throw ApiError.badRequest('Attendees must be CRM staff members');
+    }
+  }
 
   const conflicts = await findConflicts({
     date: new Date(data.date),
@@ -198,16 +218,36 @@ export const createMeeting = async (data, user) => {
   return meeting;
 };
 
-export const getMeetings = async (query) => {
+export const getMeetings = async (query, user, clientProfile) => {
   const { page, limit, sortBy, sortOrder, ...filters } = query;
-  return meetingRepository.findAll(filters, { page, limit, sortBy, sortOrder });
+
+  const options = { page, limit, sortBy, sortOrder };
+  if (clientProfile) {
+    options.accessFilter = {
+      $or: [{ client: clientProfile._id }, { attendees: user._id }],
+    };
+  }
+
+  return meetingRepository.findAll(filters, options);
 };
 
-export const getMeetingById = async (id) => {
+export const getMeetingById = async (id, user, clientProfile) => {
   const meeting = await meetingRepository.findById(id);
   if (!meeting) {
     throw ApiError.notFound('Meeting not found');
   }
+
+  if (clientProfile) {
+    const clientId = String(meeting.client?._id || meeting.client || '');
+    const isClientMeeting = clientId === String(clientProfile._id);
+    const isAttendee = (meeting.attendees || []).some(
+      (a) => String(a._id || a) === String(user._id),
+    );
+    if (!isClientMeeting && !isAttendee) {
+      throw ApiError.forbidden('You do not have access to this meeting');
+    }
+  }
+
   return meeting;
 };
 
@@ -306,10 +346,19 @@ export const updateMeetingNotes = async (id, notes) => {
   return meetingRepository.updateNotesById(id, notes);
 };
 
-export const deleteMeeting = async (id, { allSeries = false } = {}) => {
+export const deleteMeeting = async (id, { allSeries = false } = {}, user, clientProfile) => {
   const meeting = await meetingRepository.findById(id);
   if (!meeting) {
     throw ApiError.notFound('Meeting not found');
+  }
+  if (clientProfile) {
+    const createdById = String(meeting.createdBy?._id || meeting.createdBy || '');
+    if (createdById !== String(user._id)) {
+      throw ApiError.forbidden('You can only cancel meetings you created');
+    }
+    if (allSeries) {
+      throw ApiError.badRequest('You cannot cancel a recurring series from the portal');
+    }
   }
   if (allSeries && meeting.seriesId) {
     return { deleted: await meetingRepository.deleteSeries(meeting.seriesId) };

@@ -111,3 +111,16 @@ export const getUserStats = async () => {
 
   return stats;
 };
+
+export const getPortalStaff = async () => {
+  const { ROLES } = await import('../../constants/index.js');
+  const { default: User } = await import('../auth/auth.model.js');
+  const users = await User.find({
+    role: { $in: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE] },
+    isActive: true,
+  })
+    .select('_id name email avatar role')
+    .sort({ name: 1 })
+    .lean();
+  return users;
+};

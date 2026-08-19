@@ -3,7 +3,7 @@ import * as meetingService from './meeting.service.js';
 
 export const list = async (req, res, next) => {
   try {
-    const result = await meetingService.getMeetings(req.query);
+    const result = await meetingService.getMeetings(req.query, req.user, req.clientProfile);
     ApiResponse.paginated(res, result.meetings, result.pagination);
   } catch (error) {
     next(error);
@@ -12,7 +12,11 @@ export const list = async (req, res, next) => {
 
 export const getById = async (req, res, next) => {
   try {
-    const meeting = await meetingService.getMeetingById(req.params.id);
+    const meeting = await meetingService.getMeetingById(
+      req.params.id,
+      req.user,
+      req.clientProfile,
+    );
     ApiResponse.success(res, 200, { meeting });
   } catch (error) {
     next(error);
@@ -21,7 +25,7 @@ export const getById = async (req, res, next) => {
 
 export const create = async (req, res, next) => {
   try {
-    const result = await meetingService.createMeeting(req.body, req.user);
+    const result = await meetingService.createMeeting(req.body, req.user, req.clientProfile);
     if (result.meetings) {
       ApiResponse.created(res, result, 'Meeting series scheduled successfully');
     } else {
@@ -53,9 +57,12 @@ export const updateNotes = async (req, res, next) => {
 export const remove = async (req, res, next) => {
   try {
     const { allSeries } = req.query;
-    const result = await meetingService.deleteMeeting(req.params.id, {
-      allSeries: allSeries === 'true',
-    });
+    const result = await meetingService.deleteMeeting(
+      req.params.id,
+      { allSeries: allSeries === 'true' },
+      req.user,
+      req.clientProfile,
+    );
     ApiResponse.success(res, 200, result, 'Meeting deleted successfully');
   } catch (error) {
     next(error);

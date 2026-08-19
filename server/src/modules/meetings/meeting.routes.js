@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as meetingController from './meeting.controller.js';
 import validate, { validateQuery } from '../../middleware/validate.js';
 import { verifyToken, authorize } from '../../middleware/auth.js';
+import { attachClientProfile } from '../../middleware/clientPortal.js';
 import { ROLES } from '../../constants/index.js';
 import {
   createMeetingSchema,
@@ -16,24 +17,30 @@ import {
 
 const router = Router();
 
+const STAFF = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE];
+
+const meetingReadAuth = [...STAFF.map((r) => r), ROLES.CLIENT];
+const meetingReadMiddlewares = [authorize(...meetingReadAuth), attachClientProfile];
+
 router.use(verifyToken);
 
 router.get(
   '/',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  ...meetingReadMiddlewares,
   validateQuery(meetingsQuerySchema),
   meetingController.list,
 );
 
 router.get(
   '/:id',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  ...meetingReadMiddlewares,
   meetingController.getById,
 );
 
 router.post(
   '/',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  authorize(...STAFF.slice(0, 3), ROLES.CLIENT),
+  attachClientProfile,
   validate(createMeetingSchema),
   meetingController.create,
 );
@@ -94,7 +101,8 @@ router.post(
 
 router.delete(
   '/:id',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.CLIENT),
+  attachClientProfile,
   meetingController.remove,
 );
 

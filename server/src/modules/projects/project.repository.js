@@ -28,6 +28,7 @@ export const findAll = async (query = {}, options = {}) => {
   if (query.priority) filter.priority = query.priority;
   if (query.tag) filter.tags = { $in: [query.tag] };
   if (query.employeeFilter) filter['teamMembers.user'] = query.employeeFilter;
+  if (options.client) filter.client = options.client;
 
   const [projects, total] = await Promise.all([
     Project.find(filter)

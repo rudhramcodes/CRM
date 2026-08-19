@@ -5,6 +5,7 @@ export const NOTIFICATION_TYPES = {
   TASK_COMMENT: 'task_comment',
   MENTION: 'mention',
   PROJECT_ASSIGNED: 'project_assigned',
+  PROJECT_CHAT: 'project_chat',
   LEAD_CREATED: 'lead_created',
   LEAD_ASSIGNED: 'lead_assigned',
   LEAD_CONVERTED: 'lead_converted',
@@ -80,6 +81,12 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `${d.actorName} marked "${d.projectName}" as ${d.newStatus}`,
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: false, cliq: true },
+  },
+  project_chat: {
+    title: 'New message',
+    message: (d) => `${d.senderName}: ${d.message}`,
+    priority: NOTIFICATION_PRIORITIES.LOW,
+    channels: { email: false, cliq: false },
   },
   lead_created: {
     title: 'New Lead',

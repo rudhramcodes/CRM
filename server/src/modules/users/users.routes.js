@@ -21,6 +21,12 @@ router.get(
 );
 
 router.get(
+  '/portal-staff',
+  authorize(ROLES.CLIENT),
+  usersController.getPortalStaff,
+);
+
+router.get(
   '/',
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
   validateQuery(usersQuerySchema),

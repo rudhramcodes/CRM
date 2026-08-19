@@ -3,7 +3,7 @@ import * as projectService from './project.service.js';
 
 export const list = async (req, res, next) => {
   try {
-    const result = await projectService.getProjects(req.query, req.user);
+    const result = await projectService.getProjects(req.query, req.user, req.clientProfile);
     ApiResponse.paginated(res, result.projects, result.pagination);
   } catch (error) {
     next(error);
@@ -12,7 +12,7 @@ export const list = async (req, res, next) => {
 
 export const getById = async (req, res, next) => {
   try {
-    const project = await projectService.getProjectById(req.params.id);
+    const project = await projectService.getProjectById(req.params.id, req.user, req.clientProfile);
     ApiResponse.success(res, 200, { project });
   } catch (error) {
     next(error);
@@ -87,7 +87,7 @@ export const deleteTask = async (req, res, next) => {
 export const addMessage = async (req, res, next) => {
   try {
     const files = req.files || [];
-    const message = await projectService.addMessage(req.params.id, req.body, req.user, files);
+    const message = await projectService.addMessage(req.params.id, req.body, req.user, req.clientProfile, files);
     ApiResponse.created(res, { message }, 'Message posted');
   } catch (error) {
     next(error);
@@ -96,7 +96,7 @@ export const addMessage = async (req, res, next) => {
 
 export const getMessages = async (req, res, next) => {
   try {
-    const messages = await projectService.getMessages(req.params.id);
+    const messages = await projectService.getMessages(req.params.id, req.user, req.clientProfile);
     ApiResponse.success(res, 200, messages);
   } catch (error) {
     next(error);
@@ -105,7 +105,7 @@ export const getMessages = async (req, res, next) => {
 
 export const deleteMessage = async (req, res, next) => {
   try {
-    await projectService.deleteMessage(req.params.id, req.params.messageId, req.user);
+    await projectService.deleteMessage(req.params.id, req.params.messageId, req.user, req.clientProfile);
     ApiResponse.success(res, 200, null, 'Message deleted');
   } catch (error) {
     next(error);
@@ -115,7 +115,7 @@ export const deleteMessage = async (req, res, next) => {
 // Activities
 export const getActivities = async (req, res, next) => {
   try {
-    const activities = await projectService.getActivities(req.params.id);
+    const activities = await projectService.getActivities(req.params.id, req.user, req.clientProfile);
     ApiResponse.success(res, 200, activities);
   } catch (error) {
     next(error);

@@ -40,6 +40,10 @@ export const findAll = async (query = {}, options = {}) => {
     if (query.dateTo) filter.date.$lte = new Date(query.dateTo);
   }
 
+  if (options.accessFilter) {
+    Object.assign(filter, options.accessFilter);
+  }
+
   const [meetings, total] = await Promise.all([
     Meeting.find(filter)
       .sort(sort)

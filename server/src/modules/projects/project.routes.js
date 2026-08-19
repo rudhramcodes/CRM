@@ -3,6 +3,7 @@ import multer from 'multer';
 import * as projectController from './project.controller.js';
 import validate, { validateQuery } from '../../middleware/validate.js';
 import { verifyToken, authorize } from '../../middleware/auth.js';
+import { attachClientProfile } from '../../middleware/clientPortal.js';
 import { ROLES } from '../../constants/index.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -18,22 +19,25 @@ const router = Router();
 
 router.use(verifyToken);
 
+const STAFF = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE];
+const projectReadAuth = [authorize(...STAFF, ROLES.CLIENT), attachClientProfile];
+
 router.get(
   '/stats',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  authorize(...STAFF),
   projectController.stats,
 );
 
 router.get(
   '/',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  ...projectReadAuth,
   validateQuery(projectsQuerySchema),
   projectController.list,
 );
 
 router.get(
   '/:id',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  ...projectReadAuth,
   projectController.getById,
 );
 
@@ -57,30 +61,32 @@ router.delete(
   projectController.remove,
 );
 
-// Messages - viewable by all, postable by super_admin/admin/manager
+// Messages - viewable + postable by staff and the linked client (client scoped in service)
 router.get(
   '/:id/messages',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  ...projectReadAuth,
   projectController.getMessages,
 );
 
 router.post(
   '/:id/messages',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  authorize(...STAFF, ROLES.CLIENT),
+  attachClientProfile,
   upload.array('images', 5),
   projectController.addMessage,
 );
 
 router.delete(
   '/:id/messages/:messageId',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  authorize(...STAFF, ROLES.CLIENT),
+  attachClientProfile,
   projectController.deleteMessage,
 );
 
-// Activities - viewable by all project roles
+// Activities - viewable by staff + linked client
 router.get(
   '/:id/activities',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
+  ...projectReadAuth,
   projectController.getActivities,
 );
 

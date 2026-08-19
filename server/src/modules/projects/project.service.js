@@ -13,6 +13,14 @@ const assertClientExists = async (clientId) => {
   }
 };
 
+const assertClientProjectAccess = async (project, clientProfile) => {
+  if (!clientProfile) return;
+  const projectClientId = project.client?._id || project.client;
+  if (String(projectClientId) !== String(clientProfile._id)) {
+    throw ApiError.forbidden('Access denied to this project');
+  }
+};
+
 export const createProject = async (data, user) => {
   await assertClientExists(data.client);
 
@@ -61,17 +69,21 @@ export const createProject = async (data, user) => {
   return project;
 };
 
-export const getProjects = async (query, _user) => {
+export const getProjects = async (query, _user, clientProfile) => {
   const { page, limit, sortBy, sortOrder, ...filters } = query;
   const options = { page, limit, sortBy, sortOrder };
+  if (clientProfile) options.client = clientProfile._id;
 
   return projectRepository.findAll(filters, options);
 };
 
-export const getProjectById = async (id) => {
+export const getProjectById = async (id, user, clientProfile) => {
   const project = await projectRepository.findById(id);
   if (!project) {
     throw ApiError.notFound('Project not found');
+  }
+  if (user?.role === 'client') {
+    await assertClientProjectAccess(project, clientProfile);
   }
   return project;
 };
@@ -240,9 +252,15 @@ const parseTaskCommand = (text) => {
   };
 };
 
-export const addMessage = async (projectId, data, user, files = []) => {
+export const addMessage = async (projectId, data, user, clientProfile, files = []) => {
   const project = await projectRepository.findById(projectId);
   if (!project) throw ApiError.notFound('Project not found');
+  if (user.role === 'client') {
+    await assertClientProjectAccess(project, clientProfile);
+    if (data.text?.trim().toLowerCase().startsWith('/task')) {
+      throw ApiError.forbidden('Clients cannot create tasks from chat');
+    }
+  }
 
   const images = await Promise.all(
     (files || []).map(async (f) => {
@@ -290,6 +308,37 @@ export const addMessage = async (projectId, data, user, files = []) => {
 
   const saved = project.messages[project.messages.length - 1];
 
+  const chatNotif = notificationService.buildNotification('project_chat', {
+    senderName: user.name,
+    message: data.text ? data.text.slice(0, 120) : '📎 image',
+  });
+
+  if (user.role === 'client') {
+    const memberIds = (project.teamMembers || [])
+      .map((m) => (m.user?._id || m.user))
+      .filter((uid) => String(uid) !== String(user._id));
+    notificationService.createAndSendBulk(memberIds, {
+      referenceId: project._id,
+      referenceModel: 'Project',
+      actionBy: user._id,
+      link: `/projects/${project._id}`,
+      ...chatNotif,
+    }).catch(() => {});
+  } else {
+    const clientId = project.client?._id || project.client;
+    const linkedClient = clientId ? await Client.findById(clientId).select('user').lean() : null;
+    if (linkedClient?.user) {
+      notificationService.createAndSend({
+        recipient: linkedClient.user,
+        referenceId: project._id,
+        referenceModel: 'Project',
+        actionBy: user._id,
+        link: `/projects/${project._id}`,
+        ...chatNotif,
+      }).catch(() => {});
+    }
+  }
+
   if (data.text) {
     const mentionRegex = /@\[([^\]]+)\]\(([a-fA-F0-9]+)\)/g;
     let mentionMatch;
@@ -321,17 +370,23 @@ export const addMessage = async (projectId, data, user, files = []) => {
   return saved;
 };
 
-export const getMessages = async (projectId) => {
+export const getMessages = async (projectId, user, clientProfile) => {
   const project = await projectRepository.findById(projectId);
   if (!project) throw ApiError.notFound('Project not found');
+  if (user?.role === 'client') {
+    await assertClientProjectAccess(project, clientProfile);
+  }
 
   await project.populate('messages.createdBy', 'name email avatar');
   return (project.messages || []).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 };
 
-export const deleteMessage = async (projectId, messageId, user) => {
+export const deleteMessage = async (projectId, messageId, user, clientProfile) => {
   const project = await projectRepository.findById(projectId);
   if (!project) throw ApiError.notFound('Project not found');
+  if (user.role === 'client') {
+    await assertClientProjectAccess(project, clientProfile);
+  }
 
   const message = project.messages.id(messageId);
   if (!message) throw ApiError.notFound('Message not found');
@@ -342,8 +397,11 @@ export const deleteMessage = async (projectId, messageId, user) => {
 };
 
 // --- Activities ---
-export const getActivities = async (projectId) => {
+export const getActivities = async (projectId, user, clientProfile) => {
   const project = await projectRepository.findById(projectId);
   if (!project) throw ApiError.notFound('Project not found');
+  if (user?.role === 'client') {
+    await assertClientProjectAccess(project, clientProfile);
+  }
   return (project.activities || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
