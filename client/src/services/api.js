@@ -19,8 +19,10 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
     if (refreshResult.data) {
       result = await baseQuery(args, api, extraOptions);
     } else {
+      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
       localStorage.removeItem('user');
-      window.location.href = '/auth/login';
+      localStorage.removeItem('accessToken');
+      window.location.href = storedUser?.role === 'client' ? '/portal/login' : '/auth/login';
     }
   }
 
@@ -30,6 +32,6 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Lead', 'LeadStats', 'Client', 'Meeting', 'Project', 'Task', 'Invoice', 'Payment', 'Notification', 'User', 'UserStats', 'NotifPrefs', 'OrgSettings', 'RolesPerms', 'SecuritySettings', 'IntegrationSettings'],
+  tagTypes: ['Lead', 'LeadStats', 'Client', 'ClientMe', 'PortalStaff', 'Meeting', 'Project', 'Task', 'Invoice', 'Payment', 'Notification', 'User', 'UserStats', 'NotifPrefs', 'OrgSettings', 'RolesPerms', 'SecuritySettings', 'IntegrationSettings'],
   endpoints: () => ({}),
 });

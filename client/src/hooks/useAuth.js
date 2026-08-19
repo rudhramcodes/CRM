@@ -7,10 +7,12 @@ export function useAuth() {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading, error, fieldErrors } = useSelector((state) => state.auth);
 
+  const roleHome = (role) => (role === 'client' ? '/portal' : '/dashboard');
+
   const login = async (credentials) => {
     const result = await dispatch(loginUser(credentials));
     if (loginUser.fulfilled.match(result)) {
-      navigate('/dashboard');
+      navigate(roleHome(result.payload?.user?.role));
     }
     return result;
   };
@@ -18,14 +20,14 @@ export function useAuth() {
   const register = async (userData) => {
     const result = await dispatch(registerUser(userData));
     if (registerUser.fulfilled.match(result)) {
-      navigate('/dashboard');
+      navigate(roleHome(result.payload?.user?.role));
     }
     return result;
   };
 
   const logout = () => {
     dispatch(logoutAction());
-    navigate('/auth/login');
+    navigate(roleHome(user?.role));
   };
 
   return {

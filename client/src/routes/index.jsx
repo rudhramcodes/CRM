@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import AuthLayout from '../layouts/AuthLayout';
+import ClientPortalLayout from '../layouts/ClientPortalLayout';
+import ClientAuthLayout from '../layouts/ClientAuthLayout';
 import ProtectedRoute from './ProtectedRoute';
 
 import Login from '../pages/auth/Login';
@@ -10,6 +12,17 @@ import VerifyEmailScreen from '../pages/VerifyEmailScreen';
 import Dashboard from '../pages/Dashboard';
 import NotFound from '../pages/NotFound';
 import TaskRedirect from './TaskRedirect';
+import ClientPortalLogin from '../modules/portal/pages/ClientPortalLogin';
+import AcceptInvite from '../modules/portal/pages/AcceptInvite';
+import OnboardingWizard from '../modules/portal/pages/OnboardingWizard';
+import ClientDashboard from '../modules/portal/pages/ClientDashboard';
+import PortalGuide from '../modules/portal/pages/PortalGuide';
+import PortalProfile from '../modules/portal/pages/PortalProfile';
+import PortalProjects from '../modules/portal/pages/PortalProjects';
+import PortalProjectDetail from '../modules/portal/pages/PortalProjectDetail';
+import PortalMeetings from '../modules/portal/pages/PortalMeetings';
+import PortalMeetingNew from '../modules/portal/pages/PortalMeetingNew';
+import PortalMeetingDetail from '../modules/portal/pages/PortalMeetingDetail';
 import LeadList from '../modules/leads/pages/LeadList';
 import LeadDetail from '../modules/leads/pages/LeadDetail';
 import LeadForm from '../modules/leads/components/LeadForm';
@@ -39,6 +52,35 @@ const router = createBrowserRouter([
       { path: 'login', element: <Login /> },
       { path: 'forgot-password', element: <ForgotPassword /> },
       { path: 'reset-password', element: <ResetPassword /> },
+    ],
+  },
+  {
+    path: '/portal/login',
+    element: <ClientAuthLayout />,
+    children: [{ index: true, element: <ClientPortalLogin /> }],
+  },
+  {
+    path: '/portal/accept-invite',
+    element: <ClientAuthLayout />,
+    children: [{ index: true, element: <AcceptInvite /> }],
+  },
+  {
+    path: '/portal',
+    element: (
+      <ProtectedRoute requiredRoles={['client']}>
+        <ClientPortalLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <ClientDashboard /> },
+      { path: 'onboarding', element: <OnboardingWizard /> },
+      { path: 'guide', element: <PortalGuide /> },
+      { path: 'profile', element: <PortalProfile /> },
+      { path: 'projects', element: <PortalProjects /> },
+      { path: 'projects/:id', element: <PortalProjectDetail /> },
+      { path: 'meetings', element: <PortalMeetings /> },
+      { path: 'meetings/new', element: <PortalMeetingNew /> },
+      { path: 'meetings/:id', element: <PortalMeetingDetail /> },
     ],
   },
   {

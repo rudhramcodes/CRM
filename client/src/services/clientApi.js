@@ -58,6 +58,24 @@ export const clientApi = api.injectEndpoints({
       providesTags: ['Client'],
       keepUnusedDataFor: 0,
     }),
+
+    getClientMe: builder.query({
+      query: () => '/clients/me',
+      providesTags: ['ClientMe'],
+      keepUnusedDataFor: 0,
+    }),
+
+    inviteClient: builder.mutation({
+      query: (id) => ({
+        url: `/clients/${id}/invite`,
+        method: 'POST',
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: 'Client', id },
+        'Client',
+        'ClientMe',
+      ],
+    }),
   }),
 });
 
@@ -69,4 +87,6 @@ export const {
   useDeleteClientMutation,
   useConvertLeadToClientMutation,
   useGetClientStatsQuery,
+  useGetClientMeQuery,
+  useInviteClientMutation,
 } = clientApi;

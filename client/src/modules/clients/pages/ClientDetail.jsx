@@ -15,10 +15,12 @@ import {
   Calendar,
   CreditCard,
   Hash,
+  KeyRound,
 } from 'lucide-react';
 import {
   useGetClientByIdQuery,
   useDeleteClientMutation,
+  useInviteClientMutation,
 } from '../../../services/clientApi';
 import ClientStatusBadge from '../components/ClientStatusBadge';
 import ClientForm from '../components/ClientForm';
@@ -40,6 +42,7 @@ export default function ClientDetail() {
 
   const { data: clientData, isLoading, error } = useGetClientByIdQuery(id);
   const [deleteClient, { isLoading: isDeleting }] = useDeleteClientMutation();
+  const [inviteClient, { isLoading: isInviting }] = useInviteClientMutation();
 
   const client = clientData?.data?.client;
 
@@ -50,6 +53,19 @@ export default function ClientDetail() {
   }, [client, dispatch]);
 
   const handleDelete = () => setShowDeleteConfirm(true);
+
+  const handleInvite = async () => {
+    try {
+      await inviteClient(id).unwrap();
+      toast.success(`Portal invite sent to ${client.email}`);
+    } catch (error) {
+      if (error?.status === 409) {
+        toast.error(error?.data?.message || 'Portal account already active');
+      } else {
+        toast.error(error?.data?.message || 'Failed to send portal invite');
+      }
+    }
+  };
 
   const confirmDelete = useCallback(async () => {
     try {
@@ -63,6 +79,7 @@ export default function ClientDetail() {
 
   const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
+  const portalActive = !!client?.user;
 
   if (isLoading) {
     return <DetailSkeleton />;
@@ -101,6 +118,12 @@ export default function ClientDetail() {
         </button>
 
         <div className="flex items-center gap-2">
+          {canManage && !portalActive && (
+            <Button variant="secondary" size="sm" onClick={handleInvite} loading={isInviting}>
+              <KeyRound className="w-3.5 h-3.5" />
+              Send Portal Invite
+            </Button>
+          )}
           {canManage && (
             <Button variant="secondary" size="sm" onClick={() => setShowEditModal(true)}>
               <Edit2 className="w-3.5 h-3.5" />
@@ -130,6 +153,11 @@ export default function ClientDetail() {
                 <h2 className="text-xl font-semibold text-primary-900">{client.companyName}</h2>
                 <div className="flex items-center gap-2 mt-1.5">
                   <ClientStatusBadge status={client.status} />
+                  {portalActive && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                      Portal: Active
+                    </span>
+                  )}
                   {client.convertedFrom && (
                     <>
                       <span className="text-xs text-zinc-400">|</span>

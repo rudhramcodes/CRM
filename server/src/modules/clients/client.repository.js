@@ -9,7 +9,8 @@ export const findById = async (id) => {
   return Client.findById(id)
     .populate('convertedFrom', 'name email source status')
     .populate('notes.createdBy', 'name email avatar role')
-    .populate('createdBy', 'name email');
+    .populate('createdBy', 'name email')
+    .populate('user', 'name email role isActive onboardingCompleted');
 };
 
 export const findByEmail = async (email) => {

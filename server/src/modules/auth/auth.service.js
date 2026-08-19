@@ -271,7 +271,7 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
 export const acceptClientInvite = async ({ token, password }) => {
   const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
-  const { default: clientRepository } = await import('../clients/client.repository.js');
+  const clientRepository = await import('../clients/client.repository.js');
   const client = await clientRepository.findOneByPortalInviteToken(hashedToken);
   if (!client) {
     throw ApiError.badRequest('Invite token is invalid or has expired');
@@ -313,7 +313,7 @@ export const getMeWithClient = async (user) => {
   if (user.role !== ROLES.CLIENT) {
     return user;
   }
-  const { default: clientRepository } = await import('../clients/client.repository.js');
+  const clientRepository = await import('../clients/client.repository.js');
   const client = await clientRepository.findOneByUser(user._id);
   const userObj = user.toJSON ? user.toJSON() : user;
   return { ...userObj, clientId: client?._id ?? null };
