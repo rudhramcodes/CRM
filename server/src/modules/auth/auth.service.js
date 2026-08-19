@@ -6,6 +6,7 @@ import logger from '../../utils/logger.js';
 import * as authRepository from './auth.repository.js';
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from '../../services/emailService.js';
 import { validatePasswordAgainstPolicy } from '../settings/settings.service.js';
+import { ROLES } from '../../constants/index.js';
 
 const generateTokens = async (user) => {
   const accessToken = user.generateAccessToken();
@@ -265,4 +266,55 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
 
   user.password = newPassword;
   await user.save();
+};
+
+export const acceptClientInvite = async ({ token, password }) => {
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const { default: clientRepository } = await import('../clients/client.repository.js');
+  const client = await clientRepository.findOneByPortalInviteToken(hashedToken);
+  if (!client) {
+    throw ApiError.badRequest('Invite token is invalid or has expired');
+  }
+
+  if (!client.portalInviteExpires || client.portalInviteExpires < new Date()) {
+    throw ApiError.badRequest('Invite token has expired');
+  }
+
+  const user = await authRepository.findById(client.user);
+  if (!user) {
+    throw ApiError.badRequest('Portal account not found — please contact support');
+  }
+
+  const policyErrors = await validatePasswordAgainstPolicy(password);
+  if (policyErrors.length) {
+    throw ApiError.badRequest(policyErrors.join('; '));
+  }
+
+  user.password = password;
+  user.isEmailVerified = true;
+  user.isActive = true;
+  await user.save();
+
+  client.portalInviteToken = null;
+  client.portalInviteExpires = null;
+  await client.save();
+
+  return user;
+};
+
+export const completeOnboarding = async (userId) => {
+  const user = await authRepository.updateUser(userId, { onboardingCompleted: true });
+  if (!user) throw ApiError.notFound('User not found');
+  return user;
+};
+
+export const getMeWithClient = async (user) => {
+  if (user.role !== ROLES.CLIENT) {
+    return user;
+  }
+  const { default: clientRepository } = await import('../clients/client.repository.js');
+  const client = await clientRepository.findOneByUser(user._id);
+  const userObj = user.toJSON ? user.toJSON() : user;
+  return { ...userObj, clientId: client?._id ?? null };
 };

@@ -16,6 +16,16 @@ export const findByEmail = async (email) => {
   return Client.findOne({ email });
 };
 
+export const findOneByUser = async (userId) => {
+  return Client.findOne({ user: userId });
+};
+
+export const findOneByPortalInviteToken = async (token) => {
+  return Client.findOne({ portalInviteToken: token }).select(
+    '+portalInviteToken +portalInviteExpires',
+  );
+};
+
 export const findByGst = async (gstNumber) => {
   return Client.findOne({ gstNumber });
 };

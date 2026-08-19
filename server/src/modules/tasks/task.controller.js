@@ -3,14 +3,14 @@ import * as taskService from './task.service.js';
 
 export const list = async (req, res, next) => {
   try {
-    const result = await taskService.getTasks(req.query);
+    const result = await taskService.getTasks(req.query, req.user, req.clientProfile);
     ApiResponse.paginated(res, result.tasks, result.pagination);
   } catch (err) { next(err); }
 };
 
 export const getById = async (req, res, next) => {
   try {
-    const task = await taskService.getTaskById(req.params.id);
+    const task = await taskService.getTaskById(req.params.id, req.user, req.clientProfile);
     ApiResponse.success(res, 200, { task });
   } catch (err) { next(err); }
 };
@@ -39,7 +39,7 @@ export const remove = async (req, res, next) => {
 // Subtasks
 export const getSubtasks = async (req, res, next) => {
   try {
-    const tasks = await taskService.getSubtasks(req.params.id);
+    const tasks = await taskService.getSubtasks(req.params.id, req.user, req.clientProfile);
     ApiResponse.success(res, 200, { tasks });
   } catch (err) { next(err); }
 };
@@ -47,7 +47,7 @@ export const getSubtasks = async (req, res, next) => {
 // Dependencies
 export const getDependencies = async (req, res, next) => {
   try {
-    const deps = await taskService.getDependencies(req.params.id);
+    const deps = await taskService.getDependencies(req.params.id, req.user, req.clientProfile);
     ApiResponse.success(res, 200, deps);
   } catch (err) { next(err); }
 };
@@ -69,14 +69,14 @@ export const removeDependency = async (req, res, next) => {
 // Comments
 export const addComment = async (req, res, next) => {
   try {
-    const task = await taskService.addComment(req.params.id, req.body.text, req.user);
+    const task = await taskService.addComment(req.params.id, req.body.text, req.user, req.clientProfile);
     ApiResponse.success(res, 200, { task }, 'Comment added');
   } catch (err) { next(err); }
 };
 
 export const removeComment = async (req, res, next) => {
   try {
-    const task = await taskService.removeComment(req.params.id, req.params.commentId, req.user);
+    const task = await taskService.removeComment(req.params.id, req.params.commentId, req.user, req.clientProfile);
     ApiResponse.success(res, 200, { task }, 'Comment removed');
   } catch (err) { next(err); }
 };
@@ -127,7 +127,7 @@ export const unwatchTask = async (req, res, next) => {
 
 export const getWatchedTasks = async (req, res, next) => {
   try {
-    const result = await taskService.getWatchedTasks(req.user._id, req.query);
+    const result = await taskService.getWatchedTasks(req.user._id, req.query, req.user, req.clientProfile);
     ApiResponse.paginated(res, result.tasks, result.pagination);
   } catch (err) { next(err); }
 };

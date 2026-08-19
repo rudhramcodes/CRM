@@ -3,6 +3,20 @@ import User from '../auth/auth.model.js';
 import * as taskRepo from './task.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
 import { emitEntityUpdate } from '../../sockets/index.js';
+import ApiError from '../../utils/ApiError.js';
+
+const assertClientTaskAccess = async (taskId, clientProfile) => {
+  if (!clientProfile) return null;
+  const task = await taskRepo.findById(taskId);
+  if (!task) throw ApiError.notFound('Task not found');
+  const projectId = task.project?._id || task.project;
+  const { default: Project } = await import('../projects/project.model.js');
+  const project = projectId ? await Project.findById(projectId).select('client').lean() : null;
+  if (!project || String(project.client) !== String(clientProfile._id)) {
+    throw ApiError.forbidden('Access denied to this task');
+  }
+  return task;
+};
 
 const checkCircularDependency = async (taskId, depId, visited = new Set()) => {
   if (taskId === depId) return true;
@@ -43,11 +57,17 @@ export const createTask = async (data, user) => {
   return created;
 };
 
-export const getTasks = async (query) => taskRepo.findAll(query);
+export const getTasks = async (query, user, clientProfile) => {
+  const options = {};
+  if (user?.role === 'client' && clientProfile) {
+    options.client = clientProfile._id;
+  }
+  return taskRepo.findAll(query, options);
+};
 
-export const getTaskById = async (id) => {
-  const task = await taskRepo.findById(id);
-  if (!task) throw { status: 404, message: 'Task not found' };
+export const getTaskById = async (id, user, clientProfile) => {
+  const task = user?.role === 'client' ? await assertClientTaskAccess(id, clientProfile) : await taskRepo.findById(id);
+  if (!task) throw ApiError.notFound('Task not found');
   return task;
 };
 
@@ -149,9 +169,9 @@ export const deleteTask = async (id, user) => {
 };
 
 // Subtasks
-export const getSubtasks = async (parentId) => {
-  const parent = await taskRepo.findById(parentId);
-  if (!parent) throw { status: 404, message: 'Task not found' };
+export const getSubtasks = async (parentId, user, clientProfile) => {
+  const parent = user?.role === 'client' ? await assertClientTaskAccess(parentId, clientProfile) : await taskRepo.findById(parentId);
+  if (!parent) throw ApiError.notFound('Task not found');
   return taskRepo.findSubtasks(parentId);
 };
 
@@ -175,9 +195,9 @@ export const removeDependency = async (taskId, depId) => {
   return taskRepo.findById(taskId);
 };
 
-export const getDependencies = async (taskId) => {
-  const task = await taskRepo.findById(taskId);
-  if (!task) throw { status: 404, message: 'Task not found' };
+export const getDependencies = async (taskId, user, clientProfile) => {
+  const task = user?.role === 'client' ? await assertClientTaskAccess(taskId, clientProfile) : await taskRepo.findById(taskId);
+  if (!task) throw ApiError.notFound('Task not found');
   return { dependsOn: task.dependsOn || [], blockedBy: task.blockedBy || [] };
 };
 
@@ -226,10 +246,15 @@ const processMentions = async (text, commenter, taskId, taskTitle, projectId) =>
   matched.forEach((u) => sendMentionNotif(u, commenter, taskId, taskTitle, projectId));
 };
 
-export const addComment = async (taskId, text, user) => {
+export const addComment = async (taskId, text, user, clientProfile) => {
+  const task = user?.role === 'client'
+    ? await assertClientTaskAccess(taskId, clientProfile)
+    : await taskRepo.findById(taskId);
+  if (!task) throw ApiError.notFound('Task not found');
+
   const comment = { text, createdBy: user._id };
-  const task = await taskRepo.addComment(taskId, comment);
-  if (!task) throw { status: 404, message: 'Task not found' };
+  const updated = await taskRepo.addComment(taskId, comment);
+  if (!updated) throw ApiError.notFound('Task not found');
   await taskRepo.addActivity(taskId, { action: 'commented', field: 'comment', performedBy: user._id });
 
   processMentions(text, user, taskId, task.title, task.project?._id || task.project).catch(() => {});
@@ -246,15 +271,27 @@ export const addComment = async (taskId, text, user) => {
 
   emitEntityUpdate('task', taskId, 'comment_added');
 
-  return task;
+  return updated;
 };
 
 // Checklists
-export const removeComment = async (taskId, commentId, user) => {
-  const task = await taskRepo.removeComment(taskId, commentId);
-  if (!task) throw { status: 404, message: 'Task not found' };
+export const removeComment = async (taskId, commentId, user, clientProfile) => {
+  const task = user?.role === 'client'
+    ? await assertClientTaskAccess(taskId, clientProfile)
+    : await taskRepo.findById(taskId);
+  if (!task) throw ApiError.notFound('Task not found');
+
+  const comment = task.comments?.find((c) => String(c._id) === String(commentId));
+  if (!comment) throw ApiError.notFound('Comment not found');
+
+  if (user.role === 'client' && String(comment.createdBy?._id || comment.createdBy) !== String(user._id)) {
+    throw ApiError.forbidden('You can only delete your own comments');
+  }
+
+  const updated = await taskRepo.removeComment(taskId, commentId);
+  if (!updated) throw ApiError.notFound('Task not found');
   await taskRepo.addActivity(taskId, { action: 'removed_comment', field: 'comment', performedBy: user._id });
-  return task;
+  return updated;
 };
 
 export const addChecklistItem = async (taskId, text, user) => {
@@ -309,8 +346,12 @@ export const removeWatcher = async (taskId, userId) => {
   return task;
 };
 
-export const getWatchedTasks = async (userId, query) => {
-  return taskRepo.findAll({ ...query, watchedBy: userId });
+export const getWatchedTasks = async (userId, query, user, clientProfile) => {
+  const options = {};
+  if (user?.role === 'client' && clientProfile) {
+    options.client = clientProfile._id;
+  }
+  return taskRepo.findAll({ ...query, watchedBy: userId }, options);
 };
 
 // Time Tracking

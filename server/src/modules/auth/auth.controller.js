@@ -93,7 +93,26 @@ export const refresh = async (req, res, next) => {
 
 export const getMe = async (req, res, next) => {
   try {
-    ApiResponse.success(res, 200, { user: req.user });
+    const user = await authService.getMeWithClient(req.user);
+    ApiResponse.success(res, 200, { user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const acceptClientInvite = async (req, res, next) => {
+  try {
+    await authService.acceptClientInvite(req.body);
+    ApiResponse.success(res, 200, null, 'Password set. You can now log in.');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const completeOnboarding = async (req, res, next) => {
+  try {
+    await authService.completeOnboarding(req.user._id);
+    ApiResponse.success(res, 200, null, 'Onboarding completed');
   } catch (error) {
     next(error);
   }

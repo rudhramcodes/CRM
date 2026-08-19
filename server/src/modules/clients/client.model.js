@@ -92,6 +92,21 @@ const clientSchema = new mongoose.Schema(
       ref: 'Lead',
       default: null,
     },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    portalInviteToken: {
+      type: String,
+      select: false,
+      default: null,
+    },
+    portalInviteExpires: {
+      type: Date,
+      select: false,
+      default: null,
+    },
     notes: [noteSchema],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -112,6 +127,7 @@ const clientSchema = new mongoose.Schema(
 
 clientSchema.index({ status: 1 });
 clientSchema.index({ createdAt: -1 });
+clientSchema.index({ user: 1 }, { unique: true, sparse: true });
 clientSchema.index({ companyName: 'text', email: 'text', contactPerson: 'text' });
 
 const Client = mongoose.model('Client', clientSchema);

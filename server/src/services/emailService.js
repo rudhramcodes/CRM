@@ -238,3 +238,34 @@ export const sendPasswordResetEmail = async (email, resetToken) => {
   const resetUrl = `${config.clientUrl}/auth/reset-password?token=${resetToken}`;
   return sendEmail({ to: email, subject: 'Reset your Rudhram password', html: renderPasswordResetEmail(resetUrl) });
 };
+
+export const BRAND_PORTAL_NAMES = {
+  aghori: 'Aghori',
+  panigrahna: 'Panigrahna',
+  house_of_joggi: 'House of Joggi',
+  damrru: 'Damrru',
+  tandavs: 'Tandavs',
+  kapaalik: 'Kapaalik',
+  kalyannam: 'Kalyannam',
+  storage_media_solution: 'Storage Media Solution',
+};
+
+export const renderPortalInviteEmail = ({ portalName, inviteUrl }) =>
+  renderEmail({
+    preheader: `You've been invited to the ${portalName} client portal. Set your password to get started.`,
+    heading: `Welcome to ${portalName}`,
+    subtext: `You've been invited to the <strong style="color:${INK};">${portalName}</strong> client portal. Set a password to sign in and access your projects, tasks, and meetings.`,
+    bodyHtml: `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${BG};border:1px solid ${BORDER};border-radius:12px;padding:16px 20px;font-family:${FONT};font-size:13px;color:${MUTED};">If the button doesn\u2019t work, copy this link into your browser:<br><a href="${inviteUrl}" style="color:${INK};">${inviteUrl}</a></td></tr></table>`,
+    cta: { url: inviteUrl, text: 'Set your password' },
+    footerNote: 'This link expires in 7 days. If you didn\u2019t expect this email, you can safely ignore it.',
+  });
+
+export const sendPortalInviteEmail = async (email, inviteToken, brand) => {
+  const portalName = BRAND_PORTAL_NAMES[brand] || 'Rudhram';
+  const inviteUrl = `${config.clientUrl}/portal/accept-invite?token=${inviteToken}`;
+  return sendEmail({
+    to: email,
+    subject: `You're invited to the ${portalName} client portal`,
+    html: renderPortalInviteEmail({ portalName, inviteUrl }),
+  });
+};

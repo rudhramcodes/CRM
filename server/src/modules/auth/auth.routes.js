@@ -2,7 +2,8 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import * as authController from './auth.controller.js';
 import validate from '../../middleware/validate.js';
-import { verifyToken } from '../../middleware/auth.js';
+import { verifyToken, authorize } from '../../middleware/auth.js';
+import { ROLES } from '../../constants/index.js';
 import {
   registerSchema,
   loginSchema,
@@ -13,6 +14,7 @@ import {
   resendVerificationSchema,
   updateProfileSchema,
   changePasswordSchema,
+  acceptClientInviteSchema,
 } from './auth.validation.js';
 
 const router = Router();
@@ -40,5 +42,8 @@ router.post('/resend-verification', authLimiter, validate(resendVerificationSche
 
 router.patch('/profile', verifyToken, validate(updateProfileSchema), authController.updateProfile);
 router.put('/password', verifyToken, validate(changePasswordSchema), authController.changePassword);
+
+router.post('/client/accept-invite', authLimiter, validate(acceptClientInviteSchema), authController.acceptClientInvite);
+router.post('/complete-onboarding', verifyToken, authorize(ROLES.CLIENT), authController.completeOnboarding);
 
 export default router;

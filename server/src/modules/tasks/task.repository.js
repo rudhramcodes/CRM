@@ -16,7 +16,7 @@ export const create = (data) => Task.create(data);
 export const findById = (id) =>
   Task.findById(id).populate(POPULATE_FIELDS);
 
-export const findAll = async (query, options) => {
+export const findAll = async (query, options = {}) => {
   const filter = {};
   if (query.search) {
     const re = { $regex: query.search, $options: 'i' };
@@ -34,6 +34,12 @@ export const findAll = async (query, options) => {
   }
   if (query.parent !== undefined) filter.parent = query.parent || null;
   if (query.watchedBy) filter.watchers = query.watchedBy;
+
+  if (options.client) {
+    const { default: Project } = await import('../projects/project.model.js');
+    const projects = await Project.find({ client: options.client }).select('_id').lean();
+    filter.project = { $in: projects.map((p) => p._id) };
+  }
 
   const sort = {};
   const sortField = query.sort?.startsWith('-') ? query.sort.slice(1) : query.sort || 'createdAt';

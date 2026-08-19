@@ -64,3 +64,21 @@ export const stats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const invite = async (req, res, next) => {
+  try {
+    const data = await clientService.sendPortalInvite(req.params.id);
+    ApiResponse.success(res, 200, data, 'Portal invite sent');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMyProfile = async (req, res, next) => {
+  try {
+    const data = await clientService.getMyProfile(req.user, req.clientProfile);
+    ApiResponse.success(res, 200, data);
+  } catch (error) {
+    next(error);
+  }
+};
