@@ -47,7 +47,7 @@ export const sendPortalInvite = async (clientId) => {
   client.portalInviteExpires = new Date(Date.now() + PORTAL_INVITE_TTL_MS);
   await client.save();
 
-  sendPortalInviteEmail(client.email, inviteToken, client.brand).catch((err) =>
+  sendPortalInviteEmail(client.email, inviteToken).catch((err) =>
     logger.error(`Portal invite email failed: ${err.message}`),
   );
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { ArrowLeft, ChevronDown, MapPin, CalendarDays, Send, Trash2 } from 'lucide-react';
@@ -10,6 +10,7 @@ import Button from '../../../components/ui/Button';
 import { getStatusColor, formatDate } from '../../../utils/formatters';
 import { useGetProjectByIdQuery } from '../../../services/projectApi';
 import { useGetTasksQuery, useGetTaskByIdQuery, useAddTaskCommentMutation, useDeleteTaskCommentMutation } from '../../../services/taskApi';
+import useSocketEntity from '../../../hooks/useSocketEntity';
 import PortalChatPanel from '../components/PortalChatPanel';
 
 const STATUS_LABELS = {
@@ -47,11 +48,26 @@ export default function PortalProjectDetail() {
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedTask, setExpandedTask] = useState(null);
 
-  const { data: project, isLoading, isError, error } = useGetProjectByIdQuery(id, { skip: !id });
-  const { data: tasksData, isLoading: tasksLoading } = useGetTasksQuery({ project: id, limit: 100 }, { skip: !id });
+  const { data: projectData, isLoading, isError, error, refetch: refetchProject } = useGetProjectByIdQuery(id, { skip: !id });
+  const project = projectData?.data?.project;
+  const { data: tasksData, isLoading: tasksLoading, refetch: refetchTasks } = useGetTasksQuery({ project: id, limit: 100 }, { skip: !id });
 
   const tasks = tasksData?.data || tasksData || [];
   const milestones = project?.milestones || [];
+  const [taskRefreshKey, setTaskRefreshKey] = useState(0);
+
+  useSocketEntity('project', id, {
+    onUpdate: (data) => {
+      const action = data?.action;
+      if (action === 'project_updated') {
+        refetchProject();
+      } else if (action === 'task_added' || action === 'task_updated' || action === 'task_deleted') {
+        refetchTasks();
+      } else if (action === 'comment_added' || action === 'comment_removed') {
+        setTaskRefreshKey((k) => k + 1);
+      }
+    },
+  });
 
   if (isLoading) {
     return (
@@ -139,7 +155,7 @@ export default function PortalProjectDetail() {
                     <span
                       className={`absolute -left-[7px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white ${MILESTONE_STATUS_COLORS[m.status] || 'bg-zinc-200'}`}
                     />
-                    <p className="text-sm font-medium text-primary-900">{m.name}</p>
+                    <p className="text-sm font-medium text-primary-900">{m.title}</p>
                     <p className="text-xs text-zinc-400 mt-0.5">
                       {m.status === 'completed' ? 'Completed' : m.status === 'in_progress' ? 'In progress' : 'Pending'}
                       {m.dueDate && ` · due ${formatDate(m.dueDate)}`}
@@ -162,7 +178,7 @@ export default function PortalProjectDetail() {
             ) : (
               <div className="divide-y divide-zinc-100">
                 {tasks.map((task) => (
-                  <TaskRow key={task._id} task={task} expanded={expandedTask === task._id} onToggle={() => setExpandedTask(expandedTask === task._id ? null : task._id)} currentUser={user} />
+                  <TaskRow key={task._id} task={task} expanded={expandedTask === task._id} onToggle={() => setExpandedTask(expandedTask === task._id ? null : task._id)} currentUser={user} refreshKey={taskRefreshKey} />
                 ))}
               </div>
             )}
@@ -173,13 +189,21 @@ export default function PortalProjectDetail() {
   );
 }
 
-function TaskRow({ task, expanded, onToggle, currentUser }) {
-  const { data: taskDetail } = useGetTaskByIdQuery(task._id, { skip: !expanded });
+function TaskRow({ task, expanded, onToggle, currentUser, refreshKey }) {
+  const { data: taskDetail, refetch: refetchTaskDetail } = useGetTaskByIdQuery(task._id, { skip: !expanded });
   const [commentText, setCommentText] = useState('');
   const [addComment, { isLoading: isAdding }] = useAddTaskCommentMutation();
   const [deleteComment] = useDeleteTaskCommentMutation();
+  const prevRefreshKey = useRef(refreshKey);
 
-  const comments = taskDetail?.comments || task.comments || [];
+  useEffect(() => {
+    if (expanded && refreshKey !== prevRefreshKey.current) {
+      refetchTaskDetail();
+    }
+    prevRefreshKey.current = refreshKey;
+  }, [refreshKey, expanded, refetchTaskDetail]);
+
+  const comments = taskDetail?.data?.task?.comments || task.comments || [];
 
   const handleAddComment = async (e) => {
     e.preventDefault();

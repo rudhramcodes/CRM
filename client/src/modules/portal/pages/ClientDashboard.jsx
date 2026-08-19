@@ -22,7 +22,7 @@ export default function ClientDashboard() {
   const { data: projectsData, isLoading: projectsLoading } = useGetProjectsQuery({ limit: 4 });
   const { data: meetingsData, isLoading: meetingsLoading } = useGetMeetingsQuery({ limit: 5 });
 
-  const stats = me?.stats || { projectsByStatus: [], totalProjects: 0, upcomingMeetings: 0 };
+  const stats = me?.data?.stats || { projectsByStatus: [], totalProjects: 0, upcomingMeetings: 0 };
   const projects = projectsData?.data?.projects || projectsData?.projects || projectsData?.data || [];
   const meetings = meetingsData?.data?.meetings || meetingsData?.meetings || meetingsData?.data || [];
 
@@ -31,7 +31,7 @@ export default function ClientDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-xl font-semibold text-primary-900">Dashboard</h1>
-          <p className="text-sm text-zinc-500 mt-1">Welcome back, {me?.client?.companyName || 'there'}.</p>
+          <p className="text-sm text-zinc-500 mt-1">Welcome back, {me?.data?.client?.companyName || 'there'}.</p>
         </div>
         <Link to="/portal/meetings/new">
           <Button>

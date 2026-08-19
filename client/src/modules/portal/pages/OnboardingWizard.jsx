@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { CheckCircle, ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import { ONBOARDING_STEPS, GUIDE_SECTIONS } from '../data/onboardingContent';
-import { getBrandTheme } from '../../../constants/brandThemes';
 import { useGetClientMeQuery } from '../../../services/clientApi';
 import { completeOnboarding } from '../../../app/store/authSlice';
 import { cn } from '../../../utils/cn';
@@ -17,12 +16,8 @@ export default function OnboardingWizard() {
   const [completing, setCompleting] = useState(false);
   const [error, setError] = useState(null);
 
-  const brand = me?.client?.brand || 'aghori';
-  const theme = getBrandTheme(brand);
-  const client = me?.client || {};
+  const client = me?.data?.client || {};
   const total = ONBOARDING_STEPS.length;
-
-  const renderTitle = (title) => title.replace('{brandName}', theme.portalName);
 
   const handleComplete = async () => {
     setCompleting(true);
@@ -42,29 +37,17 @@ export default function OnboardingWizard() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
-        <div
-          className="px-8 py-6 text-white"
-          style={{
-            background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.accent1} 130%)`,
-          }}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-xl">
-              <span>{theme.logoEmoji}</span>
-            </div>
-            <div>
-              <p className="font-heading font-semibold">{theme.portalName}</p>
-              <p className="text-white/70 text-xs">Client portal</p>
-            </div>
-          </div>
-          <h1 className="font-heading text-xl font-semibold">{renderTitle(ONBOARDING_STEPS[step].title)}</h1>
-          <p className="text-white/80 text-sm mt-1 leading-relaxed max-w-lg">
-            {ONBOARDING_STEPS[step].body}
-          </p>
-        </div>
-
+      <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
         <div className="px-8 py-6">
+          <div className="mb-6">
+            <h1 className="font-heading text-xl font-semibold text-primary-900">
+              {ONBOARDING_STEPS[step].title}
+            </h1>
+            <p className="text-sm text-zinc-500 mt-1 leading-relaxed max-w-lg">
+              {ONBOARDING_STEPS[step].body}
+            </p>
+          </div>
+
           <div className="flex items-center gap-2 mb-6">
             {ONBOARDING_STEPS.map((s, i) => (
               <div key={s.key} className="flex items-center gap-2 flex-1">
@@ -91,7 +74,9 @@ export default function OnboardingWizard() {
             <div className="grid sm:grid-cols-2 gap-3 mb-6">
               {GUIDE_SECTIONS.map((section) => (
                 <div key={section.key} className="rounded-xl border border-zinc-200 p-4">
-                  <div className="text-xl mb-2">{section.icon}</div>
+                  <div className="w-10 h-10 rounded-lg bg-primary-900/5 flex items-center justify-center mb-2">
+                    <section.icon className="w-5 h-5 text-primary-900" />
+                  </div>
                   <h3 className="text-sm font-semibold text-primary-900 mb-1">{section.title}</h3>
                   <p className="text-xs text-zinc-500 leading-relaxed">{section.body}</p>
                 </div>
@@ -114,10 +99,6 @@ export default function OnboardingWizard() {
                 <div>
                   <p className="text-xs text-zinc-400 uppercase tracking-wide mb-0.5">Email</p>
                   <p className="text-primary-900 font-medium">{client.email || user?.email || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-zinc-400 uppercase tracking-wide mb-0.5">Brand</p>
-                  <p className="text-primary-900 font-medium capitalize">{theme.portalName}</p>
                 </div>
               </div>
             </div>

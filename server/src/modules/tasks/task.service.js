@@ -44,6 +44,8 @@ export const createTask = async (data, user) => {
     }
   }
   const created = await taskRepo.findById(task._id);
+  const createdProjectId = created.project?._id || created.project;
+  if (createdProjectId) emitEntityUpdate('project', createdProjectId, 'task_added', { taskId: created._id });
   if (data.assignedTo) {
     const notif = notificationService.buildNotification('task_assigned', {
       taskTitle: created.title, actorName: user.name,
@@ -144,6 +146,8 @@ export const updateTask = async (id, data, user) => {
   }
 
   emitEntityUpdate('task', id, 'task_updated');
+  const updatedProjectId = updated.project?._id || updated.project;
+  if (updatedProjectId) emitEntityUpdate('project', updatedProjectId, 'task_updated', { taskId: id });
   return updated;
 };
 
@@ -165,6 +169,8 @@ export const deleteTask = async (id, user) => {
   }
 
   emitEntityUpdate('task', id, 'task_deleted');
+  const deletedProjectId = task.project?._id || task.project;
+  if (deletedProjectId) emitEntityUpdate('project', deletedProjectId, 'task_deleted', { taskId: id });
   return taskRepo.deleteById(id);
 };
 
@@ -270,6 +276,8 @@ export const addComment = async (taskId, text, user, clientProfile) => {
   }
 
   emitEntityUpdate('task', taskId, 'comment_added');
+  const projectId = task.project?._id || task.project;
+  if (projectId) emitEntityUpdate('project', projectId, 'comment_added', { taskId });
 
   return updated;
 };
@@ -291,6 +299,11 @@ export const removeComment = async (taskId, commentId, user, clientProfile) => {
   const updated = await taskRepo.removeComment(taskId, commentId);
   if (!updated) throw ApiError.notFound('Task not found');
   await taskRepo.addActivity(taskId, { action: 'removed_comment', field: 'comment', performedBy: user._id });
+
+  emitEntityUpdate('task', taskId, 'comment_removed');
+  const projectId = task.project?._id || task.project;
+  if (projectId) emitEntityUpdate('project', projectId, 'comment_removed', { taskId });
+
   return updated;
 };
 

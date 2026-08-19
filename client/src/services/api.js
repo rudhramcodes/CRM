@@ -17,6 +17,8 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
     );
 
     if (refreshResult.data) {
+      const newToken = refreshResult.data?.data?.accessToken;
+      if (newToken) localStorage.setItem('accessToken', newToken);
       result = await baseQuery(args, api, extraOptions);
     } else {
       const storedUser = JSON.parse(localStorage.getItem('user') || 'null');

@@ -239,17 +239,6 @@ export const sendPasswordResetEmail = async (email, resetToken) => {
   return sendEmail({ to: email, subject: 'Reset your Rudhram password', html: renderPasswordResetEmail(resetUrl) });
 };
 
-export const BRAND_PORTAL_NAMES = {
-  aghori: 'Aghori',
-  panigrahna: 'Panigrahna',
-  house_of_joggi: 'House of Joggi',
-  damrru: 'Damrru',
-  tandavs: 'Tandavs',
-  kapaalik: 'Kapaalik',
-  kalyannam: 'Kalyannam',
-  storage_media_solution: 'Storage Media Solution',
-};
-
 export const renderPortalInviteEmail = ({ portalName, inviteUrl }) =>
   renderEmail({
     preheader: `You've been invited to the ${portalName} client portal. Set your password to get started.`,
@@ -260,8 +249,8 @@ export const renderPortalInviteEmail = ({ portalName, inviteUrl }) =>
     footerNote: 'This link expires in 7 days. If you didn\u2019t expect this email, you can safely ignore it.',
   });
 
-export const sendPortalInviteEmail = async (email, inviteToken, brand) => {
-  const portalName = BRAND_PORTAL_NAMES[brand] || 'Rudhram';
+export const sendPortalInviteEmail = async (email, inviteToken) => {
+  const portalName = 'Rudhram';
   const inviteUrl = `${config.clientUrl}/portal/accept-invite?token=${inviteToken}`;
   return sendEmail({
     to: email,

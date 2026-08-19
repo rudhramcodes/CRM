@@ -28,6 +28,7 @@ import {
   useDeleteTaskMutation,
 } from '../../../services/taskApi';
 import { useGetUsersQuery } from '../../../services/userApi';
+import useSocketEntity from '../../../hooks/useSocketEntity';
 import TaskForm from '../components/TaskForm';
 import ProjectStatusBadge from '../components/ProjectStatusBadge';
 import ProjectPriorityBadge from '../components/ProjectPriorityBadge';
@@ -64,16 +65,29 @@ export default function ProjectDetail() {
   const [deleteTaskId, setDeleteTaskId] = useState(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
 
-  const { data: projectData, isLoading, error } = useGetProjectByIdQuery(id);
+  const { data: projectData, isLoading, error, refetch: refetchProject } = useGetProjectByIdQuery(id);
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
   const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();
   const [updateProjectMilestones] = useUpdateProjectMilestonesMutation();
   const { data: activitiesData, isLoading: activitiesLoading } = useGetProjectActivitiesQuery(id, { skip: !id });
-  const { data: tasksData } = useGetTasksQuery({ project: id, limit: 100 }, { skip: !id });
+  const { data: tasksData, refetch: refetchTasks } = useGetTasksQuery({ project: id, limit: 100 }, { skip: !id });
   const { data: usersData } = useGetUsersQuery({ limit: 100 });
   const [createTask] = useCreateTaskMutation();
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
+
+  useSocketEntity('project', id, {
+    onUpdate: (data) => {
+      const action = data?.action;
+      if (action === 'project_updated') {
+        refetchProject();
+      } else if (action === 'task_added' || action === 'task_updated' || action === 'task_deleted') {
+        refetchTasks();
+      } else if (action === 'comment_added' || action === 'comment_removed') {
+        refetchTasks();
+      }
+    },
+  });
 
   const project = projectData?.data?.project;
   const activities = activitiesData?.data || [];

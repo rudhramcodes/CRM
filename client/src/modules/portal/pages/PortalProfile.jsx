@@ -1,24 +1,21 @@
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Lock, Eye, EyeOff, Building2, User, Mail, Phone, Palette } from 'lucide-react';
+import { Lock, Eye, EyeOff, Building2, User, Mail, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../../components/ui/Button';
-import { getBrandTheme } from '../../../constants/brandThemes';
+import Input from '../../../components/ui/Input';
 import { useGetClientMeQuery } from '../../../services/clientApi';
 import { useChangePasswordMutation } from '../../../services/settingsApi';
 
 export default function PortalProfile() {
   const { user } = useSelector((state) => state.auth);
   const { data: me } = useGetClientMeQuery(undefined, { skip: user?.role !== 'client' });
-  const client = me?.client || {};
+  const client = me?.data?.client || {};
 
   const [password, setPassword] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordErrors, setPasswordErrors] = useState({});
   const [showPwd, setShowPwd] = useState({ current: false, new: false, confirm: false });
   const [changePassword, { isLoading: isChanging }] = useChangePasswordMutation();
-
-  const brand = client.brand || 'aghori';
-  const theme = getBrandTheme(brand);
 
   const validate = () => {
     const errors = {};
@@ -50,13 +47,6 @@ export default function PortalProfile() {
     }
   };
 
-  const inputClass = (hasError) =>
-    `w-full pl-3 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
-      hasError
-        ? 'border-red-300 bg-red-50 focus:ring-red-400 focus:border-red-400'
-        : 'border-zinc-200 focus:ring-primary-900'
-    }`;
-
   const infoRow = (Icon, label, value) => (
     <div className="flex items-start gap-3">
       <div className="w-8 h-8 rounded-lg bg-primary-900/5 flex items-center justify-center shrink-0">
@@ -68,6 +58,12 @@ export default function PortalProfile() {
       </div>
     </div>
   );
+
+  const passwordFields = [
+    { key: 'currentPassword', label: 'Current Password', placeholder: 'Enter current password' },
+    { key: 'newPassword', label: 'New Password', placeholder: 'Enter new password' },
+    { key: 'confirmPassword', label: 'Confirm New Password', placeholder: 'Re-enter new password' },
+  ];
 
   return (
     <div className="space-y-6">
@@ -86,7 +82,6 @@ export default function PortalProfile() {
             {infoRow(User, 'Contact person', client.contactPerson)}
             {infoRow(Mail, 'Email', client.email)}
             {infoRow(Phone, 'Phone', client.phone)}
-            {infoRow(Palette, 'Portal theme', theme.portalName)}
           </div>
         </div>
 
@@ -95,36 +90,28 @@ export default function PortalProfile() {
             <Lock className="w-4 h-4" /> Change Password
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {[
-              { key: 'currentPassword', label: 'Current Password', placeholder: 'Enter current password' },
-              { key: 'newPassword', label: 'New Password', placeholder: 'Enter new password' },
-              { key: 'confirmPassword', label: 'Confirm New Password', placeholder: 'Re-enter new password' },
-            ].map((field) => (
-              <div key={field.key}>
-                <label className="block text-xs text-zinc-400 uppercase tracking-wide mb-1">{field.label}</label>
-                <div className="relative">
-                  <input
-                    type={showPwd[field.key] ? 'text' : 'password'}
-                    value={password[field.key]}
-                    onChange={(e) => {
-                      setPassword((p) => ({ ...p, [field.key]: e.target.value }));
-                      setPasswordErrors((p) => ({ ...p, [field.key]: '' }));
-                    }}
-                    className={`${inputClass(passwordErrors[field.key])} pr-9`}
-                    placeholder={field.placeholder}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPwd((p) => ({ ...p, [field.key]: !p[field.key] }))}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
-                    aria-label={showPwd[field.key] ? 'Hide password' : 'Show password'}
-                  >
-                    {showPwd[field.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {passwordErrors[field.key] && (
-                  <p className="text-xs text-red-500 mt-1">{passwordErrors[field.key]}</p>
-                )}
+            {passwordFields.map((field) => (
+              <div key={field.key} className="relative">
+                <Input
+                  type={showPwd[field.key] ? 'text' : 'password'}
+                  label={field.label}
+                  value={password[field.key]}
+                  onChange={(e) => {
+                    setPassword((p) => ({ ...p, [field.key]: e.target.value }));
+                    setPasswordErrors((p) => ({ ...p, [field.key]: '' }));
+                  }}
+                  className="pr-9"
+                  placeholder={field.placeholder}
+                  error={passwordErrors[field.key]}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((p) => ({ ...p, [field.key]: !p[field.key] }))}
+                  className="absolute right-2.5 top-[38px] text-zinc-400 hover:text-zinc-600"
+                  aria-label={showPwd[field.key] ? 'Hide password' : 'Show password'}
+                >
+                  {showPwd[field.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             ))}
             <Button type="submit" loading={isChanging} disabled={isChanging}>

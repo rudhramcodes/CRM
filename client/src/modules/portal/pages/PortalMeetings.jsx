@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CalendarClock, Plus, Video } from 'lucide-react';
+import { CalendarClock, Plus, Video, Eye } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Skeleton from '../../../components/ui/Skeleton';
 import EmptyState from '../../../components/ui/EmptyState';
@@ -71,21 +71,21 @@ export default function PortalMeetings() {
                 {formatDate(meeting.date)} · {meeting.startTime}–{meeting.endTime}
                 {meeting.location && ` · ${meeting.location}`}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-zinc-100">
                 <Link
                   to={`/portal/meetings/${meeting._id}`}
-                  className="text-xs font-medium text-primary-900 hover:underline"
+                  className="inline-flex items-center gap-2 rounded-lg font-medium text-xs px-3 py-1.5 border border-zinc-300 text-zinc-700 hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
                 >
-                  View details
+                  <Eye className="w-3.5 h-3.5" /> View details
                 </Link>
                 {meeting.meetingLink && meeting.status === 'scheduled' && (
                   <a
                     href={meeting.meetingLink}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-medium text-primary-900 hover:underline"
+                    className="inline-flex items-center gap-2 rounded-lg font-medium text-xs px-3 py-1.5 bg-primary-900 text-white hover:bg-primary-800 active:bg-primary-950 transition-colors"
                   >
-                    <Video className="w-3 h-3" /> Join
+                    <Video className="w-3.5 h-3.5" /> Join
                   </a>
                 )}
               </div>

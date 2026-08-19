@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGetProjectMessagesQuery, useAddProjectMessageMutation, useDeleteProjectMessageMutation } from '../../../services/projectApi';
 import { useGetUsersQuery } from '../../../services/userApi';
+import useSocketEntity from '../../../hooks/useSocketEntity';
 import toast from 'react-hot-toast';
 import Button from '../../../components/ui/Button';
 import ImageViewer from './ImageViewer';
@@ -31,10 +32,12 @@ export default function ProjectMessageFeed({ projectId }) {
   const mentionListRef = useRef(null);
   const selectedMentionsRef = useRef({});
 
-  const { data: messagesData, isLoading } = useGetProjectMessagesQuery({ id: projectId });
+  const { data: messagesData, isLoading, refetch } = useGetProjectMessagesQuery({ id: projectId });
   const [addMessage, { isLoading: isSending }] = useAddProjectMessageMutation();
   const [deleteMessage] = useDeleteProjectMessageMutation();
   const { data: usersData } = useGetUsersQuery({ limit: 100 }, { skip: !user });
+
+  useSocketEntity('project', projectId, { onUpdate: () => refetch() });
 
   const messages = messagesData?.data || [];
   const users = usersData?.data?.users || usersData?.data || [];

@@ -4,6 +4,7 @@ import { uploadBuffer } from '../../services/cloudinaryService.js';
 import Task from '../tasks/task.model.js';
 import Client from '../clients/client.model.js';
 import * as notificationService from '../notifications/notification.service.js';
+import { emitEntityUpdate } from '../../sockets/index.js';
 import logger from '../../utils/logger.js';
 
 const assertClientExists = async (clientId) => {
@@ -139,6 +140,8 @@ export const updateProject = async (id, data, user) => {
 
   const updated = await projectRepository.updateById(id, updateData, activities);
 
+  emitEntityUpdate('project', id, 'project_updated');
+
   if (data.status && data.status !== project.status) {
     const notif = notificationService.buildNotification('project_status_change', {
       projectName: project.title, actorName: user.name, newStatus: data.status,
@@ -196,6 +199,7 @@ export const addTask = async (projectId, data, user) => {
   project.activities.push({ action: 'task_added', performedBy: user._id });
   await project.save();
   const saved = project.tasks[project.tasks.length - 1];
+  emitEntityUpdate('project', projectId, 'task_added', { taskId: saved._id });
   if (data.assignedTo && String(data.assignedTo) !== String(user._id)) {
     const notif = notificationService.buildNotification('task_assigned', {
       taskTitle: task.title, actorName: user.name,
@@ -223,6 +227,7 @@ export const updateTask = async (projectId, taskId, data, user) => {
 
   project.activities.push({ action: 'task_updated', performedBy: user._id });
   await project.save();
+  emitEntityUpdate('project', projectId, 'task_updated', { taskId });
   return task;
 };
 
@@ -236,6 +241,7 @@ export const deleteTask = async (projectId, taskId, user) => {
   project.tasks.pull(taskId);
   project.activities.push({ action: 'task_deleted', performedBy: user._id });
   await project.save();
+  emitEntityUpdate('project', projectId, 'task_deleted', { taskId });
 };
 
 // --- Messages ---
@@ -307,6 +313,8 @@ export const addMessage = async (projectId, data, user, clientProfile, files = [
   await project.save();
 
   const saved = project.messages[project.messages.length - 1];
+
+  emitEntityUpdate('project', project._id, 'message_added', { messageId: saved._id });
 
   const chatNotif = notificationService.buildNotification('project_chat', {
     senderName: user.name,
@@ -394,6 +402,7 @@ export const deleteMessage = async (projectId, messageId, user, clientProfile) =
 
   project.messages.pull(messageId);
   await project.save();
+  emitEntityUpdate('project', projectId, 'message_deleted', { messageId });
 };
 
 // --- Activities ---

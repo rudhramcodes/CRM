@@ -79,7 +79,7 @@ export default function Header({ onMobileMenuOpen }) {
       // Proceed with local logout even if API fails
     }
     dispatch(logout());
-    navigate('/auth/login');
+    navigate(user?.role === 'client' ? '/portal/login' : '/auth/login');
   };
 
   return (
@@ -161,7 +161,7 @@ export default function Header({ onMobileMenuOpen }) {
                   })
                 )}
               </div>
-              {notifications.length > 0 && (
+              {notifications.length > 0 && user?.role !== 'client' && (
                 <button onClick={() => { navigate('/notifications'); setShowNotifDropdown(false); }}
                   className="w-full text-center text-xs text-primary-900 py-2 border-t border-zinc-100 hover:bg-zinc-50">
                   View all
@@ -190,13 +190,15 @@ export default function Header({ onMobileMenuOpen }) {
                   <p className="text-sm font-medium text-primary-900 truncate">{user.name}</p>
                   <p className="text-xs text-zinc-500 truncate">{user.email}</p>
                 </div>
-                <button
-                  onClick={() => { setShowDropdown(false); navigate('/settings'); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 transition-colors"
-                >
-                  <Settings className="w-3.5 h-3.5" strokeWidth={1.5} />
-                  Settings
-                </button>
+                {user?.role !== 'client' && (
+                  <button
+                    onClick={() => { setShowDropdown(false); navigate('/settings'); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 transition-colors"
+                  >
+                    <Settings className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    Settings
+                  </button>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"

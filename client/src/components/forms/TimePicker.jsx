@@ -34,6 +34,14 @@ export default function TimePicker({ value, onChange, label, error }) {
   const [minute, setMinute] = useState(initial.minute);
   const [period, setPeriod] = useState(initial.period);
 
+  // Commit the displayed default (09:00 AM) so the shown value is actually submitted.
+  useEffect(() => {
+    if (!value) {
+      onChange?.('09:00');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const parts = toParts(value);
     setHour(parts.hour);

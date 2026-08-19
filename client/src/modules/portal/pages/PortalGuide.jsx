@@ -15,7 +15,9 @@ export default function PortalGuide() {
         <div className="grid sm:grid-cols-2 gap-4">
           {GUIDE_SECTIONS.map((section) => (
             <div key={section.key} className="bg-white rounded-xl border border-zinc-200 p-5">
-              <div className="text-2xl mb-2">{section.icon}</div>
+              <div className="w-10 h-10 rounded-lg bg-primary-900/5 flex items-center justify-center mb-2">
+                <section.icon className="w-5 h-5 text-primary-900" />
+              </div>
               <h3 className="text-sm font-semibold text-primary-900 mb-1">{section.title}</h3>
               <p className="text-sm text-zinc-500 leading-relaxed">{section.body}</p>
             </div>

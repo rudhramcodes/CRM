@@ -1,7 +1,9 @@
+import { FolderOpen, MapPin, CheckCircle2, MessageSquare, CalendarClock } from 'lucide-react';
+
 export const ONBOARDING_STEPS = [
   {
     key: 'welcome',
-    title: 'Welcome to {brandName}',
+    title: 'Welcome to Rudhram',
     body:
       'You now have your own client portal where you can follow every project we work on together — milestones, tasks, and conversations — all in one place.',
   },
@@ -23,35 +25,35 @@ export const GUIDE_SECTIONS = [
   {
     key: 'projects',
     title: 'Projects',
-    icon: '📁',
+    icon: FolderOpen,
     body:
       'Every project we run for you appears here with its status — planning, active, review, or completed. Open a project to see its milestones and tasks.',
   },
   {
     key: 'milestones',
     title: 'Milestones',
-    icon: '📍',
+    icon: MapPin,
     body:
       'Milestones mark the key phases of your project. Each one shows its due date and status, so you always know where things stand.',
   },
   {
     key: 'tasks',
     title: 'Tasks',
-    icon: '✅',
+    icon: CheckCircle2,
     body:
       'Tasks break milestones into work items. You can view tasks and add comments — your team sees them instantly and can reply.',
   },
   {
     key: 'chat',
     title: 'Project chat',
-    icon: '💬',
+    icon: MessageSquare,
     body:
       'Every project has its own chat. Drop questions or updates there instead of email — staff and client messages flow in one thread.',
   },
   {
     key: 'meetings',
     title: 'Meetings',
-    icon: '📅',
+    icon: CalendarClock,
     body:
       'View scheduled meetings, join with the meeting link, and schedule new ones with our team. You can cancel meetings you created.',
   },

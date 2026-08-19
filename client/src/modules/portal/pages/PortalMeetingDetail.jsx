@@ -22,7 +22,8 @@ export default function PortalMeetingDetail() {
   const user = useSelector((state) => state.auth.user);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const { data: meeting, isLoading, isError, error } = useGetMeetingByIdQuery(id, { skip: !id });
+  const { data, isLoading, isError, error } = useGetMeetingByIdQuery(id, { skip: !id });
+  const meeting = data?.data?.meeting;
   const [deleteMeeting, { isLoading: isDeleting }] = useDeleteMeetingMutation();
 
   if (isLoading) {
@@ -49,7 +50,7 @@ export default function PortalMeetingDetail() {
 
   const handleCancel = async () => {
     try {
-      await deleteMeeting(id).unwrap();
+      await deleteMeeting({ id }).unwrap();
       toast.success('Meeting cancelled');
       navigate('/portal/meetings');
     } catch (err) {
@@ -83,12 +84,12 @@ export default function PortalMeetingDetail() {
               <MapPin className="w-4 h-4 text-zinc-400" /> {meeting.location}
             </span>
           )}
-          {meeting.meetingLink && (
+          {meeting.meetingLink && meeting.status === 'scheduled' && (
             <a
               href={meeting.meetingLink}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-primary-900 font-medium hover:underline"
+              className="inline-flex items-center gap-2 rounded-lg font-medium text-sm px-3 py-1.5 bg-primary-900 text-white hover:bg-primary-800 active:bg-primary-950 transition-colors"
             >
               <Video className="w-4 h-4" /> Join meeting
             </a>

@@ -51,7 +51,7 @@ export default function PortalProjects() {
       <div>
         <h1 className="font-heading text-xl font-semibold text-primary-900">Projects</h1>
         <p className="text-sm text-zinc-500 mt-1">
-          {me?.client?.companyName ? `${me.client.companyName}'s projects` : 'Your projects'}
+          {me?.data?.client?.companyName ? `${me.data.client.companyName}'s projects` : 'Your projects'}
         </p>
       </div>
 
