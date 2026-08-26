@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { PAYMENT_STATUS, PAYMENT_METHODS } from '../../constants/index.js';
+import { PAYMENT_STATUS, PAYMENT_METHODS, PAYMENT_TYPES } from '../../constants/index.js';
 
 const paymentSchema = new mongoose.Schema(
   {
@@ -17,6 +17,17 @@ const paymentSchema = new mongoose.Schema(
       type: Number,
       required: [true, 'Amount is required'],
       min: [1, 'Amount must be greater than 0'],
+    },
+    paymentType: {
+      type: String,
+      enum: Object.values(PAYMENT_TYPES),
+      default: PAYMENT_TYPES.PARTIAL,
+    },
+    receiptNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
     },
     paymentMethod: {
       type: String,
@@ -64,6 +75,7 @@ paymentSchema.index({ invoice: 1 });
 paymentSchema.index({ client: 1 });
 paymentSchema.index({ paymentDate: -1 });
 paymentSchema.index({ status: 1 });
+paymentSchema.index({ paymentType: 1 });
 
 const Payment = mongoose.model('Payment', paymentSchema);
 

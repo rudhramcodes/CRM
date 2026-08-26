@@ -56,7 +56,7 @@ export default function PaymentList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-zinc-900">Payments</h1>
-        <button onClick={() => { refetchPayments(); refetchStats(); }}
+        <button aria-label="Refresh payments" onClick={() => { refetchPayments(); refetchStats(); }}
           disabled={isFetching}
           className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
           title="Refresh payments"

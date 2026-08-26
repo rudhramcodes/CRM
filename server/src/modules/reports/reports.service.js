@@ -7,14 +7,18 @@ import Task from '../tasks/task.model.js';
 const buildDateFilter = (from, to) => {
   const filter = {};
   if (from) filter.$gte = new Date(from);
-  if (to) filter.$lte = new Date(to);
+  if (to) {
+    const toDate = new Date(to);
+    toDate.setHours(23, 59, 59, 999);
+    filter.$lte = toDate;
+  }
   return Object.keys(filter).length ? filter : undefined;
 };
 
 // ── Revenue Report ──
 export const getRevenueReport = async (from, to) => {
   const dateFilter = buildDateFilter(from, to);
-  const matchStage = dateFilter ? { createdAt: dateFilter } : {};
+  const matchStage = dateFilter ? { issueDate: dateFilter } : {};
 
   // Monthly revenue breakdown
   const monthlyRevenue = await Invoice.aggregate([
@@ -55,9 +59,9 @@ export const getRevenueReport = async (from, to) => {
     { $project: { _id: 0, method: '$_id', amount: { $round: ['$amount', 2] }, count: 1 } },
   ]);
 
-  // Summary
+  // Summary (with date filter applied)
   const summary = await Invoice.aggregate([
-    { $match: { status: { $in: ['paid', 'sent', 'overdue', 'partially_paid'] } } },
+    { $match: { ...matchStage, status: { $in: ['paid', 'sent', 'overdue', 'partially_paid'] } } },
     {
       $group: {
         _id: null,
@@ -128,24 +132,22 @@ export const getPipelineReport = async (from, to) => {
 // ── Client Report ──
 export const getClientReport = async (from, to) => {
   const dateFilter = buildDateFilter(from, to);
-  const matchStage = dateFilter ? { createdAt: dateFilter } : {};
 
-  // By status
+  // By status - NO date filter (shows all-time distribution for pie chart)
   const byStatus = await Client.aggregate([
-    { $match: matchStage },
     { $group: { _id: '$status', count: { $sum: 1 } } },
     { $project: { _id: 0, status: '$_id', count: 1 } },
   ]);
 
-  // By brand
+  // By brand - NO date filter (shows all-time distribution)
   const byBrand = await Client.aggregate([
-    { $match: matchStage },
     { $group: { _id: '$brand', count: { $sum: 1 } } },
     { $sort: { count: -1 } },
     { $project: { _id: 0, brand: '$_id', count: 1 } },
   ]);
 
-  // Monthly new clients
+  // Monthly new clients - WITH date filter (shows trend over time)
+  const matchStage = dateFilter ? { createdAt: dateFilter } : {};
   const monthly = await Client.aggregate([
     { $match: matchStage },
     {
@@ -158,11 +160,13 @@ export const getClientReport = async (from, to) => {
     { $project: { _id: 0, month: '$_id', count: 1 } },
   ]);
 
-  const total = await Client.countDocuments(matchStage);
-  const converted = await Client.countDocuments({ ...matchStage, convertedFrom: { $ne: null } });
+  // Total counts
+  const total = await Client.countDocuments();
+  const active = await Client.countDocuments({ status: 'active' });
+  const converted = await Client.countDocuments({ convertedFrom: { $ne: null } });
 
   return {
-    summary: { total, active: byStatus.find(s => s.status === 'active')?.count || 0, converted },
+    summary: { total, active, converted },
     charts: { byStatus, byBrand, monthly },
   };
 };
@@ -190,14 +194,17 @@ export const getInvoiceReport = async (from, to) => {
 
   const aging = [];
   for (const bucket of agingBuckets) {
-    const daysAgoMin = new Date(now.getTime() - bucket.max * 24 * 60 * 60 * 1000);
-    const daysAgoMax = new Date(now.getTime() - bucket.min * 24 * 60 * 60 * 1000);
+    const olderDate = new Date(now.getTime() - bucket.max * 24 * 60 * 60 * 1000);
+    const newerDate = new Date(now.getTime() - bucket.min * 24 * 60 * 60 * 1000);
+    const dueDateFilter = bucket.max === Infinity
+      ? { $lte: newerDate }
+      : { $lte: newerDate, $gte: olderDate };
     const result = await Invoice.aggregate([
       {
         $match: {
           ...matchStage,
           status: { $in: ['sent', 'overdue', 'partially_paid'] },
-          dueDate: { $lte: daysAgoMax, $gte: bucket.max === Infinity ? new Date(0) : daysAgoMin },
+          dueDate: dueDateFilter,
         },
       },
       { $group: { _id: null, count: { $sum: 1 }, amount: { $sum: '$balanceDue' } } },

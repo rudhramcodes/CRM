@@ -81,7 +81,7 @@ export default function InvoiceList() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-zinc-900">Invoices</h1>
         <div className="flex items-center gap-2">
-          <button onClick={() => { refetchInvoices(); refetchStats(); }}
+          <button aria-label="Refresh invoices" onClick={() => { refetchInvoices(); refetchStats(); }}
             disabled={isFetching}
             className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
             title="Refresh invoices"

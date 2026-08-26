@@ -8,7 +8,8 @@
     "build": "cd ../client && npm install --include=dev && npm run build",
     "start": "node src/server.js",
     "seed": "node src/seed.js",
-    "email:preview": "node scripts/email-preview/server.js"
+    "email:preview": "node scripts/email-preview/server.js",
+    "test:e2e": "playwright test e2e/advance-payment.spec.cjs --config=playwright.config.cjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -36,6 +37,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "nodemon": "^3.1.4",
     "prettier": "^3.3.3"
   }

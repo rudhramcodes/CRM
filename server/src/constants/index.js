@@ -54,6 +54,13 @@ export const PAYMENT_STATUS = {
   REFUNDED: 'refunded',
 };
 
+export const PAYMENT_TYPES = {
+  ADVANCE: 'advance',
+  PARTIAL: 'partial',
+  FINAL: 'final',
+  OTHER: 'other',
+};
+
 export const PAYMENT_METHODS = {
   UPI: 'upi',
   BANK_TRANSFER: 'bank_transfer',

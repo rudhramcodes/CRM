@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
-import { PAYMENT_STATUS, PAYMENT_METHODS } from '../../../constants';
+import { PAYMENT_STATUS, PAYMENT_METHODS, PAYMENT_TYPES } from '../../../constants';
 import { DatePickerSimple } from '../../../components/ui/DatePickerSimple';
 import {
   Select,
@@ -15,6 +15,7 @@ export default function PaymentFilters({ onFilterChange }) {
     search: '',
     status: '',
     paymentMethod: '',
+    paymentType: '',
     dateFrom: '',
     dateTo: '',
   });
@@ -25,6 +26,7 @@ export default function PaymentFilters({ onFilterChange }) {
       if (filters.search) activeFilters.search = filters.search;
       if (filters.status) activeFilters.status = filters.status;
       if (filters.paymentMethod) activeFilters.paymentMethod = filters.paymentMethod;
+      if (filters.paymentType) activeFilters.paymentType = filters.paymentType;
       if (filters.dateFrom) activeFilters.dateFrom = filters.dateFrom;
       if (filters.dateTo) activeFilters.dateTo = filters.dateTo;
       onFilterChange(activeFilters);
@@ -33,10 +35,10 @@ export default function PaymentFilters({ onFilterChange }) {
   }, [filters, onFilterChange]);
 
   const clearFilters = () => {
-    setFilters({ search: '', status: '', paymentMethod: '', dateFrom: '', dateTo: '' });
+    setFilters({ search: '', status: '', paymentMethod: '', paymentType: '', dateFrom: '', dateTo: '' });
   };
 
-  const hasFilters = filters.search || filters.status || filters.paymentMethod || filters.dateFrom || filters.dateTo;
+  const hasFilters = filters.search || filters.status || filters.paymentMethod || filters.paymentType || filters.dateFrom || filters.dateTo;
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
@@ -82,6 +84,17 @@ export default function PaymentFilters({ onFilterChange }) {
               {m.label}
             </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.paymentType || 'all'}
+        onValueChange={(value) => setFilters((p) => ({ ...p, paymentType: value === 'all' ? '' : value }))}
+      >
+        <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="All Payment Types" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Payment Types</SelectItem>
+          {PAYMENT_TYPES.map((type) => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
         </SelectContent>
       </Select>
 

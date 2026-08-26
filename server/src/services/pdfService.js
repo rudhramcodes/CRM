@@ -1,4 +1,18 @@
 import puppeteer from 'puppeteer';
+import { readFileSync } from 'fs';
+
+const loadFontBase64 = (relativePath) => {
+  try {
+    return readFileSync(new URL(relativePath, import.meta.url)).toString('base64');
+  } catch {
+    return '';
+  }
+};
+
+const APEX_REGULAR_FONT = loadFontBase64('../../assets/fonts/ApexNewTrial-Book.otf');
+const APEX_MEDIUM_FONT = loadFontBase64('../../assets/fonts/ApexNewTrial-Medium.otf');
+const GOLDENBOOK_REGULAR_FONT = loadFontBase64('../../assets/fonts/Goldenbook-Regular.otf');
+const GOLDENBOOK_BOLD_FONT = loadFontBase64('../../assets/fonts/Goldenbook-Bold.otf');
 
 // Parent company logo — paste your Rudhram wordmark cloudinary URL here
 const RUDHRAM_LOGO_URL = 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png'; // TODO: replace with actual Rudhram wordmark logo url
@@ -477,42 +491,71 @@ export const generatePaymentReceiptHtml = (payment, invoice) => {
 <head>
   <meta charset="utf-8">
   <style>
-    @page { size: A4; margin: 20mm; }
-    body { font-family: Arial, sans-serif; color: #1a1a1a; font-size: 10pt; line-height: 1.5; }
-    .container { max-width: 500px; margin: 0 auto; }
-    .header { text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px; }
-    .header h1 { font-size: 18pt; color: #1a1a1a; margin: 0 0 4px; }
-    .header p { color: #6b7280; margin: 0; font-size: 9pt; }
-    .badge { display: inline-block; background: #059669; color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 8pt; }
-    .amount-block { text-align: center; padding: 24px 0; }
-    .amount-block .label { font-size: 8pt; color: #6b7280; text-transform: uppercase; }
-    .amount-block .value { font-size: 22pt; font-weight: bold; color: #059669; margin: 4px 0; }
-    .details { width: 100%; border-collapse: collapse; margin: 16px 0; }
-    .details td { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
-    .details td:first-child { color: #6b7280; width: 120px; }
-    .details td:last-child { text-align: right; font-weight: 500; }
-    .footer { text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 8pt; color: #9ca3af; }
+    @page { size: A4; margin: 16mm; }
+    :root { --copper: #B3712D; --cream: #F6F0DF; --espresso: #3A2415; --sand: #DCC19D; }
+    ${APEX_REGULAR_FONT ? `@font-face { font-family: 'Apex New Trial'; src: url(data:font/opentype;base64,${APEX_REGULAR_FONT}) format('opentype'); font-weight: 400; font-style: normal; }` : ''}
+    ${APEX_MEDIUM_FONT ? `@font-face { font-family: 'Apex New Trial'; src: url(data:font/opentype;base64,${APEX_MEDIUM_FONT}) format('opentype'); font-weight: 500; font-style: normal; }` : ''}
+    ${APEX_MEDIUM_FONT ? `@font-face { font-family: 'Apex New Trial'; src: url(data:font/opentype;base64,${APEX_MEDIUM_FONT}) format('opentype'); font-weight: 600; font-style: normal; }` : ''}
+    ${GOLDENBOOK_REGULAR_FONT ? `@font-face { font-family: 'Golden Book'; src: url(data:font/opentype;base64,${GOLDENBOOK_REGULAR_FONT}) format('opentype'); font-weight: 400; font-style: normal; }` : ''}
+    ${GOLDENBOOK_BOLD_FONT ? `@font-face { font-family: 'Golden Book'; src: url(data:font/opentype;base64,${GOLDENBOOK_BOLD_FONT}) format('opentype'); font-weight: 700; font-style: normal; }` : ''}
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: var(--espresso); font-family: 'Apex New Trial', 'Apex New', Arial, sans-serif; font-size: 10pt; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .container { max-width: 520px; margin: 0 auto; border: 1px solid var(--sand); border-radius: 18px; overflow: hidden; }
+    .header { position: relative; text-align: center; background: var(--cream); border-bottom: 1px solid var(--sand); padding: 26px 28px 22px; }
+    .header::before { content: ''; position: absolute; inset: 0 0 auto; height: 6px; background: var(--copper); }
+    .header img { height: 50px; max-width: 230px; object-fit: contain; margin: 6px auto 14px; display: block; }
+    .receipt-no { color: var(--copper); font-size: 8pt; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; margin-top: 8px !important; }
+    .header h1 { font-family: 'Golden Book', 'Golden Book Roman', Georgia, serif; font-size: 23pt; font-weight: 500; letter-spacing: .02em; color: var(--espresso); margin: 0 0 4px; }
+    .header p { color: var(--espresso); opacity: .72; margin: 0; font-size: 9pt; }
+    .content { padding: 24px 28px 28px; }
+    .amount-block { text-align: center; background: var(--espresso); border-radius: 14px; padding: 20px 16px 18px; margin-bottom: 22px; }
+    .amount-block .label { color: var(--sand); font-size: 8pt; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .amount-block .value { font-family: 'Golden Book', 'Golden Book Roman', Georgia, serif; font-size: 27pt; font-weight: 500; color: var(--cream); margin: 5px 0 10px; }
+    .badge { display: inline-block; background: var(--copper); color: #fff; padding: 5px 14px; border-radius: 999px; font-size: 8pt; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+    .section-title { color: var(--copper); font-family: 'Golden Book', 'Golden Book Roman', Georgia, serif; font-size: 13pt; font-weight: 500; margin: 0 0 8px; }
+    .details { width: 100%; border-collapse: collapse; margin: 0 0 22px; }
+    .details td { padding: 8px 0; border-bottom: 1px solid var(--sand); vertical-align: top; }
+    .details td:first-child { color: var(--espresso); opacity: .62; width: 46%; }
+    .details td:last-child { text-align: right; font-weight: 500; overflow-wrap: anywhere; }
+    .settlement { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--cream); border: 1px solid var(--sand); border-radius: 12px; padding: 14px; margin-top: 6px; }
+    .settlement .label { display: block; color: var(--espresso); opacity: .62; font-size: 8pt; text-transform: uppercase; letter-spacing: .08em; }
+    .settlement .value { display: block; margin-top: 3px; font-size: 12pt; font-weight: 500; color: var(--espresso); }
+    .settlement .balance .value { color: var(--copper); }
+    .footer { text-align: center; margin: 0 28px; padding: 18px 0 22px; border-top: 1px solid var(--sand); font-size: 8pt; color: var(--espresso); opacity: .65; }
+    .footer p { margin: 3px 0; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
+      ${RUDHRAM_LOGO_URL ? `<img src="${RUDHRAM_LOGO_URL}" alt="Rudhram" />` : ''}
       <h1>Payment Receipt</h1>
       <p>Rudhram Enterprises Private Limited</p>
+      <p class="receipt-no">${esc(payment.receiptNumber || `RCT-${String(payment._id || '').slice(-8).toUpperCase() || 'N/A'}`)}</p>
     </div>
-    <div class="amount-block">
-      <div class="label">Amount Paid</div>
-      <div class="value">${fmt(payment.amount)}</div>
-      <span class="badge">${payment.status.toUpperCase()}</span>
+    <div class="content">
+      <div class="amount-block">
+        <div class="label">Amount Received</div>
+        <div class="value">${fmt(payment.amount)}</div>
+        <span class="badge">${esc(payment.status || 'completed')}</span>
+      </div>
+      <h2 class="section-title">Payment details</h2>
+      <table class="details">
+        <tr><td>Payment purpose</td><td>${({ advance: 'Advance Payment', partial: 'Part Payment', final: 'Final Payment', other: 'Other Payment' })[payment.paymentType] || 'Payment'}</td></tr>
+        <tr><td>Payment date</td><td>${fmtDate(payment.paymentDate)}</td></tr>
+        <tr><td>Payment method</td><td>${esc(methodLabels[payment.paymentMethod] || payment.paymentMethod || '-')}</td></tr>
+        <tr><td>Reference</td><td>${esc(payment.referenceNo || '-')}</td></tr>
+        <tr><td>Invoice</td><td>${esc(inv.invoiceNumber || '-')}</td></tr>
+        <tr><td>Client</td><td>${esc(client.companyName || client.contactPerson || 'N/A')}</td></tr>
+      </table>
+      <h2 class="section-title">Settlement summary</h2>
+      <div class="settlement">
+        <div><span class="label">Invoice total</span><span class="value">${fmt(inv.total)}</span></div>
+        <div><span class="label">Paid to date</span><span class="value">${fmt(inv.paidAmount)}</span></div>
+        <div class="balance"><span class="label">Balance due</span><span class="value">${fmt(inv.balanceDue)}</span></div>
+        <div><span class="label">Collection</span><span class="value">${inv.total > 0 ? `${Math.min(100, Math.round((Number(inv.paidAmount || 0) / Number(inv.total)) * 100))}%` : '0%'}</span></div>
+      </div>
     </div>
-    <table class="details">
-      <tr><td>Receipt No.</td><td>RCT-${String(payment._id || '').slice(-8).toUpperCase() || 'N/A'}</td></tr>
-      <tr><td>Payment Date</td><td>${fmtDate(payment.paymentDate)}</td></tr>
-      <tr><td>Payment Method</td><td>${methodLabels[payment.paymentMethod] || payment.paymentMethod}</td></tr>
-      <tr><td>Reference</td><td>${payment.referenceNo || '-'}</td></tr>
-      <tr><td>Invoice</td><td>${inv.invoiceNumber || '-'}</td></tr>
-      <tr><td>Client</td><td>${esc(client.companyName || client.contactPerson || 'N/A')}</td></tr>
-    </table>
     <div class="footer">
       <p>This is a computer-generated receipt. No signature required.</p>
       <p>${COMPANY.legalName} | ${COMPANY.email} | ${COMPANY.contact}</p>

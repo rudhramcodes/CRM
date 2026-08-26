@@ -101,7 +101,7 @@ export default function InvoiceDetail() {
     setLoadingAction('paid');
     try {
       await createPayment({
-        invoice: id, amount, paymentMethod,
+        invoice: id, amount, paymentType: 'final', paymentMethod,
         paymentDate: new Date().toISOString().split('T')[0], status: 'completed',
       }).unwrap();
       toast.success('Payment recorded successfully');
@@ -209,7 +209,7 @@ export default function InvoiceDetail() {
   if (isLoading) return <DetailSkeleton />;
   if (!invoice) return <div className="text-zinc-500 py-8 text-center">Invoice not found</div>;
 
-  const canRecordPayment = ['sent', 'overdue', 'partially_paid'].includes(invoice.status);
+  const canRecordPayment = ['draft', 'sent', 'overdue', 'partially_paid'].includes(invoice.status);
   const isPaidOrCancelled = ['paid', 'cancelled'].includes(invoice.status);
   const paymentPct = invoice.total > 0 ? Math.round((Number(invoice.paidAmount || 0) / invoice.total) * 100) : 0;
 
@@ -242,8 +242,15 @@ export default function InvoiceDetail() {
             </>
           )}
 
+          {/* Advance payment can be collected before an invoice is sent */}
+          {invoice.status === 'draft' && (
+            <Button variant="primary" size="sm" onClick={() => setShowPaymentForm(true)}>
+              <CreditCard className="w-4 h-4 mr-1" /> Record Advance
+            </Button>
+          )}
+
           {/* Active invoice actions */}
-          {canRecordPayment && (
+          {canRecordPayment && invoice.status !== 'draft' && (
             <>
               <Button variant="primary" size="sm" onClick={confirmFullPayment} loading={loadingAction === 'paid'}>
                 <CheckCircle className="w-4 h-4 mr-1" />
@@ -294,11 +301,13 @@ export default function InvoiceDetail() {
           <h3 className="text-sm font-medium text-zinc-700">Payments</h3>
           {canRecordPayment && (
             <div className="flex gap-2">
-              <Button size="sm" variant="primary" onClick={confirmFullPayment} loading={loadingAction === 'paid'}>
-                {invoice.status === 'partially_paid' ? `Collect Remaining (${fmt(invoice.balanceDue)})` : 'Mark as Paid'}
-              </Button>
+              {invoice.status !== 'draft' && (
+                <Button size="sm" variant="primary" onClick={confirmFullPayment} loading={loadingAction === 'paid'}>
+                  {invoice.status === 'partially_paid' ? `Collect Remaining (${fmt(invoice.balanceDue)})` : 'Mark as Paid'}
+                </Button>
+              )}
               <Button size="sm" variant="secondary" onClick={() => setShowPaymentForm(true)}>
-                Record Payment
+                {invoice.status === 'draft' ? 'Record Advance' : 'Record Payment'}
               </Button>
             </div>
           )}

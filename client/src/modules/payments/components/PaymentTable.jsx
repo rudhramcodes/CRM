@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { Eye, Trash2, ExternalLink } from 'lucide-react';
 import PaymentStatusBadge from './PaymentStatusBadge';
-import { PAYMENT_METHODS } from '../../../constants';
+import { PAYMENT_METHODS, PAYMENT_TYPES } from '../../../constants';
 import DataTable from '../../../components/tables/DataTable';
+
+const typeMap = PAYMENT_TYPES.reduce((map, type) => { map[type.value] = type.label; return map; }, {});
 
 const methodMap = PAYMENT_METHODS.reduce((map, m) => {
   map[m.value] = m.label;
@@ -10,6 +12,12 @@ const methodMap = PAYMENT_METHODS.reduce((map, m) => {
 }, {});
 
 const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+const purposeClasses = {
+  advance: 'bg-blue-50 text-blue-700 border-blue-100',
+  partial: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+  final: 'bg-green-50 text-green-700 border-green-100',
+  other: 'bg-zinc-50 text-zinc-700 border-zinc-200',
+};
 
 export default function PaymentTable({ payments, onDelete, canDelete }) {
   const navigate = useNavigate();
@@ -64,11 +72,23 @@ export default function PaymentTable({ payments, onDelete, canDelete }) {
       cell: ({ row }) => {
         const inv = row.invoice;
         if (!inv) return '-';
-        const bal = inv.total - row.amount;
-        const positive = bal >= 0;
+        const bal = Number(inv.balanceDue ?? (inv.total - row.amount));
+        const settled = bal <= 0;
         return (
-          <span className={positive ? 'text-orange-600 font-medium' : 'text-green-600 font-medium'}>
-            {positive ? fmt(bal) : 'Overpaid'}
+          <span className={settled ? 'text-green-600 font-medium' : 'text-orange-600 font-medium'}>
+            {settled ? 'Settled' : fmt(bal)}
+          </span>
+        );
+      },
+    },
+    {
+      header: 'Purpose',
+      accessor: 'paymentType',
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return (
+          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap ${purposeClasses[value] || purposeClasses.other}`}>
+            {typeMap[value] || 'Payment'}
           </span>
         );
       },
@@ -111,6 +131,7 @@ export default function PaymentTable({ payments, onDelete, canDelete }) {
                 navigate(`/payments/${payment._id}`);
               }}
               className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors rounded"
+              aria-label={`View payment ${payment.receiptNumber || payment._id}`}
               title="View"
             >
               <Eye className="w-4 h-4" />
@@ -123,7 +144,8 @@ export default function PaymentTable({ payments, onDelete, canDelete }) {
                   onDelete?.(payment._id);
                 }}
                 className="p-1.5 text-zinc-400 hover:text-red-600 transition-colors rounded"
-                title="Delete"
+                aria-label={`Delete payment ${payment.receiptNumber || payment._id}`}
+              title="Delete"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

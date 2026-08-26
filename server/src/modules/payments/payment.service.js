@@ -45,6 +45,8 @@ const recalculateInvoicePayment = async (invoiceId) => {
   return invoice;
 };
 
+const nextReceiptNumber = () => `RCT-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
+
 const sendPaymentConfirmation = async (payment, invoice, outstanding) => {
   const clientEmail = invoice.client?.email;
   if (!clientEmail) {
@@ -88,6 +90,8 @@ export const createPayment = async (data, user) => {
     invoice: data.invoice,
     client: invoice.client,
     amount: data.amount,
+    paymentType: data.paymentType || (data.amount >= invoice.balanceDue ? 'final' : invoice.paidAmount > 0 ? 'partial' : 'advance'),
+    receiptNumber: nextReceiptNumber(),
     paymentMethod: data.paymentMethod,
     referenceNo: data.referenceNo || '',
     notes: data.notes || '',

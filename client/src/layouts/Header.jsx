@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Menu, Bell, Search, User, Settings, LogOut } from 'lucide-react';
+import { Menu, Bell, Volume2, VolumeX, Search, User, Settings, LogOut } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { toggleSidebar } from '../app/store/uiSlice';
 import { logout } from '../app/store/authSlice';
@@ -12,23 +12,32 @@ import { formatDistanceToNow } from 'date-fns';
 import axios from 'axios';
 import { API_BASE_URL } from '../constants';
 import { cn } from '../utils/cn';
+import { isNotificationSoundEnabled, playNotificationSound, primeNotificationSound, setNotificationSoundEnabled } from '../utils/notificationSound';
 
 export default function Header({ onMobileMenuOpen }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const pageTitle = useSelector((state) => state.ui.pageTitle);
+  const routeTitle = location.pathname.startsWith('/invoices')
+    ? (location.pathname === '/invoices' ? 'Invoices' : 'Invoice Detail')
+    : location.pathname.startsWith('/payments')
+      ? (location.pathname === '/payments' ? 'Payments' : 'Payment Detail')
+      : pageTitle;
   const user = useSelector((state) => state.auth.user);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
   const [liveUnreadCount, setLiveUnreadCount] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(() => isNotificationSoundEnabled());
 
   const { data: unreadData } = useGetUnreadCountQuery(undefined, { skip: !user, pollingInterval: 30000 });
   const { data: notifData } = useGetNotificationsQuery({ limit: 5, read: 'false' }, { skip: !user || !showNotifDropdown });
   const [markAllRead] = useMarkAllNotificationsReadMutation();
 
   const handleNewNotification = useCallback((notification) => {
+    playNotificationSound();
     const cfg = NOTIFICATION_CONFIG[notification.type] || NOTIFICATION_CONFIG.system;
     const Icon = cfg.icon;
     toast.custom((t) => (
@@ -46,6 +55,13 @@ export default function Header({ onMobileMenuOpen }) {
       </div>
     ), { duration: 4000, position: 'top-right' });
   }, [navigate]);
+
+  const handleSoundToggle = async () => {
+    const nextEnabled = !soundEnabled;
+    setSoundEnabled(nextEnabled);
+    setNotificationSoundEnabled(nextEnabled);
+    if (nextEnabled) await primeNotificationSound();
+  };
 
   const handleUnreadChange = useCallback((count) => {
     setLiveUnreadCount(count);
@@ -86,19 +102,21 @@ export default function Header({ onMobileMenuOpen }) {
     <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
       <div className="flex items-center gap-3">
         <button
+          aria-label="Toggle sidebar"
           onClick={() => dispatch(toggleSidebar())}
           className="hidden lg:flex p-2 rounded-lg hover:bg-zinc-100 text-zinc-400 transition-colors"
         >
           <Menu className="w-4.5 h-4.5" strokeWidth={1.5} />
         </button>
         <button
+          aria-label="Open navigation menu"
           onClick={onMobileMenuOpen}
           className="lg:hidden p-2 rounded-lg hover:bg-zinc-100 text-zinc-400 transition-colors"
         >
           <Menu className="w-4.5 h-4.5" strokeWidth={1.5} />
         </button>
         <h1 className="font-heading text-base font-semibold text-primary-900">
-          {pageTitle}
+          {routeTitle}
         </h1>
       </div>
 
@@ -113,8 +131,9 @@ export default function Header({ onMobileMenuOpen }) {
         </div>
 
         <div className="relative" ref={notifRef}>
-          <button onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-            className="relative p-2 rounded-lg hover:bg-zinc-100 text-zinc-400 transition-colors">
+          <button aria-label={`${unreadCount > 0 ? `${unreadCount} unread ` : ''}Notifications`} onClick={async () => { await primeNotificationSound(); setShowNotifDropdown(!showNotifDropdown); }}
+            className={cn('relative p-2 rounded-lg hover:bg-zinc-100 transition-colors', unreadCount > 0 ? 'text-primary-900' : 'text-zinc-400')}>
+
             <Bell className="w-4.5 h-4.5" strokeWidth={1.5} />
             {unreadCount > 0 && (
               <span className="absolute top-1 right-1 min-w-[16px] h-4 flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
@@ -125,13 +144,21 @@ export default function Header({ onMobileMenuOpen }) {
 
           {showNotifDropdown && (
             <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-zinc-200 rounded-lg shadow-lg z-50">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-100">
-                <p className="text-sm font-medium text-primary-900">Notifications</p>
-                {unreadCount > 0 && (
-                  <button onClick={() => markAllRead()} className="text-xs text-primary-900 hover:underline">
-                    Mark all read
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-zinc-100">
+                <div>
+                  <p className="text-sm font-semibold text-primary-900">Notifications</p>
+                  <p className="text-[11px] text-zinc-400">{unreadCount > 0 ? `${unreadCount} unread` : 'You’re all caught up'}</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button type="button" aria-label={soundEnabled ? 'Mute notification sound' : 'Enable notification sound'} onClick={handleSoundToggle} className="p-1.5 rounded-md text-zinc-400 hover:text-primary-900 hover:bg-zinc-100" title={soundEnabled ? 'Mute notification sound' : 'Enable notification sound'}>
+                    {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
                   </button>
-                )}
+                  {unreadCount > 0 && (
+                    <button onClick={() => markAllRead()} className="text-xs text-primary-900 hover:underline">
+                      Mark all read
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {notifications.length === 0 ? (
@@ -161,12 +188,15 @@ export default function Header({ onMobileMenuOpen }) {
                   })
                 )}
               </div>
-              {notifications.length > 0 && user?.role !== 'client' && (
-                <button onClick={() => { navigate('/notifications'); setShowNotifDropdown(false); }}
-                  className="w-full text-center text-xs text-primary-900 py-2 border-t border-zinc-100 hover:bg-zinc-50">
-                  View all
-                </button>
-              )}
+              <div className="flex items-center justify-between px-3 py-2 border-t border-zinc-100 bg-zinc-50/60">
+                <span className="text-[11px] text-zinc-400">Sound {soundEnabled ? 'on' : 'off'}</span>
+                {user?.role !== 'client' && (
+                  <button onClick={() => { navigate('/notifications'); setShowNotifDropdown(false); }}
+                    className="text-xs font-medium text-primary-900 hover:underline">
+                    View all notifications
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -174,6 +204,7 @@ export default function Header({ onMobileMenuOpen }) {
         {user && (
           <div className="relative pl-2 border-l border-zinc-200 ml-1" ref={dropdownRef}>
             <button
+              aria-label="Open account menu"
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-zinc-100 transition-colors"
             >

@@ -43,6 +43,10 @@ export const findAll = async (query = {}, options = {}) => {
     filter.paymentMethod = query.paymentMethod;
   }
 
+  if (query.paymentType) {
+    filter.paymentType = query.paymentType;
+  }
+
   if (query.invoice) {
     filter.invoice = query.invoice;
   }

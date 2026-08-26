@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Loader2, ArrowRightToLine, Wallet } from 'lucide-react';
-import { PAYMENT_METHODS, PAYMENT_STATUS } from '../../../constants';
+import { PAYMENT_METHODS, PAYMENT_STATUS, PAYMENT_TYPES } from '../../../constants';
 import Button from '../../../components/ui/Button';
 import {
   Select,
@@ -26,6 +26,7 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
   const [form, setForm] = useState({
     invoice: invoiceId || initial?.invoice?._id || '',
     amount: initial?.amount || (balanceDue ? String(balanceDue) : ''),
+    paymentType: initial?.paymentType || (balanceDue === total ? 'advance' : 'partial'),
     paymentMethod: initial?.paymentMethod || 'upi',
     referenceNo: initial?.referenceNo || '',
     notes: initial?.notes || '',
@@ -69,6 +70,7 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
       await onSubmit({
         invoice: form.invoice,
         amount: amountNum,
+        paymentType: form.paymentType,
         paymentMethod: form.paymentMethod,
         referenceNo: form.referenceNo,
         notes: form.notes,
@@ -93,7 +95,7 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
           <div className="flex items-center gap-2">
             <Wallet className="w-5 h-5 text-indigo-600" />
             <h2 className="text-lg font-semibold text-zinc-900">
-              {initial ? 'Edit Payment' : 'Record Payment'}
+              {initial ? 'Edit Payment' : form.paymentType === 'advance' ? 'Record Advance Payment' : 'Record Payment'}
             </h2>
           </div>
           <button onClick={onClose} className="p-1 text-zinc-400 hover:text-zinc-600 rounded">
@@ -110,6 +112,19 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
               </p>
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 mb-1">Payment Purpose</label>
+            <Select value={form.paymentType} onValueChange={(v) => handleChange('paymentType', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAYMENT_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-zinc-500 mt-1">Use Advance Payment for an initial collection before the invoice is fully settled.</p>
+          </div>
 
           {/* Balance Due indicator */}
           {balanceDue > 0 && !initial && (
@@ -132,12 +147,14 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
           )}
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
+            <label htmlFor="payment-amount" className="block text-sm font-medium text-zinc-700 mb-1">
               Amount <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-medium text-sm">₹</span>
               <input
+                id="payment-amount"
+                aria-describedby="payment-amount-help payment-amount-error"
                 type="number"
                 step="0.01"
                 min="0"
@@ -154,9 +171,14 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
               />
             </div>
             {amountOverLimit && (
-              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                <span>⚠</span>
+              <p id="payment-amount-error" role="alert" className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                <span aria-hidden="true">!</span>
                 Exceeds balance due of {fmt(balanceDue)}
+              </p>
+            )}
+            {!amountOverLimit && (
+              <p id="payment-amount-help" className="text-xs text-zinc-500 mt-1">
+                Maximum collectible amount: {fmt(balanceDue)}
               </p>
             )}
           </div>
@@ -208,8 +230,9 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Reference No.</label>
+            <label htmlFor="payment-reference" className="block text-sm font-medium text-zinc-700 mb-1">Reference No.</label>
             <input
+              id="payment-reference"
               type="text"
               placeholder="UTR / Cheque no. / Transaction ID"
               value={form.referenceNo}
@@ -274,7 +297,7 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || amountOverLimit || amountNum <= 0}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {initial ? 'Update Payment' : amountNum === balanceDue ? 'Pay Full Amount' : 'Record Payment'}
             </Button>

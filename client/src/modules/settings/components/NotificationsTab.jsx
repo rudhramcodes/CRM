@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Bell, Mail, Smartphone, Loader } from 'lucide-react';
+import { Bell, Mail, Smartphone, Loader, Volume2, VolumeX } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import toast from 'react-hot-toast';
 import { useGetNotifPrefsQuery, useUpdateNotifPrefsMutation } from '../../../services/settingsApi';
+import { isNotificationSoundEnabled, playNotificationSound, setNotificationSoundEnabled } from '../../../utils/notificationSound';
 
 const NOTIF_TYPES = [
   { id: 'task_assigned', label: 'Task Assigned' },
@@ -28,6 +29,7 @@ export default function NotificationsTab() {
   const { data: prefs, isLoading } = useGetNotifPrefsQuery();
   const [updateNotifPrefs, { isLoading: isSaving }] = useUpdateNotifPrefsMutation();
   const [local, setLocal] = useState({});
+  const [soundEnabled, setSoundEnabled] = useState(() => isNotificationSoundEnabled());
 
   useEffect(() => {
     if (prefs?.notify) {
@@ -69,6 +71,29 @@ export default function NotificationsTab() {
       </h3>
       <p className="text-xs text-zinc-500 mb-4">Choose how you receive each type of notification.</p>
 
+      <div className="mb-5 flex items-center justify-between gap-4 rounded-xl border border-[#DCC19D] bg-[#F6F0DF]/60 p-4">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-white p-2 text-[#B3712D] shadow-sm">
+            {soundEnabled ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-[#3A2415]">Notification sound</p>
+            <p className="mt-0.5 text-xs text-[#3A2415]/65">Play a subtle chime when a new in-app notification arrives.</p>
+            <button type="button" onClick={playNotificationSound} disabled={!soundEnabled} className="mt-2 text-xs font-medium text-[#B3712D] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-40">Test sound</button>
+          </div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-label="Notification sound"
+          aria-checked={soundEnabled}
+          onClick={() => { const next = !soundEnabled; setSoundEnabled(next); setNotificationSoundEnabled(next); }}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B3712D]/40 ${soundEnabled ? 'bg-[#B3712D]' : 'bg-zinc-300'}`}
+        >
+          <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${soundEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+        </button>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -94,10 +119,11 @@ export default function NotificationsTab() {
                       <button
                         type="button"
                         role="switch"
+                        aria-label={`${nt.label} ${ch.label} notifications`}
                         aria-checked={channels[ch.id]}
                         onClick={() => toggle(nt.id, ch.id)}
                         className={`w-9 h-5 rounded-full relative cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary-900/30 ${
-                          channels[ch.id] ? 'bg-primary-900' : 'bg-zinc-300'
+                          channels[ch.id] ? 'bg-[#3A2415]' : 'bg-zinc-300'
                         }`}
                       >
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${

@@ -11,11 +11,13 @@ import {
   useLazyGetPaymentReceiptQuery,
   useGetInvoicePaymentsQuery,
 } from '../../../services/paymentApi';
-import { PAYMENT_METHODS } from '../../../constants';
+import { PAYMENT_METHODS, PAYMENT_TYPES } from '../../../constants';
 import { useSelector } from 'react-redux';
 import Button from '../../../components/ui/Button';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { DetailSkeleton } from '../../../components/ui/Skeleton';
+
+const typeMap = PAYMENT_TYPES.reduce((map, type) => { map[type.value] = type.label; return map; }, {});
 
 const methodMap = PAYMENT_METHODS.reduce((map, m) => {
   map[m.value] = m.label;
@@ -96,7 +98,7 @@ export default function PaymentDetail() {
           <ArrowLeft className="w-4 h-4" /> Back to Payments
         </button>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={handleDownloadReceipt} loading={isDownloading}>
+          <Button variant="primary" size="sm" className="bg-[#B3712D] hover:bg-[#8e5924] text-white shadow-sm" onClick={handleDownloadReceipt} loading={isDownloading}>
             <Download className="w-4 h-4 mr-1" /> Receipt
           </Button>
           <Button variant="secondary" size="sm" onClick={() => setShowEditModal(true)}>
@@ -111,14 +113,22 @@ export default function PaymentDetail() {
       </div>
 
       {/* Payment amount card */}
-      <div className="bg-white rounded-xl border border-zinc-200">
+      <div className="bg-white rounded-xl border border-[#DCC19D] border-t-4 border-t-[#B3712D] shadow-sm">
         <div className="p-6 border-b border-zinc-100">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-zinc-900">Payment Details</h1>
+            <h1 className="font-heading text-xl font-bold text-[#3A2415]">Payment Details</h1>
             <PaymentStatusBadge status={payment.status} />
           </div>
 
           <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="text-xs text-zinc-500 uppercase tracking-wide">Receipt No.</label>
+              <p className="text-sm font-semibold text-zinc-900 mt-1">{payment.receiptNumber || `RCT-${payment._id?.slice(-8).toUpperCase()}`}</p>
+            </div>
+            <div>
+              <label className="text-xs text-zinc-500 uppercase tracking-wide">Payment Purpose</label>
+              <p className="mt-1 inline-flex rounded-full border border-[#DCC19D] bg-[#F6F0DF] px-2.5 py-1 text-xs font-semibold text-[#3A2415]">{typeMap[payment.paymentType] || 'Payment'}</p>
+            </div>
             <div>
               <label className="text-xs text-zinc-500 uppercase tracking-wide">{payment.status === 'refunded' ? 'Refund Amount' : 'Amount Paid'}</label>
               <p className={`text-2xl font-bold mt-1 ${payment.status === 'refunded' ? 'text-red-600' : 'text-green-600'}`}>{fmtAmt(payment.amount, payment.status)}</p>
@@ -142,7 +152,7 @@ export default function PaymentDetail() {
 
         {/* Invoice summary */}
         <div className="p-6 border-b border-zinc-100">
-          <h2 className="text-sm font-semibold text-zinc-700 mb-3">Invoice Summary</h2>
+          <h2 className="font-heading text-sm font-semibold text-[#3A2415] mb-3">Invoice Summary</h2>
           {inv ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
@@ -196,7 +206,7 @@ export default function PaymentDetail() {
 
         {/* Client info */}
         <div className="p-6 border-b border-zinc-100">
-          <h2 className="text-sm font-semibold text-zinc-700 mb-3">Client</h2>
+          <h2 className="font-heading text-sm font-semibold text-[#3A2415] mb-3">Client</h2>
           {payment.client ? (
             <div>
               <p className="text-sm font-medium text-zinc-900">{payment.client.companyName}</p>

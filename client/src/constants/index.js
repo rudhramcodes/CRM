@@ -94,6 +94,13 @@ export const PAYMENT_STATUS = [
   { value: 'refunded', label: 'Refunded', color: 'bg-purple-100 text-purple-800' },
 ];
 
+export const PAYMENT_TYPES = [
+  { value: 'advance', label: 'Advance Payment' },
+  { value: 'partial', label: 'Part Payment' },
+  { value: 'final', label: 'Final Payment' },
+  { value: 'other', label: 'Other Payment' },
+];
+
 export const PAYMENT_METHODS = [
   { value: 'upi', label: 'UPI' },
   { value: 'bank_transfer', label: 'Bank Transfer' },
