@@ -1,4 +1,5 @@
 import ApiError from '../../utils/ApiError.js';
+import logger from '../../utils/logger.js';
 import * as leadRepository from './lead.repository.js';
 import * as clientRepository from '../clients/client.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
@@ -147,17 +148,15 @@ export const updateLead = async (id, data, user) => {
   }
 
   if (data.status && data.status !== lead.status) {
-    data.statusChangedAt = new Date();
-    data.statusChangedBy = user._id;
-
-    // If status is changed to 'won', auto-convert to client
-    if (data.status === 'won') {
-      data.convertedAt = new Date();
-
-      if (!lead.convertedToClient) {
-        const existingClient = await clientRepository.findByEmail(lead.email);
-        if (!existingClient) {
-          const brand = lead.brand || 'panigrahna';
+    // If status is changed to 'won', auto-convert to client FIRST
+    // Client creation must succeed before we mark the lead as won
+    if (data.status === 'won' && !lead.convertedToClient) {
+      let existingClient = await clientRepository.findByEmail(lead.email);
+      if (existingClient) {
+        data.convertedToClient = existingClient._id;
+      } else {
+        const brand = lead.brand || 'panigrahna';
+        try {
           const client = await clientRepository.create({
             clientId: await generateClientId(brand),
             companyName: lead.company || `${lead.name}'s Company`,
@@ -170,9 +169,41 @@ export const updateLead = async (id, data, user) => {
             createdBy: user._id,
           });
           data.convertedToClient = client._id;
+        } catch (err) {
+          if (err.code === 11000) {
+            const duplicateField = Object.keys(err.keyValue || {})[0] || 'unknown';
+            logger.warn(`[lead-convert] E11000 on field "${duplicateField}" for lead ${lead._id}`);
+
+            existingClient = await clientRepository.findByEmail(lead.email);
+            if (existingClient) {
+              data.convertedToClient = existingClient._id;
+            } else if (duplicateField === 'clientId') {
+              const retryClientId = await generateClientId(brand);
+              const retryClient = await clientRepository.create({
+                clientId: retryClientId,
+                companyName: lead.company || `${lead.name}'s Company`,
+                contactPerson: lead.name,
+                email: lead.email,
+                phone: lead.phone,
+                brand,
+                convertedFrom: lead._id,
+                status: 'active',
+                createdBy: user._id,
+              });
+              data.convertedToClient = retryClient._id;
+            } else {
+              throw ApiError.conflict(`Duplicate key on "${duplicateField}" — a client with this ${duplicateField} already exists`);
+            }
+          } else {
+            throw err;
+          }
         }
       }
+      data.convertedAt = new Date();
     }
+
+    data.statusChangedAt = new Date();
+    data.statusChangedBy = user._id;
   }
 
   if (data.assignedTo) {

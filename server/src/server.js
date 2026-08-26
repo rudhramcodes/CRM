@@ -9,7 +9,34 @@ import { startMeetingReminderCron } from './jobs/meetingReminder.job.js';
 import { startTaskDueCron } from './jobs/taskDueSoon.job.js';
 import { startCleanupCron } from './jobs/cleanupNotifications.job.js';
 import User from './modules/auth/auth.model.js';
+import Client from './modules/clients/client.model.js';
 import { ROLES, ROLE_PERMISSIONS } from './constants/index.js';
+
+/**
+ * Fix stale MongoDB indexes that were created without sparse:true.
+ * The Client model's `user` field has a unique+sparse index, but if the
+ * index was created without sparse, all null user values collide (E11000).
+ * This drops the bad index and lets Mongoose recreate it correctly.
+ */
+const fixStaleIndexes = async () => {
+  try {
+    const indexes = await Client.collection.indexes();
+    const userIdx = indexes.find((idx) => idx.key && idx.key.user === 1);
+    if (userIdx && !userIdx.sparse) {
+      logger.info('[index-fix] Dropping stale user_1 index (missing sparse:true)');
+      await Client.collection.dropIndex('user_1');
+      await Client.createIndexes();
+      logger.info('[index-fix] user_1 index recreated with sparse:true');
+    }
+  } catch (err) {
+    // If index doesn't exist or already correct, skip silently
+    if (err.codeName === 'IndexNotFound') {
+      // Index doesn't exist yet — Mongoose will create it on first use
+    } else {
+      logger.warn(`[index-fix] Skipped: ${err.message}`);
+    }
+  }
+};
 
 const autoSeed = async () => {
   try {
@@ -39,6 +66,7 @@ const autoSeed = async () => {
 const startServer = async () => {
   try {
     await connectDB();
+    await fixStaleIndexes();
     await autoSeed();
 
     const httpServer = createServer(app);

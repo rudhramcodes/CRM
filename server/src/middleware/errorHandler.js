@@ -24,7 +24,10 @@ const errorHandler = (err, req, res, _next) => {
         : error.name === 'CastError'
           ? 'Invalid ID provided. This record may have been deleted.'
           : error.code === 11000
-            ? `${Object.keys(error.keyValue).join(', ')} already exists`
+            ? (() => {
+                const fields = Object.keys(error.keyValue || {});
+                return `Duplicate value for field: ${fields.join(', ')}. A record with this ${fields.join(' and ')} already exists`;
+              })()
             : error.name === 'JsonWebTokenError'
               ? 'Invalid token'
               : error.name === 'TokenExpiredError'
