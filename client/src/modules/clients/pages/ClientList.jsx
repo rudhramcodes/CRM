@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, UserCheck, RefreshCw } from 'lucide-react';
+import { Plus, UserCheck } from 'lucide-react';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import { useGetClientsQuery, useGetClientStatsQuery, useUpdateClientMutation, useDeleteClientMutation } from '../../../services/clientApi';
 import ClientTable from '../components/ClientTable';
 import ClientFilters from '../components/ClientFilters';
@@ -89,7 +90,7 @@ export default function ClientList() {
             className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
             title="Refresh clients"
           >
-            <RefreshCw className={`w-4 h-4 ${isFetchingClients ? 'animate-spin' : ''}`} />
+            <RefreshCwIcon className={`w-4 h-4 ${isFetchingClients ? 'animate-spin' : ''}`} />
           </button>
           {canCreate && (
             <Button onClick={() => navigate('/clients/new')}>

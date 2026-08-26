@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, Users, Columns3, LayoutList, RefreshCw, XCircle, Trash2, X, CheckSquare, Download, Upload } from 'lucide-react';
+import { Plus, Users, Columns3, LayoutList, XCircle, Trash2, X, CheckSquare, Download, Upload } from 'lucide-react';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import { useGetLeadsQuery, useGetLeadStatsQuery, useDeleteLeadMutation, useUpdateLeadMutation, useBulkDeleteLeadsMutation, useBulkUpdateLeadsMutation } from '../../../services/leadApi';
 import LeadTable from '../components/LeadTable';
 import LeadKanbanBoard from '../components/LeadKanbanBoard';
@@ -195,7 +196,7 @@ export default function LeadList() {
             className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
             title="Refresh leads"
           >
-            <RefreshCw className={`w-4 h-4 ${isFetchingLeads ? 'animate-spin' : ''}`} />
+            <RefreshCwIcon className={`w-4 h-4 ${isFetchingLeads ? 'animate-spin' : ''}`} />
           </button>
           <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
             <button

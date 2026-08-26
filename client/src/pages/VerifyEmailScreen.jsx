@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, ShieldCheck, LogOut, RefreshCw } from 'lucide-react';
+import { Mail, ShieldCheck, LogOut } from 'lucide-react';
+import RefreshCwIcon from '../components/ui/RefreshCwIcon';
 import axios from 'axios';
 import { API_BASE_URL } from '../constants';
 import { setUser } from '../app/store/authSlice';
@@ -309,7 +310,7 @@ export default function VerifyEmailScreen() {
                     onClick={resendCode}
                     className="flex items-center gap-1.5 text-xs font-medium text-primary-900 hover:text-primary-700 transition-colors"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
+                    <RefreshCwIcon className="w-3.5 h-3.5" strokeWidth={1.75} />
                     Resend code
                   </button>
                 )}

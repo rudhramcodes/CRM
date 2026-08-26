@@ -1,5 +1,6 @@
 import { Component } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import RefreshCwIcon from './ui/RefreshCwIcon';
 import Button from './ui/Button';
 
 export default class ErrorBoundary extends Component {
@@ -25,7 +26,7 @@ export default class ErrorBoundary extends Component {
               {this.state.error?.message || 'An unexpected error occurred'}
             </p>
             <Button onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/'; }}>
-              <RefreshCw className="w-4 h-4" /> Restart
+              <RefreshCwIcon className="w-4 h-4" /> Restart
             </Button>
           </div>
         </div>

@@ -8,7 +8,6 @@ import {
   FileSpreadsheet,
   FileUp,
   Loader2,
-  RefreshCw,
   Table2,
   Upload,
   X,
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import { useImportLeadsMutation } from '../../../services/leadApi';
 import toast from 'react-hot-toast';
 import { cn } from '../../../utils/cn';
@@ -277,7 +277,7 @@ export default function LeadImportModal({ open, onClose }) {
                     setView('upload');
                   }}
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCwIcon className="w-3.5 h-3.5" />
                   Import another file
                 </Button>
               </div>

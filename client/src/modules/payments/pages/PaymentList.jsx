@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { CreditCard, IndianRupee, Clock, TrendingUp, RefreshCw } from 'lucide-react';
+import { CreditCard, IndianRupee, Clock, TrendingUp } from 'lucide-react';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import toast from 'react-hot-toast';
 import PaymentTable from '../components/PaymentTable';
 import PaymentFilters from '../components/PaymentFilters';
@@ -61,7 +62,7 @@ export default function PaymentList() {
           className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
           title="Refresh payments"
         >
-          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          <RefreshCwIcon className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
         </button>
       </div>
 

@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, RefreshCw, LayoutList, CalendarDays } from 'lucide-react';
+import { Plus, LayoutList, CalendarDays } from 'lucide-react';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import { useGetMeetingsQuery, useUpdateMeetingMutation, useDeleteMeetingMutation } from '../../../services/meetingApi';
 import MeetingTable from '../components/MeetingTable';
 import MeetingFilters from '../components/MeetingFilters';
@@ -141,7 +142,7 @@ export default function MeetingList() {
             className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
             title="Refresh meetings"
           >
-            <RefreshCw className={`w-4 h-4 ${isFetchingMeetings ? 'animate-spin' : ''}`} />
+            <RefreshCwIcon className={`w-4 h-4 ${isFetchingMeetings ? 'animate-spin' : ''}`} />
           </button>
           {canCreate && (
             <Button onClick={() => setShowCreateModal(true)}>

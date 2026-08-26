@@ -213,7 +213,7 @@ export const updateLead = async (id, data, user) => {
   }
 
   if (data.followUpDate) {
-    data.followUpDate = new Date(data.followUpDate);
+    data.followUpDate = new Date(data.followUpDate);  
   }
 
   const updated = await leadRepository.updateById(id, data);

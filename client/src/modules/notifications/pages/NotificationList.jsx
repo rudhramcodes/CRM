@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { Bell, CheckCheck, RefreshCw } from 'lucide-react';
+import { Bell, CheckCheck } from 'lucide-react';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import {
@@ -103,7 +104,7 @@ export default function NotificationList() {
           <p className="text-sm font-medium text-red-800">Notifications could not be loaded.</p>
           <p className="mt-1 text-xs text-red-600">Check your connection and try again.</p>
           <button type="button" onClick={refetch} className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100">
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Retry
+            <RefreshCwIcon className="h-3.5 w-3.5" aria-hidden="true" /> Retry
           </button>
         </div>
       )}

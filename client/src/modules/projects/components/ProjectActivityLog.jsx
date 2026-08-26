@@ -1,10 +1,11 @@
-import { PlusCircle, RefreshCw, Edit2, Trash2, CheckSquare, ClipboardList } from 'lucide-react';
+import { PlusCircle, Edit2, Trash2, CheckSquare, ClipboardList } from 'lucide-react';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import { formatDate } from '../../../utils/formatters';
 import Skeleton from '../../../components/ui/Skeleton';
 
 const ACTION_ICONS = {
   project_created: PlusCircle,
-  status_changed: RefreshCw,
+  status_changed: RefreshCwIcon,
   tasks_updated: Edit2,
   task_added: CheckSquare,
   task_updated: Edit2,

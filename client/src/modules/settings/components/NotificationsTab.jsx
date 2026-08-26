@@ -92,7 +92,7 @@ export default function NotificationsTab() {
           onClick={() => { const next = !soundEnabled; setSoundEnabled(next); setNotificationSoundEnabled(next); }}
           className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B3712D]/40 ${soundEnabled ? 'bg-[#B3712D]' : 'bg-zinc-300'}`}
         >
-          <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${soundEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${soundEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
         </button>
       </div>
 

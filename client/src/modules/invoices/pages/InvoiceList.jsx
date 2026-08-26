@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Receipt, Plus, FileText, Send, CheckCircle, AlertTriangle, XCircle, IndianRupee, Clock, RefreshCw } from 'lucide-react';
+import { Receipt, Plus, FileText, Send, CheckCircle, AlertTriangle, XCircle, IndianRupee, Clock } from 'lucide-react';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import toast from 'react-hot-toast';
 import InvoiceTable from '../components/InvoiceTable';
 import InvoiceFilters from '../components/InvoiceFilters';
@@ -86,7 +87,7 @@ export default function InvoiceList() {
             className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
             title="Refresh invoices"
           >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            <RefreshCwIcon className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
           <Button onClick={() => navigate('/invoices/new')}>
             <Plus className="w-4 h-4 mr-1.5" /> Create Invoice

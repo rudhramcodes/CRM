@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { BarChart3, TrendingUp, Users, UserCheck, FileText, CheckSquare, RefreshCw } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, UserCheck, FileText, CheckSquare } from 'lucide-react';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import { useGetReportQuery } from '../../../services/reportApi';
 import RevenueReport from '../components/RevenueReport';
 import PipelineReport from '../components/PipelineReport';
@@ -85,7 +86,7 @@ export default function ReportsPage() {
             className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
             title="Refresh reports"
           >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            <RefreshCwIcon className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
           {isFetching && <span className="text-xs text-zinc-400">Refreshing...</span>}
         </div>

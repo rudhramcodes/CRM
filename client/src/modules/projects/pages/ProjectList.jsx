@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, FolderKanban, Columns, LayoutList, RefreshCw } from 'lucide-react';
+import { Plus, FolderKanban, Columns, LayoutList } from 'lucide-react';
+import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import {
   useGetProjectsQuery,
   useGetProjectStatsQuery,
@@ -99,7 +100,7 @@ export default function ProjectList() {
             className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
             title="Refresh projects"
           >
-            <RefreshCw className={`w-4 h-4 ${isFetchingProjects ? 'animate-spin' : ''}`} />
+            <RefreshCwIcon className={`w-4 h-4 ${isFetchingProjects ? 'animate-spin' : ''}`} />
           </button>
           <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
             <button onClick={() => setViewMode('table')}
