@@ -88,16 +88,21 @@ export const createLead = async (data, user) => {
 
   const lead = await leadRepository.create(leadData);
 
+  const { default: User } = await import('../auth/auth.model.js');
+  const allUsers = await User.find({ isActive: true }).select('_id');
+  const recipientIds = allUsers
+    .map((u) => String(u._id))
+    .filter((uid) => uid !== String(user._id));
+
   const notif = notificationService.buildNotification('lead_created', {
     leadName: lead.name, source: lead.source || 'manual',
   });
+  notificationService.createAndSendBulk(recipientIds, {
+    referenceId: lead._id, referenceModel: 'Lead',
+    actionBy: user._id, link: `/leads/${lead._id}`, ...notif,
+  }).catch(() => {});
 
   if (data.assignedTo && String(data.assignedTo) !== String(user._id)) {
-    notificationService.createAndSendBulk([data.assignedTo], {
-      referenceId: lead._id, referenceModel: 'Lead',
-      actionBy: user._id, link: `/leads/${lead._id}`, ...notif,
-    }).catch(() => {});
-
     const assignedNotif = notificationService.buildNotification('lead_assigned', {
       leadName: lead.name, actorName: user.name,
     });
@@ -105,17 +110,6 @@ export const createLead = async (data, user) => {
       recipient: data.assignedTo, referenceId: lead._id, referenceModel: 'Lead',
       actionBy: user._id, link: `/leads/${lead._id}`,
       ...assignedNotif,
-    }).catch(() => {});
-  } else {
-    const { default: User } = await import('../auth/auth.model.js');
-    const admins = await User.find({ role: { $in: ['super_admin', 'admin', 'manager'] }, isActive: true })
-      .select('_id');
-    const adminIds = admins
-      .map((a) => String(a._id))
-      .filter((aid) => aid !== String(user._id));
-    notificationService.createAndSendBulk(adminIds, {
-      referenceId: lead._id, referenceModel: 'Lead',
-      actionBy: user._id, link: `/leads/${lead._id}`, ...notif,
     }).catch(() => {});
   }
 
