@@ -91,14 +91,33 @@ export const createLead = async (data, user) => {
   const notif = notificationService.buildNotification('lead_created', {
     leadName: lead.name, source: lead.source || 'manual',
   });
-  const recipients = data.assignedTo && String(data.assignedTo) !== String(user._id)
-    ? [data.assignedTo]
-    : [];
-  // Empty recipients → Cliq team broadcast still fires; assignee gets in-app/email.
-  notificationService.createAndSendBulk(recipients, {
-    referenceId: lead._id, referenceModel: 'Lead',
-    actionBy: user._id, link: `/leads/${lead._id}`, ...notif,
-  }).catch(() => {});
+
+  if (data.assignedTo && String(data.assignedTo) !== String(user._id)) {
+    notificationService.createAndSendBulk([data.assignedTo], {
+      referenceId: lead._id, referenceModel: 'Lead',
+      actionBy: user._id, link: `/leads/${lead._id}`, ...notif,
+    }).catch(() => {});
+
+    const assignedNotif = notificationService.buildNotification('lead_assigned', {
+      leadName: lead.name, actorName: user.name,
+    });
+    notificationService.createAndSend({
+      recipient: data.assignedTo, referenceId: lead._id, referenceModel: 'Lead',
+      actionBy: user._id, link: `/leads/${lead._id}`,
+      ...assignedNotif,
+    }).catch(() => {});
+  } else {
+    const { default: User } = await import('../auth/auth.model.js');
+    const admins = await User.find({ role: { $in: ['super_admin', 'admin', 'manager'] }, isActive: true })
+      .select('_id');
+    const adminIds = admins
+      .map((a) => String(a._id))
+      .filter((aid) => aid !== String(user._id));
+    notificationService.createAndSendBulk(adminIds, {
+      referenceId: lead._id, referenceModel: 'Lead',
+      actionBy: user._id, link: `/leads/${lead._id}`, ...notif,
+    }).catch(() => {});
+  }
 
   return lead;
 };
@@ -162,17 +181,35 @@ export const updateLead = async (id, data, user) => {
     }
   }
 
-  if (data.assignedTo && lead.assignedTo &&
-      String(data.assignedTo) !== String(lead.assignedTo._id || lead.assignedTo) &&
-      String(data.assignedTo) !== String(user._id)) {
-    const notif = notificationService.buildNotification('lead_assigned', {
-      leadName: lead.name, actorName: user.name,
-    });
-    notificationService.createAndSend({
-      recipient: data.assignedTo, referenceId: lead._id, referenceModel: 'Lead',
-      actionBy: user._id, link: `/leads/${lead._id}`,
-      ...notif,
-    }).catch(() => {});
+  if (data.assignedTo) {
+    const currentAssigned = lead.assignedTo
+      ? String(lead.assignedTo._id || lead.assignedTo)
+      : null;
+    const newAssigned = String(data.assignedTo);
+
+    if (newAssigned !== currentAssigned && newAssigned !== String(user._id)) {
+      const notif = notificationService.buildNotification('lead_assigned', {
+        leadName: lead.name, actorName: user.name,
+      });
+      notificationService.createAndSend({
+        recipient: data.assignedTo, referenceId: lead._id, referenceModel: 'Lead',
+        actionBy: user._id, link: `/leads/${lead._id}`,
+        ...notif,
+      }).catch(() => {});
+    }
+
+    if (currentAssigned && currentAssigned !== newAssigned && currentAssigned !== String(user._id)) {
+      const notif = notificationService.buildNotification('lead_assigned', {
+        leadName: lead.name, actorName: user.name,
+      });
+      notificationService.createAndSend({
+        recipient: currentAssigned, referenceId: lead._id, referenceModel: 'Lead',
+        actionBy: user._id, link: `/leads/${lead._id}`,
+        title: `${user.name} reassigned a lead`,
+        message: `${user.name} reassigned "${lead.name}" to another team member`,
+        ...notif,
+      }).catch(() => {});
+    }
   }
 
   if (data.followUpDate) {
@@ -182,12 +219,14 @@ export const updateLead = async (id, data, user) => {
   const updated = await leadRepository.updateById(id, data);
 
   if (data.status === 'won' && lead.assignedTo && !lead.assignedTo.equals(user._id)) {
+    const clientId = data.convertedToClient || updated.convertedToClient;
     const notif = notificationService.buildNotification('lead_converted', {
       leadName: lead.name,
     });
     notificationService.createAndSend({
-      recipient: lead.assignedTo, referenceId: updated._id, referenceModel: 'Lead',
-      actionBy: user._id, link: `/clients/${updated.convertedToClient}`, ...notif,
+      recipient: lead.assignedTo, referenceId: clientId || updated._id, referenceModel: 'Client',
+      actionBy: user._id, link: clientId ? `/clients/${clientId}` : `/leads/${updated._id}`,
+      ...notif,
     }).catch(() => {});
   }
 

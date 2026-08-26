@@ -3,8 +3,10 @@ export const NOTIFICATION_TYPES = {
   TASK_DUE_SOON: 'task_due_soon',
   TASK_STATUS_CHANGE: 'task_status_change',
   TASK_COMMENT: 'task_comment',
+  TASK_DELETED: 'task_deleted',
   MENTION: 'mention',
   PROJECT_ASSIGNED: 'project_assigned',
+  PROJECT_STATUS_CHANGE: 'project_status_change',
   PROJECT_CHAT: 'project_chat',
   LEAD_CREATED: 'lead_created',
   LEAD_ASSIGNED: 'lead_assigned',
@@ -141,6 +143,12 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `${d.clientName} contract expires ${d.date}`,
     priority: NOTIFICATION_PRIORITIES.HIGH,
     channels: { email: true, cliq: true },
+  },
+  task_deleted: {
+    title: 'Task Deleted',
+    message: (d) => `"${d.taskTitle}" was deleted by ${d.actorName}`,
+    priority: NOTIFICATION_PRIORITIES.MEDIUM,
+    channels: { email: false, cliq: false },
   },
   system: {
     title: 'System Update',

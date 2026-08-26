@@ -88,6 +88,20 @@ export default function Header({ onMobileMenuOpen }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const primeOnInteraction = () => {
+      primeNotificationSound();
+      document.removeEventListener('click', primeOnInteraction);
+      document.removeEventListener('keydown', primeOnInteraction);
+    };
+    document.addEventListener('click', primeOnInteraction);
+    document.addEventListener('keydown', primeOnInteraction);
+    return () => {
+      document.removeEventListener('click', primeOnInteraction);
+      document.removeEventListener('keydown', primeOnInteraction);
+    };
+  }, []);
+
   const handleLogout = async () => {
     try {
       await axios.post(`${API_BASE_URL}/auth/logout`, {}, { withCredentials: true });

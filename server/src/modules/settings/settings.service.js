@@ -65,10 +65,15 @@ export const updateRolePermissions = async (role, permissions) => {
 
 export const shouldNotify = async (userId, type, channel = 'inApp') => {
   const prefs = await UserPreference.findOne({ user: userId });
-  if (!prefs) return true;
+  if (!prefs) {
+    return true; // No preferences set, default to enabled
+  }
   const channels = prefs.notify?.get?.(type) || prefs.notify?.[type];
-  if (!channels) return true;
-  return channels[channel] !== false;
+  if (!channels) {
+    return true; // No preference for this type, default to enabled
+  }
+  const allowed = channels[channel] !== false;
+  return allowed;
 };
 
 // ── Security Settings (password policy, login lockout) ──

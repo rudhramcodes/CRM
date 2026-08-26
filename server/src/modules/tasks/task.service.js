@@ -160,11 +160,14 @@ export const deleteTask = async (id, user) => {
     }
   }
   if (task.assignedTo && user && String(task.assignedTo._id) !== String(user._id)) {
+    const projectLink = task.project?._id || task.project;
+    const notif = notificationService.buildNotification('task_deleted', {
+      taskTitle: task.title, actorName: user.name,
+    });
     notificationService.createAndSend({
-      recipient: task.assignedTo._id, type: 'task_deleted', title: 'Task Deleted',
-      message: `"${task.title}" was deleted by ${user.name}`,
-      referenceId: task._id, referenceModel: 'Task',
-      actionBy: user._id, link: '',
+      recipient: task.assignedTo._id, referenceId: task._id, referenceModel: 'Task',
+      actionBy: user._id, link: projectLink ? `/projects/${projectLink}` : '/dashboard',
+      ...notif,
     }).catch(() => {});
   }
 

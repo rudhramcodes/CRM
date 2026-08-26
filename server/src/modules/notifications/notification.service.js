@@ -44,8 +44,13 @@ export const createAndSend = async ({
   recipient, type, title, message, link, priority,
   referenceId, referenceModel, actionBy, metadata, channels,
 }) => {
+  logger.info(`[Notification] Creating: type=${type}, recipient=${recipient}, referenceId=${referenceId}`);
+
   // Dedup: same type + same reference + same recipient within 5 min
-  if (isDuplicate(recipient, type, referenceId)) return null;
+  if (isDuplicate(recipient, type, referenceId)) {
+    logger.info(`[Notification] Skipped duplicate: type=${type}, recipient=${recipient}`);
+    return null;
+  }
 
   const template = type ? NOTIFICATION_TEMPLATES[type] : null;
   // Template routing gates the channels this type is allowed on
@@ -57,9 +62,13 @@ export const createAndSend = async ({
   if (type) {
     allowedInApp = await shouldNotify(recipient, type, 'inApp');
     allowedEmail = await shouldNotify(recipient, type, 'email');
+    logger.info(`[Notification] Preferences: inApp=${allowedInApp}, email=${allowedEmail} for type=${type}`);
   }
   // If user explicitly disabled both, skip entirely
-  if (!allowedInApp && !allowedEmail) return null;
+  if (!allowedInApp && !allowedEmail) {
+    logger.info(`[Notification] Skipped: both channels disabled for type=${type}, recipient=${recipient}`);
+    return null;
+  }
 
   const finalChannels = {
     inApp: allowedInApp && (!channels || channels.inApp !== false),
@@ -86,12 +95,19 @@ export const createAndSend = async ({
       const io = getIO();
       if (io) {
         const unreadCount = await notifRepo.countUnreadByRecipient(recipient);
-        io.to(`user:${recipient}`).emit('notification:new', notification);
-        io.to(`user:${recipient}`).emit('notification:unread', { count: unreadCount });
+        const room = `user:${recipient}`;
+        logger.info(`[Notification] Emitting to room ${room}: notification:new`);
+        io.to(room).emit('notification:new', notification);
+        io.to(room).emit('notification:unread', { count: unreadCount });
+        logger.info(`[Notification] Socket emit successful, unread count: ${unreadCount}`);
+      } else {
+        logger.warn('[Notification] Socket.io not initialized - no real-time delivery');
       }
     } catch (err) {
-      logger.error(`Socket emit failed for notification: ${err.message}`);
+      logger.error(`[Notification] Socket emit failed: ${err.message}`);
     }
+  } else {
+    logger.info(`[Notification] InApp disabled, skipping socket emit for type=${type}`);
   }
 
   // Send email (only if email channel is allowed)

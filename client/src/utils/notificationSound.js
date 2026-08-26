@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'notificationSoundEnabled';
-let audioContext;
+let audio = null;
+let isPrimed = false;
 
 export const isNotificationSoundEnabled = () => {
   if (typeof window === 'undefined') return true;
@@ -12,50 +13,51 @@ export const setNotificationSoundEnabled = (enabled) => {
   }
 };
 
-const getAudioContext = () => {
+const getAudio = () => {
   if (typeof window === 'undefined') return null;
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContext) return null;
-  audioContext ||= new AudioContext();
-  return audioContext;
+  if (!audio) {
+    audio = new Audio('/sounds/notification.mp3');
+    audio.volume = 0.7;
+    audio.preload = 'auto';
+    audio.load();
+  }
+  return audio;
 };
 
 export const primeNotificationSound = async () => {
-  const context = getAudioContext();
-  if (context?.state === 'suspended') {
-    try { await context.resume(); } catch { /* Browser may still require a gesture. */ }
+  if (typeof window === 'undefined') return;
+  const a = getAudio();
+  if (!a) return;
+  try {
+    a.currentTime = 0;
+    await a.play();
+    isPrimed = true;
+    a.pause();
+    a.currentTime = 0;
+  } catch (e) {
+    console.warn('Could not prime notification sound:', e);
   }
 };
 
 export const playNotificationSound = async () => {
   if (!isNotificationSoundEnabled()) return;
-  const context = getAudioContext();
-  if (!context) return;
+  if (typeof window === 'undefined') return;
+  const a = getAudio();
+  if (!a) return;
   try {
-    await primeNotificationSound();
-    if (context.state !== 'running') return;
-    const now = context.currentTime;
-    const gain = context.createGain();
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
-    gain.connect(context.destination);
-
-    const first = context.createOscillator();
-    first.type = 'sine';
-    first.frequency.setValueAtTime(880, now);
-    first.frequency.exponentialRampToValueAtTime(1174.66, now + 0.16);
-    first.connect(gain);
-    first.start(now);
-    first.stop(now + 0.22);
-
-    const second = context.createOscillator();
-    second.type = 'sine';
-    second.frequency.setValueAtTime(1174.66, now + 0.13);
-    second.connect(gain);
-    second.start(now + 0.13);
-    second.stop(now + 0.42);
-  } catch {
-    // Sound is a progressive enhancement; notification delivery must still work.
+    a.currentTime = 0;
+    await a.play();
+  } catch (e) {
+    console.warn('Could not play notification sound:', e);
+    if (!isPrimed) {
+      try {
+        await a.load();
+        a.currentTime = 0;
+        await a.play();
+        isPrimed = true;
+      } catch (e2) {
+        console.error('Notification sound failed after retry:', e2);
+      }
+    }
   }
 };

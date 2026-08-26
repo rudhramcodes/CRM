@@ -6,6 +6,7 @@ import logger from '../../utils/logger.js';
 import Client from '../clients/client.model.js';
 import Payment from '../payments/payment.model.js';
 import { VENTURE_CODES } from '../../constants/index.js';
+import * as notificationService from '../notifications/notification.service.js';
 
 // Invoice service manages NON-FINANCIAL status transitions only.
 // Financial transitions (→ partially_paid, → paid) are handled by Payment service
@@ -152,7 +153,23 @@ export const updateInvoiceStatus = async (id, status, user = null) => {
   }
   if (status === 'cancelled') updateData.cancelledAt = new Date();
 
-  return invoiceRepository.updateById(id, updateData);
+  const updated = await invoiceRepository.updateById(id, updateData);
+
+  if (status === 'sent' && user) {
+    const notif = notificationService.buildNotification('system', {
+      message: `Invoice #${invoice.invoiceNumber} has been sent to ${invoice.client?.contactPerson || 'client'}`,
+    });
+    const adminQuery = (await import('../auth/auth.model.js')).default;
+    const admins = await adminQuery.find({ role: { $in: ['super_admin', 'admin'] }, isActive: true }).select('_id');
+    const adminIds = admins.map((a) => String(a._id)).filter((aid) => String(aid) !== String(user._id));
+    notificationService.createAndSendBulk(adminIds, {
+      referenceId: invoice._id, referenceModel: 'Invoice',
+      actionBy: user._id, link: `/invoices/${invoice._id}`,
+      ...notif,
+    }).catch(() => {});
+  }
+
+  return updated;
 };
 
 const sendInvoiceEmail = async (invoice) => {

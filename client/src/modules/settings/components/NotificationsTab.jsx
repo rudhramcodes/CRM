@@ -11,6 +11,8 @@ const NOTIF_TYPES = [
   { id: 'task_comment', label: 'Task Comment' },
   { id: 'mention', label: 'Mentions' },
   { id: 'project_assigned', label: 'Project Assigned' },
+  { id: 'project_status_change', label: 'Project Status Change' },
+  { id: 'project_chat', label: 'Project Chat' },
   { id: 'lead_created', label: 'New Lead' },
   { id: 'lead_assigned', label: 'Lead Assigned' },
   { id: 'meeting_scheduled', label: 'Meeting Scheduled' },
