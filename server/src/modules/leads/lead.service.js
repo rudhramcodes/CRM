@@ -6,6 +6,7 @@ import * as notificationService from '../notifications/notification.service.js';
 import generateClientId from '../../utils/generateClientId.js';
 import * as XLSX from 'xlsx';
 import { LEAD_STATUS, LEAD_BRANDS } from '../../constants/index.js';
+import { sendClientOnboardingEmail } from '../../services/emailService.js';
 
 const LEAD_SOURCES = ['google_ads', 'referral', 'instagram', 'linkedin', 'website', 'email', 'call', 'other'];
 const MAX_IMPORT_ROWS = 1000;
@@ -151,17 +152,18 @@ export const updateLead = async (id, data, user) => {
     // If status is changed to 'won', auto-convert to client FIRST
     // Client creation must succeed before we mark the lead as won
     if (data.status === 'won' && !lead.convertedToClient) {
-      let existingClient = await clientRepository.findByEmail(lead.email);
+      let existingClient = await clientRepository.findByEmail(data.email || lead.email);
       if (existingClient) {
         data.convertedToClient = existingClient._id;
       } else {
         const brand = lead.brand || 'panigrahna';
+        const clientEmail = data.email || lead.email;
         try {
           const client = await clientRepository.create({
             clientId: await generateClientId(brand),
             companyName: lead.company || `${lead.name}'s Company`,
             contactPerson: lead.name,
-            email: lead.email,
+            email: clientEmail,
             phone: lead.phone,
             brand,
             convertedFrom: lead._id,
@@ -169,12 +171,19 @@ export const updateLead = async (id, data, user) => {
             createdBy: user._id,
           });
           data.convertedToClient = client._id;
+
+          sendClientOnboardingEmail(clientEmail, {
+            clientName: lead.name,
+            companyName: lead.company || `${lead.name}'s Company`,
+            clientId: client.clientId,
+            brand,
+          }).catch((err) => logger.error(`[lead-convert] Onboarding email failed: ${err.message}`));
         } catch (err) {
           if (err.code === 11000) {
             const duplicateField = Object.keys(err.keyValue || {})[0] || 'unknown';
             logger.warn(`[lead-convert] E11000 on field "${duplicateField}" for lead ${lead._id}`);
 
-            existingClient = await clientRepository.findByEmail(lead.email);
+            existingClient = await clientRepository.findByEmail(clientEmail);
             if (existingClient) {
               data.convertedToClient = existingClient._id;
             } else if (duplicateField === 'clientId') {
@@ -183,7 +192,7 @@ export const updateLead = async (id, data, user) => {
                 clientId: retryClientId,
                 companyName: lead.company || `${lead.name}'s Company`,
                 contactPerson: lead.name,
-                email: lead.email,
+                email: clientEmail,
                 phone: lead.phone,
                 brand,
                 convertedFrom: lead._id,
@@ -243,13 +252,19 @@ export const updateLead = async (id, data, user) => {
 
   const updated = await leadRepository.updateById(id, data);
 
-  if (data.status === 'won' && lead.assignedTo && !lead.assignedTo.equals(user._id)) {
+  if (data.status === 'won') {
+    const { default: User } = await import('../auth/auth.model.js');
+    const allMembers = await User.find({ isActive: true, role: { $ne: 'client' } }).select('_id');
+    const memberIds = allMembers
+      .map((u) => String(u._id))
+      .filter((uid) => uid !== String(user._id));
+
     const clientId = data.convertedToClient || updated.convertedToClient;
     const notif = notificationService.buildNotification('lead_converted', {
       leadName: lead.name,
     });
-    notificationService.createAndSend({
-      recipient: lead.assignedTo, referenceId: clientId || updated._id, referenceModel: 'Client',
+    notificationService.createAndSendBulk(memberIds, {
+      referenceId: clientId || updated._id, referenceModel: 'Client',
       actionBy: user._id, link: clientId ? `/clients/${clientId}` : `/leads/${updated._id}`,
       ...notif,
     }).catch(() => {});

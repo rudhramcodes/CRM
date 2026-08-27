@@ -6,7 +6,7 @@ import * as leadRepository from '../leads/lead.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
 import User from '../auth/auth.model.js';
 import { ROLES, ROLE_PERMISSIONS } from '../../constants/index.js';
-import { sendPortalInviteEmail } from '../../services/emailService.js';
+import { sendPortalInviteEmail, sendClientOnboardingEmail } from '../../services/emailService.js';
 import logger from '../../utils/logger.js';
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
@@ -129,15 +129,26 @@ export const convertFromLead = async (leadId, user) => {
     convertedAt: new Date(),
   });
 
-  if (lead.assignedTo && !lead.assignedTo.equals(user._id)) {
-    const notif = notificationService.buildNotification('lead_converted', {
-      leadName: lead.name,
-    });
-    notificationService.createAndSend({
-      recipient: lead.assignedTo, referenceId: client._id, referenceModel: 'Client',
-      actionBy: user._id, link: `/clients/${client._id}`, ...notif,
-    }).catch(() => {});
-  }
+  const allMembers = await User.find({ isActive: true, role: { $ne: 'client' } }).select('_id');
+  const memberIds = allMembers
+    .map((u) => String(u._id))
+    .filter((uid) => uid !== String(user._id));
+
+  const notif = notificationService.buildNotification('lead_converted', {
+    leadName: lead.name,
+  });
+  notificationService.createAndSendBulk(memberIds, {
+    referenceId: client._id, referenceModel: 'Client',
+    actionBy: user._id, link: `/clients/${client._id}`,
+    ...notif,
+  }).catch(() => {});
+
+  sendClientOnboardingEmail(lead.email, {
+    clientName: lead.name,
+    companyName: lead.company || `${lead.name}'s Company`,
+    clientId: client.clientId,
+    brand,
+  }).catch((err) => logger.error(`[convert-lead] Onboarding email failed: ${err.message}`));
 
   return client;
 };

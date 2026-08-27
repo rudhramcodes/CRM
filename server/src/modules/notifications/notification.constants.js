@@ -104,9 +104,9 @@ export const NOTIFICATION_TEMPLATES = {
   },
   lead_converted: {
     title: 'Lead Converted',
-    message: (d) => `"${d.leadName}" converted to client`,
+    message: (d) => `"${d.leadName}" has been converted to a client`,
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
-    channels: { email: true, cliq: true },
+    channels: { email: false, cliq: true },
   },
   meeting_scheduled: {
     title: 'Meeting Scheduled',
