@@ -28,6 +28,7 @@ import templateRoutes from './modules/templates/template.routes.js';
 import reportRoutes from './modules/reports/reports.routes.js';
 import notificationRoutes from './modules/notifications/notification.routes.js';
 import settingsRoutes from './modules/settings/settings.routes.js';
+import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
 
 const app = express();
 
@@ -104,6 +105,7 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Serve frontend build in production
 if (config.nodeEnv === 'production') {

@@ -10,6 +10,7 @@ import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
 import VerifyEmailScreen from '../pages/VerifyEmailScreen';
 import Dashboard from '../pages/Dashboard';
+import VentureDashboard from '../pages/VentureDashboard';
 import NotFound from '../pages/NotFound';
 import TaskRedirect from './TaskRedirect';
 import ClientPortalLogin from '../modules/portal/pages/ClientPortalLogin';
@@ -101,6 +102,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
+      { path: 'dashboard/venture/:brand', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><VentureDashboard /></ProtectedRoute> },
       { path: 'leads', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><LeadList /></ProtectedRoute> },
       { path: 'leads/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><LeadForm /></ProtectedRoute> },
       { path: 'leads/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><LeadDetail /></ProtectedRoute> },
