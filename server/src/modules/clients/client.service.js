@@ -95,6 +95,7 @@ export const create = async (data, user) => {
   const client = await clientRepository.create(payload);
 
   // Auto-create portal user account for the client
+  let portalUserCreated = false;
   const existingUser = await User.findOne({ email: data.email });
   if (!existingUser) {
     try {
@@ -111,25 +112,30 @@ export const create = async (data, user) => {
 
       client.user = portalUser._id;
       await client.save();
-
-      // Send onboarding email immediately
-      sendClientOnboardingEmail(data.email, {
-        clientName: data.contactPerson,
-        companyName: data.companyName,
-        clientId: client.clientId,
-        brand: data.brand,
-      }).catch((err) => logger.error(`[create-client] Onboarding email failed: ${err.message}`));
-
-      setTimeout(() => {
-        sendClientCredentialsEmail(data.email, {
-          clientName: data.contactPerson,
-          email: data.email,
-          password: CLIENT_DEFAULT_PASSWORD,
-        }).catch((err) => logger.error(`[create-client] Credentials email failed: ${err.message}`));
-      }, 45000);
+      portalUserCreated = true;
     } catch (err) {
       logger.error(`[create-client] Failed to create portal user: ${err.message}`);
     }
+  } else {
+    portalUserCreated = true;
+  }
+
+  if (portalUserCreated) {
+    sendClientOnboardingEmail(data.email, {
+      clientName: data.contactPerson,
+      companyName: data.companyName,
+      clientId: client.clientId,
+      brand: data.brand,
+    }).catch((err) => logger.error(`[create-client] Onboarding email failed: ${err.message}`));
+
+    const delayMs = 45000;
+    new Promise((resolve) => setTimeout(resolve, delayMs)).then(() => {
+      return sendClientCredentialsEmail(data.email, {
+        clientName: data.contactPerson,
+        email: data.email,
+        password: CLIENT_DEFAULT_PASSWORD,
+      });
+    }).catch((err) => logger.error(`[create-client] Credentials email failed: ${err.message}`));
   }
 
   return client;
@@ -191,7 +197,7 @@ export const convertFromLead = async (leadId, user) => {
     brand,
   }).catch((err) => logger.error(`[convert-lead] Onboarding email failed: ${err.message}`));
 
-  // Auto-create portal user for converted lead
+  let portalUserCreated = false;
   const existingUser = await User.findOne({ email: lead.email });
   if (!existingUser) {
     try {
@@ -208,17 +214,22 @@ export const convertFromLead = async (leadId, user) => {
 
       client.user = portalUser._id;
       await client.save();
-
-      setTimeout(() => {
-        sendClientCredentialsEmail(lead.email, {
-          clientName: lead.name,
-          email: lead.email,
-          password: CLIENT_DEFAULT_PASSWORD,
-        }).catch((err) => logger.error(`[convert-lead] Credentials email failed: ${err.message}`));
-      }, 45000);
+      portalUserCreated = true;
     } catch (err) {
       logger.error(`[convert-lead] Failed to create portal user: ${err.message}`);
     }
+  } else {
+    portalUserCreated = true;
+  }
+
+  if (portalUserCreated) {
+    new Promise((resolve) => setTimeout(resolve, 45000)).then(() => {
+      return sendClientCredentialsEmail(lead.email, {
+        clientName: lead.name,
+        email: lead.email,
+        password: CLIENT_DEFAULT_PASSWORD,
+      });
+    }).catch((err) => logger.error(`[convert-lead] Credentials email failed: ${err.message}`));
   }
 
   return client;
