@@ -8,10 +8,10 @@ set -euo pipefail
 
 # 1) System packages
 apt update && apt upgrade -y
-apt-get install -y curl build-essential python3 make g++
+apt-get install -y curl build-essential python3 make g++ unzip
 
-# 2) Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+# 2) Node.js 22 (puppeteer 25 requires >=22.12)
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y nodejs
 
 # 3) Chromium system libraries (required by Puppeteer for invoice PDFs)

@@ -40,7 +40,6 @@ Option A — run the prepared script (edit the repo URL inside first):
 Option B — manual:
     apt update && apt upgrade -y
     apt-get install -y curl build-essential python3 make g++
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt-get install -y nodejs
     apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
       libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
