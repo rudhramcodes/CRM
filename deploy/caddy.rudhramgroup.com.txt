@@ -1,0 +1,7 @@
+# ===== CRM site: rudhramgroup.com =====
+# APPEND this as a NEW, separate block to /etc/caddy/Caddyfile.
+# Do NOT modify the existing shriambikaniketantrust.org block.
+# Caddy auto-issues the TLS certificate and handles HTTP->HTTPS + WebSockets.
+rudhramgroup.com {
+    reverse_proxy 127.0.0.1:3000
+}

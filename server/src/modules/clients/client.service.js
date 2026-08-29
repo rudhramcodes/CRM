@@ -6,12 +6,13 @@ import * as leadRepository from '../leads/lead.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
 import User from '../auth/auth.model.js';
 import { ROLES, ROLE_PERMISSIONS } from '../../constants/index.js';
-import { sendPortalInviteEmail, sendClientOnboardingEmail } from '../../services/emailService.js';
+import { sendPortalInviteEmail, sendClientOnboardingEmail, sendClientCredentialsEmail } from '../../services/emailService.js';
 import logger from '../../utils/logger.js';
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 const PORTAL_INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CLIENT_DEFAULT_PASSWORD = 'client@rudhram';
 
 export const sendPortalInvite = async (clientId) => {
   const client = await clientRepository.findById(clientId);
@@ -91,7 +92,47 @@ export const create = async (data, user) => {
     payload.notes = [{ text: data.notes, createdBy: user._id }];
   }
 
-  return clientRepository.create(payload);
+  const client = await clientRepository.create(payload);
+
+  // Auto-create portal user account for the client
+  const existingUser = await User.findOne({ email: data.email });
+  if (!existingUser) {
+    try {
+      const portalUser = await User.create({
+        name: data.contactPerson,
+        email: data.email,
+        password: CLIENT_DEFAULT_PASSWORD,
+        role: ROLES.CLIENT,
+        permissions: ROLE_PERMISSIONS[ROLES.CLIENT],
+        isActive: true,
+        isEmailVerified: true,
+        mustChangePassword: true,
+      });
+
+      client.user = portalUser._id;
+      await client.save();
+
+      // Send onboarding email immediately
+      sendClientOnboardingEmail(data.email, {
+        clientName: data.contactPerson,
+        companyName: data.companyName,
+        clientId: client.clientId,
+        brand: data.brand,
+      }).catch((err) => logger.error(`[create-client] Onboarding email failed: ${err.message}`));
+
+      setTimeout(() => {
+        sendClientCredentialsEmail(data.email, {
+          clientName: data.contactPerson,
+          email: data.email,
+          password: CLIENT_DEFAULT_PASSWORD,
+        }).catch((err) => logger.error(`[create-client] Credentials email failed: ${err.message}`));
+      }, 45000);
+    } catch (err) {
+      logger.error(`[create-client] Failed to create portal user: ${err.message}`);
+    }
+  }
+
+  return client;
 };
 
 export const convertFromLead = async (leadId, user) => {
@@ -149,6 +190,36 @@ export const convertFromLead = async (leadId, user) => {
     clientId: client.clientId,
     brand,
   }).catch((err) => logger.error(`[convert-lead] Onboarding email failed: ${err.message}`));
+
+  // Auto-create portal user for converted lead
+  const existingUser = await User.findOne({ email: lead.email });
+  if (!existingUser) {
+    try {
+      const portalUser = await User.create({
+        name: lead.name,
+        email: lead.email,
+        password: CLIENT_DEFAULT_PASSWORD,
+        role: ROLES.CLIENT,
+        permissions: ROLE_PERMISSIONS[ROLES.CLIENT],
+        isActive: true,
+        isEmailVerified: true,
+        mustChangePassword: true,
+      });
+
+      client.user = portalUser._id;
+      await client.save();
+
+      setTimeout(() => {
+        sendClientCredentialsEmail(lead.email, {
+          clientName: lead.name,
+          email: lead.email,
+          password: CLIENT_DEFAULT_PASSWORD,
+        }).catch((err) => logger.error(`[convert-lead] Credentials email failed: ${err.message}`));
+      }, 45000);
+    } catch (err) {
+      logger.error(`[convert-lead] Failed to create portal user: ${err.message}`);
+    }
+  }
 
   return client;
 };

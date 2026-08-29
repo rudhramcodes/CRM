@@ -12,7 +12,12 @@ export function useAuth() {
   const login = async (credentials) => {
     const result = await dispatch(loginUser(credentials));
     if (loginUser.fulfilled.match(result)) {
-      navigate(roleHome(result.payload?.user?.role));
+      const { user } = result.payload;
+      if (user?.mustChangePassword) {
+        navigate('/auth/change-password');
+      } else {
+        navigate(roleHome(user?.role));
+      }
     }
     return result;
   };

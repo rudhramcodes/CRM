@@ -84,7 +84,7 @@ export const loginUser = async (email, password) => {
 
   const tokens = await generateTokens(user);
   const userObj = user.toJSON();
-  return { user: userObj, ...tokens };
+  return { user: userObj, mustChangePassword: user.mustChangePassword || false, ...tokens };
 };
 
 export const logoutUser = async (userId) => {

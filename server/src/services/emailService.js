@@ -266,7 +266,7 @@ const LIGHT_GOLD = '#DCC19D';
 const EMAIL_FONT = "'Bricolage Grotesque', Georgia, serif";
 const EMAIL_BODY_FONT = "'Manrope', Helvetica, Arial, sans-serif";
 
-export const renderClientOnboardingEmail = ({ clientName, companyName, clientId, brand, portalUrl }) => {
+export const renderClientOnboardingEmail = ({ clientName, companyName, clientId, brand }) => {
   const brandLabel = {
     panigrahna: 'Panigrahna',
     aghori: 'Aghori',
@@ -350,10 +350,11 @@ export const renderClientOnboardingEmail = ({ clientName, companyName, clientId,
           </table>
         </td></tr>
       </table>
-      <p style="margin:0 0 8px;font-family:${EMAIL_BODY_FONT};font-size:15px;color:${DARK_BROWN};line-height:1.75;">Use the button below to access your portal and get started:</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 0;">
-        <tr><td align="center" style="background:${DARK_BROWN};border-radius:12px;">
-          <a href="${portalUrl}" target="_blank" style="display:inline-block;padding:15px 40px;font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${CREAM};text-decoration:none;letter-spacing:0.3px;">Access Your Portal</a>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;border:1px solid ${LIGHT_GOLD};border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:14px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Next Steps</td></tr>
+        <tr><td style="padding:18px 22px;">
+          <p style="margin:0 0 12px;font-family:${EMAIL_BODY_FONT};font-size:14px;color:${DARK_BROWN};line-height:1.7;">Your client portal account has been created. You will receive your <strong>login credentials</strong> shortly via a separate email.</p>
+          <p style="margin:0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:${DARK_BROWN};line-height:1.7;">For your security, you will be prompted to change your password after your first login.</p>
         </td></tr>
       </table>
       <p style="margin:28px 0 0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:#8a7560;line-height:1.7;">If you have any questions, your dedicated account manager is here to help. Simply reply to this email or reach out through the portal.</p>
@@ -374,10 +375,111 @@ export const renderClientOnboardingEmail = ({ clientName, companyName, clientId,
 };
 
 export const sendClientOnboardingEmail = async (email, { clientName, companyName, clientId, brand }) => {
-  const portalUrl = `${config.clientUrl}/portal/login`;
   return sendEmail({
     to: email,
     subject: `Welcome to Rudhram, ${clientName}`,
-    html: renderClientOnboardingEmail({ clientName, companyName, clientId, brand, portalUrl }),
+    html: renderClientOnboardingEmail({ clientName, companyName, clientId, brand }),
+  });
+};
+
+export const renderClientCredentialsEmail = ({ clientName, email, password, portalUrl }) => {
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Your Rudhram Portal Credentials</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .fluid { max-width: 100% !important; height: auto !important; margin-left: auto !important; margin-right: auto !important; }
+    .mobile-padding { padding-left: 24px !important; padding-right: 24px !important; }
+    .credentials-table td { padding: 12px 16px !important; font-size: 12px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};font-family:${EMAIL_BODY_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-container" style="max-width:600px;width:100%;">
+
+<tr><td align="center" style="padding-bottom:32px;">
+  <a href="https://rudhram.in" target="_blank" style="text-decoration:none;">
+    <img src="https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png" alt="Rudhram" width="160" style="width:160px;max-width:160px;height:auto;display:block;border:0;" class="fluid">
+  </a>
+</td></tr>
+
+<tr><td style="background:#ffffff;border:1px solid ${LIGHT_GOLD};border-radius:20px;overflow:hidden;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td style="height:4px;background:linear-gradient(90deg,${GOLD},${LIGHT_GOLD},${GOLD});font-size:0;line-height:0;">&nbsp;</td>
+  </tr></table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:44px 44px 36px;" class="mobile-padding">
+    <tr><td>
+      <h1 style="margin:0 0 6px;font-family:${EMAIL_FONT};font-size:28px;font-weight:700;color:${DARK_BROWN};line-height:1.2;">Your Portal Credentials</h1>
+      <p style="margin:0 0 28px;font-family:${EMAIL_FONT};font-size:15px;color:${GOLD};line-height:1.5;">Login details for your client portal</p>
+      <p style="margin:0 0 20px;font-family:${EMAIL_BODY_FONT};font-size:15px;color:${DARK_BROWN};line-height:1.75;">Dear <strong style="font-weight:600;">${clientName}</strong>,</p>
+      <p style="margin:0 0 20px;font-family:${EMAIL_BODY_FONT};font-size:15px;color:${DARK_BROWN};line-height:1.75;">Your client portal account is ready. Use the credentials below to sign in and access your projects, invoices, and meetings.</p>
+      
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;border:1px solid ${LIGHT_GOLD};border-radius:14px;overflow:hidden;" class="credentials-table">
+        <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Your Login Details</td></tr>
+        <tr><td style="padding:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:120px;">Email</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${email}</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Password</td>
+              <td style="padding:14px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;font-family:monospace;letter-spacing:1px;">${password}</td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 0;">
+        <tr><td align="center" style="background:${DARK_BROWN};border-radius:12px;">
+          <a href="${portalUrl}" target="_blank" style="display:inline-block;padding:15px 40px;font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${CREAM};text-decoration:none;letter-spacing:0.3px;">Sign In to Portal</a>
+        </td></tr>
+      </table>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 0;border:1px solid #fecaca;border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:16px 20px;background:#fef2f2;">
+          <p style="margin:0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#991b1b;line-height:1.6;">
+            <strong>Important:</strong> For your security, please change your password after your first login. Go to <strong>Settings &rarr; Change Password</strong> in the portal.
+          </p>
+        </td></tr>
+      </table>
+
+      <p style="margin:24px 0 0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:#8a7560;line-height:1.7;">If you did not request this account, please contact our support team immediately.</p>
+    </td></tr>
+  </table>
+</td></tr>
+
+<tr><td align="center" style="padding:32px 16px 0;">
+  <p style="margin:0;font-family:${EMAIL_FONT};font-size:13px;color:${GOLD};line-height:1.6;letter-spacing:0.5px;">RUDHRAM</p>
+  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Manage your business, grow your revenue.</p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+};
+
+export const sendClientCredentialsEmail = async (to, { clientName, email, password }) => {
+  const portalUrl = `${config.clientUrl}/portal/login`;
+  return sendEmail({
+    to,
+    subject: `Your Rudhram Portal Login Credentials`,
+    html: renderClientCredentialsEmail({ clientName, email, password, portalUrl }),
   });
 };
