@@ -44,6 +44,7 @@ export const findAll = async (query = {}, options = {}) => {
     const clientIds = brandClientIds.map((c) => c._id);
     const leadIds = brandLeadIds.map((l) => l._id);
     filter.$or = [
+      { brand: query.brand },
       { client: { $in: clientIds } },
       { lead: { $in: leadIds } },
     ];

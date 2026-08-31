@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { MEETING_STATUS } from '../../constants/index.js';
+import { MEETING_STATUS, LEAD_BRANDS } from '../../constants/index.js';
 
 const actionItemSchema = new mongoose.Schema(
   {
@@ -94,6 +94,11 @@ const meetingSchema = new mongoose.Schema(
     client: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Client',
+      default: null,
+    },
+    brand: {
+      type: String,
+      enum: LEAD_BRANDS,
       default: null,
     },
     attendees: [

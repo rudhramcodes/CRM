@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MEETING_STATUS } from '../../constants/index.js';
+import { MEETING_STATUS, LEAD_BRANDS } from '../../constants/index.js';
 
 const MEETING_STATUS_LIST = Object.values(MEETING_STATUS);
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -48,6 +48,7 @@ export const createMeetingSchema = z
     recordingLink: z.string().url('Invalid recording URL').optional().or(z.literal('')),
     lead: z.string().optional().nullable(),
     client: z.string().optional().nullable(),
+    brand: z.enum(LEAD_BRANDS).optional().nullable(),
     status: z.enum(MEETING_STATUS_LIST).optional(),
     attendees: z.array(objectId).optional(),
     actionItems: z.array(actionItemInputSchema).optional(),
@@ -78,6 +79,7 @@ export const updateMeetingSchema = z
     recordingLink: z.string().url('Invalid recording URL').optional().or(z.literal('')),
     lead: z.string().optional().nullable(),
     client: z.string().optional().nullable(),
+    brand: z.enum(LEAD_BRANDS).optional().nullable(),
     status: z.enum(MEETING_STATUS_LIST).optional(),
     attendees: z.array(objectId).optional(),
     actionItems: z.array(actionItemInputSchema).optional(),

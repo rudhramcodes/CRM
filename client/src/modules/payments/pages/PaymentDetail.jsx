@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Edit2, Trash2, ExternalLink, Download } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, ExternalLink, Download, Briefcase } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PaymentStatusBadge from '../components/PaymentStatusBadge';
 import PaymentForm from '../components/PaymentForm';
@@ -11,7 +11,7 @@ import {
   useLazyGetPaymentReceiptQuery,
   useGetInvoicePaymentsQuery,
 } from '../../../services/paymentApi';
-import { PAYMENT_METHODS, PAYMENT_TYPES } from '../../../constants';
+import { PAYMENT_METHODS, PAYMENT_TYPES, BRANDS } from '../../../constants';
 import { useSelector } from 'react-redux';
 import Button from '../../../components/ui/Button';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
@@ -22,6 +22,11 @@ const typeMap = PAYMENT_TYPES.reduce((map, type) => { map[type.value] = type.lab
 const methodMap = PAYMENT_METHODS.reduce((map, m) => {
   map[m.value] = m.label;
   return map;
+}, {});
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => {
+  acc[b.value] = b.label;
+  return acc;
 }, {});
 
 const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -208,9 +213,19 @@ export default function PaymentDetail() {
         <div className="p-6 border-b border-zinc-100">
           <h2 className="font-heading text-sm font-semibold text-[#3A2415] mb-3">Client</h2>
           {payment.client ? (
-            <div>
-              <p className="text-sm font-medium text-zinc-900">{payment.client.companyName}</p>
-              <p className="text-xs text-zinc-500">{payment.client.contactPerson} • {payment.client.email}</p>
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium text-zinc-900">{payment.client.companyName}</p>
+                <p className="text-xs text-zinc-500">{payment.client.contactPerson} • {payment.client.email}</p>
+              </div>
+              {payment.client.brand && (
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-3.5 h-3.5 text-zinc-400" />
+                  <span className="text-xs font-medium text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded-full">
+                    {BRAND_LABELS[payment.client.brand] || payment.client.brand}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-sm text-zinc-400">Client deleted</p>

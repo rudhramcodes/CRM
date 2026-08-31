@@ -145,7 +145,7 @@ export default function MeetingTable({
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-sm text-zinc-700">
-                    {meeting.client?.brand ? BRAND_LABELS[meeting.client.brand] || meeting.client.brand : meeting.lead?.brand ? BRAND_LABELS[meeting.lead.brand] || meeting.lead.brand : '—'}
+                    {meeting.brand ? (BRAND_LABELS[meeting.brand] || meeting.brand) : meeting.client?.brand ? BRAND_LABELS[meeting.client.brand] || meeting.client.brand : meeting.lead?.brand ? BRAND_LABELS[meeting.lead.brand] || meeting.lead.brand : '—'}
                   </span>
                 </td>
                 <td className="px-4 py-3">

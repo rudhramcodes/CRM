@@ -288,13 +288,13 @@ export default function MeetingDetail() {
                     </div>
                   </div>
                 )}
-                {(meeting.client?.brand || meeting.lead?.brand) && (
+                {(meeting.brand || meeting.client?.brand || meeting.lead?.brand) && (
                   <div className="flex items-center gap-3">
                     <Briefcase className="w-4 h-4 text-zinc-400 shrink-0" />
                     <div>
                       <p className="text-xs text-zinc-400">Venture</p>
                       <p className="text-sm text-primary-900">
-                        {BRAND_LABELS[meeting.client?.brand || meeting.lead?.brand] || meeting.client?.brand || meeting.lead?.brand}
+                        {BRAND_LABELS[meeting.brand || meeting.client?.brand || meeting.lead?.brand] || meeting.brand || meeting.client?.brand || meeting.lead?.brand}
                       </p>
                     </div>
                   </div>

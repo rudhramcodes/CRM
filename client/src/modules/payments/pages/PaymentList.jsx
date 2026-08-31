@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { CreditCard, IndianRupee, Clock, TrendingUp } from 'lucide-react';
+import { CreditCard, IndianRupee, Clock, TrendingUp, Briefcase } from 'lucide-react';
 import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import toast from 'react-hot-toast';
 import PaymentTable from '../components/PaymentTable';
@@ -9,6 +9,7 @@ import { useSelector } from 'react-redux';
 import EmptyState from '../../../components/ui/EmptyState';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
+import { LEAD_BRANDS } from '../../../constants';
 
 const statCards = [
   { key: 'totalCollected', label: 'Total Collected', icon: IndianRupee, color: 'text-green-600 bg-green-50', format: (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
@@ -22,6 +23,7 @@ export default function PaymentList() {
 
   const [filters, setFilters] = useState({});
   const [page, setPage] = useState(1);
+  const [activeBrand, setActiveBrand] = useState('');
 
   const { data: paymentsData, isLoading, isFetching, refetch: refetchPayments } = useGetPaymentsQuery({ ...filters, page, limit: 10 });
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetPaymentStatsQuery();
@@ -33,7 +35,23 @@ export default function PaymentList() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const handleFilterChange = useCallback((newFilters) => {
-    setFilters(newFilters);
+    setFilters((prev) => {
+      const next = { ...newFilters };
+      if (activeBrand) next.brand = activeBrand;
+      else delete next.brand;
+      return next;
+    });
+    setPage(1);
+  }, [activeBrand]);
+
+  const handleBrandChange = useCallback((brand) => {
+    setActiveBrand(brand);
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (brand) next.brand = brand;
+      else delete next.brand;
+      return next;
+    });
     setPage(1);
   }, []);
 
@@ -83,6 +101,52 @@ export default function PaymentList() {
           </div>
         ))}
       </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          onClick={() => handleBrandChange('')}
+          className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            !activeBrand
+              ? 'bg-primary-900 text-white shadow-sm'
+              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+          }`}
+        >
+          All
+        </button>
+        {LEAD_BRANDS.map((b) => (
+          <button
+            key={b.value}
+            onClick={() => handleBrandChange(b.value)}
+            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              activeBrand === b.value
+                ? 'bg-primary-900 text-white shadow-sm'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
+      </div>
+
+      {!statsLoading && stats.byBrand?.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-zinc-700 mb-2 flex items-center gap-2">
+            <Briefcase className="w-4 h-4" />
+            Venture-wise Collection
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {stats.byBrand.map((item) => (
+              <div key={item.brand} className="bg-white rounded-lg border border-zinc-200 p-3">
+                <p className="text-xs text-zinc-500 capitalize">{item.brand?.replace(/_/g, ' ')}</p>
+                <p className="text-lg font-bold text-green-600 mt-1">
+                  ₹{Number(item.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-[11px] text-zinc-400">{item.count} payment{item.count !== 1 ? 's' : ''}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-zinc-200 p-4">
         <PaymentFilters onFilterChange={handleFilterChange} />

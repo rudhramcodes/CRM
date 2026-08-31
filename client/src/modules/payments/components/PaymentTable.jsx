@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Eye, Trash2, ExternalLink } from 'lucide-react';
 import PaymentStatusBadge from './PaymentStatusBadge';
-import { PAYMENT_METHODS, PAYMENT_TYPES } from '../../../constants';
+import { PAYMENT_METHODS, PAYMENT_TYPES, BRANDS } from '../../../constants';
 import DataTable from '../../../components/tables/DataTable';
 
 const typeMap = PAYMENT_TYPES.reduce((map, type) => { map[type.value] = type.label; return map; }, {});
@@ -9,6 +9,11 @@ const typeMap = PAYMENT_TYPES.reduce((map, type) => { map[type.value] = type.lab
 const methodMap = PAYMENT_METHODS.reduce((map, m) => {
   map[m.value] = m.label;
   return map;
+}, {});
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => {
+  acc[b.value] = b.label;
+  return acc;
 }, {});
 
 const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -29,7 +34,7 @@ export default function PaymentTable({ payments, onDelete, canDelete }) {
       sortable: false,
       cell: ({ getValue }) => {
         const inv = getValue();
-        return inv ? inv.invoiceNumber : '-';
+        return inv ? <span className="whitespace-nowrap">{inv.invoiceNumber}</span> : '-';
       },
     },
     {
@@ -39,6 +44,15 @@ export default function PaymentTable({ payments, onDelete, canDelete }) {
       cell: ({ getValue }) => {
         const client = getValue();
         return client ? client.companyName : '-';
+      },
+    },
+    {
+      header: 'Venture',
+      accessor: 'client',
+      sortable: false,
+      cell: ({ getValue }) => {
+        const client = getValue();
+        return client?.brand ? (BRAND_LABELS[client.brand] || client.brand) : '—';
       },
     },
     {

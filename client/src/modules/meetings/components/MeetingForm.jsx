@@ -13,7 +13,7 @@ import StartTimePicker from '../../../components/forms/StartTimePicker';
 import DurationPicker from '../../../components/forms/DurationPicker';
 import LinkInput from '../../../components/forms/LinkInput';
 import Button from '../../../components/ui/Button';
-import { MEETING_STATUS } from '../../../constants';
+import { MEETING_STATUS, LEAD_BRANDS } from '../../../constants';
 import { useCreateMeetingMutation, useGenerateMeetingLinkMutation, useUpdateMeetingMutation } from '../../../services/meetingApi';
 import { useGetUsersQuery } from '../../../services/userApi';
 
@@ -34,6 +34,7 @@ const meetingFormSchema = z
     location: z.string().max(200).optional().or(z.literal('')),
     notes: z.string().max(5000).optional().or(z.literal('')),
     status: z.string().optional(),
+    brand: z.string().optional().nullable(),
     attendees: z.array(z.string()).default([]),
     recurrenceType: z.string().optional(),
     recurrenceOccurrences: z.coerce.number().int().min(2).max(100).optional(),
@@ -68,6 +69,7 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
     location: meeting.location || '',
     notes: meeting.notes || '',
     status: meeting.status || 'scheduled',
+    brand: meeting.brand || '',
     attendees: (meeting.attendees || []).map((a) => a?._id || a),
     recurrenceType: 'none',
   }) : {
@@ -79,6 +81,7 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
     location: '',
     notes: '',
     status: 'scheduled',
+    brand: '',
     attendees: [],
     recurrenceType: 'none',
   }, [meeting]);
@@ -130,6 +133,7 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
         location: data.location || undefined,
         notes: data.notes || undefined,
         status: data.status || 'scheduled',
+        brand: data.brand || null,
         attendees: data.attendees || [],
       };
       if (!isEditing && data.recurrenceType && data.recurrenceType !== 'none') {
@@ -277,6 +281,26 @@ export default function MeetingForm({ meeting, onSuccess, onCancel }) {
           label="Status"
           options={MEETING_STATUS}
           error={errors.status?.message}
+        />
+
+        <Controller
+          name="brand"
+          control={control}
+          render={({ field }) => (
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1.5">Venture</label>
+              <select
+                value={field.value || ''}
+                onChange={(e) => field.onChange(e.target.value || null)}
+                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900"
+              >
+                <option value="">Select venture...</option>
+                {LEAD_BRANDS.map((b) => (
+                  <option key={b.value} value={b.value}>{b.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
         />
 
         {!isEditing && (

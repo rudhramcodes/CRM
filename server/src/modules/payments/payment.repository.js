@@ -55,6 +55,12 @@ export const findAll = async (query = {}, options = {}) => {
     filter.client = query.client;
   }
 
+  if (query.brand) {
+    const brandClients = await Client.find({ brand: query.brand }).select('_id').lean();
+    const clientIds = brandClients.map((c) => c._id);
+    filter.client = { $in: clientIds };
+  }
+
   if (query.dateFrom || query.dateTo) {
     filter.paymentDate = {};
     if (query.dateFrom) filter.paymentDate.$gte = new Date(query.dateFrom);
@@ -66,8 +72,8 @@ export const findAll = async (query = {}, options = {}) => {
       .sort(sort)
       .skip(skip)
       .limit(limit)
-    .populate('invoice', 'invoiceNumber total status paidAmount balanceDue')
-      .populate('client', 'companyName contactPerson')
+      .populate('invoice', 'invoiceNumber total status paidAmount balanceDue')
+      .populate('client', 'companyName contactPerson brand')
       .populate('createdBy', 'name email'),
     Payment.countDocuments(filter),
   ]);
@@ -108,7 +114,7 @@ export const getLatestPayment = async (invoiceId) => {
 };
 
 export const getStats = async () => {
-  const [totalCollected, pendingPaymentsSum, byMethod, outstandingResult] = await Promise.all([
+  const [totalCollected, pendingPaymentsSum, byMethod, outstandingResult, byBrand] = await Promise.all([
     Payment.aggregate([
       { $match: { status: 'completed' } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -127,11 +133,32 @@ export const getStats = async () => {
       { $match: { status: { $nin: ['paid', 'cancelled', 'draft'] } } },
       { $group: { _id: null, total: { $sum: '$balanceDue' } } },
     ]),
+    Payment.aggregate([
+      { $match: { status: 'completed' } },
+      {
+        $lookup: {
+          from: 'clients',
+          localField: 'client',
+          foreignField: '_id',
+          as: 'clientData',
+        },
+      },
+      { $unwind: { path: '$clientData', preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: '$clientData.brand',
+          total: { $sum: '$amount' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { total: -1 } },
+    ]),
   ]);
 
   return {
     totalCollected: totalCollected.length > 0 ? totalCollected[0].total : 0,
     pendingAmount: outstandingResult.length > 0 ? outstandingResult[0].total : 0,
     byMethod,
+    byBrand: byBrand.filter((b) => b._id).map((b) => ({ brand: b._id, total: b.total, count: b.count })),
   };
 };

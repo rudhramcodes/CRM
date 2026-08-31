@@ -41,6 +41,7 @@ export const paymentsQuerySchema = z.object({
   paymentType: z.enum(PAYMENT_TYPES_LIST).optional(),
   invoice: z.string().optional(),
   client: z.string().optional(),
+  brand: z.string().optional(),
   dateFrom: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), 'Invalid dateFrom')
