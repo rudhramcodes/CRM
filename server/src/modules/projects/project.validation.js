@@ -92,6 +92,8 @@ export const projectsQuerySchema = z.object({
   status: z.enum(PROJECT_STATUS_LIST).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   tag: z.string().optional(),
+  brand: z.string().optional(),
+  employeeFilter: z.string().optional(),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(10),
   sortBy: z.string().optional().default('createdAt'),

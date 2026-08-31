@@ -202,9 +202,7 @@ export async function getVentureDashboard(brand) {
     clientMonthly,
     revenueMonthly,
     aging,
-    taskByStatus,
-    taskTotal,
-    taskDone,
+    brandTasks,
     comparisonData,
   ] = await Promise.all([
     Lead.countDocuments(brandLeadMatch),
@@ -257,12 +255,23 @@ export async function getVentureDashboard(brand) {
       }
       return result;
     })(),
-    Task.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-      { $project: { _id: 0, status: '$_id', count: 1 } },
-    ]),
-    Task.countDocuments(),
-    Task.countDocuments({ status: 'done' }),
+    // Tasks filtered by brand through Project → Client chain
+    brandClientIds.length > 0
+      ? (async () => {
+          const brandProjectIds = (await Project.find({ client: { $in: brandClientIds } }).select('_id').lean()).map((p) => p._id);
+          if (brandProjectIds.length === 0) return { byStatus: [], total: 0, done: 0 };
+          const [byStatus, total, done] = await Promise.all([
+            Task.aggregate([
+              { $match: { project: { $in: brandProjectIds } } },
+              { $group: { _id: '$status', count: { $sum: 1 } } },
+              { $project: { _id: 0, status: '$_id', count: 1 } },
+            ]),
+            Task.countDocuments({ project: { $in: brandProjectIds } }),
+            Task.countDocuments({ project: { $in: brandProjectIds }, status: 'done' }),
+          ]);
+          return { byStatus, total, done };
+        })()
+      : { byStatus: [], total: 0, done: 0 },
     // Comparison: leads + clients per brand
     Lead.aggregate([
       { $match: { isDeleted: false } },
@@ -313,10 +322,10 @@ export async function getVentureDashboard(brand) {
     },
     invoices: { aging },
     tasks: {
-      byStatus: taskByStatus,
-      total: taskTotal,
-      done: taskDone,
-      completionRate: taskTotal > 0 ? Math.round((taskDone / taskTotal) * 100) : 0,
+      byStatus: brandTasks.byStatus,
+      total: brandTasks.total,
+      done: brandTasks.done,
+      completionRate: brandTasks.total > 0 ? Math.round((brandTasks.done / brandTasks.total) * 100) : 0,
     },
     comparison: comparisonData,
   };

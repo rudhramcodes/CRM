@@ -4,8 +4,10 @@ import ProjectPriorityBadge from './ProjectPriorityBadge';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
 import { cn } from '../../../utils/cn';
-import { PROJECT_STATUS } from '../../../constants';
+import { PROJECT_STATUS, BRANDS } from '../../../constants';
 import { TableSkeleton } from '../../../components/ui/Skeleton';
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
 
 const formatCurrency = (amount, currency = 'INR') => {
   return new Intl.NumberFormat('en-IN', {
@@ -70,6 +72,9 @@ export default function ProjectTable({
                 Client
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Venture
+              </th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
@@ -124,6 +129,11 @@ export default function ProjectTable({
                   ) : (
                     <span className="text-sm text-zinc-300">—</span>
                   )}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
+                    {project.client?.brand ? BRAND_LABELS[project.client.brand] || project.client.brand : '—'}
+                  </span>
                 </td>
                 <td className="px-4 py-3">
                   <div onClick={(e) => e.stopPropagation()}>

@@ -13,7 +13,9 @@ import {
   Tag,
   AlertTriangle,
   CheckCircle2,
+  Briefcase,
 } from 'lucide-react';
+import { BRANDS } from '../../../constants';
 import {
   useGetProjectByIdQuery,
   useDeleteProjectMutation,
@@ -54,6 +56,8 @@ const formatCurrency = (amount, currency = 'INR') => {
     maximumFractionDigits: 0,
   }).format(amount);
 };
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -252,6 +256,18 @@ export default function ProjectDetail() {
             {project.client.email && (
               <p className="text-xs text-zinc-500">{project.client.email}</p>
             )}
+          </div>
+        )}
+
+        {project.client?.brand && (
+          <div className="bg-white rounded-xl border border-zinc-200 p-4">
+            <div className="flex items-center gap-2 text-zinc-400 mb-1">
+              <Briefcase className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase tracking-wider">Venture</span>
+            </div>
+            <p className="text-sm font-medium text-primary-900">
+              {BRAND_LABELS[project.client.brand] || project.client.brand}
+            </p>
           </div>
         )}
 

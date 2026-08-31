@@ -1,4 +1,5 @@
 import Project from './project.model.js';
+import Client from '../clients/client.model.js';
 import paginate, { getPaginationMeta, escapeRegex } from '../../utils/pagination.js';
 
 export const create = async (data) => {
@@ -29,6 +30,11 @@ export const findAll = async (query = {}, options = {}) => {
   if (query.tag) filter.tags = { $in: [query.tag] };
   if (query.employeeFilter) filter['teamMembers.user'] = query.employeeFilter;
   if (options.client) filter.client = options.client;
+
+  if (query.brand) {
+    const brandClientIds = (await Client.find({ brand: query.brand }).select('_id').lean()).map((c) => c._id);
+    filter.client = { $in: brandClientIds };
+  }
 
   const [projects, total] = await Promise.all([
     Project.find(filter)

@@ -18,6 +18,7 @@ import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { StatCardSkeleton } from '../../../components/ui/Skeleton';
+import { LEAD_BRANDS } from '../../../constants';
 import toast from 'react-hot-toast';
 
 export default function ProjectList() {
@@ -28,6 +29,7 @@ export default function ProjectList() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewMode, setViewMode] = useState('table');
+  const [activeBrand, setActiveBrand] = useState('');
 
   useEffect(() => { dispatch(setPageTitle('Projects')); }, [dispatch]);
 
@@ -39,6 +41,16 @@ export default function ProjectList() {
   const projects = data?.data || [];
   const pagination = data?.pagination;
   const stats = statsData?.data || {};
+
+  const handleBrandChange = useCallback((brand) => {
+    setActiveBrand(brand);
+    setQueryParams((prev) => {
+      const next = { ...prev, page: 1 };
+      if (brand) next.brand = brand;
+      else delete next.brand;
+      return next;
+    });
+  }, []);
 
   const handleFilterChange = useCallback((filters) => {
     setQueryParams((prev) => ({ ...prev, ...filters, page: 1 }));
@@ -132,6 +144,32 @@ export default function ProjectList() {
           ))}
         </div>
       )}
+
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          onClick={() => handleBrandChange('')}
+          className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            !activeBrand
+              ? 'bg-primary-900 text-white shadow-sm'
+              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+          }`}
+        >
+          All
+        </button>
+        {LEAD_BRANDS.map((b) => (
+          <button
+            key={b.value}
+            onClick={() => handleBrandChange(b.value)}
+            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              activeBrand === b.value
+                ? 'bg-primary-900 text-white shadow-sm'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
+      </div>
 
       <ProjectFilters onFilterChange={handleFilterChange} />
 
