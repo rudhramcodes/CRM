@@ -18,6 +18,7 @@ import {
   Circle,
   Plus,
   RefreshCcw,
+  Briefcase,
 } from 'lucide-react';
 import {
   useGetMeetingByIdQuery,
@@ -38,6 +39,12 @@ import EmptyState from '../../../components/ui/EmptyState';
 import { DetailSkeleton } from '../../../components/ui/Skeleton';
 import toast from 'react-hot-toast';
 import { formatDate } from '../../../utils/formatters';
+import { BRANDS } from '../../../constants';
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => {
+  acc[b.value] = b.label;
+  return acc;
+}, {});
 
 export default function MeetingDetail() {
   const { id } = useParams();
@@ -262,7 +269,7 @@ export default function MeetingDetail() {
           {/* Related To */}
           {(meeting.lead || meeting.client) && (
             <div className="mt-4 pt-4 border-t border-zinc-100">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {meeting.client && (
                   <div className="flex items-center gap-3">
                     <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
@@ -278,6 +285,17 @@ export default function MeetingDetail() {
                     <div>
                       <p className="text-xs text-zinc-400">Lead</p>
                       <p className="text-sm text-primary-900">{meeting.lead.name}</p>
+                    </div>
+                  </div>
+                )}
+                {(meeting.client?.brand || meeting.lead?.brand) && (
+                  <div className="flex items-center gap-3">
+                    <Briefcase className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <div>
+                      <p className="text-xs text-zinc-400">Venture</p>
+                      <p className="text-sm text-primary-900">
+                        {BRAND_LABELS[meeting.client?.brand || meeting.lead?.brand] || meeting.client?.brand || meeting.lead?.brand}
+                      </p>
                     </div>
                   </div>
                 )}

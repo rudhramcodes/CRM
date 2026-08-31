@@ -90,6 +90,7 @@ export const updateClientSchema = z.object({
 export const clientsQuerySchema = z.object({
   search: z.string().optional(),
   status: z.enum(['active', 'inactive']).optional(),
+  brand: z.string().optional(),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(10),
   sort: z.string().optional(),

@@ -12,6 +12,7 @@ import CalendarView from '../components/CalendarView';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import { LEAD_BRANDS } from '../../../constants';
 import toast from 'react-hot-toast';
 import { cn } from '../../../utils/cn';
 
@@ -23,6 +24,7 @@ export default function MeetingList() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [view, setView] = useState('list');
+  const [activeBrand, setActiveBrand] = useState('');
 
   useEffect(() => {
     dispatch(setPageTitle('Meetings'));
@@ -35,13 +37,23 @@ export default function MeetingList() {
   const meetings = meetingsData?.data || [];
   const pagination = meetingsData?.pagination;
 
+  const handleBrandChange = useCallback((brand) => {
+    setActiveBrand(brand);
+    setQueryParams((prev) => {
+      const next = { ...prev, page: 1 };
+      if (brand) next.brand = brand;
+      else delete next.brand;
+      return next;
+    });
+  }, []);
+
   const handleFilterChange = useCallback((filters) => {
     const params = {};
     if (filters.search) params.search = filters.search;
     if (filters.status) params.status = filters.status;
     if (filters.dateFrom) params.dateFrom = filters.dateFrom;
     if (filters.dateTo) params.dateTo = filters.dateTo;
-    setQueryParams(params);
+    setQueryParams((prev) => ({ ...prev, ...params, page: 1 }));
   }, []);
 
   const canCreate = user && ['super_admin', 'admin', 'manager'].includes(user.role);
@@ -151,6 +163,32 @@ export default function MeetingList() {
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          onClick={() => handleBrandChange('')}
+          className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            !activeBrand
+              ? 'bg-primary-900 text-white shadow-sm'
+              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+          }`}
+        >
+          All
+        </button>
+        {LEAD_BRANDS.map((b) => (
+          <button
+            key={b.value}
+            onClick={() => handleBrandChange(b.value)}
+            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              activeBrand === b.value
+                ? 'bg-primary-900 text-white shadow-sm'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}

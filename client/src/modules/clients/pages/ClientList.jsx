@@ -11,6 +11,7 @@ import Button from '../../../components/ui/Button';
 import EmptyState from '../../../components/ui/EmptyState';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import { LEAD_BRANDS } from '../../../constants';
 import toast from 'react-hot-toast';
 
 export default function ClientList() {
@@ -19,6 +20,7 @@ export default function ClientList() {
   const user = useSelector((state) => state.auth.user);
   const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 });
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [activeBrand, setActiveBrand] = useState('');
 
   useEffect(() => {
     dispatch(setPageTitle('Clients'));
@@ -32,6 +34,16 @@ export default function ClientList() {
   const clients = clientsData?.data || [];
   const pagination = clientsData?.pagination;
   const stats = statsData?.data || {};
+
+  const handleBrandChange = useCallback((brand) => {
+    setActiveBrand(brand);
+    setQueryParams((prev) => {
+      const next = { ...prev, page: 1 };
+      if (brand) next.brand = brand;
+      else delete next.brand;
+      return next;
+    });
+  }, []);
 
   const handleFilterChange = useCallback((filters) => {
     setQueryParams({ ...filters, page: 1 });
@@ -122,6 +134,32 @@ export default function ClientList() {
           </div>
         </div>
       )}
+
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          onClick={() => handleBrandChange('')}
+          className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            !activeBrand
+              ? 'bg-primary-900 text-white shadow-sm'
+              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+          }`}
+        >
+          All
+        </button>
+        {LEAD_BRANDS.map((b) => (
+          <button
+            key={b.value}
+            onClick={() => handleBrandChange(b.value)}
+            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              activeBrand === b.value
+                ? 'bg-primary-900 text-white shadow-sm'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
+      </div>
 
       {/* Filters */}
       <ClientFilters onFilterChange={handleFilterChange} />

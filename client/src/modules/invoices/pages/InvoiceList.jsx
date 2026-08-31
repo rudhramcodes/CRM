@@ -11,6 +11,7 @@ import Button from '../../../components/ui/Button';
 import EmptyState from '../../../components/ui/EmptyState';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
+import { LEAD_BRANDS } from '../../../constants';
 
 const statCards = [
   { key: 'total', label: 'Total Invoices', icon: FileText, color: 'text-blue-600 bg-blue-50' },
@@ -29,6 +30,7 @@ export default function InvoiceList() {
 
   const [filters, setFilters] = useState({});
   const [page, setPage] = useState(1);
+  const [activeBrand, setActiveBrand] = useState('');
 
   const { data: invoicesData, isLoading, isFetching, refetch: refetchInvoices } = useGetInvoicesQuery({ ...filters, page, limit: 10 });
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetInvoiceStatsQuery();
@@ -41,7 +43,23 @@ export default function InvoiceList() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const handleFilterChange = useCallback((newFilters) => {
-    setFilters(newFilters);
+    setFilters((prev) => {
+      const next = { ...newFilters };
+      if (activeBrand) next.brand = activeBrand;
+      else delete next.brand;
+      return next;
+    });
+    setPage(1);
+  }, [activeBrand]);
+
+  const handleBrandChange = useCallback((brand) => {
+    setActiveBrand(brand);
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (brand) next.brand = brand;
+      else delete next.brand;
+      return next;
+    });
     setPage(1);
   }, []);
 
@@ -163,6 +181,32 @@ export default function InvoiceList() {
             />
           </div>
         )}
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          onClick={() => handleBrandChange('')}
+          className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            !activeBrand
+              ? 'bg-primary-900 text-white shadow-sm'
+              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+          }`}
+        >
+          All
+        </button>
+        {LEAD_BRANDS.map((b) => (
+          <button
+            key={b.value}
+            onClick={() => handleBrandChange(b.value)}
+            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              activeBrand === b.value
+                ? 'bg-primary-900 text-white shadow-sm'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
       </div>
 
       <div className="bg-white rounded-lg border border-zinc-200 p-4">

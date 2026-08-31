@@ -5,6 +5,12 @@ import { formatDate } from '../../../utils/formatters';
 import { cn } from '../../../utils/cn';
 import { MEETING_STATUS } from '../../../constants';
 import { TableSkeleton } from '../../../components/ui/Skeleton';
+import { BRANDS } from '../../../constants';
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => {
+  acc[b.value] = b.label;
+  return acc;
+}, {});
 
 export default function MeetingTable({
   meetings = [],
@@ -56,6 +62,7 @@ export default function MeetingTable({
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Title</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Date & Time</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Venture</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Related To</th>
               <th className="text-right px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Actions</th>
             </tr>
@@ -135,6 +142,11 @@ export default function MeetingTable({
                       <MeetingStatusBadge status={meeting.status} />
                     )}
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-sm text-zinc-700">
+                    {meeting.client?.brand ? BRAND_LABELS[meeting.client.brand] || meeting.client.brand : meeting.lead?.brand ? BRAND_LABELS[meeting.lead.brand] || meeting.lead.brand : '—'}
+                  </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="text-sm text-zinc-700">

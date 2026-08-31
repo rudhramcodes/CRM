@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Send, XCircle, Trash2, Printer, Edit2, Download, CheckCircle, CreditCard,
+  Briefcase,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InvoiceStatusBadge from '../components/InvoiceStatusBadge';
@@ -24,9 +25,15 @@ import PaymentStatusBadge from '../../payments/components/PaymentStatusBadge';
 import { PAYMENT_METHODS } from '../../../constants';
 import Button from '../../../components/ui/Button';
 import { DetailSkeleton } from '../../../components/ui/Skeleton';
+import { BRANDS } from '../../../constants';
 
 const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN') : '-';
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => {
+  acc[b.value] = b.label;
+  return acc;
+}, {});
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -285,8 +292,16 @@ export default function InvoiceDetail() {
 
       {/* ── Invoice Preview ── */}
       <div className="bg-white rounded-lg border border-zinc-200 print:border-none print:rounded-none print:overflow-visible overflow-hidden">
-        <div className="flex justify-end p-4 pb-0 print:hidden">
-          <InvoiceStatusBadge status={invoice.status} />
+        <div className="flex items-center justify-between p-4 pb-0 print:hidden">
+          <div className="flex items-center gap-3">
+            <InvoiceStatusBadge status={invoice.status} />
+            {invoice.client?.brand && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 text-xs font-medium text-zinc-700">
+                <Briefcase className="w-3 h-3" />
+                {BRAND_LABELS[invoice.client.brand] || invoice.client.brand}
+              </span>
+            )}
+          </div>
         </div>
         {invoiceHtml ? (
           <div className="p-8 print:p-0" dangerouslySetInnerHTML={{ __html: invoiceHtml }} />

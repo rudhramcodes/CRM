@@ -121,6 +121,7 @@ export const meetingsQuerySchema = z.object({
   status: z.enum(MEETING_STATUS_LIST).optional(),
   lead: z.string().optional(),
   client: z.string().optional(),
+  brand: z.string().optional(),
   dateFrom: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), 'Invalid dateFrom')

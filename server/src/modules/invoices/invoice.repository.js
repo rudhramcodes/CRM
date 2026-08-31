@@ -44,6 +44,12 @@ export const findAll = async (query = {}, options = {}) => {
     filter.client = query.client;
   }
 
+  if (query.brand) {
+    const brandClients = await Client.find({ brand: query.brand }).select('_id').lean();
+    const clientIds = brandClients.map((c) => c._id);
+    filter.client = { $in: clientIds };
+  }
+
   if (query.dateFrom || query.dateTo) {
     filter.issueDate = {};
     if (query.dateFrom) filter.issueDate.$gte = new Date(query.dateFrom);

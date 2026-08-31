@@ -16,6 +16,7 @@ import {
   CreditCard,
   Hash,
   KeyRound,
+  Briefcase,
 } from 'lucide-react';
 import {
   useGetClientByIdQuery,
@@ -29,8 +30,11 @@ import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import EmptyState from '../../../components/ui/EmptyState';
 import { DetailSkeleton } from '../../../components/ui/Skeleton';
+import { BRANDS } from '../../../constants';
 import toast from 'react-hot-toast';
 import { formatDate, getTimeAgo } from '../../../utils/formatters';
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -179,6 +183,15 @@ export default function ClientDetail() {
                 <p className="text-sm text-primary-900">{client.companyName}</p>
               </div>
             </div>
+            {client.brand && (
+              <div className="flex items-center gap-3">
+                <Briefcase className="w-4 h-4 text-zinc-400 shrink-0" />
+                <div>
+                  <p className="text-xs text-zinc-400">Venture</p>
+                  <p className="text-sm text-primary-900">{BRAND_LABELS[client.brand] || client.brand}</p>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <User className="w-4 h-4 text-zinc-400 shrink-0" />
               <div>

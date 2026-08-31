@@ -2,9 +2,11 @@ import DataTable from '../../../components/tables/DataTable';
 import ClientStatusBadge from './ClientStatusBadge';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
-import { CLIENT_STATUS } from '../../../constants';
+import { CLIENT_STATUS, BRANDS } from '../../../constants';
 import { cn } from '../../../utils/cn';
 import { Edit2, Trash2 } from 'lucide-react';
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
 
 export default function ClientTable({ clients, loading, error, onRowClick, canEdit, canDelete, onEdit, onDelete, onStatusChange, serverPagination, page, pageSize, total, totalPages, hasNextPage, hasPrevPage, onPageChange, onPageSizeChange }) {
   const columns = [
@@ -43,6 +45,15 @@ export default function ClientTable({ clients, loading, error, onRowClick, canEd
       accessor: 'gstNumber',
       cell: ({ value }) => (
         <span className="text-sm text-zinc-500">{value || '—'}</span>
+      ),
+    },
+    {
+      header: 'Venture',
+      accessor: 'brand',
+      cell: ({ value }) => (
+        <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
+          {value ? BRAND_LABELS[value] || value : '—'}
+        </span>
       ),
     },
     {

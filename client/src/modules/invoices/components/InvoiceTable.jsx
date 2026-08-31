@@ -9,6 +9,12 @@ import {
   SelectContent,
   SelectItem,
 } from '../../../components/ui/Select';
+import { BRANDS } from '../../../constants';
+
+const BRAND_LABELS = BRANDS.reduce((acc, b) => {
+  acc[b.value] = b.label;
+  return acc;
+}, {});
 
 // Only non-financial status transitions here.
 // "Mark as Paid" / "Collect Remaining" are payment actions done via POST /api/payments.
@@ -181,6 +187,7 @@ export default function InvoiceTable({ invoices, onDelete, onStatusChange }) {
   const columns = [
     { header: 'Invoice #', accessor: 'invoiceNumber' },
     { header: 'Client', accessor: 'client', sortable: false, cell: ({ getValue }) => getValue() ? getValue().companyName : '-' },
+    { header: 'Venture', accessor: 'client', sortable: false, cell: ({ getValue }) => { const client = getValue(); return client?.brand ? (BRAND_LABELS[client.brand] || client.brand) : '—'; } },
     { header: 'Issue Date', accessor: 'issueDate', cell: ({ getValue }) => getValue() ? new Date(getValue()).toLocaleDateString('en-IN') : '-' },
     { header: 'Due Date', accessor: 'dueDate', cell: ({ getValue }) => getValue() ? new Date(getValue()).toLocaleDateString('en-IN') : '-' },
     {

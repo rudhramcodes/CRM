@@ -1,4 +1,6 @@
 import Meeting from './meeting.model.js';
+import Client from '../clients/client.model.js';
+import Lead from '../leads/lead.model.js';
 import paginate, { getPaginationMeta, escapeRegex } from '../../utils/pagination.js';
 
 export const create = async (data) => {
@@ -34,6 +36,19 @@ export const findAll = async (query = {}, options = {}) => {
     filter.client = query.client;
   }
 
+  if (query.brand) {
+    const [brandClientIds, brandLeadIds] = await Promise.all([
+      Client.find({ brand: query.brand }).select('_id').lean(),
+      Lead.find({ brand: query.brand, isDeleted: false }).select('_id').lean(),
+    ]);
+    const clientIds = brandClientIds.map((c) => c._id);
+    const leadIds = brandLeadIds.map((l) => l._id);
+    filter.$or = [
+      { client: { $in: clientIds } },
+      { lead: { $in: leadIds } },
+    ];
+  }
+
   if (query.dateFrom || query.dateTo) {
     filter.date = {};
     if (query.dateFrom) filter.date.$gte = new Date(query.dateFrom);
@@ -49,8 +64,8 @@ export const findAll = async (query = {}, options = {}) => {
       .sort(sort)
       .skip(skip)
       .limit(limit)
-      .populate('lead', 'name email')
-      .populate('client', 'companyName contactPerson')
+      .populate('lead', 'name email brand')
+      .populate('client', 'companyName contactPerson brand')
       .populate('attendees', 'name email avatar')
       .populate('createdBy', 'name email'),
     Meeting.countDocuments(filter),

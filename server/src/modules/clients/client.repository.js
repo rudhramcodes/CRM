@@ -50,6 +50,10 @@ export const findAll = async (query = {}, options = {}) => {
     filter.status = query.status;
   }
 
+  if (query.brand) {
+    filter.brand = query.brand;
+  }
+
   const [clients, total] = await Promise.all([
     Client.find(filter)
       .sort(sort)

@@ -80,6 +80,7 @@ export const invoicesQuerySchema = z.object({
   search: z.string().optional(),
   status: z.enum(INVOICE_STATUS_LIST).optional(),
   client: z.string().optional(),
+  brand: z.string().optional(),
   dateFrom: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), 'Invalid dateFrom')
