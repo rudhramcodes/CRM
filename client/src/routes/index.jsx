@@ -42,6 +42,12 @@ import PaymentList from '../modules/payments/pages/PaymentList';
 import PaymentDetail from '../modules/payments/pages/PaymentDetail';
 import ReportsPage from '../modules/reports/pages/ReportsPage';
 import NotificationList from '../modules/notifications/pages/NotificationList';
+import AttendanceCalendar from '../modules/attendance/pages/AttendanceCalendar';
+import AttendanceList from '../modules/attendance/pages/AttendanceList';
+import AttendanceShifts from '../modules/attendance/pages/AttendanceShifts';
+import AttendanceLeaves from '../modules/attendance/pages/AttendanceLeaves';
+import AttendanceHolidays from '../modules/attendance/pages/AttendanceHolidays';
+import AttendanceReports from '../modules/attendance/pages/AttendanceReports';
 import SettingsPage from '../modules/settings/pages/SettingsPage';
 import UserManagement from '../modules/users/pages/UserManagement';
 
@@ -122,6 +128,12 @@ const router = createBrowserRouter([
       { path: 'payments', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><PaymentList /></ProtectedRoute> },
       { path: 'payments/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><PaymentDetail /></ProtectedRoute> },
       { path: 'reports', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><ReportsPage /></ProtectedRoute> },
+      { path: 'attendance', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><AttendanceCalendar /></ProtectedRoute> },
+      { path: 'attendance/list', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><AttendanceList /></ProtectedRoute> },
+      { path: 'attendance/shifts', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><AttendanceShifts /></ProtectedRoute> },
+      { path: 'attendance/leaves', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><AttendanceLeaves /></ProtectedRoute> },
+      { path: 'attendance/holidays', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><AttendanceHolidays /></ProtectedRoute> },
+      { path: 'attendance/reports', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><AttendanceReports /></ProtectedRoute> },
       { path: 'notifications', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><NotificationList /></ProtectedRoute> },
       { path: 'users', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><UserManagement /></ProtectedRoute> },
       { path: 'settings', element: <SettingsPage /> },
