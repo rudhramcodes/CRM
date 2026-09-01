@@ -13,6 +13,8 @@ import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 import { LEAD_BRANDS } from '../../../constants';
 
+const BRAND_LABELS = LEAD_BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
+
 const statCards = [
   { key: 'total', label: 'Total Invoices', icon: FileText, color: 'text-blue-600 bg-blue-50' },
   { key: 'draft', label: 'Draft', icon: FileText, color: 'text-zinc-600 bg-zinc-50' },
@@ -182,6 +184,40 @@ export default function InvoiceList() {
           </div>
         )}
       </div>
+
+      {!statsLoading && stats?.byBrand && Object.keys(stats.byBrand).length > 0 && (
+        <div className="bg-white rounded-lg border border-zinc-200 p-4">
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Invoices By Venture</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(stats.byBrand).map(([brand, count]) => (
+              <div key={brand} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 rounded-lg border border-zinc-100">
+                <span className="text-sm font-medium text-zinc-700">{BRAND_LABELS[brand] || brand}</span>
+                <span className="text-sm font-bold text-primary-900">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!statsLoading && stats?.revenueByBrand && Object.keys(stats.revenueByBrand).length > 0 && (
+        <div className="bg-white rounded-lg border border-zinc-200 p-4">
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Revenue By Venture</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Object.entries(stats.revenueByBrand).map(([brand, data]) => (
+              <div key={brand} className="px-3 py-2 bg-zinc-50 rounded-lg border border-zinc-100">
+                <p className="text-sm font-medium text-zinc-700 mb-1">{BRAND_LABELS[brand] || brand}</p>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-zinc-500">{data.count} invoices</span>
+                  <span className="text-green-600 font-semibold">{formatCurrency(data.totalPaid)} paid</span>
+                  {data.totalPending > 0 && (
+                    <span className="text-orange-600">{formatCurrency(data.totalPending)} pending</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-1.5">
         <button

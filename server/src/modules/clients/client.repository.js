@@ -87,6 +87,13 @@ export const countByStatus = async () => {
   ]);
 };
 
+export const countByBrand = async () => {
+  return Client.aggregate([
+    { $group: { _id: '$brand', count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+  ]);
+};
+
 export const countAll = async (filter = {}) => {
   return Client.countDocuments(filter);
 };

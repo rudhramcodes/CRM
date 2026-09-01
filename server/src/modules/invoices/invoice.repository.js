@@ -85,6 +85,47 @@ export const countByStatus = async () => {
   ]);
 };
 
+export const countByBrand = async () => {
+  return Invoice.aggregate([
+    {
+      $lookup: {
+        from: 'clients',
+        localField: 'client',
+        foreignField: '_id',
+        as: 'clientDoc',
+      },
+    },
+    { $unwind: { path: '$clientDoc', preserveNullAndEmptyArrays: true } },
+    { $group: { _id: '$clientDoc.brand', count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+  ]);
+};
+
+export const getRevenueByBrand = async () => {
+  return Invoice.aggregate([
+    { $match: { status: { $in: ['paid', 'sent', 'overdue', 'partially_paid'] } } },
+    {
+      $lookup: {
+        from: 'clients',
+        localField: 'client',
+        foreignField: '_id',
+        as: 'clientDoc',
+      },
+    },
+    { $unwind: { path: '$clientDoc', preserveNullAndEmptyArrays: true } },
+    {
+      $group: {
+        _id: '$clientDoc.brand',
+        totalRevenue: { $sum: '$total' },
+        totalPaid: { $sum: '$paidAmount' },
+        totalPending: { $sum: '$balanceDue' },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { count: -1 } },
+  ]);
+};
+
 export const countAll = async (filter = {}) => {
   return Invoice.countDocuments(filter);
 };

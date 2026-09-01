@@ -19,6 +19,8 @@ import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { StatCardSkeleton } from '../../../components/ui/Skeleton';
 import { LEAD_BRANDS } from '../../../constants';
+
+const BRAND_LABELS = LEAD_BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
 import toast from 'react-hot-toast';
 
 export default function ProjectList() {
@@ -135,14 +137,30 @@ export default function ProjectList() {
           {Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)}
         </div>
       ) : stats.total > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {statsConfig.map(({ key, label, color }) => (
-            <div key={key} className="bg-white rounded-xl border border-zinc-200 px-4 py-3">
-              <p className="text-2xl font-bold text-primary-900">{stats[key] || 0}</p>
-              <p className={`text-xs font-medium ${color}`}>{label}</p>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {statsConfig.map(({ key, label, color }) => (
+              <div key={key} className="bg-white rounded-xl border border-zinc-200 px-4 py-3">
+                <p className="text-2xl font-bold text-primary-900">{stats[key] || 0}</p>
+                <p className={`text-xs font-medium ${color}`}>{label}</p>
+              </div>
+            ))}
+          </div>
+
+          {stats.byBrand && Object.keys(stats.byBrand).length > 0 && (
+            <div className="bg-white rounded-xl border border-zinc-200 p-4">
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">By Venture</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(stats.byBrand).map(([brand, count]) => (
+                  <div key={brand} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 rounded-lg border border-zinc-100">
+                    <span className="text-sm font-medium text-zinc-700">{BRAND_LABELS[brand] || brand}</span>
+                    <span className="text-sm font-bold text-primary-900">{count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       <div className="flex flex-wrap gap-1.5">

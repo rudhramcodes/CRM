@@ -169,7 +169,11 @@ export const deleteProject = async (id) => {
 };
 
 export const getProjectStats = async () => {
-  const statusCounts = await projectRepository.countByStatus();
+  const [statusCounts, brandCounts] = await Promise.all([
+    projectRepository.countByStatus(),
+    projectRepository.countByBrand(),
+  ]);
+
   const stats = { total: 0, planning: 0, active: 0, review: 0, completed: 0 };
 
   for (const item of statusCounts) {
@@ -177,7 +181,12 @@ export const getProjectStats = async () => {
     stats.total += item.count;
   }
 
-  return stats;
+  const byBrand = {};
+  for (const item of brandCounts) {
+    byBrand[item._id || 'unassigned'] = item.count;
+  }
+
+  return { ...stats, byBrand };
 };
 
 // --- Tasks ---

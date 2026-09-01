@@ -17,6 +17,8 @@ import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Modal from '../../../components/ui/Modal';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { LEAD_STATUS, LEAD_BRANDS } from '../../../constants';
+
+const BRAND_LABELS = LEAD_BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
 import { downloadLeadsCsv, downloadLeadsExcel, downloadLeadsPdf } from '../../../utils/exportLeads';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -239,19 +241,35 @@ export default function LeadList() {
           {Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)}
         </div>
       ) : stats.total > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {statCards.map((card) => (
-            <div
-              key={card.status}
-              className="bg-white rounded-xl border border-zinc-200 p-4 text-center"
-            >
-              <p className="text-2xl font-semibold text-primary-900">{card.value}</p>
-              <div className="mt-1 flex justify-center">
-                <LeadStatusBadge status={card.status} />
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {statCards.map((card) => (
+              <div
+                key={card.status}
+                className="bg-white rounded-xl border border-zinc-200 p-4 text-center"
+              >
+                <p className="text-2xl font-semibold text-primary-900">{card.value}</p>
+                <div className="mt-1 flex justify-center">
+                  <LeadStatusBadge status={card.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {stats.byBrand && Object.keys(stats.byBrand).length > 0 && (
+            <div className="bg-white rounded-xl border border-zinc-200 p-4">
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">By Venture</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(stats.byBrand).map(([brand, count]) => (
+                  <div key={brand} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 rounded-lg border border-zinc-100">
+                    <span className="text-sm font-medium text-zinc-700">{BRAND_LABELS[brand] || brand}</span>
+                    <span className="text-sm font-bold text-primary-900">{count}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Brand Tabs */}

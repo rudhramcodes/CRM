@@ -6,6 +6,7 @@ import { setPageTitle } from '../app/store/uiSlice';
 import { useGetDashboardOverviewQuery } from '../services/dashboardApi';
 import AnimatedCounter from '../components/ui/AnimatedCounter';
 import ProgressRing from '../components/ui/ProgressRing';
+import EmployeeDashboard from './EmployeeDashboard';
 import {
   Users, UserCheck, FolderKanban, IndianRupee, Clock, AlertCircle,
   TrendingUp, ArrowUpRight, ArrowDownRight, Loader2, Activity,
@@ -94,11 +95,16 @@ export default function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  const { data, isLoading, isError } = useGetDashboardOverviewQuery();
+  const isEmployee = user?.role === 'employee';
+  const { data, isLoading, isError } = useGetDashboardOverviewQuery(undefined, { skip: isEmployee });
 
   useEffect(() => {
     dispatch(setPageTitle('Dashboard'));
   }, [dispatch]);
+
+  if (isEmployee) {
+    return <EmployeeDashboard />;
+  }
 
   if (isLoading) {
     return (

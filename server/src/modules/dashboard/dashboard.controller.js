@@ -10,6 +10,15 @@ export const getDashboardOverview = async (req, res, next) => {
   }
 };
 
+export const getEmployeeDashboard = async (req, res, next) => {
+  try {
+    const data = await dashboardService.getEmployeeDashboard(req.user._id);
+    ApiResponse.success(res, 200, data);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getVentureData = async (req, res, next) => {
   try {
     const { brand } = req.params;

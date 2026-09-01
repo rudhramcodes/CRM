@@ -73,6 +73,22 @@ export const countByStatus = async () => {
   return Project.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
 };
 
+export const countByBrand = async () => {
+  return Project.aggregate([
+    {
+      $lookup: {
+        from: 'clients',
+        localField: 'client',
+        foreignField: '_id',
+        as: 'clientDoc',
+      },
+    },
+    { $unwind: { path: '$clientDoc', preserveNullAndEmptyArrays: true } },
+    { $group: { _id: '$clientDoc.brand', count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+  ]);
+};
+
 export const countAll = async (filter = {}) => {
   return Project.countDocuments(filter);
 };

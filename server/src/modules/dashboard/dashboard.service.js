@@ -181,6 +181,76 @@ export async function getOverview() {
   };
 }
 
+// ── EMPLOYEE DASHBOARD ──
+export async function getEmployeeDashboard(userId) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [tasksByStatus, totalTasks, doneTasks, upcomingMeetings, recentTasks, recentLeads] = await Promise.all([
+    Task.aggregate([
+      { $match: { assignedTo: ObjectId(userId) } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+      { $project: { _id: 0, status: '$_id', count: 1 } },
+    ]),
+    Task.countDocuments({ assignedTo: ObjectId(userId) }),
+    Task.countDocuments({ assignedTo: ObjectId(userId), status: 'done' }),
+    Meeting.find({
+      attendees: ObjectId(userId),
+      date: { $gte: todayStart },
+      status: 'scheduled',
+    })
+      .sort({ date: 1, startTime: 1 })
+      .limit(5)
+      .select('title date startTime endTime status lead client location meetingLink')
+      .populate('lead', 'name company')
+      .populate('client', 'companyName contactPerson')
+      .lean(),
+    Task.find({ assignedTo: ObjectId(userId) })
+      .sort({ updatedAt: -1 })
+      .limit(5)
+      .select('title status priority project dueDate updatedAt')
+      .populate('project', 'name')
+      .lean(),
+    Lead.find({ assignedTo: ObjectId(userId), isDeleted: false })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('name company status source createdAt')
+      .lean(),
+  ]);
+
+  const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+  const activity = [
+    ...recentTasks.map((t) => ({
+      type: 'task',
+      title: t.title,
+      description: `${t.status.replace(/_/g, ' ')} — ${t.project?.name || 'No project'}`,
+      timestamp: t.updatedAt,
+      priority: t.priority,
+    })),
+    ...recentLeads.map((l) => ({
+      type: 'lead',
+      title: l.name,
+      description: `${l.company || 'Unknown'} — ${l.status}`,
+      timestamp: l.createdAt,
+      source: l.source,
+    })),
+  ]
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 10);
+
+  return {
+    tasks: {
+      byStatus: tasksByStatus,
+      total: totalTasks,
+      done: doneTasks,
+      completionRate,
+    },
+    meetings: upcomingMeetings,
+    activity,
+  };
+}
+
 // ── VENTURE DASHBOARD ──
 export async function getVentureDashboard(brand) {
   const months = lastNMonths(12);

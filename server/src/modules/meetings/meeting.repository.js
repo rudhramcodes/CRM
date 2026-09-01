@@ -9,8 +9,8 @@ export const create = async (data) => {
 
 export const findById = async (id) => {
   return Meeting.findById(id)
-    .populate('lead', 'name email company')
-    .populate('client', 'companyName contactPerson email')
+    .populate('lead', 'name email company brand')
+    .populate('client', 'companyName contactPerson email brand')
     .populate('attendees', 'name email avatar')
     .populate('createdBy', 'name email');
 };
@@ -77,16 +77,16 @@ export const findAll = async (query = {}, options = {}) => {
 
 export const updateById = async (id, data) => {
   return Meeting.findByIdAndUpdate(id, data, { new: true, runValidators: true })
-    .populate('lead', 'name email company')
-    .populate('client', 'companyName contactPerson email')
+    .populate('lead', 'name email company brand')
+    .populate('client', 'companyName contactPerson email brand')
     .populate('attendees', 'name email avatar')
     .populate('createdBy', 'name email');
 };
 
 export const updateNotesById = async (id, notes) => {
   return Meeting.findByIdAndUpdate(id, { notes }, { new: true, runValidators: true })
-    .populate('lead', 'name email company')
-    .populate('client', 'companyName contactPerson email')
+    .populate('lead', 'name email company brand')
+    .populate('client', 'companyName contactPerson email brand')
     .populate('attendees', 'name email avatar')
     .populate('createdBy', 'name email');
 };

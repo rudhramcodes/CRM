@@ -432,7 +432,10 @@ export const importLeads = async (file, user) => {
 };
 
 export const getLeadStats = async () => {
-  const statusCounts = await leadRepository.countByStatus();
+  const [statusCounts, brandCounts] = await Promise.all([
+    leadRepository.countByStatus(),
+    leadRepository.countByBrand(),
+  ]);
 
   const stats = {
     total: 0,
@@ -449,5 +452,10 @@ export const getLeadStats = async () => {
     stats.total += item.count;
   }
 
-  return stats;
+  const byBrand = {};
+  for (const item of brandCounts) {
+    byBrand[item._id || 'unassigned'] = item.count;
+  }
+
+  return { ...stats, byBrand };
 };

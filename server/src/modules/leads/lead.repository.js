@@ -98,6 +98,14 @@ export const countByStatus = async () => {
   ]);
 };
 
+export const countByBrand = async () => {
+  return Lead.aggregate([
+    { $match: { isDeleted: false } },
+    { $group: { _id: '$brand', count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+  ]);
+};
+
 export const countAll = async (filter = {}) => {
   return Lead.countDocuments(filter);
 };

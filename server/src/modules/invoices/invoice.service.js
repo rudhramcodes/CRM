@@ -233,14 +233,34 @@ export const sendInvoiceEmailById = async (id) => {
 };
 
 export const getStats = async () => {
-  const statusCounts = await invoiceRepository.countByStatus();
-  const revenueStats = await invoiceRepository.getRevenueStats();
-  const total = await invoiceRepository.countAll();
-  const overdueCount = await invoiceRepository.countOverdue();
+  const [statusCounts, revenueStats, total, overdueCount, brandCounts, revenueByBrand] = await Promise.all([
+    invoiceRepository.countByStatus(),
+    invoiceRepository.getRevenueStats(),
+    invoiceRepository.countAll(),
+    invoiceRepository.countOverdue(),
+    invoiceRepository.countByBrand(),
+    invoiceRepository.getRevenueByBrand(),
+  ]);
 
   const statusBreakdown = { draft: 0, sent: 0, partially_paid: 0, paid: 0, overdue: 0, cancelled: 0 };
   statusCounts.forEach(({ _id, count }) => {
     statusBreakdown[_id] = count;
+  });
+
+  const byBrand = {};
+  brandCounts.forEach(({ _id, count }) => {
+    byBrand[_id || 'unassigned'] = count;
+  });
+
+  const revenueByBrandMap = {};
+  revenueByBrand.forEach((item) => {
+    const key = item._id || 'unassigned';
+    revenueByBrandMap[key] = {
+      count: item.count,
+      totalRevenue: item.totalRevenue,
+      totalPaid: item.totalPaid,
+      totalPending: item.totalPending,
+    };
   });
 
   return {
@@ -248,5 +268,7 @@ export const getStats = async () => {
     ...statusBreakdown,
     overdueCount,
     revenue: revenueStats,
+    byBrand,
+    revenueByBrand: revenueByBrandMap,
   };
 };

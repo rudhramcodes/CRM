@@ -279,15 +279,23 @@ export const remove = async (id) => {
 };
 
 export const getStats = async () => {
-  const statusCounts = await clientRepository.countByStatus();
-  const total = await clientRepository.countAll();
+  const [statusCounts, brandCounts, total] = await Promise.all([
+    clientRepository.countByStatus(),
+    clientRepository.countByBrand(),
+    clientRepository.countAll(),
+  ]);
 
   const stats = { total, active: 0, inactive: 0 };
   statusCounts.forEach(({ _id, count }) => {
     stats[_id] = count;
   });
 
-  return stats;
+  const byBrand = {};
+  brandCounts.forEach(({ _id, count }) => {
+    byBrand[_id || 'unassigned'] = count;
+  });
+
+  return { ...stats, byBrand };
 };
 
 export const getMyProfile = async (user, clientProfile) => {
