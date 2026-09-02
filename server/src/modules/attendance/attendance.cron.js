@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { Attendance, Shift, Holiday } from './attendance.model.js';
-import { User } from '../auth/auth.model.js';
+import User from '../auth/auth.model.js';
 import logger from '../../utils/logger.js';
 
 const autoClockOut = async () => {

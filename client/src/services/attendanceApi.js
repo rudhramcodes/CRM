@@ -12,9 +12,10 @@ export const attendanceApi = api.injectEndpoints({
     }),
 
     clockOut: builder.mutation({
-      query: () => ({
+      query: (body = {}) => ({
         url: '/attendance/clock-out',
         method: 'POST',
+        body,
       }),
       invalidatesTags: ['Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
@@ -42,6 +43,14 @@ export const attendanceApi = api.injectEndpoints({
       }),
       providesTags: ['AttendanceToday'],
       keepUnusedDataFor: 0,
+    }),
+
+    getAttendanceSummary: builder.query({
+      query: ({ employeeId, date }) => ({
+        url: `/attendance/summary/${employeeId || ''}`,
+        params: date ? { date } : {},
+      }),
+      providesTags: ['Attendance'],
     }),
 
     getAttendanceList: builder.query({
@@ -78,6 +87,15 @@ export const attendanceApi = api.injectEndpoints({
         body,
       }),
       invalidatesTags: ['Attendance', 'AttendanceToday', 'AttendanceStats'],
+    }),
+
+    manualEntry: builder.mutation({
+      query: (body) => ({
+        url: '/attendance/manual',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Attendance', 'AttendanceStats'],
     }),
 
     requestRegularization: builder.mutation({
@@ -249,10 +267,12 @@ export const {
   useStartBreakMutation,
   useEndBreakMutation,
   useGetTodayStatusQuery,
+  useGetAttendanceSummaryQuery,
   useGetAttendanceListQuery,
   useGetAttendanceCalendarQuery,
   useGetAttendanceStatsQuery,
   useManualOverrideMutation,
+  useManualEntryMutation,
   useRequestRegularizationMutation,
   useApproveRegularizationMutation,
   useApplyLeaveMutation,

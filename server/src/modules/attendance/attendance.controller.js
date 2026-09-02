@@ -15,7 +15,7 @@ export const clockIn = async (req, res, next) => {
 
 export const clockOut = async (req, res, next) => {
   try {
-    const record = await attendanceService.clockOut(req.user._id);
+    const record = await attendanceService.clockOut(req.user._id, req.body.location);
     ApiResponse.success(res, 200, { attendance: record }, 'Clocked out successfully');
   } catch (error) {
     next(error);
@@ -45,6 +45,17 @@ export const getTodayStatus = async (req, res, next) => {
     const employeeId = req.query.employee || req.user._id;
     const record = await attendanceService.getTodayStatus(employeeId);
     ApiResponse.success(res, 200, { attendance: record });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSummary = async (req, res, next) => {
+  try {
+    const employeeId = req.params.employeeId || req.user._id;
+    const { date } = req.query;
+    const summary = await attendanceService.getAttendanceSummary(employeeId, date);
+    ApiResponse.success(res, 200, { summary });
   } catch (error) {
     next(error);
   }
@@ -90,6 +101,17 @@ export const manualOverride = async (req, res, next) => {
   try {
     const record = await attendanceService.manualOverride(req.params.id, req.body, req.user._id);
     ApiResponse.success(res, 200, { attendance: record }, 'Attendance updated');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ===================== MANUAL ENTRY =====================
+
+export const manualEntry = async (req, res, next) => {
+  try {
+    const record = await attendanceService.manualEntry(req.body, req.user._id);
+    ApiResponse.created(res, { attendance: record }, 'Manual entry created');
   } catch (error) {
     next(error);
   }

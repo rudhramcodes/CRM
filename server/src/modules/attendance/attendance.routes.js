@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import { verifyToken, authorize } from '../../middleware/auth.js';
-import { validate, validateQuery } from '../../middleware/validate.js';
+import validate, { validateQuery } from '../../middleware/validate.js';
 import * as attendanceController from './attendance.controller.js';
 import {
   clockInSchema,
+  clockOutSchema,
   attendanceQuerySchema,
   attendanceUpdateSchema,
   regularizeSchema,
   regularizeActionSchema,
+  manualEntrySchema,
   createShiftSchema,
   updateShiftSchema,
   createLeaveSchema,
@@ -34,6 +36,7 @@ router.post(
 router.post(
   '/clock-out',
   authorize('super_admin', 'admin', 'manager', 'employee'),
+  validate(clockOutSchema),
   attendanceController.clockOut
 );
 
@@ -53,6 +56,12 @@ router.get(
   '/today',
   authorize('super_admin', 'admin', 'manager', 'employee'),
   attendanceController.getTodayStatus
+);
+
+router.get(
+  '/summary/:employeeId?',
+  authorize('super_admin', 'admin', 'manager', 'employee'),
+  attendanceController.getSummary
 );
 
 router.get(
@@ -79,6 +88,15 @@ router.patch(
   authorize('super_admin', 'admin'),
   validate(attendanceUpdateSchema),
   attendanceController.manualOverride
+);
+
+// --- Manual Entry ---
+
+router.post(
+  '/manual',
+  authorize('super_admin', 'admin'),
+  validate(manualEntrySchema),
+  attendanceController.manualEntry
 );
 
 // --- Regularization ---

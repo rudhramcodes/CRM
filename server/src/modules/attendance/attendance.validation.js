@@ -11,6 +11,8 @@ export const clockInSchema = z.object({
       lng: z.number().min(-180).max(180).optional(),
     })
     .optional(),
+  isWFH: z.boolean().optional(),
+  wfhReason: z.string().max(500).optional(),
 });
 
 export const clockOutSchema = z.object({
@@ -20,6 +22,16 @@ export const clockOutSchema = z.object({
       lng: z.number().min(-180).max(180).optional(),
     })
     .optional(),
+});
+
+export const manualEntrySchema = z.object({
+  employee: z.string().min(1, 'Employee is required'),
+  date: z.string().min(1, 'Date is required'),
+  clockInTime: z.string().optional(),
+  clockOutTime: z.string().optional(),
+  status: z.enum(['present', 'absent', 'half_day', 'wfh', 'leave', 'holiday', 'weekend']).optional(),
+  notes: z.string().max(500).optional(),
+  isWFH: z.boolean().optional(),
 });
 
 export const attendanceQuerySchema = z.object({
@@ -77,7 +89,7 @@ export const updateShiftSchema = z.object({
 
 export const createLeaveSchema = z
   .object({
-    leaveType: z.enum(['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'other']),
+    leaveType: z.enum(['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'comp_off', 'other']),
     startDate: z.string().min(1, 'Start date is required'),
     endDate: z.string().min(1, 'End date is required'),
     reason: z.string().min(10, 'Reason must be at least 10 characters').max(1000),
@@ -97,7 +109,7 @@ export const leaveQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional().default(20),
   employee: z.string().optional(),
   status: z.enum(['pending', 'approved', 'rejected']).optional(),
-  leaveType: z.enum(['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'other']).optional(),
+  leaveType: z.enum(['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'comp_off', 'other']).optional(),
 });
 
 export const leaveActionSchema = z.object({
@@ -109,6 +121,7 @@ export const leaveActionSchema = z.object({
 export const createHolidaySchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   date: z.string().min(1, 'Date is required'),
+  description: z.string().max(500).optional(),
   type: z.enum(['national', 'company', 'optional']).optional().default('company'),
   isRecurring: z.boolean().optional(),
 });
@@ -116,6 +129,7 @@ export const createHolidaySchema = z.object({
 export const updateHolidaySchema = z.object({
   name: z.string().min(1).max(100).optional(),
   date: z.string().optional(),
+  description: z.string().max(500).optional(),
   type: z.enum(['national', 'company', 'optional']).optional(),
   isRecurring: z.boolean().optional(),
 });

@@ -277,46 +277,10 @@ export const getMonthlyReport = async (year, month) => {
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
-  return Attendance.aggregate([
-    { $match: { date: { $gte: startOfMonth, $lte: endOfMonth } } },
-    {
-      $group: {
-        _id: '$employee',
-        totalDays: { $sum: 1 },
-        presentDays: { $sum: { $cond: [{ $eq: ['$status', 'present'] }, 1, 0] } },
-        absentDays: { $sum: { $cond: [{ $eq: ['$status', 'absent'] }, 1, 0] } },
-        halfDays: { $sum: { $cond: [{ $eq: ['$status', 'half_day'] }, 1, 0] } },
-        leaveDays: { $sum: { $cond: [{ $eq: ['$status', 'leave'] }, 1, 0] } },
-        wfhDays: { $sum: { $cond: [{ $eq: ['$status', 'wfh'] }, 1, 0] } },
-        totalWorkHours: { $sum: '$workHours' },
-        totalOvertime: { $sum: '$overtime' },
-        lateDays: { $sum: { $cond: ['$isLate', 1, 0] } },
-      },
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'employeeInfo',
-      },
-    },
-    { $unwind: '$employeeInfo' },
-    {
-      $project: {
-        _id: 1,
-        employee: { _id: '$_id', name: '$employeeInfo.name', email: '$employeeInfo.email', avatar: '$employeeInfo.avatar' },
-        totalDays: 1,
-        presentDays: 1,
-        absentDays: 1,
-        halfDays: 1,
-        leaveDays: 1,
-        wfhDays: 1,
-        totalWorkHours: { $round: ['$totalWorkHours', 2] },
-        totalOvertime: { $round: ['$totalOvertime', 2] },
-        lateDays: 1,
-      },
-    },
-    { $sort: { 'employee.name': 1 } },
-  ]);
+  return Attendance.find({
+    date: { $gte: startOfMonth, $lte: endOfMonth },
+  })
+    .populate('employee', 'name email avatar role')
+    .populate('shift', 'name startTime endTime')
+    .sort({ date: -1, 'employee.name': 1 });
 };

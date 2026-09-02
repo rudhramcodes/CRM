@@ -2,7 +2,7 @@ import ApiError from '../../utils/ApiError.js';
 import * as attendanceRepo from './attendance.repository.js';
 import { Shift } from './attendance.model.js';
 
-// ===================== ATTENDANCE =====================
+// ===================== HELPERS =====================
 
 const parseHHMM = (hhmm) => {
   const [h, m] = hhmm.split(':').map(Number);
@@ -14,16 +14,82 @@ const isWeekend = (date) => {
   return day === 0 || day === 6;
 };
 
+// Auto-migrate old-format records: if clockIn.time exists but sessions[] is empty,
+// create a session from legacy fields so break/clockout work for pre-migration records.
+const ensureActiveSession = (record) => {
+  if (!record.sessions) record.sessions = [];
+
+  const hasActive = record.sessions.find(s => s.clockIn?.time && !s.clockOut?.time);
+  if (hasActive) return hasActive;
+
+  // Legacy record: clockIn.time exists but no session yet
+  if (record.clockIn?.time && !record.clockOut?.time) {
+    const session = {
+      clockIn: {
+        time: record.clockIn.time,
+        ip: record.clockIn.ip || null,
+        location: record.clockIn.location || {},
+      },
+      clockOut: null,
+      breaks: record.breaks || [],
+      workMinutes: 0,
+      overtime: 0,
+    };
+    record.sessions.push(session);
+    return session;
+  }
+
+  return null;
+};
+
+const calcSessionBreakMinutes = (breaks = []) => {
+  let total = 0;
+  for (const brk of breaks) {
+    if (brk.start && brk.end) {
+      total += (new Date(brk.end) - new Date(brk.start)) / 60000;
+    }
+  }
+  return Math.round(total);
+};
+
+const recalcRecordTotals = (record, shiftDuration = 8) => {
+  let totalWorkMinutes = 0;
+  let totalBreakMinutes = 0;
+
+  for (const session of record.sessions || []) {
+    totalBreakMinutes += calcSessionBreakMinutes(session.breaks);
+    if (session.clockIn?.time) {
+      const end = session.clockOut?.time || new Date();
+      session.workMinutes = Math.round((end - new Date(session.clockIn.time)) / 60000 - calcSessionBreakMinutes(session.breaks));
+      if (session.workMinutes < 0) session.workMinutes = 0;
+      session.overtime = Math.max(0, session.workMinutes - shiftDuration * 60);
+      totalWorkMinutes += session.workMinutes;
+    }
+  }
+
+  record.workHours = +(totalWorkMinutes / 60).toFixed(2);
+  record.totalBreakMinutes = Math.round(totalBreakMinutes);
+  record.overtime = +((Math.max(0, totalWorkMinutes - shiftDuration * 60)) / 60).toFixed(2);
+
+  // Sync legacy fields from last session
+  const lastSession = record.sessions?.[record.sessions.length - 1];
+  if (lastSession) {
+    record.clockIn = lastSession.clockIn || {};
+    record.clockOut = lastSession.clockOut || {};
+    record.breaks = lastSession.breaks || [];
+  }
+
+  return record;
+};
+
+// ===================== ATTENDANCE =====================
+
 export const clockIn = async (employeeId, data, ip) => {
   const now = new Date();
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
 
-  let record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
-  if (record && record.clockIn && record.clockIn.time) {
-    throw ApiError.badRequest('Already clocked in today');
-  }
-
+  // Check for approved leave
   const leaves = await attendanceRepo.findAllLeaves(
     { employee: employeeId, status: 'approved', startDate: { $lte: now }, endDate: { $gte: today } },
     { limit: 1 }
@@ -32,9 +98,30 @@ export const clockIn = async (employeeId, data, ip) => {
     throw ApiError.badRequest('You have an approved leave for today');
   }
 
-  const shift = await attendanceRepo.findDefaultShift();
-  if (!shift) throw ApiError.badRequest('No shift configured. Contact admin.');
+  // Find or create shift
+  let shift = await attendanceRepo.findDefaultShift();
+  if (!shift) {
+    shift = await Shift.create({
+      name: 'General Shift',
+      startTime: '09:00',
+      endTime: '18:00',
+      gracePeriod: 15,
+      isActive: true,
+      isDefault: true,
+    });
+  }
 
+  let record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
+
+  // Check if already has active session
+  if (record) {
+    const activeSession = (record.sessions || []).find(s => s.clockIn?.time && !s.clockOut?.time);
+    if (activeSession) {
+      throw ApiError.badRequest('Already clocked in. Clock out first before clocking in again.');
+    }
+  }
+
+  // Check holiday / weekend
   if (!record) {
     const holiday = await attendanceRepo.findHolidayByDate(today);
     if (holiday) {
@@ -43,6 +130,7 @@ export const clockIn = async (employeeId, data, ip) => {
         date: today,
         shift: shift._id,
         status: 'holiday',
+        sessions: [],
         createdBy: employeeId,
       });
       throw ApiError.badRequest(`Today is a holiday: ${holiday.name}`);
@@ -54,6 +142,7 @@ export const clockIn = async (employeeId, data, ip) => {
         date: today,
         shift: shift._id,
         status: 'weekend',
+        sessions: [],
         createdBy: employeeId,
       });
     } else {
@@ -61,79 +150,95 @@ export const clockIn = async (employeeId, data, ip) => {
         employee: employeeId,
         date: today,
         shift: shift._id,
-        status: 'present',
+        status: data?.isWFH ? 'wfh' : 'present',
+        isWFH: data?.isWFH || false,
+        wfhReason: data?.wfhReason || null,
+        sessions: [],
         createdBy: employeeId,
       });
     }
   }
 
-  const clockInTime = now;
+  // Late detection
   const shiftStart = parseHHMM(shift.startTime);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const graceEnd = shiftStart + (shift.gracePeriod || 15);
   const isLate = nowMinutes > graceEnd;
   const lateMinutes = isLate ? nowMinutes - graceEnd : 0;
 
-  const updateData = {
-    'clockIn.time': clockInTime,
-    'clockIn.ip': ip || null,
-    'clockIn.location': data?.location || {},
-    status: 'present',
-    isLate,
-    lateMinutes,
-    $push: {
-      events: {
-        type: 'clock_in',
-        timestamp: clockInTime,
-        metadata: { ip, isLate, lateMinutes },
-      },
+  // Push new session
+  const newSession = {
+    clockIn: {
+      time: now,
+      ip: ip || null,
+      location: data?.location || {},
     },
+    clockOut: null,
+    breaks: [],
+    workMinutes: 0,
+    overtime: 0,
   };
 
-  record = await attendanceRepo.updateAttendance(record._id, updateData);
+  record.sessions.push(newSession);
+  record.isLate = isLate;
+  record.lateMinutes = lateMinutes;
+  record.status = data?.isWFH ? 'wfh' : 'present';
+  if (data?.isWFH) {
+    record.isWFH = true;
+    record.wfhReason = data?.wfhReason || null;
+  }
+
+  recalcRecordTotals(record, shift.duration);
+
+  record.events.push({
+    type: 'clock_in',
+    timestamp: now,
+    metadata: { ip, isLate, lateMinutes, sessionIndex: record.sessions.length - 1 },
+  });
+
+  await record.save();
   return record;
 };
 
-export const clockOut = async (employeeId) => {
+export const clockOut = async (employeeId, location) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
-  if (!record || !record.clockIn || !record.clockIn.time) {
-    throw ApiError.badRequest('You have not clocked in today');
-  }
-  if (record.clockOut && record.clockOut.time) {
-    throw ApiError.badRequest('Already clocked out today');
-  }
+  if (!record) throw ApiError.badRequest('You have not clocked in today');
+
+  const session = ensureActiveSession(record);
+  if (!session) throw ApiError.badRequest('No active session to clock out');
 
   const now = new Date();
-  let totalBreakMinutes = 0;
-  for (const brk of record.breaks || []) {
-    if (brk.start && brk.end) {
-      totalBreakMinutes += (new Date(brk.end) - new Date(brk.start)) / 60000;
+
+  session.clockOut = { time: now, location: location || {} };
+
+  for (const brk of session.breaks) {
+    if (brk.start && !brk.end) {
+      brk.end = now;
+      brk.duration = Math.round((now - new Date(brk.start)) / 60000);
     }
   }
 
-  const workMinutes = (now - new Date(record.clockIn.time)) / 60000 - totalBreakMinutes;
-  const workHours = +(workMinutes / 60).toFixed(2);
-  const shiftDuration = record.shift?.duration || 8;
-  const overtime = +(Math.max(0, workHours - shiftDuration)).toFixed(2);
+  let shiftDuration = 8;
+  if (record.shift?.duration) shiftDuration = record.shift.duration;
+  else if (record.shift?._id) {
+    const shift = await attendanceRepo.findShiftById(record.shift._id);
+    if (shift) shiftDuration = shift.duration;
+  }
 
-  const updateData = {
-    'clockOut.time': now,
-    'clockOut.ip': null,
-    workHours,
-    overtime,
-    $push: {
-      events: {
-        type: 'clock_out',
-        timestamp: now,
-        metadata: { workHours, overtime },
-      },
-    },
-  };
+  recalcRecordTotals(record, shiftDuration);
 
-  return attendanceRepo.updateAttendance(record._id, updateData);
+  const sessionIdx = record.sessions.indexOf(session);
+  record.events.push({
+    type: 'clock_out',
+    timestamp: now,
+    metadata: { workHours: record.workHours, overtime: record.overtime, sessionIndex: sessionIdx },
+  });
+
+  await record.save();
+  return record;
 };
 
 export const startBreak = async (employeeId) => {
@@ -141,24 +246,21 @@ export const startBreak = async (employeeId) => {
   today.setHours(0, 0, 0, 0);
 
   const record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
-  if (!record || !record.clockIn || !record.clockIn.time) {
-    throw ApiError.badRequest('Clock in first');
-  }
-  if (record.clockOut && record.clockOut.time) {
-    throw ApiError.badRequest('Already clocked out');
-  }
+  if (!record) throw ApiError.badRequest('Clock in first');
 
-  const lastBreak = record.breaks?.[record.breaks.length - 1];
+  const activeSession = ensureActiveSession(record);
+  if (!activeSession) throw ApiError.badRequest('No active session. Clock in first.');
+
+  const lastBreak = activeSession.breaks?.[activeSession.breaks.length - 1];
   if (lastBreak && !lastBreak.end) {
     throw ApiError.badRequest('Already on break');
   }
 
-  return attendanceRepo.updateAttendance(record._id, {
-    $push: {
-      breaks: { start: new Date(), end: null, duration: 0 },
-      events: { type: 'break_start', timestamp: new Date() },
-    },
-  });
+  activeSession.breaks.push({ start: new Date(), end: null, duration: 0 });
+
+  record.events.push({ type: 'break_start', timestamp: new Date() });
+  await record.save();
+  return record;
 };
 
 export const endBreak = async (employeeId) => {
@@ -168,8 +270,10 @@ export const endBreak = async (employeeId) => {
   const record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
   if (!record) throw ApiError.badRequest('No attendance record found');
 
-  const breaks = record.breaks || [];
-  const lastBreak = breaks[breaks.length - 1];
+  const activeSession = ensureActiveSession(record);
+  if (!activeSession) throw ApiError.badRequest('No active session');
+
+  const lastBreak = activeSession.breaks?.[activeSession.breaks.length - 1];
   if (!lastBreak || lastBreak.end) {
     throw ApiError.badRequest('Not currently on break');
   }
@@ -179,18 +283,46 @@ export const endBreak = async (employeeId) => {
   lastBreak.end = now;
   lastBreak.duration = duration;
 
-  return attendanceRepo.updateAttendance(record._id, {
-    breaks,
-    $push: {
-      events: { type: 'break_end', timestamp: now, metadata: { duration } },
-    },
-  });
+  let shiftDuration = 8;
+  if (record.shift?.duration) shiftDuration = record.shift.duration;
+  recalcRecordTotals(record, shiftDuration);
+
+  record.events.push({ type: 'break_end', timestamp: now, metadata: { duration } });
+  await record.save();
+  return record;
 };
 
 export const getTodayStatus = async (employeeId) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
+};
+
+export const getAttendanceSummary = async (employeeId, date) => {
+  const target = date ? new Date(date) : new Date();
+  target.setHours(0, 0, 0, 0);
+
+  const record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, target);
+  if (!record) return null;
+
+  let totalBreakMinutes = 0;
+  for (const session of record.sessions || []) {
+    totalBreakMinutes += calcSessionBreakMinutes(session.breaks);
+  }
+
+  return {
+    record,
+    totalWorkHours: record.workHours || 0,
+    totalBreakMinutes,
+    totalBreakHours: +(totalBreakMinutes / 60).toFixed(2),
+    sessions: (record.sessions || []).map((s, i) => ({
+      index: i,
+      clockIn: s.clockIn?.time,
+      clockOut: s.clockOut?.time,
+      breaks: s.breaks || [],
+      workMinutes: s.workMinutes || 0,
+    })),
+  };
 };
 
 export const getAttendanceList = async (query, options) => {
@@ -224,6 +356,77 @@ export const manualOverride = async (id, data, adminId) => {
       },
     },
   });
+};
+
+// ===================== MANUAL ENTRY =====================
+
+export const manualEntry = async (data, adminId) => {
+  const { employee, date, clockInTime, clockOutTime, status, notes, isWFH } = data;
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0);
+
+  let shift = await attendanceRepo.findDefaultShift();
+  if (!shift) {
+    shift = await Shift.create({
+      name: 'General Shift',
+      startTime: '09:00',
+      endTime: '18:00',
+      gracePeriod: 15,
+      isActive: true,
+      isDefault: true,
+    });
+  }
+
+  let record = await attendanceRepo.findAttendanceByEmployeeAndDate(employee, targetDate);
+
+  const sessions = [];
+  if (clockInTime) {
+    const session = {
+      clockIn: { time: new Date(clockInTime) },
+      clockOut: clockOutTime ? { time: new Date(clockOutTime) } : null,
+      breaks: [],
+      workMinutes: 0,
+      overtime: 0,
+    };
+
+    if (clockInTime && clockOutTime) {
+      const breakMinutes = 0;
+      session.workMinutes = Math.round((new Date(clockOutTime) - new Date(clockInTime)) / 60000 - breakMinutes);
+      session.overtime = Math.max(0, session.workMinutes - shift.duration * 60);
+    }
+    sessions.push(session);
+  }
+
+  if (record) {
+    record.sessions = sessions;
+    recalcRecordTotals(record, shift.duration);
+    record.status = status || record.status;
+    record.notes = notes || record.notes;
+    if (isWFH !== undefined) record.isWFH = isWFH;
+    record.updatedBy = adminId;
+    record.events.push({
+      type: 'status_change',
+      timestamp: new Date(),
+      metadata: { by: adminId, manualEntry: true },
+    });
+    await record.save();
+    return record;
+  }
+
+  record = await attendanceRepo.createAttendance({
+    employee,
+    date: targetDate,
+    shift: shift._id,
+    sessions,
+    status: status || 'present',
+    notes: notes || null,
+    isWFH: isWFH || false,
+    createdBy: adminId,
+  });
+
+  recalcRecordTotals(record, shift.duration);
+  await record.save();
+  return record;
 };
 
 // ===================== REGULARIZATION =====================
@@ -413,6 +616,7 @@ export const getLeaveBalance = async (employeeId) => {
       casual: { total: 10, used: 0, balance: 10 },
       earned: { total: 15, used: 0, balance: 15 },
       unpaid: { total: 0, used: 0, balance: 0 },
+      comp_off: { total: 0, used: 0, balance: 0 },
     });
   }
 
@@ -476,6 +680,7 @@ export const getStats = async (employeeId, dateFrom, dateTo) => {
     late: 0,
     totalWorkHours: 0,
     totalOvertime: 0,
+    totalBreakMinutes: 0,
   };
 
   for (const r of records) {
@@ -483,6 +688,7 @@ export const getStats = async (employeeId, dateFrom, dateTo) => {
     if (r.isLate) stats.late++;
     stats.totalWorkHours += r.workHours || 0;
     stats.totalOvertime += r.overtime || 0;
+    stats.totalBreakMinutes += r.totalBreakMinutes || 0;
   }
 
   stats.totalWorkHours = +stats.totalWorkHours.toFixed(2);
@@ -511,10 +717,23 @@ export const bulkImport = async (records, userId) => {
       }
 
       const shift = await attendanceRepo.findDefaultShift();
+
+      const sessions = [];
+      if (row.clockIn) {
+        sessions.push({
+          clockIn: { time: new Date(row.clockIn) },
+          clockOut: row.clockOut ? { time: new Date(row.clockOut) } : null,
+          breaks: [],
+          workMinutes: 0,
+          overtime: 0,
+        });
+      }
+
       await attendanceRepo.createAttendance({
         employee: employeeId,
         date,
         shift: shift?._id,
+        sessions,
         clockIn: row.clockIn ? { time: new Date(row.clockIn) } : undefined,
         clockOut: row.clockOut ? { time: new Date(row.clockOut) } : undefined,
         status: row.status || 'present',

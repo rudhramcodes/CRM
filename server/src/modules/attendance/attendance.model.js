@@ -11,14 +11,26 @@ const breakSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const clockEventSchema = new mongoose.Schema(
+const sessionSchema = new mongoose.Schema(
   {
-    time: { type: Date, default: null },
-    location: {
-      lat: { type: Number, default: null },
-      lng: { type: Number, default: null },
+    clockIn: {
+      time: { type: Date, default: null },
+      ip: { type: String, default: null },
+      location: {
+        lat: { type: Number, default: null },
+        lng: { type: Number, default: null },
+      },
     },
-    ip: { type: String, default: null },
+    clockOut: {
+      time: { type: Date, default: null },
+      location: {
+        lat: { type: Number, default: null },
+        lng: { type: Number, default: null },
+      },
+    },
+    breaks: { type: [breakSchema], default: [] },
+    workMinutes: { type: Number, default: 0 },
+    overtime: { type: Number, default: 0 },
   },
   { _id: false }
 );
@@ -84,8 +96,12 @@ const attendanceSchema = new mongoose.Schema(
       ref: 'Shift',
       required: [true, 'Shift is required'],
     },
-    clockIn: { type: clockEventSchema, default: () => ({}) },
-    clockOut: { type: clockEventSchema, default: () => ({}) },
+    // Legacy fields - kept for backward compatibility
+    clockIn: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
+    clockOut: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
+    breaks: { type: [breakSchema], default: [] },
+    // New sessions-based approach
+    sessions: { type: [sessionSchema], default: [] },
     status: {
       type: String,
       enum: ['present', 'absent', 'half_day', 'wfh', 'leave', 'holiday', 'weekend'],
@@ -93,11 +109,12 @@ const attendanceSchema = new mongoose.Schema(
     },
     workHours: { type: Number, default: 0 },
     overtime: { type: Number, default: 0 },
+    totalBreakMinutes: { type: Number, default: 0 },
     isLate: { type: Boolean, default: false },
     lateMinutes: { type: Number, default: 0 },
-    breaks: { type: [breakSchema], default: [] },
     isWFH: { type: Boolean, default: false },
     wfhReason: { type: String, default: null },
+    notes: { type: String, default: null },
     leave: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'LeaveRequest',
@@ -110,9 +127,30 @@ const attendanceSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { transform(_doc, ret) { delete ret.__v; return ret; } },
+    toJSON: { virtuals: true, transform(_doc, ret) { delete ret.__v; return ret; } },
   }
 );
+
+// Virtual: active session (session with clockIn but no clockOut)
+attendanceSchema.virtual('activeSession').get(function () {
+  if (!this.sessions || this.sessions.length === 0) return null;
+  const last = this.sessions[this.sessions.length - 1];
+  if (last.clockIn?.time && !last.clockOut?.time) return last;
+  return null;
+});
+
+// Virtual: is currently clocked in
+attendanceSchema.virtual('isClockedIn').get(function () {
+  return this.activeSession !== null;
+});
+
+// Virtual: is on break
+attendanceSchema.virtual('isOnBreak').get(function () {
+  const session = this.activeSession;
+  if (!session || !session.breaks || session.breaks.length === 0) return false;
+  const lastBreak = session.breaks[session.breaks.length - 1];
+  return lastBreak.start && !lastBreak.end;
+});
 
 // Indexes
 attendanceSchema.index({ employee: 1, date: 1 }, { unique: true });
@@ -193,7 +231,7 @@ const leaveRequestSchema = new mongoose.Schema(
     },
     leaveType: {
       type: String,
-      enum: ['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'other'],
+      enum: ['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'comp_off', 'other'],
       required: [true, 'Leave type is required'],
     },
     startDate: {
@@ -250,6 +288,11 @@ const holidaySchema = new mongoose.Schema(
       required: [true, 'Date is required'],
       unique: true,
     },
+    description: {
+      type: String,
+      default: null,
+      maxlength: 500,
+    },
     type: {
       type: String,
       enum: ['national', 'company', 'optional'],
@@ -294,6 +337,7 @@ const leaveBalanceSchema = new mongoose.Schema(
     casual: { type: balanceSubSchema, default: () => ({}) },
     earned: { type: balanceSubSchema, default: () => ({}) },
     unpaid: { type: balanceSubSchema, default: () => ({}) },
+    comp_off: { type: balanceSubSchema, default: () => ({}) },
   },
   {
     timestamps: true,
