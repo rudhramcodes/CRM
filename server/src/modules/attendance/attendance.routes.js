@@ -79,7 +79,7 @@ router.get(
 
 router.get(
   '/stats',
-  authorize('super_admin', 'admin', 'manager'),
+  authorize('super_admin', 'admin', 'manager', 'employee'),
   attendanceController.stats
 );
 

@@ -1,6 +1,8 @@
+import mongoose from 'mongoose';
 import ApiError from '../../utils/ApiError.js';
 import * as attendanceRepo from './attendance.repository.js';
 import { Shift } from './attendance.model.js';
+import { escapeRegex } from '../../utils/pagination.js';
 
 // ===================== HELPERS =====================
 
@@ -329,10 +331,31 @@ export const getAttendanceList = async (query, options) => {
   const filter = {};
   if (query.employee) filter.employee = query.employee;
   if (query.status) filter.status = query.status;
+  if (query.search) {
+    const User = mongoose.model('User');
+    const searchRegex = new RegExp(escapeRegex(query.search), 'i');
+    const users = await User.find({
+      $or: [{ name: searchRegex }, { email: searchRegex }],
+    }).select('_id');
+    const ids = users.map((u) => u._id);
+    if (filter.employee) {
+      const empIdStr = String(filter.employee);
+      if (ids.some((id) => String(id) === empIdStr)) {
+        filter.employee = filter.employee;
+      } else {
+        filter.employee = { $in: [] };
+      }
+    } else {
+      filter.employee = { $in: ids };
+    }
+  }
   if (query.dateFrom || query.dateTo) {
     filter.date = {};
-    if (query.dateFrom) filter.date.$gte = new Date(query.dateFrom);
-    if (query.dateTo) filter.date.$lte = new Date(query.dateTo);
+    if (query.dateFrom) filter.date.$gte = new Date(query.dateFrom + 'T00:00:00Z');
+    if (query.dateTo) {
+      const end = new Date(query.dateTo + 'T23:59:59.999Z');
+      filter.date.$lte = end;
+    }
   }
   return attendanceRepo.findAllAttendance(filter, options);
 };
@@ -362,8 +385,8 @@ export const manualOverride = async (id, data, adminId) => {
 
 export const manualEntry = async (data, adminId) => {
   const { employee, date, clockInTime, clockOutTime, status, notes, isWFH } = data;
-  const targetDate = new Date(date);
-  targetDate.setHours(0, 0, 0, 0);
+  const targetDate = new Date(date + 'T00:00:00Z');
+  targetDate.setUTCHours(0, 0, 0, 0);
 
   let shift = await attendanceRepo.findDefaultShift();
   if (!shift) {
@@ -381,17 +404,23 @@ export const manualEntry = async (data, adminId) => {
 
   const sessions = [];
   if (clockInTime) {
+    const clockInFull = new Date(`${date}T${clockInTime}:00`);
+    const clockInDate = isNaN(clockInFull.getTime()) ? new Date(`${date}T${clockInTime}`) : clockInFull;
     const session = {
-      clockIn: { time: new Date(clockInTime) },
-      clockOut: clockOutTime ? { time: new Date(clockOutTime) } : null,
+      clockIn: { time: clockInDate },
+      clockOut: clockOutTime ? { time: (() => { const d = new Date(`${date}T${clockOutTime}:00`); return isNaN(d.getTime()) ? new Date(`${date}T${clockOutTime}`) : d; })() } : null,
       breaks: [],
       workMinutes: 0,
       overtime: 0,
     };
 
     if (clockInTime && clockOutTime) {
-      const breakMinutes = 0;
-      session.workMinutes = Math.round((new Date(clockOutTime) - new Date(clockInTime)) / 60000 - breakMinutes);
+      const breakMinutes = calcSessionBreakMinutes([]);
+      const outTime = new Date(`${date}T${clockOutTime}:00`);
+      const inTime = new Date(`${date}T${clockInTime}:00`);
+      const outMs = isNaN(outTime.getTime()) ? new Date(`${date}T${clockOutTime}`).getTime() : outTime.getTime();
+      const inMs = isNaN(inTime.getTime()) ? new Date(`${date}T${clockInTime}`).getTime() : inTime.getTime();
+      session.workMinutes = Math.round((outMs - inMs) / 60000 - breakMinutes);
       session.overtime = Math.max(0, session.workMinutes - shift.duration * 60);
     }
     sessions.push(session);
@@ -666,7 +695,24 @@ export const getMonthlyReport = async (year, month) => {
 };
 
 export const getStats = async (employeeId, dateFrom, dateTo) => {
-  const records = await attendanceRepo.findAttendanceForStats(employeeId, dateFrom, dateTo);
+  let from = dateFrom ? new Date(dateFrom) : null;
+  let to = dateTo ? new Date(dateTo) : null;
+
+  if (!from && !to) {
+    const now = new Date();
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  } else if (from && !to) {
+    to = new Date();
+    to.setHours(23, 59, 59, 999);
+  } else if (!from && to) {
+    from = new Date(to.getFullYear(), to.getMonth(), 1);
+    to.setHours(23, 59, 59, 999);
+  } else {
+    to.setHours(23, 59, 59, 999);
+  }
+
+  const records = await attendanceRepo.findAttendanceForStats(employeeId, from, to);
 
   const stats = {
     totalDays: records.length,

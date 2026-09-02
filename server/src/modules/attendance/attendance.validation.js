@@ -41,6 +41,7 @@ export const attendanceQuerySchema = z.object({
   status: z.enum(['present', 'absent', 'half_day', 'wfh', 'leave', 'holiday', 'weekend']).optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
+  search: z.string().optional(),
   sort: z.string().optional().default('-date'),
 });
 

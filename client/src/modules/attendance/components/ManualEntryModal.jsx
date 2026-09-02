@@ -3,7 +3,8 @@ import { useManualEntryMutation, useGetShiftsQuery } from '../../../services/att
 import { useGetUsersQuery } from '../../../services/userApi';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
-import Input from '../../../components/ui/Input';
+import { DatePickerSimple } from '../../../components/ui/DatePickerSimple';
+import TimePicker from '../../../components/ui/TimePicker';
 import Textarea from '../../../components/ui/Textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
 import Switch from '../../../components/ui/Switch';
@@ -28,8 +29,9 @@ export default function ManualEntryModal({ open, onClose }) {
     isWFH: false,
   });
 
+  const [errors, setErrors] = useState({});
   const [manualEntry, { isLoading }] = useManualEntryMutation();
-  const { data: usersData } = useGetUsersQuery({ limit: 200 });
+  const { data: usersData } = useGetUsersQuery({ limit: 100 });
 
   const users = usersData?.data?.users || usersData?.data || [];
 
@@ -40,6 +42,14 @@ export default function ManualEntryModal({ open, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const newErrors = {};
+    if (!form.employee) newErrors.employee = 'Employee is required';
+    if (!form.date) newErrors.date = 'Date is required';
+    if (form.clockInTime && form.clockOutTime && form.clockOutTime <= form.clockInTime) {
+      newErrors.clockOutTime = 'Clock out must be after clock in';
+    }
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
     try {
       await manualEntry(form).unwrap();
       toast.success('Manual entry saved');
@@ -52,6 +62,7 @@ export default function ManualEntryModal({ open, onClose }) {
         notes: '',
         isWFH: false,
       });
+      setErrors({});
       onClose();
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to save');
@@ -60,6 +71,7 @@ export default function ManualEntryModal({ open, onClose }) {
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
   };
 
   return (
@@ -77,34 +89,38 @@ export default function ManualEntryModal({ open, onClose }) {
               ))}
             </SelectContent>
           </Select>
+          {errors.employee && <p className="text-xs text-red-600 mt-1">{errors.employee}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-zinc-700 mb-1">Date *</label>
-          <Input
-            type="date"
+          <DatePickerSimple
             value={form.date}
-            onChange={(e) => handleChange('date', e.target.value)}
-            required
+            onChange={(val) => handleChange('date', val)}
+            label=""
+            placeholder="Pick a date"
           />
+          {errors.date && <p className="text-xs text-red-600 mt-1">{errors.date}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">Clock In Time</label>
-            <Input
-              type="time"
+            <TimePicker
               value={form.clockInTime}
-              onChange={(e) => handleChange('clockInTime', e.target.value)}
+              onChange={(val) => handleChange('clockInTime', val)}
+              label=""
             />
+            {errors.clockInTime && <p className="text-xs text-red-600 mt-1">{errors.clockInTime}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">Clock Out Time</label>
-            <Input
-              type="time"
+            <TimePicker
               value={form.clockOutTime}
-              onChange={(e) => handleChange('clockOutTime', e.target.value)}
+              onChange={(val) => handleChange('clockOutTime', val)}
+              label=""
             />
+            {errors.clockOutTime && <p className="text-xs text-red-600 mt-1">{errors.clockOutTime}</p>}
           </div>
         </div>
 

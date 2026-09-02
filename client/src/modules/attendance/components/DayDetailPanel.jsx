@@ -32,7 +32,7 @@ export default function DayDetailPanel({ date, employeeId }) {
 
   const [requestRegularization] = useRequestRegularizationMutation();
 
-  const records = data?.data?.records || [];
+  const records = Array.isArray(data?.data) ? data.data : [];
   const record = records[0];
 
   const handleRegularize = async () => {
