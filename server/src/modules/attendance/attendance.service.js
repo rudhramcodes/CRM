@@ -9,6 +9,7 @@ import {
   sendLeaveApprovedEmail,
   sendLeaveRejectedEmail,
 } from '../../services/emailService.js';
+import { resolveLocationDetails } from '../../utils/geo.js';
 
 // ===================== HELPERS =====================
 
@@ -205,12 +206,18 @@ export const clockIn = async (employeeId, data, ip) => {
   const isLate = nowMinutes > graceEnd;
   const lateMinutes = isLate ? nowMinutes - graceEnd : 0;
 
+  // Resolve location (Office geofence or Area name)
+  let resolvedLocation = data?.location || {};
+  if (data?.location?.lat != null && data?.location?.lng != null) {
+    resolvedLocation = await resolveLocationDetails(data.location);
+  }
+
   // Push new session
   const newSession = {
     clockIn: {
       time: now,
       ip: ip || null,
-      location: data?.location || {},
+      location: resolvedLocation,
     },
     clockOut: null,
     breaks: [],
@@ -251,7 +258,12 @@ export const clockOut = async (employeeId, location) => {
 
   const now = new Date();
 
-  session.clockOut = { time: now, location: location || {} };
+  let resolvedLocation = location || {};
+  if (location?.lat != null && location?.lng != null) {
+    resolvedLocation = await resolveLocationDetails(location);
+  }
+
+  session.clockOut = { time: now, location: resolvedLocation };
 
   for (const brk of session.breaks) {
     if (brk.start && !brk.end) {
@@ -1118,4 +1130,90 @@ export const bulkImport = async (records, userId) => {
   }
 
   return { imported, skipped, errors };
+};
+
+// ===================== DAILY OVERVIEW STATS =====================
+
+export const getDailyOverviewStats = async (dateParam) => {
+  const User = mongoose.model('User');
+  const Attendance = mongoose.model('Attendance');
+  const LeaveRequest = mongoose.model('LeaveRequest');
+
+  // Only employee and manager roles count towards total staff
+  const targetRoles = ['employee', 'manager'];
+  const staff = await User.find({
+    role: { $in: targetRoles },
+    isActive: { $ne: false },
+  }).select('_id name email role');
+
+  const totalEmployees = staff.length;
+  const staffIds = staff.map((s) => s._id);
+
+  // Parse target date (default to today)
+  let targetDateStr = dateParam;
+  if (!targetDateStr) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    targetDateStr = `${y}-${m}-${d}`;
+  }
+
+  const startOfDay = parseStartOfDay(targetDateStr);
+  const endOfDay = parseEndOfDay(targetDateStr);
+
+  const records = await Attendance.find({
+    employee: { $in: staffIds },
+    date: { $gte: startOfDay, $lte: endOfDay },
+  }).lean();
+
+  const approvedLeaves = await LeaveRequest.find({
+    employee: { $in: staffIds },
+    status: 'approved',
+    startDate: { $lte: endOfDay },
+    endDate: { $gte: startOfDay },
+  }).lean();
+
+  const presentEmpIds = new Set();
+  const wfhEmpIds = new Set();
+  const leaveEmpIds = new Set();
+  const lateEmpIds = new Set();
+
+  for (const rec of records) {
+    const empIdStr = String(rec.employee);
+    if (rec.status === 'present' || rec.status === 'wfh') {
+      presentEmpIds.add(empIdStr);
+      if (rec.isWFH || rec.status === 'wfh') {
+        wfhEmpIds.add(empIdStr);
+      }
+      if (rec.isLate) {
+        lateEmpIds.add(empIdStr);
+      }
+    } else if (rec.status === 'leave') {
+      leaveEmpIds.add(empIdStr);
+    }
+  }
+
+  for (const leave of approvedLeaves) {
+    const empIdStr = String(leave.employee);
+    if (!presentEmpIds.has(empIdStr)) {
+      leaveEmpIds.add(empIdStr);
+    }
+  }
+
+  const presentCount = presentEmpIds.size;
+  const wfhCount = wfhEmpIds.size;
+  const leaveCount = leaveEmpIds.size;
+  const lateCount = lateEmpIds.size;
+  const absentCount = Math.max(0, totalEmployees - presentCount - leaveCount);
+
+  return {
+    date: targetDateStr,
+    totalEmployees,
+    presentCount,
+    wfhCount,
+    leaveCount,
+    absentCount,
+    lateCount,
+  };
 };

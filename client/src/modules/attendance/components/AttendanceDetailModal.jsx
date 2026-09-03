@@ -1,6 +1,7 @@
 import Modal from '../../../components/ui/Modal';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
+import LocationBadge from '../../../components/ui/LocationBadge';
 import { format, isValid } from 'date-fns';
 import {
   Clock,
@@ -232,10 +233,9 @@ export default function AttendanceDetailModal({ record, open, onClose, onEdit, i
                           <p className="text-[11px] text-zinc-400 pl-5">IP: {session.clockIn.ip}</p>
                         )}
                         {session.clockIn?.location?.lat != null && (
-                          <p className="text-[11px] text-zinc-400 pl-5 flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-zinc-400" />
-                            {session.clockIn.location.lat.toFixed(4)}, {session.clockIn.location.lng.toFixed(4)}
-                          </p>
+                          <div className="pl-5 pt-1.5">
+                            <LocationBadge location={session.clockIn.location} />
+                          </div>
                         )}
                       </div>
 
@@ -250,10 +250,9 @@ export default function AttendanceDetailModal({ record, open, onClose, onEdit, i
                           )}
                         </p>
                         {session.clockOut?.location?.lat != null && (
-                          <p className="text-[11px] text-zinc-400 pl-5 flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-zinc-400" />
-                            {session.clockOut.location.lat.toFixed(4)}, {session.clockOut.location.lng.toFixed(4)}
-                          </p>
+                          <div className="pl-5 pt-1.5">
+                            <LocationBadge location={session.clockOut.location} />
+                          </div>
                         )}
                       </div>
                     </div>

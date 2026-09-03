@@ -83,6 +83,12 @@ router.get(
   attendanceController.stats
 );
 
+router.get(
+  '/overview-stats',
+  authorize('super_admin', 'admin', 'manager', 'employee'),
+  attendanceController.getDailyOverviewStats
+);
+
 router.patch(
   '/:id',
   authorize('super_admin', 'admin'),

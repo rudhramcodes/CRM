@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { useGetAttendanceListQuery } from '../../../services/attendanceApi';
+import { useGetAttendanceListQuery, useGetAttendanceOverviewStatsQuery } from '../../../services/attendanceApi';
 import { useGetUsersQuery } from '../../../services/userApi';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
@@ -10,6 +10,7 @@ import { TableSkeleton } from '../../../components/ui/Skeleton';
 import ManualEntryModal from '../components/ManualEntryModal';
 import AttendanceDetailModal from '../components/AttendanceDetailModal';
 import AttendanceEditModal from '../components/AttendanceEditModal';
+import LocationBadge from '../../../components/ui/LocationBadge';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isValid } from 'date-fns';
 import { DatePickerSimple } from '../../../components/ui/DatePickerSimple';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
@@ -23,6 +24,7 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
+  Users,
   Home,
   FileText,
   Calendar,
@@ -57,9 +59,10 @@ export default function AttendanceList() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [employeeFilter, setEmployeeFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [datePreset, setDatePreset] = useState('all');
+  const initialTodayStr = formatDateStr(new Date());
+  const [dateFrom, setDateFrom] = useState(initialTodayStr);
+  const [dateTo, setDateTo] = useState(initialTodayStr);
+  const [datePreset, setDatePreset] = useState('today');
 
   // Modals state
   const [showManualEntry, setShowManualEntry] = useState(false);
@@ -128,14 +131,16 @@ export default function AttendanceList() {
     setSearch('');
     setStatusFilter('');
     setEmployeeFilter('');
-    setDateFrom('');
-    setDateTo('');
-    setDatePreset('all');
+    const resetToday = formatDateStr(new Date());
+    setDateFrom(resetToday);
+    setDateTo(resetToday);
+    setDatePreset('today');
     setPage(1);
   };
 
+  const isDefaultDate = datePreset === 'today' && dateFrom === initialTodayStr && dateTo === initialTodayStr;
   const hasActiveFilters =
-    searchInput || search || statusFilter || employeeFilter || dateFrom || dateTo || datePreset !== 'all';
+    Boolean(searchInput || search || statusFilter || employeeFilter || !isDefaultDate);
 
   const queryParams = {
     page,
@@ -154,41 +159,15 @@ export default function AttendanceList() {
   const pagination = data?.pagination || {};
   const users = usersData?.data?.users || usersData?.data || [];
 
-  // Summary Metrics calculated from loaded records or pagination
-  const metrics = useMemo(() => {
-    let present = 0;
-    let wfh = 0;
-    let absent = 0;
-    let leave = 0;
-    let late = 0;
-    let totalLateMinutes = 0;
-    let totalWorkHours = 0;
-
-    for (const r of records) {
-      if (r.status === 'present') present++;
-      if (r.status === 'wfh' || r.isWFH) {
-        wfh++;
-        if (r.status !== 'present') present++;
-      }
-      if (r.status === 'absent') absent++;
-      if (r.status === 'leave') leave++;
-      if (r.isLate || r.status === 'late') {
-        late++;
-        totalLateMinutes += r.lateMinutes || 0;
-      }
-      totalWorkHours += r.workHours || 0;
-    }
-
-    return {
-      present,
-      wfh,
-      absent,
-      leave,
-      late,
-      totalLateMinutes,
-      totalWorkHours: +totalWorkHours.toFixed(1),
-    };
-  }, [records]);
+  const { data: overviewData } = useGetAttendanceOverviewStatsQuery();
+  const dailyStats = overviewData?.data || {
+    totalEmployees: 0,
+    presentCount: 0,
+    wfhCount: 0,
+    leaveCount: 0,
+    absentCount: 0,
+    lateCount: 0,
+  };
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -225,122 +204,79 @@ export default function AttendanceList() {
         </div>
       )}
 
-      {/* KPI Overview Cards */}
+      {/* KPI Overview Cards (Real-time Company Daily Snapshot) */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
-        {/* Present Card */}
-        <div
-          onClick={() => {
-            setStatusFilter(statusFilter === 'present' ? '' : 'present');
-            setPage(1);
-          }}
-          className={`p-4 rounded-xl border transition-all cursor-pointer bg-white ${
-            statusFilter === 'present'
-              ? 'border-emerald-500 ring-2 ring-emerald-100 shadow-xs'
-              : 'border-zinc-200 hover:border-zinc-300 shadow-xs'
-          }`}
-        >
+        {/* Total Staff Card */}
+        <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-xs cursor-default">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Present</span>
+            <span className="text-xs font-medium text-zinc-500">Total Staff</span>
+            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <span className="text-2xl font-bold text-zinc-900">{dailyStats.totalEmployees}</span>
+          </div>
+          <p className="text-[11px] text-zinc-500 font-medium mt-0.5">Employees & Managers</p>
+        </div>
+
+        {/* Present Today Card */}
+        <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-xs cursor-default">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-zinc-500">Present Today</span>
             <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-900">{metrics.present}</span>
-            {metrics.wfh > 0 && (
-              <span className="text-[11px] text-zinc-500 font-medium">({metrics.wfh} remote)</span>
+            <span className="text-2xl font-bold text-zinc-900">{dailyStats.presentCount}</span>
+            {dailyStats.wfhCount > 0 && (
+              <span className="text-[11px] text-zinc-500 font-medium">({dailyStats.wfhCount} WFH)</span>
             )}
           </div>
           <p className="text-[11px] text-emerald-600 font-medium mt-0.5">Attended work</p>
         </div>
 
-        {/* Absent Card */}
-        <div
-          onClick={() => {
-            setStatusFilter(statusFilter === 'absent' ? '' : 'absent');
-            setPage(1);
-          }}
-          className={`p-4 rounded-xl border transition-all cursor-pointer bg-white ${
-            statusFilter === 'absent'
-              ? 'border-rose-500 ring-2 ring-rose-100 shadow-xs'
-              : 'border-zinc-200 hover:border-zinc-300 shadow-xs'
-          }`}
-        >
+        {/* Absent Today Card */}
+        <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-xs cursor-default">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Absent</span>
+            <span className="text-xs font-medium text-zinc-500">Absent Today</span>
             <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
               <XCircle className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold text-zinc-900">{metrics.absent}</span>
+            <span className="text-2xl font-bold text-zinc-900">{dailyStats.absentCount}</span>
           </div>
           <p className="text-[11px] text-rose-600 font-medium mt-0.5">Not clocked in</p>
         </div>
 
-        {/* On Leave Card */}
-        <div
-          onClick={() => {
-            setStatusFilter(statusFilter === 'leave' ? '' : 'leave');
-            setPage(1);
-          }}
-          className={`p-4 rounded-xl border transition-all cursor-pointer bg-white ${
-            statusFilter === 'leave'
-              ? 'border-purple-500 ring-2 ring-purple-100 shadow-xs'
-              : 'border-zinc-200 hover:border-zinc-300 shadow-xs'
-          }`}
-        >
+        {/* On Leave Today Card */}
+        <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-xs cursor-default">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">On Leave</span>
+            <span className="text-xs font-medium text-zinc-500">On Leave Today</span>
             <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
               <FileText className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold text-zinc-900">{metrics.leave}</span>
+            <span className="text-2xl font-bold text-zinc-900">{dailyStats.leaveCount}</span>
           </div>
           <p className="text-[11px] text-purple-600 font-medium mt-0.5">Approved leaves</p>
         </div>
 
-        {/* Late Card */}
-        <div
-          onClick={() => {
-            setStatusFilter(statusFilter === 'late' ? '' : 'late');
-            setPage(1);
-          }}
-          className={`p-4 rounded-xl border transition-all cursor-pointer bg-white ${
-            statusFilter === 'late'
-              ? 'border-amber-500 ring-2 ring-amber-100 shadow-xs'
-              : 'border-zinc-200 hover:border-zinc-300 shadow-xs'
-          }`}
-        >
+        {/* Late Arrivals Card */}
+        <div className="col-span-2 sm:col-span-1 p-4 rounded-xl border border-zinc-200 bg-white shadow-xs cursor-default">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-zinc-500">Late Arrivals</span>
             <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-900">{metrics.late}</span>
-            {metrics.totalLateMinutes > 0 && (
-              <span className="text-[11px] text-zinc-500 font-medium">({metrics.totalLateMinutes}m)</span>
-            )}
+          <div className="mt-2">
+            <span className="text-2xl font-bold text-zinc-900">{dailyStats.lateCount}</span>
           </div>
           <p className="text-[11px] text-amber-600 font-medium mt-0.5">Past grace period</p>
-        </div>
-
-        {/* Total Hours Card */}
-        <div className="col-span-2 sm:col-span-1 p-4 rounded-xl border border-zinc-200 bg-white shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Total Work Hours</span>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <span className="text-2xl font-bold text-zinc-900">{metrics.totalWorkHours}h</span>
-          </div>
-          <p className="text-[11px] text-blue-600 font-medium mt-0.5">Across listed entries</p>
         </div>
       </div>
 
@@ -585,6 +521,11 @@ export default function AttendanceList() {
                                 </span>
                               </div>
                             )}
+                            {rec.clockIn?.location?.lat != null && (
+                              <div className="mt-1">
+                                <LocationBadge location={rec.clockIn.location} size="sm" />
+                              </div>
+                            )}
                           </div>
                         ) : isLeave ? (
                           <span className="text-xs text-purple-600 font-medium italic">On Leave</span>
@@ -598,9 +539,16 @@ export default function AttendanceList() {
                       {/* Clock Out Column */}
                       <td className="px-4 py-3.5">
                         {rec.clockOut?.time ? (
-                          <span className="text-sm font-semibold text-zinc-800">
-                            {format(new Date(rec.clockOut.time), 'hh:mm a')}
-                          </span>
+                          <div>
+                            <span className="text-sm font-semibold text-zinc-800">
+                              {format(new Date(rec.clockOut.time), 'hh:mm a')}
+                            </span>
+                            {rec.clockOut?.location?.lat != null && (
+                              <div className="mt-1">
+                                <LocationBadge location={rec.clockOut.location} size="sm" />
+                              </div>
+                            )}
+                          </div>
                         ) : rec.clockIn?.time ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
                             In Progress
@@ -750,6 +698,12 @@ export default function AttendanceList() {
                       {rec.totalBreakMinutes ? `${rec.totalBreakMinutes}m` : '—'}
                     </span>
                   </div>
+                  {rec.clockIn?.location?.lat != null && (
+                    <div className="col-span-2 pt-1 border-t border-zinc-50 flex items-center gap-1.5">
+                      <span className="text-zinc-400">Location:</span>
+                      <LocationBadge location={rec.clockIn.location} size="sm" />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100" onClick={(e) => e.stopPropagation()}>

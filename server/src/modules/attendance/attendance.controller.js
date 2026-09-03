@@ -97,6 +97,15 @@ export const stats = async (req, res, next) => {
   }
 };
 
+export const getDailyOverviewStats = async (req, res, next) => {
+  try {
+    const result = await attendanceService.getDailyOverviewStats(req.query.date);
+    ApiResponse.success(res, 200, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const manualOverride = async (req, res, next) => {
   try {
     const record = await attendanceService.manualOverride(req.params.id, req.body, req.user._id);

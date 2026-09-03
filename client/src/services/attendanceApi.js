@@ -80,6 +80,15 @@ export const attendanceApi = api.injectEndpoints({
       keepUnusedDataFor: 0,
     }),
 
+    getAttendanceOverviewStats: builder.query({
+      query: (params) => ({
+        url: '/attendance/overview-stats',
+        params,
+      }),
+      providesTags: ['AttendanceStats', 'AttendanceToday', 'Attendance'],
+      keepUnusedDataFor: 0,
+    }),
+
     manualOverride: builder.mutation({
       query: ({ id, ...body }) => ({
         url: `/attendance/${id}`,
@@ -271,6 +280,7 @@ export const {
   useGetAttendanceListQuery,
   useGetAttendanceCalendarQuery,
   useGetAttendanceStatsQuery,
+  useGetAttendanceOverviewStatsQuery,
   useManualOverrideMutation,
   useManualEntryMutation,
   useRequestRegularizationMutation,
