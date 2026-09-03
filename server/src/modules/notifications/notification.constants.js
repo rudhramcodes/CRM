@@ -17,6 +17,9 @@ export const NOTIFICATION_TYPES = {
   INVOICE_OVERDUE: 'invoice_overdue',
   PAYMENT_RECEIVED: 'payment_received',
   CONTRACT_EXPIRY: 'contract_expiry',
+  LEAVE_APPLIED: 'leave_applied',
+  LEAVE_APPROVED: 'leave_approved',
+  LEAVE_REJECTED: 'leave_rejected',
   SYSTEM: 'system',
 };
 
@@ -28,7 +31,7 @@ export const NOTIFICATION_PRIORITIES = {
 
 export const REFERENCE_MODELS = [
   'Task', 'Project', 'Lead', 'Client',
-  'Invoice', 'Payment', 'Meeting', 'User',
+  'Invoice', 'Payment', 'Meeting', 'User', 'LeaveRequest',
 ];
 
 export const NOTIFICATION_CHANNELS = {
@@ -149,6 +152,24 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `"${d.taskTitle}" was deleted by ${d.actorName}`,
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: false, cliq: false },
+  },
+  leave_applied: {
+    title: 'New Leave Request',
+    message: (d) => `${d.employeeName || 'An employee'} applied for ${d.leaveType} (${d.duration})`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: true, cliq: false },
+  },
+  leave_approved: {
+    title: 'Leave Approved',
+    message: (d) => `Your ${d.leaveType} request for ${d.dates} has been approved`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: true, cliq: false },
+  },
+  leave_rejected: {
+    title: 'Leave Rejected',
+    message: (d) => `Your ${d.leaveType} request was rejected: ${d.reason || 'No reason specified'}`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: true, cliq: false },
   },
   system: {
     title: 'System Update',

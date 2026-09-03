@@ -25,6 +25,7 @@ export const clockOutSchema = z.object({
 });
 
 export const manualEntrySchema = z.object({
+  recordId: z.string().optional(),
   employee: z.string().min(1, 'Employee is required'),
   date: z.string().min(1, 'Date is required'),
   clockInTime: z.string().optional(),
@@ -38,7 +39,8 @@ export const attendanceQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(20),
   employee: z.string().optional(),
-  status: z.enum(['present', 'absent', 'half_day', 'wfh', 'leave', 'holiday', 'weekend']).optional(),
+  status: z.enum(['present', 'absent', 'half_day', 'wfh', 'leave', 'holiday', 'weekend', 'late']).optional(),
+  isLate: z.coerce.boolean().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   search: z.string().optional(),
@@ -51,6 +53,10 @@ export const attendanceUpdateSchema = z.object({
   isLate: z.boolean().optional(),
   lateMinutes: z.number().min(0).optional(),
   notes: z.string().max(500).optional(),
+  clockInTime: z.string().optional(),
+  clockOutTime: z.string().optional(),
+  isWFH: z.boolean().optional(),
+  date: z.string().optional(),
 });
 
 export const regularizeSchema = z.object({
@@ -111,6 +117,9 @@ export const leaveQuerySchema = z.object({
   employee: z.string().optional(),
   status: z.enum(['pending', 'approved', 'rejected']).optional(),
   leaveType: z.enum(['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'comp_off', 'other']).optional(),
+  search: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 
 export const leaveActionSchema = z.object({

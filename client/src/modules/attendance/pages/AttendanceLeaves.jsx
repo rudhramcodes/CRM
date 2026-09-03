@@ -8,6 +8,7 @@ import {
   useRejectLeaveMutation,
   useGetLeaveBalanceQuery,
 } from '../../../services/attendanceApi';
+import { useGetUsersQuery } from '../../../services/userApi';
 import { useAuth } from '../../../hooks/useAuth';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
@@ -26,8 +27,13 @@ import {
   AlertCircle,
   Info,
   CalendarDays,
+  Search,
+  CheckCircle2,
+  XCircle,
   Clock,
-  Sparkles,
+  User,
+  Filter,
+  Eye,
   AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -54,42 +60,129 @@ const BALANCE_KEYS = ['casual', 'sick', 'earned', 'comp_off'];
 export default function AttendanceLeaves() {
   const dispatch = useDispatch();
   const { user } = useAuth();
-  const [page, setPage] = useState(1);
-  const [showForm, setShowForm] = useState(false);
+  const isAdmin = ['super_admin', 'admin', 'manager'].includes(user?.role);
 
-  // Form state
+  // Active view tab for admins/managers: 'pending' | 'all' | 'my'
+  const [activeTab, setActiveTab] = useState(isAdmin ? 'pending' : 'my');
+  const [page, setPage] = useState(1);
+
+  // Filter States
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState('');
+  const [employeeFilter, setEmployeeFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // Modals
+  const [showForm, setShowForm] = useState(false);
+  const [viewingLeave, setViewingLeave] = useState(null);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectingLeave, setRejectingLeave] = useState(null);
+  const [rejectComment, setRejectComment] = useState('');
+  const [rejectError, setRejectError] = useState('');
+
+  // Apply Form State
   const [form, setForm] = useState({
     leaveType: 'casual',
     startDate: '',
     endDate: '',
     reason: '',
   });
-
   const [formErrors, setFormErrors] = useState({});
   const [serverError, setServerError] = useState('');
 
-  // Rejection modal state
-  const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [rejectingLeave, setRejectingLeave] = useState(null);
-  const [rejectComment, setRejectComment] = useState('');
-  const [rejectError, setRejectError] = useState('');
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     dispatch(setPageTitle('Leave Management'));
   }, [dispatch]);
 
-  const { data: leavesData, isLoading, error: leavesError } = useGetLeavesQuery({ page, limit: 10 });
+  // Determine query parameters based on tab and filters
+  const queryParams = useMemo(() => {
+    const params = {
+      page,
+      limit: 10,
+    };
+
+    if (search) params.search = search;
+    if (leaveTypeFilter && leaveTypeFilter !== 'all') params.leaveType = leaveTypeFilter;
+    if (dateFrom) params.startDate = dateFrom;
+    if (dateTo) params.endDate = dateTo;
+
+    if (isAdmin) {
+      if (activeTab === 'pending') {
+        params.status = 'pending';
+      } else if (activeTab === 'my') {
+        params.employee = user?._id;
+        if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+      } else {
+        // 'all' tab
+        if (employeeFilter && employeeFilter !== 'all') params.employee = employeeFilter;
+        if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+      }
+    } else {
+      // Normal employee
+      if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+    }
+
+    return params;
+  }, [page, search, leaveTypeFilter, dateFrom, dateTo, isAdmin, activeTab, statusFilter, employeeFilter, user?._id]);
+
+  const { data: leavesData, isLoading, error: leavesError } = useGetLeavesQuery(queryParams);
   const { data: balanceData } = useGetLeaveBalanceQuery(user?._id, { skip: !user?._id });
+  const { data: usersData } = useGetUsersQuery({ limit: 100 }, { skip: !isAdmin });
+
   const [applyLeave, { isLoading: applying }] = useApplyLeaveMutation();
   const [approveLeave, { isLoading: approving }] = useApproveLeaveMutation();
   const [rejectLeave, { isLoading: rejecting }] = useRejectLeaveMutation();
 
-  const leaves = leavesData?.data?.leaves || [];
-  const pagination = leavesData?.data?.pagination || {};
-  const balance = balanceData?.data?.balance || balanceData?.data || {};
-  const isAdmin = ['super_admin', 'admin', 'manager'].includes(user?.role);
+  const leaves = Array.isArray(leavesData?.data)
+    ? leavesData.data
+    : Array.isArray(leavesData?.data?.leaves)
+      ? leavesData.data.leaves
+      : Array.isArray(leavesData?.leaves)
+        ? leavesData.leaves
+        : [];
+  const pagination = leavesData?.pagination || leavesData?.data?.pagination || {};
+  const pendingCount = pagination?.pendingCount ?? (Array.isArray(leaves) ? leaves.filter((l) => l.status === 'pending').length : 0);
+  const balance = balanceData?.data?.balance || balanceData?.data || balanceData?.balance || {};
+  const users = Array.isArray(usersData?.data?.users)
+    ? usersData.data.users
+    : Array.isArray(usersData?.data)
+      ? usersData.data
+      : Array.isArray(usersData?.users)
+        ? usersData.users
+        : [];
 
-  // Calculate duration in days between start and end date
+  const hasActiveFilters =
+    Boolean(searchInput ||
+    (statusFilter && statusFilter !== 'all') ||
+    (leaveTypeFilter && leaveTypeFilter !== 'all') ||
+    (employeeFilter && employeeFilter !== 'all') ||
+    dateFrom ||
+    dateTo);
+
+  const clearFilters = () => {
+    setSearchInput('');
+    setSearch('');
+    setStatusFilter('');
+    setLeaveTypeFilter('');
+    setEmployeeFilter('');
+    setDateFrom('');
+    setDateTo('');
+    setPage(1);
+  };
+
+  // Calculate duration in days between start and end date for apply modal
   const leaveDuration = useMemo(() => {
     if (!form.startDate || !form.endDate) return 0;
     const start = new Date(form.startDate);
@@ -99,24 +192,19 @@ export default function AttendanceLeaves() {
     return diff >= 0 ? diff + 1 : -1;
   }, [form.startDate, form.endDate]);
 
-  // Selected leave type balance
   const currentTypeBalance = balance[form.leaveType]?.balance;
 
   const handleFieldChange = (field, value) => {
     setForm((prev) => {
       const updated = { ...prev, [field]: value };
-
-      // Auto-adjust end date if start date is changed to a date after current end date
       if (field === 'startDate' && value && prev.endDate) {
         if (new Date(value) > new Date(prev.endDate)) {
           updated.endDate = value;
         }
       }
-
       return updated;
     });
 
-    // Clear field-specific error and server error on change
     if (formErrors[field]) {
       setFormErrors((prev) => {
         const next = { ...prev };
@@ -129,15 +217,8 @@ export default function AttendanceLeaves() {
 
   const validateForm = () => {
     const errors = {};
-
-    if (!form.leaveType) {
-      errors.leaveType = 'Please select a leave type';
-    }
-
-    if (!form.startDate) {
-      errors.startDate = 'Start date is required';
-    }
-
+    if (!form.leaveType) errors.leaveType = 'Please select a leave type';
+    if (!form.startDate) errors.startDate = 'Start date is required';
     if (!form.endDate) {
       errors.endDate = 'End date is required';
     } else if (form.startDate) {
@@ -147,7 +228,6 @@ export default function AttendanceLeaves() {
         errors.endDate = 'End date must be on or after start date';
       }
     }
-
     if (!form.reason || !form.reason.trim()) {
       errors.reason = 'Please enter a reason for your leave request';
     } else if (form.reason.trim().length < 10) {
@@ -155,7 +235,6 @@ export default function AttendanceLeaves() {
     } else if (form.reason.trim().length > 1000) {
       errors.reason = 'Reason cannot exceed 1000 characters';
     }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -163,12 +242,10 @@ export default function AttendanceLeaves() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
-
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
       return;
     }
-
     try {
       await applyLeave(form).unwrap();
       toast.success('Leave application submitted successfully');
@@ -194,6 +271,7 @@ export default function AttendanceLeaves() {
     try {
       await approveLeave({ id, comment: 'Approved' }).unwrap();
       toast.success('Leave request approved');
+      if (viewingLeave?._id === id) setViewingLeave(null);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to approve leave request');
     }
@@ -219,6 +297,7 @@ export default function AttendanceLeaves() {
       setRejectingLeave(null);
       setRejectComment('');
       setRejectError('');
+      if (viewingLeave?._id === rejectingLeave._id) setViewingLeave(null);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to reject leave request');
     }
@@ -226,16 +305,39 @@ export default function AttendanceLeaves() {
 
   return (
     <div className="space-y-6">
+      {/* Top Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-primary-900">Leave Management</h2>
-          <p className="text-sm text-zinc-500 mt-1">Apply for and track employee leave requests</p>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold text-primary-900">Leave Management</h2>
+            {isAdmin && pendingCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 animate-pulse">
+                <Clock className="w-3.5 h-3.5" />
+                {pendingCount} Pending Approval{pendingCount > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-zinc-500 mt-1">
+            {isAdmin
+              ? 'Review employee leave applications, approve requests, and monitor leave balances'
+              : 'Apply for leave and track your requests and remaining balances'}
+          </p>
         </div>
         <Button onClick={handleOpenForm}>
           <Plus className="w-4 h-4" />
           Apply Leave
         </Button>
       </div>
+
+      {leavesError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Failed to load leave records</p>
+            <p className="text-xs text-red-600 mt-0.5">{leavesError?.data?.message || leavesError?.message || 'Something went wrong'}</p>
+          </div>
+        </div>
+      )}
 
       {/* Balance Cards */}
       {BALANCE_KEYS.some((k) => balance[k]) && (
@@ -276,6 +378,397 @@ export default function AttendanceLeaves() {
         </div>
       )}
 
+      {/* Admin / Manager Tabs */}
+      {isAdmin && (
+        <div className="flex items-center gap-2 border-b border-zinc-200 pb-2">
+          <button
+            onClick={() => {
+              setActiveTab('pending');
+              setPage(1);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'pending'
+                ? 'bg-primary-900 text-white shadow-sm'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>Pending Approvals</span>
+            {pendingCount > 0 && (
+              <span
+                className={`ml-1 px-1.5 py-0.2 rounded-full text-xs font-semibold ${
+                  activeTab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {pendingCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('all');
+              setPage(1);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'all'
+                ? 'bg-primary-900 text-white shadow-sm'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>All Requests</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('my');
+              setPage(1);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'my'
+                ? 'bg-primary-900 text-white shadow-sm'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+            }`}
+          >
+            <User className="w-4 h-4" />
+            <span>My Leaves</span>
+          </button>
+        </div>
+      )}
+
+      {/* Filter Bar */}
+      <div className="bg-white rounded-xl border border-zinc-200 p-4">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap items-center">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[200px] w-full sm:w-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <input
+              type="text"
+              placeholder={isAdmin ? 'Search employee or reason...' : 'Search in reason...'}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-900 bg-white"
+            />
+          </div>
+
+          {/* Employee Filter (For Admin in 'All Requests' tab) */}
+          {isAdmin && activeTab === 'all' && (
+            <div className="w-full sm:w-48">
+              <Select
+                value={employeeFilter || 'all'}
+                onValueChange={(val) => {
+                  setEmployeeFilter(val === 'all' ? '' : val);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Employees" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u._id} value={u._id}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Status Filter (When not in fixed 'pending' tab) */}
+          {(activeTab !== 'pending' || !isAdmin) && (
+            <div className="w-full sm:w-36">
+              <Select
+                value={statusFilter || 'all'}
+                onValueChange={(val) => {
+                  setStatusFilter(val === 'all' ? '' : val);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Leave Type Filter */}
+          <div className="w-full sm:w-44">
+            <Select
+              value={leaveTypeFilter || 'all'}
+              onValueChange={(val) => {
+                setLeaveTypeFilter(val === 'all' ? '' : val);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All Leave Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Leave Types</SelectItem>
+                {LEAVE_TYPE_OPTIONS.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Date Range */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <DatePickerSimple
+              value={dateFrom}
+              onChange={(val) => {
+                setDateFrom(val);
+                setPage(1);
+              }}
+              placeholder="From date"
+            />
+            <DatePickerSimple
+              value={dateTo}
+              onChange={(val) => {
+                setDateTo(val);
+                setPage(1);
+              }}
+              placeholder="To date"
+            />
+          </div>
+
+          {/* Clear Button */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-500 hover:text-zinc-700 transition-colors shrink-0"
+            >
+              <X className="w-4 h-4" />
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white rounded-xl border border-zinc-200 overflow-hidden">
+        {isLoading ? (
+          <TableSkeleton rows={5} />
+        ) : leaves.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title={
+              activeTab === 'pending'
+                ? 'No pending leave requests'
+                : 'No leave records found'
+            }
+            description={
+              activeTab === 'pending'
+                ? 'All employee leave requests have been reviewed and processed.'
+                : 'No leave records match your current filters.'
+            }
+            action={
+              <Button onClick={handleOpenForm}>
+                <Plus className="w-4 h-4" /> Apply Leave
+              </Button>
+            }
+          />
+        ) : (
+          <table className="w-full">
+            <thead className="bg-zinc-50 border-b border-zinc-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Employee</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Dates</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Duration</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Reason</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {leaves.map((leave) => {
+                const s = new Date(leave.startDate);
+                const e = new Date(leave.endDate);
+                const days = isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null;
+                const isPending = leave.status === 'pending';
+
+                return (
+                  <tr key={leave._id} className="hover:bg-zinc-50/80 transition-colors">
+                    <td className="px-4 py-3 text-sm font-medium text-zinc-900">
+                      <div className="flex items-center gap-2.5">
+                        <div className="size-8 rounded-full bg-primary-100 text-primary-900 flex items-center justify-center font-semibold text-xs shrink-0">
+                          {leave.employee?.name ? leave.employee.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div>
+                          <p className="font-medium text-zinc-900">{leave.employee?.name || '—'}</p>
+                          <p className="text-xs text-zinc-400">{leave.employee?.email || ''}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-700 capitalize">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-100 text-zinc-700">
+                        {leave.leaveType?.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-600">
+                      {isValid(s) ? format(s, 'dd MMM') : '—'} — {isValid(e) ? format(e, 'dd MMM yyyy') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-zinc-800">
+                      {days ? `${days} ${days === 1 ? 'day' : 'days'}` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-600 max-w-[200px]">
+                      <p className="truncate" title={leave.reason}>
+                        {leave.reason}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={STATUS_BADGE[leave.status] || 'default'}>
+                        {leave.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setViewingLeave(leave)}
+                          title="View Details"
+                          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+
+                        {isAdmin && isPending && (
+                          <>
+                            <button
+                              onClick={() => handleApprove(leave._id)}
+                              disabled={approving}
+                              title="Approve leave"
+                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors"
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenReject(leave)}
+                              disabled={rejecting}
+                              title="Reject leave"
+                              className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <TableSkeleton rows={5} />
+        ) : leaves.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title={
+              activeTab === 'pending'
+                ? 'No pending leave requests'
+                : 'No leave records found'
+            }
+            description="No records match your filters."
+          />
+        ) : (
+          leaves.map((leave) => {
+            const s = new Date(leave.startDate);
+            const e = new Date(leave.endDate);
+            const days = isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null;
+            const isPending = leave.status === 'pending';
+
+            return (
+              <div key={leave._id} className="bg-white rounded-xl border border-zinc-200 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="size-8 rounded-full bg-primary-100 text-primary-900 flex items-center justify-center font-semibold text-xs shrink-0">
+                      {leave.employee?.name ? leave.employee.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div>
+                      <p className="font-medium text-zinc-900 text-sm">{leave.employee?.name || '—'}</p>
+                      <span className="text-xs text-zinc-500 capitalize">{leave.leaveType?.replace('_', ' ')}</span>
+                    </div>
+                  </div>
+                  <Badge variant={STATUS_BADGE[leave.status] || 'default'}>{leave.status}</Badge>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-zinc-600 bg-zinc-50 p-2 rounded-lg">
+                  <span>
+                    {isValid(s) ? format(s, 'dd MMM') : '—'} — {isValid(e) ? format(e, 'dd MMM yyyy') : '—'}
+                  </span>
+                  <span className="font-semibold text-zinc-900">{days ? `${days} ${days === 1 ? 'day' : 'days'}` : ''}</span>
+                </div>
+
+                <p className="text-xs text-zinc-600 line-clamp-2">{leave.reason}</p>
+
+                <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
+                  <button
+                    onClick={() => setViewingLeave(leave)}
+                    className="text-xs text-primary-900 font-medium hover:underline inline-flex items-center gap-1"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View Details
+                  </button>
+
+                  {isAdmin && isPending && (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleApprove(leave._id)} loading={approving}>
+                        <Check className="h-3.5 w-3.5 text-emerald-600" /> Approve
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleOpenReject(leave)}>
+                        <X className="h-3.5 w-3.5" /> Reject
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Pagination */}
+      {pagination.pages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={!pagination.hasPrevPage}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-zinc-500">
+            Page {pagination.page} of {pagination.pages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={!pagination.hasNextPage}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       {/* Apply Leave Modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Apply for Leave" size="md">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -313,11 +806,7 @@ export default function AttendanceLeaves() {
                     <SelectItem key={opt.value} value={opt.value}>
                       <span className="flex items-center justify-between w-full gap-4">
                         <span>{opt.label}</span>
-                        {b && (
-                          <span className="text-xs text-zinc-400">
-                            ({b.balance ?? 0} left)
-                          </span>
-                        )}
+                        {b && <span className="text-xs text-zinc-400">({b.balance ?? 0} left)</span>}
                       </span>
                     </SelectItem>
                   );
@@ -369,7 +858,10 @@ export default function AttendanceLeaves() {
               <div className="flex items-center gap-2 text-zinc-700">
                 <CalendarDays className="w-4 h-4 text-zinc-500" />
                 <span>
-                  Total Duration: <strong className="text-zinc-900">{leaveDuration} {leaveDuration === 1 ? 'day' : 'days'}</strong>
+                  Total Duration:{' '}
+                  <strong className="text-zinc-900">
+                    {leaveDuration} {leaveDuration === 1 ? 'day' : 'days'}
+                  </strong>
                 </span>
               </div>
               <span className="text-xs text-zinc-500 font-medium">
@@ -400,7 +892,9 @@ export default function AttendanceLeaves() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-sm font-medium text-zinc-700">Reason for Leave *</label>
-              <span className={`text-xs ${form.reason.length < 10 && form.reason.length > 0 ? 'text-amber-600 font-medium' : 'text-zinc-400'}`}>
+              <span
+                className={`text-xs ${form.reason.length < 10 && form.reason.length > 0 ? 'text-amber-600 font-medium' : 'text-zinc-400'}`}
+              >
                 {form.reason.length}/1000 (min 10)
               </span>
             </div>
@@ -430,7 +924,113 @@ export default function AttendanceLeaves() {
         </form>
       </Modal>
 
-      {/* Reject Leave Modal (Proper UI replacing prompt) */}
+      {/* View Details Modal */}
+      {viewingLeave && (
+        <Modal
+          open={!!viewingLeave}
+          onClose={() => setViewingLeave(null)}
+          title="Leave Request Details"
+          size="md"
+        >
+          <div className="space-y-4">
+            {/* Header info */}
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-primary-100 text-primary-900 flex items-center justify-center font-semibold text-sm">
+                  {viewingLeave.employee?.name ? viewingLeave.employee.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div>
+                  <h4 className="font-semibold text-zinc-900">{viewingLeave.employee?.name || '—'}</h4>
+                  <p className="text-xs text-zinc-400">{viewingLeave.employee?.email}</p>
+                </div>
+              </div>
+              <Badge variant={STATUS_BADGE[viewingLeave.status] || 'default'}>{viewingLeave.status}</Badge>
+            </div>
+
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-3 bg-zinc-50 p-3.5 rounded-xl border border-zinc-100 text-sm">
+              <div>
+                <p className="text-xs text-zinc-400">Leave Type</p>
+                <p className="font-medium text-zinc-900 capitalize mt-0.5">
+                  {viewingLeave.leaveType?.replace('_', ' ')}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-zinc-400">Duration</p>
+                <p className="font-medium text-zinc-900 mt-0.5">
+                  {(() => {
+                    const s = new Date(viewingLeave.startDate);
+                    const e = new Date(viewingLeave.endDate);
+                    const d = isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null;
+                    return d ? `${d} ${d === 1 ? 'day' : 'days'}` : '—';
+                  })()}
+                </p>
+              </div>
+
+              <div className="col-span-2">
+                <p className="text-xs text-zinc-400">Leave Period</p>
+                <p className="font-medium text-zinc-900 mt-0.5">
+                  {viewingLeave.startDate && format(new Date(viewingLeave.startDate), 'dd MMMM yyyy')} —{' '}
+                  {viewingLeave.endDate && format(new Date(viewingLeave.endDate), 'dd MMMM yyyy')}
+                </p>
+              </div>
+
+              <div className="col-span-2">
+                <p className="text-xs text-zinc-400">Submitted On</p>
+                <p className="font-medium text-zinc-900 mt-0.5">
+                  {viewingLeave.createdAt ? format(new Date(viewingLeave.createdAt), 'dd MMM yyyy, hh:mm a') : '—'}
+                </p>
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div>
+              <p className="text-xs font-medium text-zinc-500 mb-1">Reason for Request</p>
+              <div className="p-3 bg-zinc-50 rounded-lg text-sm text-zinc-800 leading-relaxed border border-zinc-100">
+                {viewingLeave.reason}
+              </div>
+            </div>
+
+            {/* If processed */}
+            {viewingLeave.status !== 'pending' && viewingLeave.approvedBy && (
+              <div className="p-3 bg-zinc-50 rounded-lg text-xs space-y-1 border border-zinc-100">
+                <p className="text-zinc-500">
+                  Reviewed by: <strong className="text-zinc-800">{viewingLeave.approvedBy.name}</strong>
+                </p>
+                {viewingLeave.comment && (
+                  <p className="text-zinc-500">
+                    Comment: <span className="text-zinc-800 font-medium">{viewingLeave.comment}</span>
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Admin Action Buttons if Pending */}
+            {isAdmin && viewingLeave.status === 'pending' && (
+              <div className="flex justify-end gap-2 pt-3 border-t border-zinc-100">
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => handleOpenReject(viewingLeave)}
+                  disabled={rejecting}
+                >
+                  <X className="w-4 h-4" /> Reject Request
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleApprove(viewingLeave._id)}
+                  loading={approving}
+                >
+                  <Check className="w-4 h-4" /> Approve Leave
+                </Button>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Reject Leave Modal */}
       <Modal
         open={rejectModalOpen}
         onClose={() => {
@@ -458,16 +1058,14 @@ export default function AttendanceLeaves() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-              Rejection Reason *
-            </label>
+            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Rejection Reason *</label>
             <Textarea
               value={rejectComment}
               onChange={(e) => {
                 setRejectComment(e.target.value);
                 if (rejectError) setRejectError('');
               }}
-              placeholder="State the reason why this leave request is being rejected..."
+              placeholder="State why this leave request is being rejected..."
               rows={3}
               required
               className={rejectError ? 'border-red-300' : ''}
@@ -492,161 +1090,6 @@ export default function AttendanceLeaves() {
           </div>
         </form>
       </Modal>
-
-      {/* Desktop Table */}
-      <div className="hidden md:block bg-white rounded-xl border border-zinc-200 overflow-hidden">
-        {isLoading ? (
-          <TableSkeleton rows={5} />
-        ) : leaves.length === 0 ? (
-          <EmptyState
-            icon={Calendar}
-            title="No leave records"
-            description="You have not submitted any leave requests yet."
-            action={
-              <Button onClick={handleOpenForm}>
-                <Plus className="w-4 h-4" /> Apply Leave
-              </Button>
-            }
-          />
-        ) : (
-          <table className="w-full">
-            <thead className="bg-zinc-50 border-b border-zinc-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Employee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Dates</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Duration</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Reason</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Status</th>
-                {isAdmin && <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase">Actions</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {leaves.map((leave) => {
-                const s = new Date(leave.startDate);
-                const e = new Date(leave.endDate);
-                const days = isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null;
-                return (
-                  <tr key={leave._id} className="hover:bg-zinc-50 transition-colors">
-                    <td className="px-4 py-3 text-sm font-medium text-zinc-900">{leave.employee?.name || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-zinc-600 capitalize">{leave.leaveType?.replace('_', ' ')}</td>
-                    <td className="px-4 py-3 text-sm text-zinc-600">
-                      {isValid(s) ? format(s, 'dd MMM') : '—'} — {isValid(e) ? format(e, 'dd MMM yyyy') : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-600">
-                      {days ? `${days} ${days === 1 ? 'day' : 'days'}` : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-600 max-w-[220px] truncate" title={leave.reason}>
-                      {leave.reason}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={STATUS_BADGE[leave.status] || 'default'}>{leave.status}</Badge>
-                    </td>
-                    {isAdmin && (
-                      <td className="px-4 py-3">
-                        {leave.status === 'pending' && (
-                          <div className="flex gap-1.5">
-                            <button
-                              onClick={() => handleApprove(leave._id)}
-                              disabled={approving}
-                              title="Approve leave"
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                            >
-                              <Check className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleOpenReject(leave)}
-                              disabled={rejecting}
-                              title="Reject leave"
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-3">
-        {isLoading ? (
-          <TableSkeleton rows={5} />
-        ) : leaves.length === 0 ? (
-          <EmptyState
-            icon={Calendar}
-            title="No leave records"
-            description="You have not submitted any leave requests yet."
-            action={
-              <Button onClick={handleOpenForm}>
-                <Plus className="w-4 h-4" /> Apply Leave
-              </Button>
-            }
-          />
-        ) : (
-          leaves.map((leave) => {
-            const s = new Date(leave.startDate);
-            const e = new Date(leave.endDate);
-            const days = isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null;
-            return (
-              <div key={leave._id} className="bg-white rounded-xl border border-zinc-200 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-medium text-zinc-900">{leave.employee?.name || '—'}</p>
-                  <Badge variant={STATUS_BADGE[leave.status] || 'default'}>{leave.status}</Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm text-zinc-500 mb-1">
-                  <span className="capitalize">{leave.leaveType?.replace('_', ' ')}</span>
-                  {days && <span>{days} {days === 1 ? 'day' : 'days'}</span>}
-                </div>
-                <p className="text-sm text-zinc-600">
-                  {isValid(s) ? format(s, 'dd MMM') : '—'} — {isValid(e) ? format(e, 'dd MMM yyyy') : '—'}
-                </p>
-                {leave.reason && <p className="text-sm text-zinc-500 mt-2 bg-zinc-50 p-2.5 rounded-lg">{leave.reason}</p>}
-                {isAdmin && leave.status === 'pending' && (
-                  <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handleApprove(leave._id)} loading={approving}>
-                      <Check className="h-3.5 w-3.5 text-green-600" /> Approve
-                    </Button>
-                    <Button size="sm" variant="danger" className="flex-1" onClick={() => handleOpenReject(leave)}>
-                      <X className="h-3.5 w-3.5" /> Reject
-                    </Button>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {pagination.pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={!pagination.hasPrevPage}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-zinc-500">
-            Page {pagination.page} of {pagination.pages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={!pagination.hasNextPage}
-          >
-            Next
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

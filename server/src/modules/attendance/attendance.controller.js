@@ -194,11 +194,18 @@ export const applyLeave = async (req, res, next) => {
 
 export const listLeaves = async (req, res, next) => {
   try {
-    const result = await attendanceService.getLeaves(req.query, {
-      page: req.query.page,
-      limit: req.query.limit,
+    const result = await attendanceService.getLeaves(
+      req.query,
+      {
+        page: req.query.page,
+        limit: req.query.limit,
+      },
+      req.user
+    );
+    ApiResponse.paginated(res, result.leaves, {
+      ...result.pagination,
+      pendingCount: result.pendingCount ?? 0,
     });
-    ApiResponse.paginated(res, result.leaves, result.pagination);
   } catch (error) {
     next(error);
   }

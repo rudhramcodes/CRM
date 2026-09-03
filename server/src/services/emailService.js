@@ -259,6 +259,81 @@ export const sendPortalInviteEmail = async (email, inviteToken) => {
   });
 };
 
+// ── Leave Emails ──
+
+export const renderLeaveAppliedEmail = ({ employeeName, leaveType, dates, duration, reason }) =>
+  renderEmail({
+    preheader: `New leave application from ${employeeName} for ${duration}.`,
+    heading: 'New Leave Application',
+    subtext: `<strong style="color:${INK};">${employeeName}</strong> has submitted a new leave request.`,
+    bodyHtml: `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:10px;overflow:hidden;margin-bottom:16px;">
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};width:120px;">Employee</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${employeeName}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Leave Type</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${leaveType}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Dates</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${dates} (${duration})</td></tr>
+        <tr><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${MUTED};">Reason</td><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${BODY};">${reason || '—'}</td></tr>
+      </table>
+    `,
+    cta: { url: `${config.clientUrl}/attendance/leaves`, text: 'Review & Approve Leave' },
+    footerNote: 'Rudhram &middot; Attendance & Leave Management',
+  });
+
+export const renderLeaveApprovedEmail = ({ employeeName, leaveType, dates, duration }) =>
+  renderEmail({
+    preheader: `Your leave request for ${dates} has been approved.`,
+    heading: 'Leave Request Approved',
+    subtext: `Hello ${employeeName}, your leave request has been <strong style="color:#059669;">Approved</strong>.`,
+    bodyHtml: `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:10px;overflow:hidden;margin-bottom:16px;">
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};width:120px;">Leave Type</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${leaveType}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Dates</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${dates} (${duration})</td></tr>
+        <tr><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${MUTED};">Status</td><td style="padding:12px 16px;font-family:${FONT};font-size:13px;font-weight:700;color:#059669;">Approved</td></tr>
+      </table>
+    `,
+    cta: { url: `${config.clientUrl}/attendance/leaves`, text: 'View Leave Details' },
+    footerNote: 'Rudhram &middot; Attendance & Leave Management',
+  });
+
+export const renderLeaveRejectedEmail = ({ employeeName, leaveType, dates, duration, reason }) =>
+  renderEmail({
+    preheader: `Your leave request for ${dates} was rejected.`,
+    heading: 'Leave Request Update',
+    subtext: `Hello ${employeeName}, your leave request has been <strong style="color:#dc2626;">Rejected</strong>.`,
+    bodyHtml: `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:10px;overflow:hidden;margin-bottom:16px;">
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};width:120px;">Leave Type</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${leaveType}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Dates</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${dates} (${duration})</td></tr>
+        <tr><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${MUTED};">Rejection Reason</td><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:#dc2626;font-weight:500;">${reason || 'Not specified'}</td></tr>
+      </table>
+    `,
+    cta: { url: `${config.clientUrl}/attendance/leaves`, text: 'View Leave Details' },
+    footerNote: 'Rudhram &middot; Attendance & Leave Management',
+  });
+
+export const sendLeaveAppliedEmail = async ({ to, employeeName, leaveType, dates, duration, reason }) => {
+  return sendEmail({
+    to,
+    subject: `New Leave Request: ${employeeName} (${leaveType})`,
+    html: renderLeaveAppliedEmail({ employeeName, leaveType, dates, duration, reason }),
+  });
+};
+
+export const sendLeaveApprovedEmail = async ({ to, employeeName, leaveType, dates, duration }) => {
+  return sendEmail({
+    to,
+    subject: `Leave Request Approved — ${leaveType} (${dates})`,
+    html: renderLeaveApprovedEmail({ employeeName, leaveType, dates, duration }),
+  });
+};
+
+export const sendLeaveRejectedEmail = async ({ to, employeeName, leaveType, dates, duration, reason }) => {
+  return sendEmail({
+    to,
+    subject: `Leave Request Rejected — ${leaveType} (${dates})`,
+    html: renderLeaveRejectedEmail({ employeeName, leaveType, dates, duration, reason }),
+  });
+};
+
 const GOLD = '#B47737';
 const CREAM = '#F6F1E0';
 const DARK_BROWN = '#3B2515';

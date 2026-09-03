@@ -145,7 +145,7 @@ export const attendanceApi = api.injectEndpoints({
         method: 'PATCH',
         body: { comment },
       }),
-      invalidatesTags: ['Leave', 'LeaveBalance'],
+      invalidatesTags: ['Leave', 'LeaveBalance', 'Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
     rejectLeave: builder.mutation({
@@ -154,7 +154,7 @@ export const attendanceApi = api.injectEndpoints({
         method: 'PATCH',
         body: { comment },
       }),
-      invalidatesTags: ['Leave', 'LeaveBalance'],
+      invalidatesTags: ['Leave', 'LeaveBalance', 'Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
     getLeaveBalance: builder.query({

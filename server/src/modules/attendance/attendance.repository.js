@@ -194,6 +194,12 @@ export const updateLeaveStatus = async (id, status, approvedBy, comment) => {
   ).populate('employee', 'name email avatar role');
 };
 
+export const countPendingLeaves = async (filter = {}) => {
+  return LeaveRequest.countDocuments({ status: 'pending', ...filter });
+};
+
+export { LeaveRequest };
+
 // ===================== HOLIDAY =====================
 
 export const createHoliday = async (data) => {
