@@ -22,6 +22,8 @@ const ROLES_LIST = [
   { value: 'client', label: 'Client' },
 ];
 
+const CREATABLE_ROLES = ROLES_LIST.filter((role) => role.value !== 'super_admin');
+
 const ROLE_COLORS = {
   super_admin: 'bg-purple-100 text-purple-700',
   admin: 'bg-blue-100 text-blue-700',
@@ -282,7 +284,8 @@ function UserFormModal({ user, onClose, onSave }) {
             <Select value={form.role} onValueChange={(v) => setForm((p) => ({ ...p, role: v }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ROLES_LIST.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                {(user?.role === 'super_admin' ? ROLES_LIST.filter((r) => r.value === 'super_admin') : CREATABLE_ROLES)
+                  .map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

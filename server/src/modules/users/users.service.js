@@ -33,6 +33,10 @@ export const getUserById = async (id) => {
 };
 
 export const createUser = async (userData, createdBy) => {
+  if (userData.role === 'super_admin') {
+    throw ApiError.forbidden('The existing Super Admin is the only Super Admin account.');
+  }
+
   const existingUser = await authRepository.findByEmail(userData.email);
   if (existingUser) {
     throw ApiError.conflict('Email already registered');
@@ -60,6 +64,13 @@ export const updateUser = async (id, updateData, updatedBy) => {
   const user = await authRepository.findById(id);
   if (!user) {
     throw ApiError.notFound('User not found');
+  }
+
+  if (updateData.role === 'super_admin' && user.role !== 'super_admin') {
+    throw ApiError.forbidden('The existing Super Admin is the only Super Admin account.');
+  }
+  if (user.role === 'super_admin' && updateData.role && updateData.role !== 'super_admin') {
+    throw ApiError.forbidden('The existing Super Admin role cannot be changed.');
   }
 
   // If role is changing, update permissions
