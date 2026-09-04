@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UserPlus, Search, Shield, Trash2, X } from 'lucide-react';
+import { UserPlus, Search, Pencil, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSelector } from 'react-redux';
 import Button from '../../../components/ui/Button';
@@ -152,7 +152,7 @@ export default function UserManagement() {
                             onClick={() => { setEditUser(u); setShowForm(true); }}
                             className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors rounded"
                             title="Edit">
-                            <Shield className="w-4 h-4" />
+                            <Pencil className="w-4 h-4" />
                           </button>
                           {user?.role === 'super_admin' && u.role !== 'super_admin' && (
                             <button type="button"
