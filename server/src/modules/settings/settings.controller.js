@@ -34,7 +34,7 @@ export const updateOrgSettings = async (req, res, next) => {
 
 export const getRolesPermissions = async (req, res, next) => {
   try {
-    const roles = settingsService.getRolesPermissions();
+    const roles = await settingsService.getRolesPermissions();
     ApiResponse.success(res, 200, { roles });
   } catch (err) { next(err); }
 };

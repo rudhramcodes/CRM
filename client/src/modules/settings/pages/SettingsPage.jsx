@@ -13,7 +13,7 @@ const TABS = [
   { id: 'organization', label: 'Organization', icon: Building2, roles: ['super_admin', 'admin'] },
   { id: 'security', label: 'Security', icon: Lock, roles: ['super_admin', 'admin'] },
   { id: 'integrations', label: 'Integrations', icon: Plug, roles: ['super_admin', 'admin'] },
-  { id: 'roles', label: 'Roles & Permissions', icon: Shield, roles: ['super_admin'] },
+  { id: 'roles', label: 'Role Access', icon: Shield, roles: ['super_admin'] },
 ];
 
 export default function SettingsPage() {

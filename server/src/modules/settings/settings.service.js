@@ -47,7 +47,17 @@ export const updateOrgSettings = async (data) => {
   return getOrgSettings();
 };
 
-export const getRolesPermissions = () => ROLE_PERMISSIONS;
+export const getRolesPermissions = async () => {
+  const overrides = await Setting.find({ key: { $regex: /^role_permissions:/ } });
+  const roles = Object.fromEntries(
+    Object.entries(ROLE_PERMISSIONS).map(([role, permissions]) => [role, [...permissions]]),
+  );
+  for (const setting of overrides) {
+    const role = setting.key.replace('role_permissions:', '');
+    if (roles[role] && Array.isArray(setting.value)) roles[role] = setting.value;
+  }
+  return roles;
+};
 
 export const updateRolePermissions = async (role, permissions) => {
   if (!ROLE_PERMISSIONS[role]) throw ApiError.notFound(`Role "${role}" not found`);
