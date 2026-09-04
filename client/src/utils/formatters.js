@@ -88,7 +88,7 @@ export function formatHours(decimalHours, fallback = '0m') {
     return fallback;
   }
   const hours = Number(decimalHours);
-  if (Number.isNaN(hours)) return fallback;
+  if (!Number.isFinite(hours) || hours < 0) return fallback;
   if (hours === 0) return '0m';
 
   const totalMinutes = Math.round(hours * 60);
@@ -111,11 +111,12 @@ export function formatMinutes(totalMinutes, fallback = '0m') {
     return fallback;
   }
   const minutes = Number(totalMinutes);
-  if (Number.isNaN(minutes)) return fallback;
+  if (!Number.isFinite(minutes) || minutes < 0) return fallback;
   if (minutes === 0) return '0m';
 
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
+  const roundedMinutes = Math.round(minutes);
+  const h = Math.floor(roundedMinutes / 60);
+  const m = roundedMinutes % 60;
 
   if (h > 0 && m > 0) return `${h}h ${m}m`;
   if (h > 0) return `${h}h`;
