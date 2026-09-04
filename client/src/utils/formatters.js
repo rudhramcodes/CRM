@@ -76,3 +76,48 @@ export function getTimeAgo(date) {
   if (diffDays < 7) return `${diffDays}d ago`;
   return formatDate(date);
 }
+
+/**
+ * Format decimal hours to human-readable format (e.g., 1.5 → "1h 30m", 0.05 → "3m")
+ * @param {number|string|null|undefined} decimalHours - Hours in decimal format
+ * @param {string} fallback - Fallback value for null/undefined/zero
+ * @returns {string} Formatted duration string
+ */
+export function formatHours(decimalHours, fallback = '0m') {
+  if (decimalHours === null || decimalHours === undefined || decimalHours === '') {
+    return fallback;
+  }
+  const hours = Number(decimalHours);
+  if (Number.isNaN(hours)) return fallback;
+  if (hours === 0) return '0m';
+
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+}
+
+/**
+ * Format total minutes to human-readable format (e.g., 90 → "1h 30m", 3 → "3m")
+ * @param {number|string|null|undefined} totalMinutes - Total minutes
+ * @param {string} fallback - Fallback value for null/undefined/zero
+ * @returns {string} Formatted duration string
+ */
+export function formatMinutes(totalMinutes, fallback = '0m') {
+  if (totalMinutes === null || totalMinutes === undefined || totalMinutes === '') {
+    return fallback;
+  }
+  const minutes = Number(totalMinutes);
+  if (Number.isNaN(minutes)) return fallback;
+  if (minutes === 0) return '0m';
+
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+}

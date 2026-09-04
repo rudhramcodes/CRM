@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { useGetAttendanceListQuery, useRequestRegularizationMutation } from '../../../services/attendanceApi';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
+import Modal from '../../../components/ui/Modal';
+import Textarea from '../../../components/ui/Textarea';
 import { format } from 'date-fns';
 import { Clock, MapPin, AlertTriangle, FileText, Coffee, Play, LogOut } from 'lucide-react';
+import { formatHours, formatMinutes } from '../../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const STATUS_BADGE = {
@@ -30,18 +34,28 @@ export default function DayDetailPanel({ date, employeeId }) {
     limit: 5,
   });
 
-  const [requestRegularization] = useRequestRegularizationMutation();
+  const [requestRegularization, { isLoading: submittingRegularize }] = useRequestRegularizationMutation();
+  const [regularizeOpen, setRegularizeOpen] = useState(false);
+  const [regularizeReason, setRegularizeReason] = useState('');
+  const [regularizeError, setRegularizeError] = useState('');
 
   const records = Array.isArray(data?.data) ? data.data : [];
   const record = records[0];
 
-  const handleRegularize = async () => {
+  const handleRegularize = async (e) => {
+    e.preventDefault();
     if (!record) return;
-    const reason = prompt('Reason for regularization:');
-    if (!reason) return;
+    const reason = regularizeReason.trim();
+    if (reason.length < 10) {
+      setRegularizeError('Reason must be at least 10 characters');
+      return;
+    }
     try {
       await requestRegularization({ attendanceId: record._id, reason }).unwrap();
       toast.success('Regularization request submitted');
+      setRegularizeOpen(false);
+      setRegularizeReason('');
+      setRegularizeError('');
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to submit');
     }
@@ -69,9 +83,6 @@ export default function DayDetailPanel({ date, employeeId }) {
 
   const sessions = record.sessions || [];
   const hasSessions = sessions.length > 0;
-  const breakH = Math.floor((record.totalBreakMinutes || 0) / 60);
-  const breakM = (record.totalBreakMinutes || 0) % 60;
-
   return (
     <div className="bg-white rounded-xl border border-zinc-200 p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -107,8 +118,8 @@ export default function DayDetailPanel({ date, employeeId }) {
 
                 {session.workMinutes > 0 && (
                   <div className="pl-6 text-zinc-500">
-                    Work: {(session.workMinutes / 60).toFixed(1)}h
-                    {session.overtime > 0 && <span className="text-green-600 ml-1">+{(session.overtime / 60).toFixed(1)}h OT</span>}
+                    Work: {formatMinutes(session.workMinutes)}
+                    {session.overtime > 0 && <span className="text-green-600 ml-1">+{formatMinutes(session.overtime)} OT</span>}
                   </div>
                 )}
 
@@ -120,7 +131,7 @@ export default function DayDetailPanel({ date, employeeId }) {
                         <Coffee className="h-3 w-3 text-amber-500 shrink-0" />
                         <span>
                           Break {bi + 1}: {fmtTime(brk.start)} — {fmtTime(brk.end)}
-                          {brk.duration ? ` (${brk.duration}m)` : ''}
+                          {brk.duration !== null && brk.duration !== undefined ? ` (${formatMinutes(brk.duration)})` : ''}
                         </span>
                       </div>
                     ))}
@@ -149,18 +160,18 @@ export default function DayDetailPanel({ date, employeeId }) {
         )}
 
         {/* Totals */}
-        {record.workHours > 0 && (
+        {record.workHours !== null && record.workHours !== undefined && (
           <div className="flex items-center gap-2 text-zinc-600">
             <Clock className="h-4 w-4 text-zinc-400" />
-            <span>{record.workHours}h worked</span>
-            {record.overtime > 0 && <span className="text-green-600">({record.overtime}h OT)</span>}
+            <span>{formatHours(record.workHours)} worked</span>
+            {record.overtime > 0 && <span className="text-green-600">({formatHours(record.overtime)} OT)</span>}
           </div>
         )}
 
-        {record.totalBreakMinutes > 0 && (
+        {record.totalBreakMinutes !== null && record.totalBreakMinutes !== undefined && (
           <div className="flex items-center gap-2 text-zinc-500">
             <Coffee className="h-4 w-4 text-zinc-400" />
-            <span>Total break: {breakH > 0 ? `${breakH}h ` : ''}{breakM}m</span>
+            <span>Total break: {formatMinutes(record.totalBreakMinutes)}</span>
           </div>
         )}
 
@@ -181,7 +192,7 @@ export default function DayDetailPanel({ date, employeeId }) {
       {record.lateMinutes > 0 && (
         <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg text-sm text-amber-700">
           <AlertTriangle className="h-4 w-4" />
-          <span>Late by {record.lateMinutes} min</span>
+          <span>Late by {formatMinutes(record.lateMinutes)}</span>
         </div>
       )}
 
@@ -193,10 +204,37 @@ export default function DayDetailPanel({ date, employeeId }) {
       )}
 
       {record.status === 'absent' && (
-        <Button variant="outline" className="w-full" onClick={handleRegularize}>
+        <Button variant="outline" className="w-full" onClick={() => { setRegularizeOpen(true); setRegularizeError(''); }}>
           Request Regularization
         </Button>
       )}
+
+      <Modal open={regularizeOpen} onClose={() => setRegularizeOpen(false)} title="Request Regularization">
+        <form onSubmit={handleRegularize} className="space-y-4">
+          <p className="text-sm text-zinc-500">
+            Approving a request does not change clock times. An admin can correct times with Manual Entry.
+          </p>
+          <Textarea
+            label="Reason"
+            value={regularizeReason}
+            onChange={(e) => {
+              setRegularizeReason(e.target.value);
+              setRegularizeError('');
+            }}
+            error={regularizeError}
+            rows={4}
+            placeholder="Explain why this day should be regularized (min 10 characters)"
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setRegularizeOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={submittingRegularize}>
+              Submit
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -23,6 +23,27 @@ const isWeekend = (date) => {
   return day === 0 || day === 6;
 };
 
+export const NON_WORKING_ATTENDANCE_STATUSES = ['leave', 'holiday', 'weekend'];
+
+export const getClockInBlockReason = (record) => {
+  if (!record || !NON_WORKING_ATTENDANCE_STATUSES.includes(record.status)) return null;
+  if (record.status === 'leave') return 'You have an approved leave for today';
+  if (record.status === 'weekend') return 'Clock-in is not allowed on weekends';
+  if (record.status === 'holiday') {
+    return record.notes ? `Today is a holiday: ${record.notes}` : 'Clock-in is not allowed on holidays';
+  }
+  return 'Clock-in is not allowed today';
+};
+
+export const applyWorkingDayClockInStatus = (record, isWFH) => {
+  const blockReason = getClockInBlockReason(record);
+  if (blockReason) {
+    throw ApiError.badRequest(blockReason);
+  }
+  record.status = isWFH ? 'wfh' : 'present';
+  return record;
+};
+
 export const parseStartOfDay = (val) => {
   if (!val) return null;
   if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
@@ -47,7 +68,7 @@ export const parseEndOfDay = (val) => {
 
 // Auto-migrate old-format records: if clockIn.time exists but sessions[] is empty,
 // create a session from legacy fields so break/clockout work for pre-migration records.
-const ensureActiveSession = (record) => {
+export const ensureActiveSession = (record) => {
   if (!record.sessions) record.sessions = [];
 
   const hasActive = record.sessions.find(s => s.clockIn?.time && !s.clockOut?.time);
@@ -83,7 +104,7 @@ const calcSessionBreakMinutes = (breaks = []) => {
   return Math.round(total);
 };
 
-const recalcRecordTotals = (record, shiftDuration = 8) => {
+export const recalcRecordTotals = (record, shiftDuration = 8) => {
   let totalWorkMinutes = 0;
   let totalBreakMinutes = 0;
 
@@ -125,171 +146,201 @@ const recalcRecordTotals = (record, shiftDuration = 8) => {
 // ===================== ATTENDANCE =====================
 
 export const clockIn = async (employeeId, data, ip) => {
-  const now = new Date();
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
+  const mongoSession = await mongoose.startSession();
+  mongoSession.startTransaction();
+  try {
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
 
-  // Check for approved leave
-  const leaves = await attendanceRepo.findAllLeaves(
-    { employee: employeeId, status: 'approved', startDate: { $lte: now }, endDate: { $gte: today } },
-    { limit: 1 }
-  );
-  if (leaves.leaves.length > 0) {
-    throw ApiError.badRequest('You have an approved leave for today');
-  }
+    // Cover the full local calendar day so date-only leave bounds still match
+    const leaves = await attendanceRepo.findAllLeaves(
+      {
+        employee: employeeId,
+        status: 'approved',
+        startDate: { $lte: parseEndOfDay(today) },
+        endDate: { $gte: today },
+      },
+      { limit: 1 }
+    );
+    if (leaves.leaves.length > 0) {
+      throw ApiError.badRequest('You have an approved leave for today');
+    }
 
-  // Find or create shift
-  let shift = await attendanceRepo.findDefaultShift();
-  if (!shift) {
-    shift = await Shift.create({
-      name: 'General Shift',
-      startTime: '09:00',
-      endTime: '18:00',
-      gracePeriod: 15,
-      isActive: true,
-      isDefault: true,
+    // Find or create shift
+    let shift = await attendanceRepo.findDefaultShift();
+    if (!shift) {
+      shift = await Shift.create({
+        name: 'General Shift',
+        startTime: '09:00',
+        endTime: '18:00',
+        gracePeriod: 15,
+        isActive: true,
+        isDefault: true,
+      });
+    }
+
+    let record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
+
+    // Check if already has active session
+    if (record) {
+      const activeSession = (record.sessions || []).find(s => s.clockIn?.time && !s.clockOut?.time);
+      if (activeSession) {
+        throw ApiError.badRequest('Already clocked in. Clock out first before clocking in again.');
+      }
+
+      const blockReason = getClockInBlockReason(record);
+      if (blockReason) throw ApiError.badRequest(blockReason);
+    }
+
+    // Check holiday / weekend
+    if (!record) {
+      const holiday = await attendanceRepo.findHolidayByDate(today);
+      if (holiday) {
+        await attendanceRepo.createAttendance({
+          employee: employeeId,
+          date: today,
+          shift: shift._id,
+          status: 'holiday',
+          sessions: [],
+          createdBy: employeeId,
+        });
+        throw ApiError.badRequest(`Today is a holiday: ${holiday.name}`);
+      }
+
+      if (isWeekend(today)) {
+        record = await attendanceRepo.createAttendance({
+          employee: employeeId,
+          date: today,
+          shift: shift._id,
+          status: 'weekend',
+          sessions: [],
+          createdBy: employeeId,
+        });
+        throw ApiError.badRequest('Clock-in is not allowed on weekends');
+      } else {
+        record = await attendanceRepo.createAttendance({
+          employee: employeeId,
+          date: today,
+          shift: shift._id,
+          status: data?.isWFH ? 'wfh' : 'present',
+          isWFH: data?.isWFH || false,
+          wfhReason: data?.wfhReason || null,
+          sessions: [],
+          createdBy: employeeId,
+        });
+      }
+    }
+
+    // Late detection
+    const shiftStart = parseHHMM(shift.startTime);
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const graceEnd = shiftStart + (shift.gracePeriod || 15);
+    const isLate = nowMinutes > graceEnd;
+    const lateMinutes = isLate ? nowMinutes - graceEnd : 0;
+
+    // Resolve location (Office geofence or Area name)
+    let resolvedLocation = data?.location || {};
+    if (data?.location?.lat != null && data?.location?.lng != null) {
+      resolvedLocation = await resolveLocationDetails(data.location);
+    }
+
+    // Push new session
+    const newSession = {
+      clockIn: {
+        time: now,
+        ip: ip || null,
+        location: resolvedLocation,
+      },
+      clockOut: null,
+      breaks: [],
+      workMinutes: 0,
+      overtime: 0,
+    };
+
+    if (!record.sessions) record.sessions = [];
+    record.sessions.push(newSession);
+    record.isLate = isLate;
+    record.lateMinutes = lateMinutes;
+    applyWorkingDayClockInStatus(record, data?.isWFH);
+    if (data?.isWFH) {
+      record.isWFH = true;
+      record.wfhReason = data?.wfhReason || null;
+    }
+
+    recalcRecordTotals(record, shift.duration);
+
+    record.events.push({
+      type: 'clock_in',
+      timestamp: now,
+      metadata: { ip, isLate, lateMinutes, sessionIndex: record.sessions.length - 1 },
     });
+
+    await record.save({ session: mongoSession });
+    await mongoSession.commitTransaction();
+    return record;
+  } catch (err) {
+    await mongoSession.abortTransaction();
+    throw err;
+  } finally {
+    mongoSession.endSession();
   }
-
-  let record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
-
-  // Check if already has active session
-  if (record) {
-    const activeSession = (record.sessions || []).find(s => s.clockIn?.time && !s.clockOut?.time);
-    if (activeSession) {
-      throw ApiError.badRequest('Already clocked in. Clock out first before clocking in again.');
-    }
-  }
-
-  // Check holiday / weekend
-  if (!record) {
-    const holiday = await attendanceRepo.findHolidayByDate(today);
-    if (holiday) {
-      record = await attendanceRepo.createAttendance({
-        employee: employeeId,
-        date: today,
-        shift: shift._id,
-        status: 'holiday',
-        sessions: [],
-        createdBy: employeeId,
-      });
-      throw ApiError.badRequest(`Today is a holiday: ${holiday.name}`);
-    }
-
-    if (isWeekend(today)) {
-      record = await attendanceRepo.createAttendance({
-        employee: employeeId,
-        date: today,
-        shift: shift._id,
-        status: 'weekend',
-        sessions: [],
-        createdBy: employeeId,
-      });
-    } else {
-      record = await attendanceRepo.createAttendance({
-        employee: employeeId,
-        date: today,
-        shift: shift._id,
-        status: data?.isWFH ? 'wfh' : 'present',
-        isWFH: data?.isWFH || false,
-        wfhReason: data?.wfhReason || null,
-        sessions: [],
-        createdBy: employeeId,
-      });
-    }
-  }
-
-  // Late detection
-  const shiftStart = parseHHMM(shift.startTime);
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const graceEnd = shiftStart + (shift.gracePeriod || 15);
-  const isLate = nowMinutes > graceEnd;
-  const lateMinutes = isLate ? nowMinutes - graceEnd : 0;
-
-  // Resolve location (Office geofence or Area name)
-  let resolvedLocation = data?.location || {};
-  if (data?.location?.lat != null && data?.location?.lng != null) {
-    resolvedLocation = await resolveLocationDetails(data.location);
-  }
-
-  // Push new session
-  const newSession = {
-    clockIn: {
-      time: now,
-      ip: ip || null,
-      location: resolvedLocation,
-    },
-    clockOut: null,
-    breaks: [],
-    workMinutes: 0,
-    overtime: 0,
-  };
-
-  record.sessions.push(newSession);
-  record.isLate = isLate;
-  record.lateMinutes = lateMinutes;
-  record.status = data?.isWFH ? 'wfh' : 'present';
-  if (data?.isWFH) {
-    record.isWFH = true;
-    record.wfhReason = data?.wfhReason || null;
-  }
-
-  recalcRecordTotals(record, shift.duration);
-
-  record.events.push({
-    type: 'clock_in',
-    timestamp: now,
-    metadata: { ip, isLate, lateMinutes, sessionIndex: record.sessions.length - 1 },
-  });
-
-  await record.save();
-  return record;
 };
 
 export const clockOut = async (employeeId, location) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const mongoSession = await mongoose.startSession();
+  mongoSession.startTransaction();
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
-  if (!record) throw ApiError.badRequest('You have not clocked in today');
+    const record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
+    if (!record) throw ApiError.badRequest('You have not clocked in today');
 
-  const session = ensureActiveSession(record);
-  if (!session) throw ApiError.badRequest('No active session to clock out');
+    const activeSession = ensureActiveSession(record);
+    if (!activeSession) throw ApiError.badRequest('No active session to clock out');
 
-  const now = new Date();
+    const now = new Date();
 
-  let resolvedLocation = location || {};
-  if (location?.lat != null && location?.lng != null) {
-    resolvedLocation = await resolveLocationDetails(location);
-  }
-
-  session.clockOut = { time: now, location: resolvedLocation };
-
-  for (const brk of session.breaks) {
-    if (brk.start && !brk.end) {
-      brk.end = now;
-      brk.duration = Math.round((now - new Date(brk.start)) / 60000);
+    let resolvedLocation = location || {};
+    if (location?.lat != null && location?.lng != null) {
+      resolvedLocation = await resolveLocationDetails(location);
     }
+
+    activeSession.clockOut = { time: now, location: resolvedLocation };
+
+    for (const brk of activeSession.breaks) {
+      if (brk.start && !brk.end) {
+        brk.end = now;
+        brk.duration = Math.round((now - new Date(brk.start)) / 60000);
+      }
+    }
+
+    let shiftDuration = 8;
+    if (record.shift?.duration) shiftDuration = record.shift.duration;
+    else if (record.shift?._id) {
+      const shift = await attendanceRepo.findShiftById(record.shift._id);
+      if (shift) shiftDuration = shift.duration;
+    }
+
+    recalcRecordTotals(record, shiftDuration);
+
+    const sessionIdx = record.sessions.indexOf(activeSession);
+    record.events.push({
+      type: 'clock_out',
+      timestamp: now,
+      metadata: { workHours: record.workHours, overtime: record.overtime, sessionIndex: sessionIdx },
+    });
+
+    await record.save({ session: mongoSession });
+    await mongoSession.commitTransaction();
+    return record;
+  } catch (err) {
+    await mongoSession.abortTransaction();
+    throw err;
+  } finally {
+    mongoSession.endSession();
   }
-
-  let shiftDuration = 8;
-  if (record.shift?.duration) shiftDuration = record.shift.duration;
-  else if (record.shift?._id) {
-    const shift = await attendanceRepo.findShiftById(record.shift._id);
-    if (shift) shiftDuration = shift.duration;
-  }
-
-  recalcRecordTotals(record, shiftDuration);
-
-  const sessionIdx = record.sessions.indexOf(session);
-  record.events.push({
-    type: 'clock_out',
-    timestamp: now,
-    metadata: { workHours: record.workHours, overtime: record.overtime, sessionIndex: sessionIdx },
-  });
-
-  await record.save();
-  return record;
 };
 
 export const startBreak = async (employeeId) => {
@@ -837,16 +888,26 @@ export const approveLeave = async (id, adminId, comment) => {
     const holiday = await attendanceRepo.findHolidayByDate(date);
     if (holiday) continue;
 
-    const existing = await attendanceRepo.findAttendanceByEmployeeAndDate(leave.employee, date);
+    const empId = leave.employee?._id || leave.employee;
+    const existing = await attendanceRepo.findAttendanceByEmployeeAndDate(empId, date);
     if (existing) {
       await attendanceRepo.updateAttendance(existing._id, {
         status: 'leave',
         leave: leave._id,
+        sessions: [],
+        clockIn: {},
+        clockOut: {},
+        breaks: [],
+        workHours: 0,
+        overtime: 0,
+        totalBreakMinutes: 0,
+        isLate: false,
+        lateMinutes: 0,
       });
     } else {
       const shift = await attendanceRepo.findDefaultShift();
       await attendanceRepo.createAttendance({
-        employee: leave.employee,
+        employee: empId,
         date,
         shift: shift?._id,
         status: 'leave',

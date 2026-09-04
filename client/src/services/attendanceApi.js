@@ -104,7 +104,7 @@ export const attendanceApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Attendance', 'AttendanceStats'],
+      invalidatesTags: ['Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
     requestRegularization: builder.mutation({
@@ -122,7 +122,7 @@ export const attendanceApi = api.injectEndpoints({
         method: 'PATCH',
         body,
       }),
-      invalidatesTags: ['Attendance'],
+      invalidatesTags: ['Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
     applyLeave: builder.mutation({
@@ -221,7 +221,7 @@ export const attendanceApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Holiday'],
+      invalidatesTags: ['Holiday', 'Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
     updateHoliday: builder.mutation({
@@ -230,7 +230,7 @@ export const attendanceApi = api.injectEndpoints({
         method: 'PATCH',
         body,
       }),
-      invalidatesTags: ['Holiday'],
+      invalidatesTags: ['Holiday', 'Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
     deleteHoliday: builder.mutation({
@@ -238,7 +238,7 @@ export const attendanceApi = api.injectEndpoints({
         url: `/attendance/holidays/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Holiday'],
+      invalidatesTags: ['Holiday', 'Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
     getDailyReport: builder.query({

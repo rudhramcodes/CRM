@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { Attendance, Shift, Holiday } from './attendance.model.js';
 import User from '../auth/auth.model.js';
 import logger from '../../utils/logger.js';
+import { ensureActiveSession, recalcRecordTotals } from './attendance.service.js';
 
 const autoClockOut = async () => {
   try {
@@ -11,48 +12,46 @@ const autoClockOut = async () => {
     const shifts = await Shift.find({ isActive: true });
 
     for (const shift of shifts) {
-      if (shift.endTime === currentHHMM) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+      if (shift.endTime !== currentHHMM) continue;
 
-        const records = await Attendance.find({
-          date: { $gte: today, $lt: tomorrow },
-          'clockIn.time': { $exists: true, $ne: null },
-          'clockOut.time': { $exists: false },
-          shift: shift._id,
-        });
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
-        for (const record of records) {
-          const clockOutTime = new Date();
-          let totalBreakMinutes = 0;
-          for (const brk of record.breaks || []) {
-            if (brk.start && brk.end) {
-              totalBreakMinutes += (new Date(brk.end) - new Date(brk.start)) / 60000;
-            }
+      const records = await Attendance.find({
+        date: { $gte: today, $lt: tomorrow },
+        shift: shift._id,
+        $or: [
+          { sessions: { $elemMatch: { 'clockIn.time': { $ne: null }, 'clockOut.time': null } } },
+          { 'clockIn.time': { $exists: true, $ne: null }, 'clockOut.time': { $exists: false } },
+        ],
+      });
+
+      for (const record of records) {
+        const activeSession = ensureActiveSession(record);
+        if (!activeSession) continue;
+
+        const clockOutTime = new Date();
+        activeSession.clockOut = { time: clockOutTime };
+
+        for (const brk of activeSession.breaks || []) {
+          if (brk.start && !brk.end) {
+            brk.end = clockOutTime;
+            brk.duration = Math.round((clockOutTime - new Date(brk.start)) / 60000);
           }
-
-          const workMinutes = (clockOutTime - new Date(record.clockIn.time)) / 60000 - totalBreakMinutes;
-          const workHours = +(workMinutes / 60).toFixed(2);
-          const overtime = +(Math.max(0, workHours - shift.duration)).toFixed(2);
-
-          await Attendance.findByIdAndUpdate(record._id, {
-            'clockOut.time': clockOutTime,
-            workHours,
-            overtime,
-            $push: {
-              events: {
-                type: 'auto_clock_out',
-                timestamp: clockOutTime,
-                metadata: { workHours, overtime, auto: true },
-              },
-            },
-          });
         }
 
-        logger.info(`[Attendance] Auto clock-out: ${records.length} employees for shift ${shift.name}`);
+        recalcRecordTotals(record, shift.duration || 8);
+        record.events.push({
+          type: 'auto_clock_out',
+          timestamp: clockOutTime,
+          metadata: { workHours: record.workHours, overtime: record.overtime, auto: true },
+        });
+        await record.save();
       }
+
+      logger.info(`[Attendance] Auto clock-out: ${records.length} employees for shift ${shift.name}`);
     }
   } catch (error) {
     logger.error(`[Attendance] Auto clock-out error: ${error.message}`);
@@ -109,16 +108,35 @@ const autoEndBreaks = async () => {
     const sixtyMinAgo = new Date(now - 60 * 60 * 1000);
 
     const records = await Attendance.find({
-      'breaks.end': null,
-      'breaks.start': { $lte: sixtyMinAgo },
+      $or: [
+        { sessions: { $elemMatch: { 'breaks.end': null, 'breaks.start': { $lte: sixtyMinAgo } } } },
+        { 'breaks.end': null, 'breaks.start': { $lte: sixtyMinAgo } },
+      ],
     });
 
     for (const record of records) {
-      const breaks = record.breaks;
-      const lastBreak = breaks[breaks.length - 1];
-      if (lastBreak && !lastBreak.end) {
-        lastBreak.end = sixtyMinAgo;
-        lastBreak.duration = 60;
+      let changed = false;
+
+      for (const session of record.sessions || []) {
+        for (const brk of session.breaks || []) {
+          if (brk.start && !brk.end && new Date(brk.start) <= sixtyMinAgo) {
+            brk.end = sixtyMinAgo;
+            brk.duration = 60;
+            changed = true;
+          }
+        }
+      }
+
+      for (const brk of record.breaks || []) {
+        if (brk.start && !brk.end && new Date(brk.start) <= sixtyMinAgo) {
+          brk.end = sixtyMinAgo;
+          brk.duration = 60;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        recalcRecordTotals(record, record.shift?.duration || 8);
         await record.save();
       }
     }

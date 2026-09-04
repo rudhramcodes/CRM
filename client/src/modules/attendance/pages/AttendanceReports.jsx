@@ -10,6 +10,7 @@ import { format, startOfWeek, isValid } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { BarChart3, MapPin, Download, Users, Clock, Coffee, TrendingUp, ChevronRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { formatHours, formatMinutes } from '../../../utils/formatters';
 
 const safeFormat = (value, fmt, fallback = '—') => {
   if (!value) return fallback;
@@ -37,14 +38,6 @@ const STATUS_BADGE = {
   holiday: 'info',
   weekend: 'default',
   wfh: 'primary',
-};
-
-const formatHours = (hours) => {
-  if (!hours) return '—';
-  const totalMinutes = Math.round(hours * 60);
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 };
 
 const getFirstClockIn = (rec) => {
@@ -180,7 +173,7 @@ export default function AttendanceReports() {
           'Clock In': safeFormat(getFirstClockIn(rec), 'hh:mm a'),
           'Clock Out': safeFormat(getLastClockOut(rec), 'hh:mm a'),
           'Work Hours': formatHours(rec.workHours || rec.totalWorkHours),
-          'Break (min)': getTotalBreakMinutes(rec),
+          Break: formatMinutes(getTotalBreakMinutes(rec)),
           Location: getLocation(rec) || '—',
           Status: (rec.status || '—').replace('_', ' '),
         });
@@ -197,7 +190,7 @@ export default function AttendanceReports() {
             'Clock In': safeFormat(s.clockIn?.time, 'hh:mm a'),
             'Clock Out': safeFormat(s.clockOut?.time, 'hh:mm a'),
             'Work Hours': formatHours(workMin / 60),
-            'Break (min)': brkMin,
+            Break: formatMinutes(brkMin),
             Location: (loc?.lat != null) ? `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}` : '—',
             Status: (rec.status || '—').replace('_', ' '),
           });
@@ -268,7 +261,7 @@ export default function AttendanceReports() {
             </div>
             <div>
               <p className="text-xs text-zinc-500">Avg. Hours</p>
-              <p className="text-xl font-semibold text-zinc-900">{avgHours}h</p>
+              <p className="text-xl font-semibold text-zinc-900">{formatHours(avgHours)}</p>
             </div>
           </div>
         </div>
@@ -323,8 +316,8 @@ export default function AttendanceReports() {
               <BarChart data={employeeHours}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#71717a' }} />
-                <YAxis tick={{ fill: '#71717a' }} />
-                <Tooltip />
+                <YAxis tick={{ fill: '#71717a' }} tickFormatter={(value) => formatHours(value)} />
+                <Tooltip formatter={(value) => formatHours(value)} />
                 <Bar dataKey="hours" fill="#18181b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -361,8 +354,6 @@ export default function AttendanceReports() {
                 const multiSession = sessions.length > 1;
                 const isExpanded = expandedRows.has(rec._id);
                 const breakMin = getTotalBreakMinutes(rec);
-                const breakH = Math.floor(breakMin / 60);
-                const breakM = breakMin % 60;
                 const location = getLocation(rec);
                 return (
                   <Fragment key={rec._id}>
@@ -385,7 +376,7 @@ export default function AttendanceReports() {
                       <td className="px-4 py-3 text-sm text-zinc-600">{safeFormat(getFirstClockIn(rec), 'hh:mm a')}</td>
                       <td className="px-4 py-3 text-sm text-zinc-600">{safeFormat(getLastClockOut(rec), 'hh:mm a')}</td>
                       <td className="px-4 py-3 text-sm text-zinc-600">{formatHours(rec.workHours || rec.totalWorkHours)}</td>
-                      <td className="px-4 py-3 text-sm text-zinc-600">{breakMin > 0 ? `${breakH}h ${breakM}m` : '—'}</td>
+                      <td className="px-4 py-3 text-sm text-zinc-600">{breakMin > 0 ? formatMinutes(breakMin) : '—'}</td>
                       <td className="px-4 py-3 text-sm text-zinc-600">
                         {location ? (
                           <span className="flex items-center gap-1" title={location}>
@@ -412,7 +403,7 @@ export default function AttendanceReports() {
                                   <span>In: {safeFormat(s.clockIn?.time, 'hh:mm a')}</span>
                                   <span>Out: {s.clockOut?.time ? safeFormat(s.clockOut.time, 'hh:mm a') : '—'}</span>
                                   <span>{formatHours(sWork / 60)}</span>
-                                  {sBrk > 0 && <span className="text-amber-600">Break: {sBrk}m</span>}
+                                  {sBrk > 0 && <span className="text-amber-600">Break: {formatMinutes(sBrk)}</span>}
                                   {sLoc?.lat != null && (
                                     <span className="text-zinc-400 flex items-center gap-1">
                                       <MapPin className="h-3 w-3" />
@@ -446,8 +437,6 @@ export default function AttendanceReports() {
             const multiSession = sessions.length > 1;
             const isExpanded = expandedRows.has(rec._id);
             const breakMin = getTotalBreakMinutes(rec);
-            const breakH = Math.floor(breakMin / 60);
-            const breakM = breakMin % 60;
             const location = getLocation(rec);
             return (
               <div key={rec._id} className="bg-white rounded-xl border border-zinc-200 p-4">
@@ -482,7 +471,7 @@ export default function AttendanceReports() {
                   </div>
                   <div>
                     <span className="text-zinc-400">Break:</span>{' '}
-                    <span className="text-zinc-700">{breakMin > 0 ? `${breakH}h ${breakM}m` : '—'}</span>
+                    <span className="text-zinc-700">{breakMin > 0 ? formatMinutes(breakMin) : '—'}</span>
                   </div>
                   {location && (
                     <div className="col-span-2">

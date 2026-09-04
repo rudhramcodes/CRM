@@ -17,7 +17,9 @@ export const findAttendanceByEmployeeAndDate = async (employeeId, date) => {
   return Attendance.findOne({
     employee: employeeId,
     date: { $gte: startOfDay, $lte: endOfDay },
-  }).populate('shift');
+  })
+    .populate('shift')
+    .populate('leave', 'leaveType startDate endDate status');
 };
 
 export const createAttendance = async (data) => {
@@ -29,7 +31,7 @@ export const updateAttendance = async (id, data) => {
 };
 
 export const findAllAttendance = async (filter, options = {}) => {
-  const { page = 1, limit = 20, sort = '-date' } = options;
+  const { page = 1, limit = 10, sort = '-date' } = options;
   const skip = (page - 1) * limit;
 
   const [records, total] = await Promise.all([
@@ -160,7 +162,7 @@ export const findLeaveById = async (id) => {
 };
 
 export const findAllLeaves = async (filter, options = {}) => {
-  const { page = 1, limit = 20 } = options;
+  const { page = 1, limit = 10 } = options;
   const skip = (page - 1) * limit;
 
   const [leaves, total] = await Promise.all([

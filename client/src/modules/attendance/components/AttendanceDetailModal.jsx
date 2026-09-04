@@ -3,6 +3,7 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import LocationBadge from '../../../components/ui/LocationBadge';
 import { format, isValid } from 'date-fns';
+import { formatHours, formatMinutes } from '../../../utils/formatters';
 import {
   Clock,
   Coffee,
@@ -72,7 +73,7 @@ export default function AttendanceDetailModal({ record, open, onClose, onEdit, i
                 </Badge>
                 {record.isLate && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                    Late ({record.lateMinutes || 0}m)
+                    Late ({formatMinutes(record.lateMinutes)})
                   </span>
                 )}
               </div>
@@ -104,10 +105,10 @@ export default function AttendanceDetailModal({ record, open, onClose, onEdit, i
               <span>Work Duration</span>
             </div>
             <p className="text-lg font-bold text-zinc-900 mt-1">
-              {record.workHours ? `${record.workHours} hrs` : record.status === 'present' ? 'In Progress' : '0 hrs'}
+              {record.workHours !== null && record.workHours !== undefined ? formatHours(record.workHours) : record.status === 'present' ? 'In Progress' : '0m'}
             </p>
             {record.overtime > 0 && (
-              <span className="text-[11px] text-emerald-600 font-medium">+{record.overtime}h Overtime</span>
+              <span className="text-[11px] text-emerald-600 font-medium">+{formatHours(record.overtime)} Overtime</span>
             )}
           </div>
 
@@ -117,7 +118,7 @@ export default function AttendanceDetailModal({ record, open, onClose, onEdit, i
               <span>Break Time</span>
             </div>
             <p className="text-lg font-bold text-zinc-900 mt-1">
-              {record.totalBreakMinutes ? `${record.totalBreakMinutes} mins` : '0 mins'}
+              {formatMinutes(record.totalBreakMinutes)}
             </p>
             <span className="text-[11px] text-zinc-400">Total pauses</span>
           </div>
@@ -215,7 +216,7 @@ export default function AttendanceDetailModal({ record, open, onClose, onEdit, i
                       <span className="text-xs font-semibold text-primary-900">Session {idx + 1}</span>
                       {session.workMinutes > 0 && (
                         <span className="text-xs text-zinc-500 font-medium">
-                          {Math.floor(session.workMinutes / 60)}h {session.workMinutes % 60}m logged
+                          {formatMinutes(session.workMinutes)} logged
                         </span>
                       )}
                     </div>
@@ -269,7 +270,7 @@ export default function AttendanceDetailModal({ record, open, onClose, onEdit, i
                                 {safeFormat(b.start)} – {b.end ? safeFormat(b.end) : 'On Break'}
                               </span>
                               <span className="font-medium text-zinc-800">
-                                {b.duration ? `${b.duration} mins` : '—'}
+                                {b.duration !== null && b.duration !== undefined ? formatMinutes(b.duration) : '—'}
                               </span>
                             </div>
                           ))}

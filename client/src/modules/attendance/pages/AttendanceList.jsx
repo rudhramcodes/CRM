@@ -34,6 +34,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
+import { formatHours, formatMinutes } from '../../../utils/formatters';
 
 const STATUS_BADGE = {
   present: 'success',
@@ -517,7 +518,7 @@ export default function AttendanceList() {
                             {rec.isLate && (
                               <div className="mt-0.5">
                                 <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium bg-amber-100 text-amber-800">
-                                  +{rec.lateMinutes || 0}m Late
+                                  +{formatMinutes(rec.lateMinutes)} Late
                                 </span>
                               </div>
                             )}
@@ -562,10 +563,10 @@ export default function AttendanceList() {
                       <td className="px-4 py-3.5">
                         {rec.workHours ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-semibold text-zinc-900">{rec.workHours}h</span>
+                            <span className="text-sm font-semibold text-zinc-900">{formatHours(rec.workHours)}</span>
                             {rec.overtime > 0 && (
                               <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                                +{rec.overtime}h OT
+                                +{formatHours(rec.overtime)} OT
                               </span>
                             )}
                           </div>
@@ -576,7 +577,11 @@ export default function AttendanceList() {
 
                       {/* Break Column */}
                       <td className="px-4 py-3.5 text-sm text-zinc-600">
-                        {rec.totalBreakMinutes ? `${rec.totalBreakMinutes}m` : <span className="text-zinc-400">—</span>}
+                        {formatMinutes(rec.totalBreakMinutes) !== '0m' && (
+                          <div className="text-[11px] text-zinc-400 mt-0.5">
+                            {formatMinutes(rec.totalBreakMinutes)}
+                          </div>
+                        )}
                       </td>
 
                       {/* Status Column */}
@@ -679,7 +684,7 @@ export default function AttendanceList() {
                     <span className="font-medium text-zinc-800">
                       {rec.clockIn?.time ? format(new Date(rec.clockIn.time), 'hh:mm a') : isLeave ? 'Leave' : '—'}
                     </span>
-                    {rec.isLate && <span className="text-[10px] text-amber-600 block">+{rec.lateMinutes}m Late</span>}
+                    {rec.isLate && <span className="text-[10px] text-amber-600 block">+{formatMinutes(rec.lateMinutes)} Late</span>}
                   </div>
                   <div>
                     <span className="text-zinc-400">Out:</span>{' '}
@@ -689,8 +694,8 @@ export default function AttendanceList() {
                   </div>
                   <div>
                     <span className="text-zinc-400">Work Hours:</span>{' '}
-                    <span className="font-semibold text-zinc-900">{rec.workHours ? `${rec.workHours}h` : '—'}</span>
-                    {rec.overtime > 0 && <span className="text-[10px] text-emerald-600 block">+{rec.overtime}h OT</span>}
+                    <span className="font-semibold text-zinc-900">{rec.workHours ? formatHours(rec.workHours) : '—'}</span>
+                    {rec.overtime > 0 && <span className="text-[10px] text-emerald-600 block">+{formatHours(rec.overtime)} OT</span>}
                   </div>
                   <div>
                     <span className="text-zinc-400">Break:</span>{' '}

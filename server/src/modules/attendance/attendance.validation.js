@@ -37,7 +37,7 @@ export const manualEntrySchema = z.object({
 
 export const attendanceQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(20),
+  limit: z.coerce.number().int().positive().max(100).optional().default(10),
   employee: z.string().optional(),
   status: z.enum(['present', 'absent', 'half_day', 'wfh', 'leave', 'holiday', 'weekend', 'late']).optional(),
   isLate: z.coerce.boolean().optional(),
@@ -113,7 +113,7 @@ export const createLeaveSchema = z
 
 export const leaveQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(20),
+  limit: z.coerce.number().int().positive().max(100).optional().default(10),
   employee: z.string().optional(),
   status: z.enum(['pending', 'approved', 'rejected']).optional(),
   leaveType: z.enum(['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'comp_off', 'other']).optional(),

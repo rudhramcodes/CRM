@@ -9,6 +9,7 @@ import { PageLoader } from '../../../components/ui/Loader';
 import Modal from '../../../components/ui/Modal';
 import { Plus, Pencil, Trash2, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatHours } from '../../../utils/formatters';
 
 export default function AttendanceShifts() {
   const dispatch = useDispatch();
@@ -96,7 +97,7 @@ export default function AttendanceShifts() {
                   <h3 className="font-semibold text-zinc-900">{shift.name}</h3>
                   <div className="flex items-center gap-2 mt-1 text-sm text-zinc-500">
                     <Clock className="h-4 w-4 text-zinc-400 shrink-0" />
-                    <span>{shift.startTime} — {shift.endTime} ({shift.duration}h)</span>
+                    <span>{shift.startTime} — {shift.endTime} ({formatHours(shift.duration)})</span>
                   </div>
                   <p className="text-xs text-zinc-400 mt-1">Grace: {shift.gracePeriodMinutes || shift.gracePeriod || 0}min</p>
                   <div className="flex gap-2 mt-2">

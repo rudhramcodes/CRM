@@ -2,6 +2,7 @@ import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import { format } from 'date-fns';
 import { Clock, Coffee, Timer, MapPin } from 'lucide-react';
+import { formatMinutes } from '../../../utils/formatters';
 
 export default function ClockOutSummary({ open, onClose, onConfirm, activeSession, totalBreakMinutes = 0 }) {
   if (!activeSession) return null;
@@ -14,11 +15,6 @@ export default function ClockOutSummary({ open, onClose, onConfirm, activeSessio
     liveWorkMinutes = Math.round((now - new Date(clockInTime)) / 60000) - totalBreakMinutes;
     if (liveWorkMinutes < 0) liveWorkMinutes = 0;
   }
-  const workH = Math.floor(liveWorkMinutes / 60);
-  const workM = liveWorkMinutes % 60;
-  const breakH = Math.floor(totalBreakMinutes / 60);
-  const breakM = totalBreakMinutes % 60;
-
   const location = activeSession.clockIn?.location;
 
   return (
@@ -50,7 +46,7 @@ export default function ClockOutSummary({ open, onClose, onConfirm, activeSessio
             <div>
               <p className="text-xs text-primary-900 font-medium">Total Work</p>
               <p className="text-sm font-semibold text-primary-900">
-                {workH}h {workM}m
+                {formatMinutes(liveWorkMinutes)}
               </p>
             </div>
           </div>
@@ -60,7 +56,7 @@ export default function ClockOutSummary({ open, onClose, onConfirm, activeSessio
             <div>
               <p className="text-xs text-amber-600 font-medium">Break Time</p>
               <p className="text-sm font-semibold text-amber-800">
-                {breakH}h {breakM}m
+                {formatMinutes(totalBreakMinutes)}
               </p>
             </div>
           </div>

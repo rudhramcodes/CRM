@@ -7,7 +7,7 @@ function formatTime(totalSeconds) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function LiveTimer({ clockInTime, isRunning, isPaused, breakSeconds = 0 }) {
+export default function LiveTimer({ clockInTime, isRunning, isPaused, breakSeconds = 0, idleMessage = 'Not clocked in' }) {
   const [elapsed, setElapsed] = useState(0);
   const intervalRef = useRef(null);
 
@@ -44,7 +44,7 @@ export default function LiveTimer({ clockInTime, isRunning, isPaused, breakSecon
         <p className="text-5xl md:text-6xl font-mono font-bold text-zinc-300 tracking-wider">
           00:00:00
         </p>
-        <p className="text-sm text-zinc-400 mt-2">Not clocked in</p>
+        <p className="text-sm text-zinc-400 mt-2">{idleMessage}</p>
       </div>
     );
   }

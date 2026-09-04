@@ -154,9 +154,12 @@ attendanceSchema.virtual('isOnBreak').get(function () {
 
 // Indexes
 attendanceSchema.index({ employee: 1, date: 1 }, { unique: true });
+attendanceSchema.index({ date: 1 }); // for daily overview queries across all employees
 attendanceSchema.index({ status: 1 });
 attendanceSchema.index({ shift: 1 });
 attendanceSchema.index({ createdAt: -1 });
+attendanceSchema.index({ 'sessions.clockIn.time': 1 });
+attendanceSchema.index({ 'sessions.clockOut.time': 1 });
 
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 

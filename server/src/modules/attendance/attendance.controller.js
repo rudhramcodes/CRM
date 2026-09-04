@@ -1,5 +1,22 @@
 import ApiResponse from '../../utils/ApiResponse.js';
+import ApiError from '../../utils/ApiError.js';
 import * as attendanceService from './attendance.service.js';
+
+const canViewOthersAttendance = (user) =>
+  ['super_admin', 'admin', 'manager'].includes(user?.role);
+
+const scopedEmployeeId = (req, requestedId) => {
+  if (!canViewOthersAttendance(req.user)) return req.user._id;
+  return requestedId || req.user._id;
+};
+
+const assertOwnLeave = (req, leave) => {
+  if (canViewOthersAttendance(req.user)) return;
+  const ownerId = leave?.employee?._id || leave?.employee;
+  if (String(ownerId) !== String(req.user._id)) {
+    throw ApiError.forbidden('You can only view your own leave');
+  }
+};
 
 // ===================== ATTENDANCE =====================
 
@@ -42,7 +59,7 @@ export const endBreak = async (req, res, next) => {
 
 export const getTodayStatus = async (req, res, next) => {
   try {
-    const employeeId = req.query.employee || req.user._id;
+    const employeeId = scopedEmployeeId(req, req.query.employee);
     const record = await attendanceService.getTodayStatus(employeeId);
     ApiResponse.success(res, 200, { attendance: record });
   } catch (error) {
@@ -52,7 +69,7 @@ export const getTodayStatus = async (req, res, next) => {
 
 export const getSummary = async (req, res, next) => {
   try {
-    const employeeId = req.params.employeeId || req.user._id;
+    const employeeId = scopedEmployeeId(req, req.params.employeeId);
     const { date } = req.query;
     const summary = await attendanceService.getAttendanceSummary(employeeId, date);
     ApiResponse.success(res, 200, { summary });
@@ -63,9 +80,13 @@ export const getSummary = async (req, res, next) => {
 
 export const list = async (req, res, next) => {
   try {
-    const result = await attendanceService.getAttendanceList(req.query, {
-      page: req.query.page,
-      limit: req.query.limit,
+    const query = { ...req.query };
+    if (!canViewOthersAttendance(req.user)) {
+      query.employee = req.user._id;
+    }
+    const result = await attendanceService.getAttendanceList(query, {
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 10,
       sort: req.query.sort,
     });
     ApiResponse.paginated(res, result.records, result.pagination);
@@ -76,7 +97,7 @@ export const list = async (req, res, next) => {
 
 export const calendar = async (req, res, next) => {
   try {
-    const { employeeId } = req.params;
+    const employeeId = scopedEmployeeId(req, req.params.employeeId);
     const year = parseInt(req.query.year) || new Date().getFullYear();
     const month = parseInt(req.query.month) || new Date().getMonth() + 1;
     const records = await attendanceService.getCalendarData(employeeId, year, month);
@@ -88,7 +109,7 @@ export const calendar = async (req, res, next) => {
 
 export const stats = async (req, res, next) => {
   try {
-    const employeeId = req.query.employee || req.user._id;
+    const employeeId = scopedEmployeeId(req, req.query.employee);
     const { dateFrom, dateTo } = req.query;
     const result = await attendanceService.getStats(employeeId, dateFrom, dateTo);
     ApiResponse.success(res, 200, result);
@@ -206,8 +227,8 @@ export const listLeaves = async (req, res, next) => {
     const result = await attendanceService.getLeaves(
       req.query,
       {
-        page: req.query.page,
-        limit: req.query.limit,
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 10,
       },
       req.user
     );
@@ -223,6 +244,7 @@ export const listLeaves = async (req, res, next) => {
 export const getLeaveById = async (req, res, next) => {
   try {
     const leave = await attendanceService.getLeaveById(req.params.id);
+    assertOwnLeave(req, leave);
     ApiResponse.success(res, 200, { leave });
   } catch (error) {
     next(error);
@@ -249,7 +271,7 @@ export const rejectLeave = async (req, res, next) => {
 
 export const getLeaveBalance = async (req, res, next) => {
   try {
-    const employeeId = req.params.employeeId || req.user._id;
+    const employeeId = scopedEmployeeId(req, req.params.employeeId);
     const balance = await attendanceService.getLeaveBalance(employeeId);
     ApiResponse.success(res, 200, { balance });
   } catch (error) {
