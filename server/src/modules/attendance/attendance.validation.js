@@ -2,6 +2,15 @@ import { z } from 'zod';
 
 const HHMM_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
+export const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(10),
+});
+
+export const holidayQuerySchema = paginationQuerySchema.extend({
+  year: z.coerce.number().int().optional(),
+});
+
 // --- Attendance ---
 
 export const clockInSchema = z.object({
@@ -149,6 +158,8 @@ export const updateHolidaySchema = z.object({
 export const reportQuerySchema = z.object({
   date: z.string().optional(),
   startDate: z.string().optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(10),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   employee: z.string().optional(),

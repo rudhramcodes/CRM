@@ -36,6 +36,10 @@ const STATUS_BADGE = {
 
 const REPORT_PAGE_SIZE = 10;
 
+const getReportRecords = (payload) => (
+  Array.isArray(payload?.data) ? payload.data : payload?.data?.records || []
+);
+
 const safeFormat = (value, fmt, fallback = '—') => {
   if (!value) return fallback;
   const d = value instanceof Date ? value : new Date(value);
@@ -139,25 +143,43 @@ export default function AttendanceReports() {
   const weekStart = format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
   const monthYear = { year: selectedDate.getFullYear(), month: selectedDate.getMonth() + 1 };
 
-  const { data: dailyData, isLoading: dailyLoading, isFetching: dailyFetching } = useGetDailyReportQuery({ date }, { skip: reportType !== 'daily' });
-  const { data: weeklyData, isLoading: weeklyLoading, isFetching: weeklyFetching } = useGetWeeklyReportQuery({ startDate: weekStart }, { skip: reportType !== 'weekly' });
-  const { data: monthlyData, isLoading: monthlyLoading, isFetching: monthlyFetching } = useGetMonthlyReportQuery(monthYear, { skip: reportType !== 'monthly' });
+  const reportQuery = { page: reportPage, limit: REPORT_PAGE_SIZE };
+  const { data: dailyData, isLoading: dailyLoading, isFetching: dailyFetching } = useGetDailyReportQuery({ date, ...reportQuery }, { skip: reportType !== 'daily' });
+  const { data: weeklyData, isLoading: weeklyLoading, isFetching: weeklyFetching } = useGetWeeklyReportQuery({ startDate: weekStart, ...reportQuery }, { skip: reportType !== 'weekly' });
+  const { data: monthlyData, isLoading: monthlyLoading, isFetching: monthlyFetching } = useGetMonthlyReportQuery({ ...monthYear, ...reportQuery }, { skip: reportType !== 'monthly' });
 
-  const records = (
-    reportType === 'daily' ? dailyData?.data?.records :
-    reportType === 'weekly' ? weeklyData?.data?.records :
-    monthlyData?.data?.records
-  ) || [];
+  const records = reportType === 'daily'
+    ? getReportRecords(dailyData)
+    : reportType === 'weekly'
+      ? getReportRecords(weeklyData)
+      : getReportRecords(monthlyData);
   const isLoading = dailyLoading || weeklyLoading || monthlyLoading;
   const isFetching = dailyFetching || weeklyFetching || monthlyFetching;
-  const reportTotalPages = Math.max(1, Math.ceil(records.length / REPORT_PAGE_SIZE));
-  const visibleRecords = records.slice((reportPage - 1) * REPORT_PAGE_SIZE, reportPage * REPORT_PAGE_SIZE);
+  const activeReportData = reportType === 'daily' ? dailyData : reportType === 'weekly' ? weeklyData : monthlyData;
+  const reportPagination = activeReportData?.pagination || {};
+  const reportSummary = reportPagination.summary || {};
+  const reportTotalPages = reportPagination.totalPages || 1;
+  const reportTotalRecords = reportPagination.total || records.length;
+  const visibleRecords = records;
 
   useEffect(() => {
     if (reportPage > reportTotalPages) setReportPage(reportTotalPages);
   }, [reportPage, reportTotalPages]);
 
   const metrics = useMemo(() => {
+    if (reportPagination.summary) {
+      const workedRecords = reportSummary.workedRecords || 0;
+      return {
+        totalEmployees: reportSummary.totalEmployees || 0,
+        presentDays: reportSummary.presentRecords || 0,
+        absentDays: reportSummary.absentRecords || 0,
+        leaveDays: reportSummary.leaveRecords || 0,
+        totalWorkedRecords: workedRecords,
+        averageWorkedHours: workedRecords ? (reportSummary.workedHours || 0) / workedRecords : 0,
+        attendanceRate: reportSummary.totalRecords ? Math.round(((reportSummary.presentRecords || 0) / reportSummary.totalRecords) * 100) : 0,
+        totalRecords: reportSummary.totalRecords || 0,
+      };
+    }
     const employeeKeys = new Set(records.map(getEmployeeKey).filter(Boolean));
     const present = records.filter((record) => ['present', 'wfh', 'late', 'half_day'].includes(record.status));
     const absent = records.filter((record) => record.status === 'absent');
@@ -176,9 +198,17 @@ export default function AttendanceReports() {
       attendanceRate,
       totalRecords: records.length,
     };
-  }, [records]);
+  }, [records, reportPagination.summary, reportSummary]);
 
   const statusData = useMemo(() => {
+    if (reportSummary.statusDistribution) {
+      return reportSummary.statusDistribution.map(({ status, value }) => ({
+        name: status.replace('_', ' '),
+        status,
+        value,
+        color: STATUS_COLORS[status] || '#71717a',
+      }));
+    }
     const counts = records.reduce((result, record) => {
       const status = record.status || 'unknown';
       result[status] = (result[status] || 0) + 1;
@@ -190,9 +220,10 @@ export default function AttendanceReports() {
       value,
       color: STATUS_COLORS[status] || '#71717a',
     }));
-  }, [records]);
+  }, [records, reportSummary.statusDistribution]);
 
   const employeeHours = useMemo(() => {
+    if (reportSummary.employeeHours) return reportSummary.employeeHours;
     const grouped = records.reduce((result, record) => {
       const name = record.employee?.name || 'Unknown employee';
       const hours = getRecordWorkHours(record);
@@ -205,7 +236,7 @@ export default function AttendanceReports() {
       .map(([name, hours]) => ({ name, hours }))
       .sort((a, b) => b.hours - a.hours)
       .slice(0, 10);
-  }, [records]);
+  }, [records, reportSummary.employeeHours]);
 
   const toggleExpand = (id) => {
     setExpandedRows((previous) => {
@@ -331,7 +362,7 @@ export default function AttendanceReports() {
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-1 border-b border-zinc-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold text-zinc-900">Attendance Details</h3><p className="text-xs text-zinc-400">{records.length} records · {period.label}</p></div><span className="text-xs font-medium text-zinc-500">Times shown in local time</span></div>
+        <div className="flex flex-col gap-1 border-b border-zinc-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold text-zinc-900">Attendance Details</h3><p className="text-xs text-zinc-400">{reportTotalRecords} records · {period.label}</p></div><span className="text-xs font-medium text-zinc-500">Times shown in local time</span></div>
         {isLoading ? <TableSkeleton rows={6} /> : records.length === 0 ? <div className="p-8"><EmptyState icon={BarChart3} title="No attendance records" description="Choose another date or reporting period." /></div> : (
           <>
             <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[900px]"><thead className="bg-zinc-50/80"><tr>{['', 'Employee', 'Date', 'Clock In', 'Clock Out', 'Worked', 'Break', 'Location', 'Status'].map((heading, index) => <th key={heading || index} className="border-b border-zinc-200 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{heading}</th>)}</tr></thead><tbody className="divide-y divide-zinc-100">
@@ -357,6 +388,7 @@ export default function AttendanceReports() {
               })}
             </tbody></table></div>
             <div className="space-y-3 p-3 md:hidden">{visibleRecords.map((record) => { const sessions = record.sessions || []; const expanded = expandedRows.has(record._id); return <div key={record._id} className="rounded-xl border border-zinc-200 p-4 transition-shadow hover:shadow-sm"><button type="button" className="flex w-full items-center justify-between text-left" onClick={() => sessions.length > 1 && toggleExpand(record._id)}><span className="font-medium text-zinc-900">{record.employee?.name || '—'}<span className="ml-2 text-xs text-zinc-400">{sessions.length > 1 ? `${sessions.length} sessions` : safeFormat(record.date, 'dd MMM')}</span></span><Badge variant={STATUS_BADGE[record.status] || 'default'}>{record.status?.replace('_', ' ') || '—'}</Badge></button><div className="mt-3 grid grid-cols-2 gap-2 text-sm"><span className="text-zinc-500">In: <strong className="font-medium text-zinc-800">{safeFormat(getFirstClockIn(record), 'hh:mm a')}</strong></span><span className="text-zinc-500">Out: <strong className="font-medium text-zinc-800">{safeFormat(getLastClockOut(record), 'hh:mm a')}</strong></span><span className="text-zinc-500">Worked: <strong className="font-medium text-zinc-800">{formatHours(getRecordWorkHours(record))}</strong></span><span className="text-zinc-500">Break: <strong className="font-medium text-zinc-800">{getTotalBreakMinutes(record) > 0 ? formatMinutes(getTotalBreakMinutes(record)) : '—'}</strong></span></div>{expanded && <div className="mt-3 space-y-2 border-t border-zinc-100 pt-3">{sessions.map((session, index) => <div key={index} className="flex flex-wrap gap-3 text-xs text-zinc-600"><span>#{index + 1}</span><span>In {safeFormat(session.clockIn?.time, 'hh:mm a')}</span><span>Out {session.clockOut?.time ? safeFormat(session.clockOut.time, 'hh:mm a') : 'In Progress'}</span><span>{formatMinutes(getSessionWorkMinutes(session))}</span></div>)}</div>}</div>; })}</div>
+            {reportTotalPages > 1 && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 px-5 py-3"><span className="text-xs text-zinc-500">Showing {((reportPage - 1) * REPORT_PAGE_SIZE) + 1}–{Math.min(reportPage * REPORT_PAGE_SIZE, reportTotalRecords)} of {reportTotalRecords} records</span><div className="flex items-center gap-2"><button type="button" className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setReportPage((page) => Math.max(1, page - 1))} disabled={reportPage === 1}><ChevronLeft className="h-3.5 w-3.5" />Previous</button><span className="text-xs font-medium text-zinc-600">Page {reportPage} of {reportTotalPages}</span><button type="button" className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setReportPage((page) => Math.min(reportTotalPages, page + 1))} disabled={reportPage === reportTotalPages}>Next<ChevronRight className="h-3.5 w-3.5" /></button></div></div>}
           </>
         )}
       </section>

@@ -689,8 +689,8 @@ export const createShift = async (data, userId) => {
   return attendanceRepo.createShift({ ...data, createdBy: userId });
 };
 
-export const getShifts = async () => {
-  return attendanceRepo.findAllShifts();
+export const getShifts = async (options = {}) => {
+  return attendanceRepo.findAllShifts({}, options);
 };
 
 export const updateShift = async (id, data) => {
@@ -1062,8 +1062,8 @@ export const createHoliday = async (data, userId) => {
   return attendanceRepo.createHoliday({ ...data, date: new Date(data.date), createdBy: userId });
 };
 
-export const getHolidays = async (year) => {
-  return attendanceRepo.findAllHolidays(year);
+export const getHolidays = async (year, options = {}) => {
+  return attendanceRepo.findAllHolidays(year, options);
 };
 
 export const updateHoliday = async (id, data) => {
@@ -1080,11 +1080,11 @@ export const deleteHoliday = async (id) => {
 
 // ===================== REPORTS =====================
 
-export const getDailyReport = async (date) => {
-  return attendanceRepo.getDailyReport(date || new Date());
+export const getDailyReport = async (date, options = {}) => {
+  return attendanceRepo.getDailyReport(date || new Date(), options);
 };
 
-export const getWeeklyReport = async (startDate) => {
+export const getWeeklyReport = async (startDate, options = {}) => {
   const start = new Date(`${startDate}T00:00:00`);
   if (!startDate || Number.isNaN(start.getTime())) {
     throw ApiError.badRequest('A valid weekly report start date is required');
@@ -1093,11 +1093,11 @@ export const getWeeklyReport = async (startDate) => {
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
   end.setHours(23, 59, 59, 999);
-  return attendanceRepo.getWeeklyReport(start, end);
+  return attendanceRepo.getWeeklyReport(start, end, options);
 };
 
-export const getMonthlyReport = async (year, month) => {
-  return attendanceRepo.getMonthlyReport(year, month);
+export const getMonthlyReport = async (year, month, options = {}) => {
+  return attendanceRepo.getMonthlyReport(year, month, options);
 };
 
 export const getStats = async (employeeId, dateFrom, dateTo) => {

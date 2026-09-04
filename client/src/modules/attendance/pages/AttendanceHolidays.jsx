@@ -9,7 +9,7 @@ import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
 import Textarea from '../../../components/ui/Textarea';
-import { Plus, Pencil, Trash2, Calendar } from 'lucide-react';
+import { Plus, Pencil, Trash2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -19,9 +19,12 @@ const TYPE_OPTIONS = [
   { value: 'optional', label: 'Optional' },
 ];
 
+const HOLIDAY_PAGE_SIZE = 10;
+
 export default function AttendanceHolidays() {
   const dispatch = useDispatch();
   const [year, setYear] = useState(new Date().getFullYear());
+  const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: '', date: '', description: '', type: 'company' });
@@ -30,12 +33,24 @@ export default function AttendanceHolidays() {
     dispatch(setPageTitle('Holidays'));
   }, [dispatch]);
 
-  const { data, isLoading } = useGetHolidaysQuery({ year });
+  const { data, isLoading } = useGetHolidaysQuery({ year, page, limit: 10 });
   const [createHoliday, { isLoading: creating }] = useCreateHolidayMutation();
   const [updateHoliday, { isLoading: updating }] = useUpdateHolidayMutation();
   const [deleteHoliday] = useDeleteHolidayMutation();
 
-  const holidays = data?.data?.holidays || [];
+  const holidays = data?.data || [];
+  const pagination = data?.pagination || {};
+  const totalPages = pagination.totalPages || 1;
+  const totalHolidays = pagination.total || holidays.length;
+  const visibleHolidays = holidays;
+
+  useEffect(() => {
+    setPage(1);
+  }, [year]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const yearOptions = [2025, 2026, 2027].map((y) => ({ value: y, label: String(y) }));
 
@@ -159,7 +174,7 @@ export default function AttendanceHolidays() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {holidays.map((h) => (
+              {visibleHolidays.map((h) => (
                 <tr key={h._id} className="hover:bg-zinc-50 transition-colors">
                   <td className="px-4 py-3 text-sm font-medium text-zinc-900">{h.name}</td>
                   <td className="px-4 py-3 text-sm text-zinc-600">{format(new Date(h.date), 'dd MMM yyyy')}</td>
@@ -190,7 +205,7 @@ export default function AttendanceHolidays() {
             action={<Button onClick={() => setShowForm(true)}><Plus className="w-4 h-4" /> Add Holiday</Button>}
           />
         ) : (
-          holidays.map((h) => (
+          visibleHolidays.map((h) => (
             <div key={h._id} className="bg-white rounded-xl border border-zinc-200 p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="font-medium text-zinc-900">{h.name}</p>
@@ -205,6 +220,16 @@ export default function AttendanceHolidays() {
           ))
         )}
       </div>
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <span className="text-xs text-zinc-500">Showing {((page - 1) * HOLIDAY_PAGE_SIZE) + 1}–{Math.min(page * HOLIDAY_PAGE_SIZE, totalHolidays)} of {totalHolidays} holidays</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}><ChevronLeft className="h-4 w-4" />Previous</Button>
+            <span className="text-xs font-medium text-zinc-600">Page {page} of {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages}>Next<ChevronRight className="h-4 w-4" /></Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

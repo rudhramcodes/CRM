@@ -17,6 +17,8 @@ import {
   leaveActionSchema,
   createHolidaySchema,
   updateHolidaySchema,
+  paginationQuerySchema,
+  holidayQuerySchema,
   reportQuerySchema,
 } from './attendance.validation.js';
 
@@ -155,6 +157,7 @@ router.post(
 router.get(
   '/shifts',
   authorize('super_admin', 'admin', 'manager', 'employee'),
+  validateQuery(paginationQuerySchema),
   attendanceController.listShifts
 );
 
@@ -225,6 +228,7 @@ router.patch(
 router.get(
   '/holidays',
   authorize('super_admin', 'admin', 'manager', 'employee'),
+  validateQuery(holidayQuerySchema),
   attendanceController.listHolidays
 );
 

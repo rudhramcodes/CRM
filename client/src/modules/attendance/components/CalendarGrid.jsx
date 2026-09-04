@@ -58,9 +58,9 @@ export default function CalendarGrid({ currentMonth, selectedDate, onSelectDate,
     { skip }
   );
 
-  const holidaysCurrent = useGetHolidaysQuery({ year });
-  const holidaysPrevYear = useGetHolidaysQuery({ year: year - 1 }, { skip: month !== 1 });
-  const holidaysNextYear = useGetHolidaysQuery({ year: year + 1 }, { skip: month !== 12 });
+  const holidaysCurrent = useGetHolidaysQuery({ year, page: 1, limit: 100 });
+  const holidaysPrevYear = useGetHolidaysQuery({ year: year - 1, page: 1, limit: 100 }, { skip: month !== 1 });
+  const holidaysNextYear = useGetHolidaysQuery({ year: year + 1, page: 1, limit: 100 }, { skip: month !== 12 });
 
   const records = useMemo(() => {
     const merged = [
@@ -77,9 +77,9 @@ export default function CalendarGrid({ currentMonth, selectedDate, onSelectDate,
 
   const holidayMap = useMemo(() => {
     const list = [
-      ...(holidaysCurrent.data?.data?.holidays || []),
-      ...(holidaysPrevYear.data?.data?.holidays || []),
-      ...(holidaysNextYear.data?.data?.holidays || []),
+      ...(Array.isArray(holidaysCurrent.data?.data) ? holidaysCurrent.data.data : holidaysCurrent.data?.data?.holidays || []),
+      ...(Array.isArray(holidaysPrevYear.data?.data) ? holidaysPrevYear.data.data : holidaysPrevYear.data?.data?.holidays || []),
+      ...(Array.isArray(holidaysNextYear.data?.data) ? holidaysNextYear.data.data : holidaysNextYear.data?.data?.holidays || []),
     ];
     const map = {};
     for (const h of list) {

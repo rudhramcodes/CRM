@@ -186,8 +186,8 @@ export const createShift = async (req, res, next) => {
 
 export const listShifts = async (req, res, next) => {
   try {
-    const shifts = await attendanceService.getShifts();
-    ApiResponse.success(res, 200, { shifts });
+    const result = await attendanceService.getShifts({ page: req.query.page, limit: req.query.limit });
+    ApiResponse.paginated(res, result.records, result.pagination);
   } catch (error) {
     next(error);
   }
@@ -292,8 +292,8 @@ export const createHoliday = async (req, res, next) => {
 
 export const listHolidays = async (req, res, next) => {
   try {
-    const holidays = await attendanceService.getHolidays(req.query.year);
-    ApiResponse.success(res, 200, { holidays });
+    const result = await attendanceService.getHolidays(req.query.year, { page: req.query.page, limit: req.query.limit });
+    ApiResponse.paginated(res, result.records, result.pagination);
   } catch (error) {
     next(error);
   }
@@ -321,8 +321,8 @@ export const deleteHoliday = async (req, res, next) => {
 
 export const dailyReport = async (req, res, next) => {
   try {
-    const records = await attendanceService.getDailyReport(req.query.date);
-    ApiResponse.success(res, 200, { records });
+    const result = await attendanceService.getDailyReport(req.query.date, { page: req.query.page, limit: req.query.limit });
+    ApiResponse.paginated(res, result.records, result.pagination);
   } catch (error) {
     next(error);
   }
@@ -330,8 +330,8 @@ export const dailyReport = async (req, res, next) => {
 
 export const weeklyReport = async (req, res, next) => {
   try {
-    const records = await attendanceService.getWeeklyReport(req.query.startDate);
-    ApiResponse.success(res, 200, { records });
+    const result = await attendanceService.getWeeklyReport(req.query.startDate, { page: req.query.page, limit: req.query.limit });
+    ApiResponse.paginated(res, result.records, result.pagination);
   } catch (error) {
     next(error);
   }
@@ -341,8 +341,8 @@ export const monthlyReport = async (req, res, next) => {
   try {
     const year = parseInt(req.query.year) || new Date().getFullYear();
     const month = parseInt(req.query.month) || new Date().getMonth() + 1;
-    const records = await attendanceService.getMonthlyReport(year, month);
-    ApiResponse.success(res, 200, { records });
+    const result = await attendanceService.getMonthlyReport(year, month, { page: req.query.page, limit: req.query.limit });
+    ApiResponse.paginated(res, result.records, result.pagination);
   } catch (error) {
     next(error);
   }

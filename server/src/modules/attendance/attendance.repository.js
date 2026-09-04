@@ -133,8 +133,19 @@ export const findShiftById = async (id) => {
   return Shift.findById(id);
 };
 
-export const findAllShifts = async (filter = {}) => {
-  return Shift.find({ isActive: true, ...filter }).sort({ name: 1 });
+export const findAllShifts = async (filter = {}, options = {}) => {
+  const page = Math.max(1, Number(options.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(options.limit) || 10));
+  const query = { isActive: true, ...filter };
+  const [records, total] = await Promise.all([
+    Shift.find(query).sort({ name: 1 }).skip((page - 1) * limit).limit(limit),
+    Shift.countDocuments(query),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  return {
+    records,
+    pagination: { page, limit, total, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 },
+  };
 };
 
 export const updateShift = async (id, data) => {
@@ -212,14 +223,24 @@ export const findHolidayById = async (id) => {
   return Holiday.findById(id);
 };
 
-export const findAllHolidays = async (year) => {
+export const findAllHolidays = async (year, options = {}) => {
+  const page = Math.max(1, Number(options.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(options.limit) || 10));
   const filter = {};
   if (year) {
     const startOfYear = new Date(year, 0, 1);
     const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
     filter.date = { $gte: startOfYear, $lte: endOfYear };
   }
-  return Holiday.find(filter).sort({ date: 1 });
+  const [records, total] = await Promise.all([
+    Holiday.find(filter).sort({ date: 1 }).skip((page - 1) * limit).limit(limit),
+    Holiday.countDocuments(filter),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  return {
+    records,
+    pagination: { page, limit, total, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 },
+  };
 };
 
 export const findHolidayByDate = async (date) => {
@@ -259,36 +280,83 @@ export const updateLeaveBalance = async (employeeId, year, leaveType, days) => {
 
 // ===================== REPORTS =====================
 
-export const getDailyReport = async (date) => {
+const findPaginatedReport = async (filter, options = {}, sort = { date: -1 }) => {
+  const page = Math.max(1, Number(options.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(options.limit) || 10));
+  const [records, total, employees, statusCounts, workSummary, topHours] = await Promise.all([
+    Attendance.find(filter)
+      .populate('employee', 'name email avatar role')
+      .populate('shift', 'name startTime endTime')
+      .sort(sort)
+      .skip((page - 1) * limit)
+      .limit(limit),
+    Attendance.countDocuments(filter),
+    Attendance.distinct('employee', filter),
+    Attendance.aggregate([
+      { $match: filter },
+      { $group: { _id: '$status', value: { $sum: 1 } } },
+    ]),
+    Attendance.aggregate([
+      { $match: filter },
+      { $group: {
+        _id: null,
+        workedRecords: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$workHours', 0] }, 0] }, 1, 0] } },
+        workedHours: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$workHours', 0] }, 0] }, { $ifNull: ['$workHours', 0] }, 0] } },
+      } },
+    ]),
+    Attendance.aggregate([
+      { $match: filter },
+      { $group: { _id: '$employee', hours: { $sum: { $ifNull: ['$workHours', 0] } } } },
+      { $match: { hours: { $gt: 0 } } },
+      { $sort: { hours: -1 } },
+      { $limit: 10 },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'employee' } },
+      { $unwind: { path: '$employee', preserveNullAndEmptyArrays: true } },
+      { $project: { _id: 0, name: { $ifNull: ['$employee.name', 'Unknown employee'] }, hours: 1 } },
+    ]),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  return {
+    records,
+    pagination: {
+      page, limit, total, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1,
+      summary: {
+        totalEmployees: employees.length,
+        totalRecords: total,
+        presentRecords: statusCounts.filter((item) => ['present', 'wfh', 'late', 'half_day'].includes(item._id)).reduce((sum, item) => sum + item.value, 0),
+        absentRecords: statusCounts.find((item) => item._id === 'absent')?.value || 0,
+        leaveRecords: statusCounts.find((item) => item._id === 'leave')?.value || 0,
+        workedRecords: workSummary[0]?.workedRecords || 0,
+        workedHours: workSummary[0]?.workedHours || 0,
+        statusDistribution: statusCounts.map(({ _id, value }) => ({ status: _id || 'unknown', value })),
+        employeeHours: topHours,
+      },
+    },
+  };
+};
+
+export const getDailyReport = async (date, options = {}) => {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
 
-  return Attendance.find({
+  return findPaginatedReport({
     date: { $gte: startOfDay, $lte: endOfDay },
-  })
-    .populate('employee', 'name email avatar role')
-    .populate('shift', 'name startTime endTime')
-    .sort({ 'employee.name': 1 });
+  }, options, { 'employee.name': 1 });
 };
 
-export const getWeeklyReport = async (startDate, endDate) => {
-  return Attendance.find({
+export const getWeeklyReport = async (startDate, endDate, options = {}) => {
+  return findPaginatedReport({
     date: { $gte: startDate, $lte: endDate },
-  })
-    .populate('employee', 'name email avatar role')
-    .sort({ employee: 1, date: 1 });
+  }, options, { employee: 1, date: 1 });
 };
 
-export const getMonthlyReport = async (year, month) => {
+export const getMonthlyReport = async (year, month, options = {}) => {
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
-  return Attendance.find({
+  return findPaginatedReport({
     date: { $gte: startOfMonth, $lte: endOfMonth },
-  })
-    .populate('employee', 'name email avatar role')
-    .populate('shift', 'name startTime endTime')
-    .sort({ date: -1, 'employee.name': 1 });
+  }, options, { date: -1, 'employee.name': 1 });
 };

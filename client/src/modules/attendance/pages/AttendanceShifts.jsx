@@ -7,13 +7,16 @@ import Badge from '../../../components/ui/Badge';
 import EmptyState from '../../../components/ui/EmptyState';
 import { PageLoader } from '../../../components/ui/Loader';
 import Modal from '../../../components/ui/Modal';
-import { Plus, Pencil, Trash2, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatHours, formatMinutes } from '../../../utils/formatters';
 
+const SHIFT_PAGE_SIZE = 9;
+
 export default function AttendanceShifts() {
   const dispatch = useDispatch();
-  const { data, isLoading } = useGetShiftsQuery();
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useGetShiftsQuery({ page, limit: SHIFT_PAGE_SIZE });
   const [createShift, { isLoading: creating }] = useCreateShiftMutation();
   const [updateShift, { isLoading: updating }] = useUpdateShiftMutation();
   const [deleteShift] = useDeleteShiftMutation();
@@ -26,7 +29,15 @@ export default function AttendanceShifts() {
     dispatch(setPageTitle('Shifts'));
   }, [dispatch]);
 
-  const shifts = data?.data?.shifts || [];
+  const shifts = data?.data || [];
+  const pagination = data?.pagination || {};
+  const totalPages = pagination.totalPages || 1;
+  const totalShifts = pagination.total || shifts.length;
+  const visibleShifts = shifts;
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,7 +101,7 @@ export default function AttendanceShifts() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {shifts.map((shift) => (
+          {visibleShifts.map((shift) => (
             <div key={shift._id} className="bg-white rounded-xl border border-zinc-200 p-4">
               <div className="flex items-start justify-between">
                 <div className="min-w-0">
@@ -115,6 +126,16 @@ export default function AttendanceShifts() {
         </div>
       )}
 
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <span className="text-xs text-zinc-500">Showing {((page - 1) * SHIFT_PAGE_SIZE) + 1}–{Math.min(page * SHIFT_PAGE_SIZE, totalShifts)} of {totalShifts} shifts</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}><ChevronLeft className="h-4 w-4" />Previous</Button>
+            <span className="text-xs font-medium text-zinc-600">Page {page} of {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages}>Next<ChevronRight className="h-4 w-4" /></Button>
+          </div>
+        </div>
+      )}
       <Modal open={showForm} onClose={resetForm} title={editingId ? 'Edit Shift' : 'New Shift'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

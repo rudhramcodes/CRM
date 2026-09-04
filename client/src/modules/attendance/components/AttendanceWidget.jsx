@@ -54,7 +54,7 @@ const getLocation = () => {
 export default function AttendanceWidget() {
   const now = new Date();
   const { data, isLoading } = useGetTodayStatusQuery();
-  const { data: holidaysData } = useGetHolidaysQuery({ year: now.getFullYear() });
+  const { data: holidaysData } = useGetHolidaysQuery({ year: now.getFullYear(), page: 1, limit: 100 });
   const [clockIn, { isLoading: clockingIn }] = useClockInMutation();
   const [clockOut, { isLoading: clockingOut }] = useClockOutMutation();
   const [startBreak, { isLoading: startingBreak }] = useStartBreakMutation();
@@ -66,7 +66,9 @@ export default function AttendanceWidget() {
   const today = data?.data?.attendance;
   const todayKey = format(new Date(), 'yyyy-MM-dd');
   const holidayToday = useMemo(() => {
-    const holidays = holidaysData?.data?.holidays || [];
+    const holidays = Array.isArray(holidaysData?.data)
+      ? holidaysData.data
+      : holidaysData?.data?.holidays || [];
     return holidays.find((h) => {
       if (!h?.date) return false;
       return format(new Date(h.date), 'yyyy-MM-dd') === todayKey;
