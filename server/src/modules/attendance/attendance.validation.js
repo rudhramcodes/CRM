@@ -148,6 +148,7 @@ export const updateHolidaySchema = z.object({
 
 export const reportQuerySchema = z.object({
   date: z.string().optional(),
+  startDate: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   employee: z.string().optional(),

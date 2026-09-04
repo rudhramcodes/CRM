@@ -1085,9 +1085,14 @@ export const getDailyReport = async (date) => {
 };
 
 export const getWeeklyReport = async (startDate) => {
-  const start = new Date(startDate);
+  const start = new Date(`${startDate}T00:00:00`);
+  if (!startDate || Number.isNaN(start.getTime())) {
+    throw ApiError.badRequest('A valid weekly report start date is required');
+  }
+  start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
   return attendanceRepo.getWeeklyReport(start, end);
 };
 
