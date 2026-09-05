@@ -18,6 +18,9 @@ export const NOTIFICATION_TYPES = {
   PAYMENT_RECEIVED: 'payment_received',
   CONTRACT_EXPIRY: 'contract_expiry',
   LEAVE_APPLIED: 'leave_applied',
+  REGULARIZATION_REQUEST: 'regularization_request',
+  REGULARIZATION_APPROVED: 'regularization_approved',
+  REGULARIZATION_REJECTED: 'regularization_rejected',
   LEAVE_APPROVED: 'leave_approved',
   LEAVE_REJECTED: 'leave_rejected',
   SYSTEM: 'system',
@@ -30,7 +33,7 @@ export const NOTIFICATION_PRIORITIES = {
 };
 
 export const REFERENCE_MODELS = [
-  'Task', 'Project', 'Lead', 'Client',
+  'Task', 'Project', 'Lead', 'Client', 'Attendance',
   'Invoice', 'Payment', 'Meeting', 'User', 'LeaveRequest',
 ];
 
@@ -156,6 +159,24 @@ export const NOTIFICATION_TEMPLATES = {
   leave_applied: {
     title: 'New Leave Request',
     message: (d) => `${d.employeeName || 'An employee'} applied for ${d.leaveType} (${d.duration})`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: true, cliq: false },
+  },
+  regularization_request: {
+    title: 'New Regularization Request',
+    message: (d) => `${d.employeeName || 'An employee'} requested attendance regularization for ${d.date || 'an attendance record'}`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: true, cliq: false },
+  },
+  regularization_approved: {
+    title: 'Regularization Approved',
+    message: (d) => `Your attendance regularization for ${d.date || 'the requested date'} was approved by ${d.approvedBy || 'an admin'}`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: true, cliq: false },
+  },
+  regularization_rejected: {
+    title: 'Regularization Rejected',
+    message: (d) => `Your attendance regularization for ${d.date || 'the requested date'} was rejected${d.comment ? `: ${d.comment}` : ''}`,
     priority: NOTIFICATION_PRIORITIES.HIGH,
     channels: { email: true, cliq: false },
   },

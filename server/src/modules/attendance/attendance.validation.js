@@ -71,11 +71,21 @@ export const attendanceUpdateSchema = z.object({
 export const regularizeSchema = z.object({
   attendanceId: z.string().min(1, 'Attendance ID is required'),
   reason: z.string().min(10, 'Reason must be at least 10 characters').max(500),
+  clockInTime: z.string().regex(HHMM_REGEX, 'Clock in time must be HH:mm').optional().or(z.literal('')),
+  clockOutTime: z.string().regex(HHMM_REGEX, 'Clock out time must be HH:mm').optional().or(z.literal('')),
+  breakMinutes: z.coerce.number().int().min(0).max(1440).optional().default(0),
+}).refine((data) => !data.clockInTime === !data.clockOutTime, {
+  message: 'Clock in and clock out must be provided together',
+  path: ['clockOutTime'],
 });
 
 export const regularizeActionSchema = z.object({
   action: z.enum(['approved', 'rejected']),
   comment: z.string().max(500).optional(),
+}).superRefine((data, ctx) => {
+  if (data.action === 'rejected' && !data.comment?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['comment'], message: 'Rejection reason is required' });
+  }
 });
 
 // --- Shift ---

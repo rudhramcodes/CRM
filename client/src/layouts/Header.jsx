@@ -31,6 +31,7 @@ export default function Header({ onMobileMenuOpen }) {
   const notifRef = useRef(null);
   const [liveUnreadCount, setLiveUnreadCount] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(() => isNotificationSoundEnabled());
+  const notificationPath = (notification) => notification.type === 'regularization_request' ? '/attendance/regularization' : (notification.link || (notification.type?.startsWith('regularization_') ? '/attendance' : '/notifications'));
 
   const { data: unreadData } = useGetUnreadCountQuery(undefined, { skip: !user, pollingInterval: 30000 });
   const { data: notifData } = useGetNotificationsQuery({ limit: 5, read: 'false' }, { skip: !user || !showNotifDropdown });
@@ -41,7 +42,7 @@ export default function Header({ onMobileMenuOpen }) {
     const cfg = NOTIFICATION_CONFIG[notification.type] || NOTIFICATION_CONFIG.system;
     const Icon = cfg.icon;
     toast.custom((t) => (
-      <div onClick={() => { toast.dismiss(t.id); if (notification.link) navigate(notification.link); }}
+      <div onClick={() => { toast.dismiss(t.id); navigate(notificationPath(notification)); }}
         className={cn('flex items-start gap-3 px-4 py-3 bg-white rounded-lg shadow-lg border border-zinc-200 cursor-pointer hover:bg-zinc-50 transition-all w-80')}>
         <div className={cn('w-8 h-8 rounded-full flex items-center justify-center shrink-0', cfg.iconBg)}>
           <Icon className="w-4 h-4" strokeWidth={1.5} />
@@ -182,7 +183,7 @@ export default function Header({ onMobileMenuOpen }) {
                     const cfg = NOTIFICATION_CONFIG[n.type] || NOTIFICATION_CONFIG.system;
                     const Icon = cfg.icon;
                     return (
-                      <button key={n._id} onClick={() => { if (!n.read) socketMarkRead(n._id); navigate(n.link); setShowNotifDropdown(false); }}
+                      <button key={n._id} onClick={() => { if (!n.read) socketMarkRead(n._id); navigate(notificationPath(n)); setShowNotifDropdown(false); }}
                         className={cn('w-full text-left px-3 py-2.5 hover:bg-zinc-50 border-b border-zinc-50 last:border-0 flex items-start gap-2.5',
                           !n.read && 'bg-blue-50/30')}>
                         <div className={cn('w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5', cfg.iconBg)}>

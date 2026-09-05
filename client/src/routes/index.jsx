@@ -45,6 +45,7 @@ import NotificationList from '../modules/notifications/pages/NotificationList';
 import AttendanceCalendar from '../modules/attendance/pages/AttendanceCalendar';
 import AttendanceLayout from '../modules/attendance/pages/AttendanceLayout';
 import AttendanceList from '../modules/attendance/pages/AttendanceList';
+import AttendanceRegularization from '../modules/attendance/pages/AttendanceRegularization';
 import AttendanceShifts from '../modules/attendance/pages/AttendanceShifts';
 import AttendanceLeaves from '../modules/attendance/pages/AttendanceLeaves';
 import AttendanceHolidays from '../modules/attendance/pages/AttendanceHolidays';
@@ -135,6 +136,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <AttendanceCalendar /> },
           { path: 'list', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><AttendanceList /></ProtectedRoute> },
+          { path: 'regularization', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><AttendanceRegularization /></ProtectedRoute> },
           { path: 'shifts', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><AttendanceShifts /></ProtectedRoute> },
           { path: 'leaves', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><AttendanceLeaves /></ProtectedRoute> },
           { path: 'holidays', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><AttendanceHolidays /></ProtectedRoute> },

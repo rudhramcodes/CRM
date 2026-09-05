@@ -116,6 +116,15 @@ export const attendanceApi = api.injectEndpoints({
       invalidatesTags: ['Attendance'],
     }),
 
+    getRegularizationRequests: builder.query({
+      query: (status = 'pending') => ({
+        url: '/attendance/regularization/requests',
+        params: { status },
+      }),
+      providesTags: ['Attendance'],
+      keepUnusedDataFor: 0,
+    }),
+
     approveRegularization: builder.mutation({
       query: ({ id, ...body }) => ({
         url: `/attendance/${id}/regularize`,
@@ -284,6 +293,7 @@ export const {
   useManualOverrideMutation,
   useManualEntryMutation,
   useRequestRegularizationMutation,
+  useGetRegularizationRequestsQuery,
   useApproveRegularizationMutation,
   useApplyLeaveMutation,
   useGetLeavesQuery,

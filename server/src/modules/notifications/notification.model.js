@@ -25,7 +25,7 @@ const notificationSchema = new mongoose.Schema(
     referenceModel: {
       type: String,
       enum: [
-        'Task', 'Project', 'Lead', 'Client',
+        'Task', 'Project', 'Lead', 'Client', 'Attendance',
         'Invoice', 'Payment', 'Meeting', 'User', 'LeaveRequest',
       ],
     },

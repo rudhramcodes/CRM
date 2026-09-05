@@ -95,6 +95,15 @@ export const list = async (req, res, next) => {
   }
 };
 
+export const listRegularizationRequests = async (req, res, next) => {
+  try {
+    const requests = await attendanceService.getRegularizationRequests(req.query.status || 'pending');
+    ApiResponse.success(res, 200, { requests });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const calendar = async (req, res, next) => {
   try {
     const employeeId = scopedEmployeeId(req, req.params.employeeId);

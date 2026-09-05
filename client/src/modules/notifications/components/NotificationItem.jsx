@@ -20,9 +20,7 @@ export default function NotificationItem({ notification, onMarkRead, onDelete })
     if (!notification.read && onMarkRead) {
       onMarkRead(notification._id);
     }
-    if (notification.link) {
-      navigate(notification.link);
-    }
+    navigate(notification.type === 'regularization_request' ? '/attendance/regularization' : (notification.link || (notification.type?.startsWith('regularization_') ? '/attendance' : '/notifications')));
   };
 
   return (

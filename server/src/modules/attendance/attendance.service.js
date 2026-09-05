@@ -467,7 +467,7 @@ export const getCalendarData = async (employeeId, year, month) => {
   return attendanceRepo.findAttendanceForCalendar(employeeId, year, month);
 };
 
-const applyOverrideToRecord = (record, shift, { status, clockInTime, clockOutTime, dateStr, notes, isWFH, adminId }) => {
+const applyOverrideToRecord = (record, shift, { status, clockInTime, clockOutTime, breakMinutes = 0, dateStr, notes, isWFH, adminId }) => {
   const isNonWorking = ['absent', 'leave', 'holiday', 'weekend'].includes(status || record.status);
 
   const sessions = [];
@@ -486,7 +486,7 @@ const applyOverrideToRecord = (record, shift, { status, clockInTime, clockOutTim
     if (clockOutTime) {
       const [outH, outM] = clockOutTime.split(':').map(Number);
       clockOutDate = new Date(y, m - 1, d, outH, outM, 0, 0);
-      workMinutes = Math.max(0, Math.round((clockOutDate - clockInDate) / 60000));
+      workMinutes = Math.max(0, Math.round((clockOutDate - clockInDate) / 60000) - Number(breakMinutes || 0));
       overtime = +(Math.max(0, (workMinutes - (shift?.duration || 8) * 60) / 60)).toFixed(2);
     }
 
@@ -501,7 +501,11 @@ const applyOverrideToRecord = (record, shift, { status, clockInTime, clockOutTim
     sessions.push({
       clockIn: { time: clockInDate },
       clockOut: clockOutDate ? { time: clockOutDate } : null,
-      breaks: [],
+      breaks: breakMinutes > 0 ? [{
+        start: clockInDate,
+        end: new Date(clockInDate.getTime() + Number(breakMinutes) * 60000),
+        duration: Number(breakMinutes),
+      }] : [],
       workMinutes,
       overtime: +(overtime * 60).toFixed(0),
     });
@@ -509,8 +513,8 @@ const applyOverrideToRecord = (record, shift, { status, clockInTime, clockOutTim
 
   // Completely wipe out previous sessions and previous breaks
   record.sessions = sessions;
-  record.breaks = [];
-  record.totalBreakMinutes = 0;
+  record.breaks = sessions[0]?.breaks || [];
+  record.totalBreakMinutes = Number(breakMinutes || 0);
 
   if (sessions.length > 0) {
     const s = sessions[0];
@@ -637,33 +641,86 @@ export const manualEntry = async (data, adminId) => {
 export const requestRegularization = async (employeeId, data) => {
   const record = await attendanceRepo.findAttendanceById(data.attendanceId);
   if (!record) throw ApiError.notFound('Attendance record not found');
-
   if (String(record.employee._id) !== String(employeeId)) {
     throw ApiError.forbidden('You can only regularize your own attendance');
   }
-
-  return attendanceRepo.updateAttendance(record._id, {
+  const updatedRecord = await attendanceRepo.updateAttendance(record._id, {
     regularization: {
-      request: { reason: data.reason, requestedAt: new Date() },
+      request: {
+        reason: data.reason,
+        clockInTime: data.clockInTime || null,
+        clockOutTime: data.clockOutTime || null,
+        breakMinutes: Number(data.breakMinutes || 0),
+        requestedAt: new Date(),
+      },
       approval: { status: 'pending' },
     },
     $push: {
       events: {
         type: 'regularization_request',
         timestamp: new Date(),
-        metadata: { reason: data.reason },
+        metadata: {
+          reason: data.reason,
+          clockInTime: data.clockInTime || null,
+          clockOutTime: data.clockOutTime || null,
+          breakMinutes: Number(data.breakMinutes || 0),
+        },
       },
     },
   });
+
+  // Notify admins and managers; notification/email failures must not undo a valid request.
+  try {
+    const User = mongoose.model('User');
+    const applicant = await User.findById(employeeId).select('name email');
+    const adminsAndManagers = await User.find({
+      role: { $in: ['super_admin', 'admin', 'manager'] },
+    }).select('_id email name');
+    const attendanceDate = record.date
+      ? new Date(record.date).toLocaleDateString('en-GB', {
+          day: '2-digit', month: 'short', year: 'numeric',
+        })
+      : 'attendance record';
+
+    console.log(`[Regularization Apply] Notifying ${adminsAndManagers.length} admins/managers for request by ${applicant?.name}`);
+    for (const manager of adminsAndManagers) {
+      try {
+        await createAndSend({
+          recipient: manager._id,
+          type: 'regularization_request',
+          title: 'New Regularization Request',
+          message: `${applicant?.name || 'An employee'} requested attendance regularization for ${attendanceDate}`,
+          link: '/attendance/regularization',
+          priority: 'high',
+          referenceId: updatedRecord._id,
+          referenceModel: 'Attendance',
+          actionBy: employeeId,
+          metadata: {
+            employeeName: applicant?.name || 'Employee',
+            date: attendanceDate,
+            reason: data.reason,
+          },
+          channels: { inApp: true, email: true },
+        });
+      } catch (notifErr) {
+        console.error(`[Regularization Notification to ${manager.name} Failed]:`, notifErr);
+      }
+    }
+  } catch (err) {
+    console.error('[Regularization Notification Error]:', err);
+  }
+
+  return updatedRecord;
 };
 
 export const approveRegularization = async (id, action, adminId, comment) => {
   const record = await attendanceRepo.findAttendanceById(id);
   if (!record) throw ApiError.notFound('Attendance record not found');
-
+  if (record.regularization?.approval?.status !== 'pending') {
+    throw ApiError.badRequest('Regularization request is not pending');
+  }
   const eventType = action === 'approved' ? 'regularization_approved' : 'regularization_rejected';
-
-  return attendanceRepo.updateAttendance(record._id, {
+  const updated = await attendanceRepo.updateAttendance(record._id, {
     'regularization.approval': {
       status: action,
       approvedBy: adminId,
@@ -678,7 +735,51 @@ export const approveRegularization = async (id, action, adminId, comment) => {
       },
     },
   });
+  if (action === 'approved') {
+    const request = record.regularization?.request || {};
+    const shift = record.shift || await attendanceRepo.findDefaultShift();
+    const recordDate = new Date(record.date);
+    const dateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
+    applyOverrideToRecord(updated, shift, {
+      status: 'present',
+      clockInTime: request.clockInTime,
+      clockOutTime: request.clockOutTime,
+      breakMinutes: request.breakMinutes,
+      dateStr,
+      notes: updated.notes,
+      isWFH: updated.isWFH,
+      adminId,
+    });
+    await updated.save();
+  }
+  try {
+    await createAndSend({
+      recipient: record.employee?._id || record.employee,
+      type: eventType,
+      title: action === 'approved' ? 'Regularization Approved' : 'Regularization Rejected',
+      message: action === 'approved'
+        ? `Your attendance regularization for ${new Date(record.date).toLocaleDateString('en-GB')} was approved by ${updated.regularization?.approval?.approvedBy?.name || 'an admin'}`
+        : `Your attendance regularization for ${new Date(record.date).toLocaleDateString('en-GB')} was rejected${comment ? `: ${comment}` : ''}`,
+      link: '/attendance',
+      priority: 'high',
+      referenceId: updated._id,
+      referenceModel: 'Attendance',
+      actionBy: adminId,
+      metadata: {
+        date: new Date(record.date).toLocaleDateString('en-GB'),
+        approvedBy: updated.regularization?.approval?.approvedBy?.name || 'Admin',
+        comment: comment || null,
+      },
+      channels: { inApp: true, email: true },
+    });
+  } catch (notifErr) {
+    console.error('[Regularization Outcome Notification Error]:', notifErr);
+  }
+  return updated;
 };
+
+export const getRegularizationRequests = async (status = 'pending') =>
+  attendanceRepo.findRegularizationRequests(status);
 
 // ===================== SHIFT =====================
 

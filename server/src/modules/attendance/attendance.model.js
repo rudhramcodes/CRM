@@ -39,6 +39,9 @@ const regularizationSchema = new mongoose.Schema(
   {
     request: {
       reason: { type: String, default: null },
+      clockInTime: { type: String, default: null },
+      clockOutTime: { type: String, default: null },
+      breakMinutes: { type: Number, default: 0, min: 0 },
       requestedAt: { type: Date, default: null },
     },
     approval: {

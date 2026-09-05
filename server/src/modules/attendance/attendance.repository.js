@@ -41,6 +41,7 @@ export const findAllAttendance = async (filter, options = {}) => {
       .limit(limit)
       .populate('employee', 'name email avatar role')
       .populate('shift', 'name startTime endTime')
+      .populate('regularization.approval.approvedBy', 'name email')
       .populate('leave'),
     Attendance.countDocuments(filter),
   ]);
@@ -63,6 +64,18 @@ export const findAttendanceById = async (id) => {
     .populate('employee', 'name email avatar role')
     .populate('shift', 'name startTime endTime duration gracePeriod')
     .populate('leave')
+    .populate('regularization.approval.approvedBy', 'name email');
+};
+
+export const findRegularizationRequests = async (status = 'pending') => {
+  const filter = status === 'all'
+    ? { 'regularization.approval.status': { $in: ['pending', 'approved', 'rejected'] } }
+    : { 'regularization.approval.status': status };
+  return Attendance.find(filter)
+    .sort({ 'regularization.request.requestedAt': -1, date: -1 })
+    .limit(100)
+    .populate('employee', 'name email avatar role')
+    .populate('shift', 'name startTime endTime duration')
     .populate('regularization.approval.approvedBy', 'name email');
 };
 

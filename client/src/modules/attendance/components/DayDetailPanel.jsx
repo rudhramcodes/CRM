@@ -37,6 +37,9 @@ export default function DayDetailPanel({ date, employeeId }) {
   const [requestRegularization, { isLoading: submittingRegularize }] = useRequestRegularizationMutation();
   const [regularizeOpen, setRegularizeOpen] = useState(false);
   const [regularizeReason, setRegularizeReason] = useState('');
+  const [regularizeClockIn, setRegularizeClockIn] = useState('');
+  const [regularizeClockOut, setRegularizeClockOut] = useState('');
+  const [regularizeBreakMinutes, setRegularizeBreakMinutes] = useState('0');
   const [regularizeError, setRegularizeError] = useState('');
 
   const records = Array.isArray(data?.data) ? data.data : [];
@@ -51,10 +54,19 @@ export default function DayDetailPanel({ date, employeeId }) {
       return;
     }
     try {
-      await requestRegularization({ attendanceId: record._id, reason }).unwrap();
+      await requestRegularization({
+        attendanceId: record._id,
+        reason,
+        clockInTime: regularizeClockIn,
+        clockOutTime: regularizeClockOut,
+        breakMinutes: Number(regularizeBreakMinutes || 0),
+      }).unwrap();
       toast.success('Regularization request submitted');
       setRegularizeOpen(false);
       setRegularizeReason('');
+      setRegularizeClockIn('');
+      setRegularizeClockOut('');
+      setRegularizeBreakMinutes('0');
       setRegularizeError('');
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to submit');
@@ -83,6 +95,18 @@ export default function DayDetailPanel({ date, employeeId }) {
 
   const sessions = record.sessions || [];
   const hasSessions = sessions.length > 0;
+  const regularizationStatus = record.regularization?.approval?.status;
+  const approvedBy = record.regularization?.approval?.approvedBy;
+  const openRegularization = () => {
+    const clockIn = record.clockIn?.time || sessions[0]?.clockIn?.time;
+    const clockOut = record.clockOut?.time || sessions[0]?.clockOut?.time;
+    setRegularizeClockIn(clockIn ? format(new Date(clockIn), 'HH:mm') : '');
+    setRegularizeClockOut(clockOut ? format(new Date(clockOut), 'HH:mm') : '');
+    setRegularizeBreakMinutes(String(record.totalBreakMinutes || 0));
+    setRegularizeReason('');
+    setRegularizeError('');
+    setRegularizeOpen(true);
+  };
   return (
     <div className="bg-white rounded-xl border border-zinc-200 p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -91,6 +115,15 @@ export default function DayDetailPanel({ date, employeeId }) {
           {record.status?.replace('_', ' ')}
         </Badge>
       </div>
+      {regularizationStatus && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs">
+          <Badge variant={regularizationStatus === 'approved' ? 'success' : regularizationStatus === 'rejected' ? 'danger' : 'warning'}>
+            Regularization {regularizationStatus}
+          </Badge>
+          {approvedBy?.name && <span className="text-amber-800">{regularizationStatus === 'approved' ? 'Approved' : 'Reviewed'} by <strong>{approvedBy.name}</strong></span>}
+          {record.regularization?.approval?.comment && <span className="text-amber-700">“{record.regularization.approval.comment}”</span>}
+        </div>
+      )}
 
       <div className="space-y-3 text-sm">
         {/* Sessions */}
@@ -203,17 +236,20 @@ export default function DayDetailPanel({ date, employeeId }) {
         </div>
       )}
 
-      {record.status === 'absent' && (
-        <Button variant="outline" className="w-full" onClick={() => { setRegularizeOpen(true); setRegularizeError(''); }}>
-          Request Regularization
+      {record.status === 'absent' && regularizationStatus !== 'approved' && (
+        <Button variant="outline" className="w-full" onClick={openRegularization}>
+          {regularizationStatus === 'pending' ? 'Update Regularization Request' : 'Request Regularization'}
         </Button>
       )}
 
       <Modal open={regularizeOpen} onClose={() => setRegularizeOpen(false)} title="Request Regularization">
         <form onSubmit={handleRegularize} className="space-y-4">
-          <p className="text-sm text-zinc-500">
-            Approving a request does not change clock times. An admin can correct times with Manual Entry.
-          </p>
+          <p className="text-sm text-zinc-500">Add the actual attendance details. After approval, these values update the record and remain visible in the audit history.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm text-zinc-700">Clock in<input type="time" value={regularizeClockIn} onChange={(e) => setRegularizeClockIn(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2" /></label>
+            <label className="text-sm text-zinc-700">Clock out<input type="time" value={regularizeClockOut} onChange={(e) => setRegularizeClockOut(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2" /></label>
+          </div>
+          <label className="block text-sm text-zinc-700">Total break (minutes)<input type="number" min="0" max="1440" value={regularizeBreakMinutes} onChange={(e) => setRegularizeBreakMinutes(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2" /></label>
           <Textarea
             label="Reason"
             value={regularizeReason}

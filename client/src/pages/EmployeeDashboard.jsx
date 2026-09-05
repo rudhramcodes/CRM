@@ -6,6 +6,7 @@ import { setPageTitle } from '../app/store/uiSlice';
 import { useGetEmployeeDashboardQuery } from '../services/dashboardApi';
 import ProgressRing from '../components/ui/ProgressRing';
 import Badge from '../components/ui/Badge';
+import EmployeeWorkCalendar from '../components/EmployeeWorkCalendar';
 import {
   CheckCircle2, Clock, AlertCircle, Loader2, Calendar,
   ListTodo, Users, ArrowRight, MapPin, Video,
@@ -87,6 +88,8 @@ export default function EmployeeDashboard() {
           Here&apos;s your work summary for today.
         </p>
       </div>
+
+      <EmployeeWorkCalendar />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

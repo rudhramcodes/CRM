@@ -600,6 +600,12 @@ export default function AttendanceList() {
                               {rec.leave.leaveType} leave
                             </span>
                           )}
+                          {rec.regularization?.approval?.status && (
+                            <span className="text-[11px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              Regularization {rec.regularization.approval.status}
+                              {rec.regularization.approval.approvedBy?.name ? ` · by ${rec.regularization.approval.approvedBy.name}` : ''}
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -672,8 +678,13 @@ export default function AttendanceList() {
                     <Badge variant={STATUS_BADGE[rec.status] || 'default'}>
                       {rec.status?.replace('_', ' ')}
                     </Badge>
-                    {rec.isWFH && (
+                  {rec.isWFH && (
                       <span className="text-[10px] text-blue-700 font-medium bg-blue-50 px-1 rounded">WFH</span>
+                    )}
+                    {rec.regularization?.approval?.status && (
+                      <span className="text-[10px] text-amber-700 font-medium bg-amber-50 px-1 rounded">
+                        Regularization {rec.regularization.approval.status}
+                      </span>
                     )}
                   </div>
                 </div>

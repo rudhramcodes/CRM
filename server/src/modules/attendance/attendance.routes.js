@@ -109,6 +109,12 @@ router.post(
 
 // --- Regularization ---
 
+router.get(
+  '/regularization/requests',
+  authorize('super_admin', 'admin', 'manager'),
+  attendanceController.listRegularizationRequests
+);
+
 router.post(
   '/regularize',
   authorize('super_admin', 'admin', 'manager', 'employee'),
