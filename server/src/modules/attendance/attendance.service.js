@@ -20,7 +20,7 @@ const parseHHMM = (hhmm) => {
 
 const isWeekend = (date) => {
   const day = new Date(date).getDay();
-  return day === 0 || day === 6;
+  return day === 0;
 };
 
 export const NON_WORKING_ATTENDANCE_STATUSES = ['leave', 'holiday', 'weekend'];
@@ -28,7 +28,7 @@ export const NON_WORKING_ATTENDANCE_STATUSES = ['leave', 'holiday', 'weekend'];
 export const getClockInBlockReason = (record) => {
   if (!record || !NON_WORKING_ATTENDANCE_STATUSES.includes(record.status)) return null;
   if (record.status === 'leave') return 'You have an approved leave for today';
-  if (record.status === 'weekend') return 'Clock-in is not allowed on weekends';
+  if (record.status === 'weekend') return 'Clock-in is not allowed on Sunday';
   if (record.status === 'holiday') {
     return record.notes ? `Today is a holiday: ${record.notes}` : 'Clock-in is not allowed on holidays';
   }
@@ -217,7 +217,7 @@ export const clockIn = async (employeeId, data, ip) => {
           sessions: [],
           createdBy: employeeId,
         });
-        throw ApiError.badRequest('Clock-in is not allowed on weekends');
+        throw ApiError.badRequest('Clock-in is not allowed on Sunday');
       } else {
         record = await attendanceRepo.createAttendance({
           employee: employeeId,

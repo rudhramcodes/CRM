@@ -84,7 +84,7 @@ const autoAbsentMarking = async () => {
 
       if (!existing) {
         const dayOfWeek = today.getDay();
-        const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
+        const isWeekendDay = dayOfWeek === 0;
 
         await Attendance.create({
           employee: emp._id,

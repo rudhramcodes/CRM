@@ -11,7 +11,7 @@ import LiveTimer from './LiveTimer';
 import ClockOutSummary from './ClockOutSummary';
 import Button from '../../../components/ui/Button';
 import Switch from '../../../components/ui/Switch';
-import { format, isWeekend } from 'date-fns';
+import { format } from 'date-fns';
 import { Play, LogOut, Coffee, PlayCircle, Plane, Gift, CalendarOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatHours, formatMinutes } from '../../../utils/formatters';
@@ -78,7 +78,7 @@ export default function AttendanceWidget() {
   const blockedKind = useMemo(() => {
     if (today?.status && BLOCKED_STATUS[today.status]) return today.status;
     if (holidayToday) return 'holiday';
-    if (isWeekend(new Date())) return 'weekend';
+    if (new Date().getDay() === 0) return 'weekend';
     return null;
   }, [today?.status, holidayToday]);
   const sessions = today?.sessions || [];
@@ -275,7 +275,7 @@ export default function AttendanceWidget() {
                   <>{holidayToday?.name || 'Company holiday'} — clock-in is not available.</>
                 )}
                 {blockedKind === 'weekend' && (
-                  <>Clock-in is not allowed on weekends.</>
+                  <>Clock-in is not allowed on Sunday.</>
                 )}
               </p>
             </div>
