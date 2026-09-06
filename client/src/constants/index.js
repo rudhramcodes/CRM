@@ -11,6 +11,7 @@ import {
   Settings,
   BarChart3,
   ClipboardCheck,
+  BriefcaseBusiness,
 } from 'lucide-react';
 
 export const ROLES = {
@@ -137,6 +138,7 @@ export const NAV_ITEMS = [
   { label: 'Payments', path: '/payments', icon: CreditCard, roles: ['super_admin', 'admin'] },
   { label: 'Reports', path: '/reports', icon: BarChart3, roles: ['super_admin', 'admin'] },
   { label: 'Attendance', path: '/attendance', icon: ClipboardCheck, roles: ['super_admin', 'admin', 'manager', 'employee'] },
+  { label: 'Freelancers', path: '/freelancers', icon: BriefcaseBusiness, roles: ['super_admin', 'admin', 'manager'] },
   { label: 'Notifications', path: '/notifications', icon: Bell, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Users', path: '/users', icon: Users, roles: ['super_admin', 'admin'] },
   { label: 'Settings', path: '/settings', icon: Settings, roles: ['super_admin', 'admin', 'manager', 'employee'] },

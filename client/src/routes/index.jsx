@@ -52,6 +52,9 @@ import AttendanceHolidays from '../modules/attendance/pages/AttendanceHolidays';
 import AttendanceReports from '../modules/attendance/pages/AttendanceReports';
 import SettingsPage from '../modules/settings/pages/SettingsPage';
 import UserManagement from '../modules/users/pages/UserManagement';
+import FreelancerList from '../modules/freelancers/pages/FreelancerList';
+import FreelancerForm from '../modules/freelancers/pages/FreelancerForm';
+import FreelancerDetail from '../modules/freelancers/pages/FreelancerDetail';
 
 const router = createBrowserRouter([
   {
@@ -145,13 +148,19 @@ const router = createBrowserRouter([
       },
       { path: 'notifications', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><NotificationList /></ProtectedRoute> },
       { path: 'users', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><UserManagement /></ProtectedRoute> },
+
+      { path: 'freelancers', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><FreelancerList /></ProtectedRoute> },
+
+      { path: 'freelancers/new', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><FreelancerForm /></ProtectedRoute> },
+      { path: 'freelancers/:id/edit', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><FreelancerForm /></ProtectedRoute> },
+      { path: 'freelancers/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><FreelancerDetail /></ProtectedRoute> },
       { path: 'settings', element: <SettingsPage /> },
     ],
   },
   {
     path: '*',
     element: <NotFound />,
-  }, 
+  },
 ]);
 
 export default router;

@@ -61,6 +61,7 @@ export const api = createApi({
     'LeaveBalance',
     'Shift',
     'Holiday',
+    'Freelancer',
   ],
   endpoints: () => ({}),
 });
