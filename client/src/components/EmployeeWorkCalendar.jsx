@@ -18,7 +18,9 @@ import {
 } from 'date-fns';
 import {
   ArrowRight,
+  AlertTriangle,
   BriefcaseBusiness,
+  Bell,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
@@ -29,6 +31,7 @@ import {
   MapPin,
   Milestone,
   Search,
+  Users,
   Video,
   X,
 } from 'lucide-react';
@@ -90,6 +93,12 @@ const toTimeLabel = (time) => {
 };
 
 const eventSearchText = (event) => [event.title, event.detail, event.type, event.task?.priority, event.task?.status, event.meeting?.location].filter(Boolean).join(' ').toLowerCase();
+
+const timeToMinutes = (value) => {
+  if (!value) return null;
+  const [hours, minutes] = String(value).split(':').map(Number);
+  return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null;
+};
 
 function EventPill({ event, compact = false, onClick }) {
   const meta = EVENT_META[event.type] || EVENT_META.task;
@@ -188,6 +197,32 @@ export default function EmployeeWorkCalendar() {
   const todayKey = format(startOfDay(new Date()), 'yyyy-MM-dd');
   const overdueEvents = visibleEvents.filter((event) => event.type === 'deadline' && event.date < todayKey && event.task?.status !== 'done').sort((a, b) => a.date.localeCompare(b.date));
   const upcomingEvents = visibleEvents.filter((event) => event.date >= todayKey).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 10);
+  const dailyAgenda = visibleEvents.filter((event) => event.date === todayKey).sort((a, b) => (a.type === 'meeting' ? timeToMinutes(a.meeting?.startTime) || 0 : 0) - (b.type === 'meeting' ? timeToMinutes(b.meeting?.startTime) || 0 : 0));
+  const workload = useMemo(() => {
+    const taskEvents = events.filter((event) => event.type === 'task');
+    return {
+      total: taskEvents.length,
+      active: taskEvents.filter((event) => event.task?.status !== 'done').length,
+      urgent: taskEvents.filter((event) => ['urgent', 'high'].includes(event.task?.priority) && event.task?.status !== 'done').length,
+      done: taskEvents.filter((event) => event.task?.status === 'done').length,
+    };
+  }, [events]);
+  const deadlineConflicts = useMemo(() => Object.values(events.filter((event) => event.type === 'deadline' && event.task?.status !== 'done').reduce((groups, event) => {
+    (groups[event.date] ||= []).push(event);
+    return groups;
+  }, {})).filter((group) => group.length > 1), [events]);
+  const meetingConflicts = useMemo(() => Object.values(events.filter((event) => event.type === 'meeting').reduce((groups, event) => {
+    (groups[event.date] ||= []).push(event);
+    return groups;
+  }, {})).flatMap((group) => {
+    const sorted = [...group].sort((a, b) => (timeToMinutes(a.meeting?.startTime) || 0) - (timeToMinutes(b.meeting?.startTime) || 0));
+    return sorted.slice(0, -1).flatMap((event, index) => {
+      const next = sorted[index + 1];
+      const end = timeToMinutes(event.meeting?.endTime) ?? ((timeToMinutes(event.meeting?.startTime) || 0) + 60);
+      return next && end > (timeToMinutes(next.meeting?.startTime) || 0) ? [[event, next]] : [];
+    });
+  }), [events]);
+  const reminders = visibleEvents.filter((event) => (event.type === 'deadline' && event.date >= todayKey && event.date <= format(new Date(Date.now() + 3 * 86400000), 'yyyy-MM-dd')) || (event.type === 'meeting' && event.date === todayKey)).slice(0, 6);
   const loading = tasksLoading || meetingsLoading || attendanceLoading || holidaysLoading || leavesLoading;
 
   const changeMonth = (nextMonth) => { setMonth(nextMonth); setSelectedDate(nextMonth); };
@@ -235,6 +270,8 @@ export default function EmployeeWorkCalendar() {
         </div>
       </div>
 
+      {(deadlineConflicts.length > 0 || meetingConflicts.length > 0) && <div className="flex flex-wrap gap-2 border-b border-amber-100 bg-amber-50/60 px-4 py-3 sm:px-6"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><div className="flex flex-wrap gap-2 text-xs text-amber-800">{deadlineConflicts.length > 0 && <span><strong>{deadlineConflicts.length}</strong> deadline conflict{deadlineConflicts.length > 1 ? 's' : ''} detected</span>}{meetingConflicts.length > 0 && <span>{deadlineConflicts.length > 0 && ' · '}<strong>{meetingConflicts.length}</strong> overlapping meeting{meetingConflicts.length > 1 ? 's' : ''}</span>}<button type="button" onClick={() => setView('agenda')} className="font-semibold underline underline-offset-2">Review agenda</button></div></div>}
+
       <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 p-3 sm:p-5">
           {view === 'month' && <>
@@ -243,12 +280,15 @@ export default function EmployeeWorkCalendar() {
           </>}
           {view === 'week' && <div className="flex gap-2 overflow-x-auto pb-2">{weekDays.map((day) => <DayColumn key={day.toISOString()} day={day} events={eventsByDate[format(day, 'yyyy-MM-dd')] || []} onSelect={selectDate} onOpen={openEvent} />)}</div>}
           {view === 'day' && <div className="space-y-3"><div className="flex items-center justify-between rounded-xl bg-indigo-50/50 px-4 py-3"><div><p className="text-xs uppercase tracking-wider text-indigo-500">Day view</p><p className="font-semibold text-zinc-900">{format(selectedDate, 'EEEE, d MMMM')}</p></div><Badge variant="info">{selectedEvents.length} events</Badge></div>{selectedEvents.length ? selectedEvents.map((event) => <button type="button" key={event.id} onClick={() => openEvent(event)} className="flex w-full items-start gap-3 rounded-xl border border-zinc-200 p-4 text-left hover:border-indigo-200 hover:bg-indigo-50/20"><span className={`mt-1 h-2.5 w-2.5 rounded-full ${EVENT_META[event.type]?.dot}`} /><span className="min-w-0 flex-1"><span className="block font-medium capitalize text-zinc-800">{event.title}</span><span className="mt-1 block text-sm capitalize text-zinc-500">{event.detail}</span></span><ArrowRight className="h-4 w-4 text-zinc-300" /></button>) : <EmptyDay />}</div>}
-          {view === 'agenda' && <AgendaView events={upcomingEvents} overdueEvents={overdueEvents} onOpen={openEvent} />}
+          {view === 'agenda' && <AgendaView events={upcomingEvents} overdueEvents={overdueEvents} deadlineConflicts={deadlineConflicts} meetingConflicts={meetingConflicts} onOpen={openEvent} />}
         </div>
 
         <aside className="border-t border-zinc-100 bg-[#fcfcfb] p-4 sm:p-5 lg:border-l lg:border-t-0">
           <div className="mb-4 flex items-center justify-between"><div><p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Selected day</p><h4 className="mt-1 text-base font-semibold text-zinc-900">{format(selectedDate, 'EEEE, d MMM')}</h4></div>{selectedEvents.length > 0 && <span className="rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-semibold text-zinc-500">{selectedEvents.length} items</span>}</div>
           <div className="space-y-2">{selectedEvents.length ? selectedEvents.slice(0, 5).map((event) => <button type="button" key={event.id} onClick={() => openEvent(event)} className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-left hover:border-indigo-200 hover:shadow-sm"><div className="flex items-start gap-2"><span className={`mt-1 h-2 w-2 rounded-full ${EVENT_META[event.type]?.dot || 'bg-zinc-400'}`} /><div className="min-w-0"><p className="truncate text-sm font-medium capitalize text-zinc-800">{event.title}</p><p className="mt-1 text-xs capitalize text-zinc-500">{event.detail}</p></div></div></button>) : <EmptyDay />}</div>
+          <div className="mt-5 border-t border-zinc-200/70 pt-4"><div className="mb-3 flex items-center justify-between"><p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Daily agenda</p><Badge variant={dailyAgenda.length ? 'info' : 'default'} size="sm">{dailyAgenda.length}</Badge></div>{dailyAgenda.length ? <div className="space-y-1.5">{dailyAgenda.slice(0, 4).map((event) => <button type="button" key={event.id} onClick={() => openEvent(event)} className="flex w-full items-center gap-2 rounded-lg bg-white p-2 text-left hover:bg-indigo-50/50"><span className={`h-2 w-2 shrink-0 rounded-full ${EVENT_META[event.type]?.dot}`} /><span className="min-w-0 flex-1 truncate text-xs font-medium capitalize text-zinc-700">{event.title}</span><span className="shrink-0 text-[10px] text-zinc-400">{event.type === 'meeting' ? toTimeLabel(event.meeting?.startTime) : EVENT_META[event.type]?.label}</span></button>)}</div> : <p className="rounded-lg bg-white px-3 py-3 text-center text-xs text-zinc-400">No events scheduled today</p>}</div>
+          <div className="mt-5 border-t border-zinc-200/70 pt-4"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400"><Bell className="h-3.5 w-3.5" /> Reminders</p><span className="text-[10px] text-zinc-400">Next 3 days</span></div>{reminders.length ? <div className="space-y-1.5">{reminders.map((event) => <button type="button" key={event.id} onClick={() => openEvent(event)} className="flex w-full items-center gap-2 rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-left hover:bg-rose-50"><Bell className="h-3.5 w-3.5 shrink-0 text-rose-500" /><span className="min-w-0 flex-1 truncate text-xs font-medium text-zinc-700">{event.title}</span><span className="shrink-0 text-[10px] text-rose-600">{event.type === 'meeting' ? 'Today' : format(new Date(`${event.date}T12:00:00`), 'd MMM')}</span></button>)}</div> : <p className="rounded-lg bg-white px-3 py-3 text-center text-xs text-zinc-400">No urgent reminders</p>}</div>
+          <div className="mt-5 border-t border-zinc-200/70 pt-4"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400"><Users className="h-3.5 w-3.5" /> Workload</p><span className="text-[10px] text-zinc-400">This month</span></div><div className="space-y-2"><div className="h-2 overflow-hidden rounded-full bg-zinc-100"><div className="h-full rounded-full bg-indigo-500" style={{ width: `${workload.total ? Math.round((workload.done / workload.total) * 100) : 0}%` }} /></div><div className="flex justify-between text-xs text-zinc-600"><span>{workload.done} of {workload.total} tasks complete</span><strong className="text-zinc-900">{workload.active} active</strong></div><div className="flex items-center justify-between text-xs"><span className="text-zinc-500">High priority active</span><strong className={workload.urgent ? 'text-rose-600' : 'text-emerald-600'}>{workload.urgent}</strong></div></div></div>
           <div className="mt-5 border-t border-zinc-200/70 pt-4"><p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Quick actions</p><div className="grid grid-cols-2 gap-2"><QuickAction icon={ListTodo} label="New task" onClick={() => navigate('/projects')} /><QuickAction icon={Video} label="Schedule" onClick={() => navigate('/meetings/new')} /><QuickAction icon={Clock3} label="Attendance" onClick={() => navigate('/attendance')} /><QuickAction icon={CalendarDays} label="Full view" onClick={() => setView('agenda')} /></div></div>
           <div className="mt-5 border-t border-zinc-200/70 pt-4"><p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">At a glance</p><div className="space-y-2 text-xs text-zinc-600"><Stat label="Tasks this month" value={events.filter((event) => event.type === 'task').length} /><Stat label="Upcoming deadlines" value={events.filter((event) => event.type === 'deadline' && event.date >= todayKey).length} tone="text-rose-600" /><Stat label="Overdue deadlines" value={overdueEvents.length} tone="text-red-600" /><Stat label="Meetings" value={events.filter((event) => event.type === 'meeting').length} tone="text-violet-600" /></div></div>
         </aside>
@@ -273,9 +313,9 @@ function Stat({ label, value, tone = 'text-zinc-900' }) {
   return <div className="flex items-center justify-between"><span>{label}</span><strong className={tone}>{value}</strong></div>;
 }
 
-function AgendaView({ events, overdueEvents, onOpen }) {
+function AgendaView({ events, overdueEvents, deadlineConflicts, meetingConflicts, onOpen }) {
   const groups = events.reduce((map, event) => { (map[event.date] ||= []).push(event); return map; }, {});
-  return <div className="space-y-5"><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-wider text-indigo-500">Agenda</p><h4 className="mt-1 text-lg font-semibold text-zinc-900">What’s coming up</h4></div><Badge variant="info">{events.length} upcoming</Badge></div>{overdueEvents.length > 0 && <div><p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-red-600"><Flag className="h-3.5 w-3.5" />Overdue deadlines</p><div className="space-y-2">{overdueEvents.slice(0, 5).map((event) => <AgendaItem key={event.id} event={event} onOpen={onOpen} overdue />)}</div></div>}{Object.keys(groups).length ? Object.entries(groups).map(([date, dayEvents]) => <div key={date}><p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">{format(new Date(`${date}T12:00:00`), 'EEEE, d MMMM')}</p><div className="space-y-2">{dayEvents.map((event) => <AgendaItem key={event.id} event={event} onOpen={onOpen} />)}</div></div>) : <EmptyDay />}</div>;
+  return <div className="space-y-5"><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-wider text-indigo-500">Agenda</p><h4 className="mt-1 text-lg font-semibold text-zinc-900">What’s coming up</h4></div><Badge variant="info">{events.length} upcoming</Badge></div>{(deadlineConflicts.length > 0 || meetingConflicts.length > 0) && <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3"><p className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-800"><AlertTriangle className="h-3.5 w-3.5" /> Conflicts to resolve</p><div className="space-y-1">{deadlineConflicts.slice(0, 3).map((group) => <p key={group[0].date} className="text-xs text-amber-700">{format(new Date(`${group[0].date}T12:00:00`), 'd MMM')}: {group.length} deadlines fall on the same day</p>)}{meetingConflicts.slice(0, 3).map(([first, second]) => <p key={`${first.id}-${second.id}`} className="text-xs text-amber-700">{format(new Date(`${first.date}T12:00:00`), 'd MMM')}: {first.title} overlaps {second.title}</p>)}</div></div>}{overdueEvents.length > 0 && <div><p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-red-600"><Flag className="h-3.5 w-3.5" />Overdue deadlines</p><div className="space-y-2">{overdueEvents.slice(0, 5).map((event) => <AgendaItem key={event.id} event={event} onOpen={onOpen} overdue />)}</div></div>}{Object.keys(groups).length ? Object.entries(groups).map(([date, dayEvents]) => <div key={date}><p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">{format(new Date(`${date}T12:00:00`), 'EEEE, d MMMM')}</p><div className="space-y-2">{dayEvents.map((event) => <AgendaItem key={event.id} event={event} onOpen={onOpen} />)}</div></div>) : <EmptyDay />}</div>;
 }
 
 function AgendaItem({ event, onOpen, overdue = false }) {
