@@ -2,14 +2,14 @@ import { getCurrentRate, formatRateSummary } from '../rateCardUtils';
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Archive, BriefcaseBusiness, MapPin, Plus, RefreshCw, Search, Users, UserRound, X } from 'lucide-react';
+import { Archive, BriefcaseBusiness, MapPin, Plus, RefreshCw, Search, Users, UserRound, X, Power, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { setPageTitle } from '../../../app/store/uiSlice';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
 import EmptyState from '../../../components/ui/EmptyState';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
-import { useArchiveFreelancerMutation, useGetFreelancerStatsQuery, useGetFreelancersQuery } from '../../../services/freelancerApi';
+import { useArchiveFreelancerMutation, useGetFreelancerStatsQuery, useGetFreelancersQuery, useUpdateFreelancerMutation, useDeleteFreelancerMutation } from '../../../services/freelancerApi';
 import { BRANDS } from '../../../constants';
 
 const ventureLabels = Object.fromEntries(BRANDS.map((brand) => [brand.value, brand.label]));
@@ -19,12 +19,15 @@ export default function FreelancerList() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  const [filters, setFilters] = useState({ page: 1, limit: 10, search: '', venture: '', status: 'active' });
+  const [filters, setFilters] = useState({ page: 1, limit: 10, search: '', venture: '', status: '' });
   const queryFilters = Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== ''));
   const [archiveTarget, setArchiveTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const { data, isLoading, isFetching, error, refetch } = useGetFreelancersQuery(queryFilters);
   const { data: statsData, isLoading: statsLoading } = useGetFreelancerStatsQuery();
   const [archiveFreelancer, { isLoading: isArchiving }] = useArchiveFreelancerMutation();
+  const [deleteFreelancer, { isLoading: isDeleting }] = useDeleteFreelancerMutation();
+  const [updateFreelancer] = useUpdateFreelancerMutation();
   const freelancers = data?.data || [];
   const pagination = data?.pagination || {};
   const stats = statsData?.data || {};
@@ -41,6 +44,25 @@ export default function FreelancerList() {
       setArchiveTarget(null);
     } catch (err) {
       toast.error(err?.data?.message || 'Unable to archive freelancer');
+    }
+  };
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteFreelancer(deleteTarget._id).unwrap();
+      toast.success('Freelancer permanently deleted');
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error(err?.data?.message || 'Unable to delete freelancer');
+    }
+  };
+  const handleStatusToggle = async (freelancer) => {
+    try {
+      const newStatus = freelancer.status === 'active' ? 'inactive' : 'active';
+      await updateFreelancer({ id: freelancer._id, status: newStatus }).unwrap();
+      toast.success(`Freelancer marked as ${newStatus}`);
+    } catch (err) {
+      toast.error('Failed to update status');
     }
   };
 
@@ -73,13 +95,14 @@ export default function FreelancerList() {
         </div>
 
         {isLoading ? <DirectorySkeleton /> : error ? <div className="p-12"><EmptyState icon={Users} title="Unable to load freelancers" description={error?.data?.message || 'Please try again.'} /></div> : freelancers.length === 0 ? <div className="p-12"><EmptyState icon={Users} title="No freelancers yet" description="Build your crew directory by adding your first photographer, event manager, or production specialist." action={canManage ? <Button onClick={() => navigate('/freelancers/new')}><Plus className="h-4 w-4" /> Add your first freelancer</Button> : null} /></div> : <>
-          <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[760px] text-left"><thead className="border-b border-zinc-100 bg-zinc-50/70 text-[11px] uppercase tracking-wider text-zinc-400"><tr><th className="px-5 py-3 font-semibold">Freelancer</th><th className="px-4 py-3 font-semibold">Venture & services</th><th className="px-4 py-3 font-semibold">Location</th><th className="px-4 py-3 font-semibold">Status</th><th className="px-5 py-3 text-right font-semibold">Action</th></tr></thead><tbody className="divide-y divide-zinc-100">{freelancers.map((freelancer) => <DirectoryRow key={freelancer._id} freelancer={freelancer} onOpen={() => navigate(`/freelancers/${freelancer._id}`)} onArchive={() => setArchiveTarget(freelancer)} canManage={canManage} />)}</tbody></table></div>
-          <div className="grid gap-3 p-3 md:hidden">{freelancers.map((freelancer) => <DirectoryCard key={freelancer._id} freelancer={freelancer} onOpen={() => navigate(`/freelancers/${freelancer._id}`)} onArchive={() => setArchiveTarget(freelancer)} canManage={canManage} />)}</div>
+          <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[760px] text-left"><thead className="border-b border-zinc-100 bg-zinc-50/70 text-[11px] uppercase tracking-wider text-zinc-400"><tr><th className="px-5 py-3 font-semibold">Freelancer</th><th className="px-4 py-3 font-semibold">Venture & services</th><th className="px-4 py-3 font-semibold">Location</th><th className="px-4 py-3 font-semibold">Status</th><th className="px-5 py-3 text-right font-semibold">Action</th></tr></thead><tbody className="divide-y divide-zinc-100">{freelancers.map((freelancer) => <DirectoryRow key={freelancer._id} freelancer={freelancer} onOpen={() => navigate(`/freelancers/${freelancer._id}`)} onArchive={() => setArchiveTarget(freelancer)} onDelete={() => setDeleteTarget(freelancer)} onStatusToggle={handleStatusToggle} canManage={canManage} />)}</tbody></table></div>
+          <div className="grid gap-3 p-3 md:hidden">{freelancers.map((freelancer) => <DirectoryCard key={freelancer._id} freelancer={freelancer} onOpen={() => navigate(`/freelancers/${freelancer._id}`)} onArchive={() => setArchiveTarget(freelancer)} onDelete={() => setDeleteTarget(freelancer)} onStatusToggle={handleStatusToggle} canManage={canManage} />)}</div>
           <div className="flex flex-col gap-2 border-t border-zinc-100 px-4 py-3 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between"><span>Showing {freelancers.length} of {pagination.total || freelancers.length} freelancers</span><div className="flex gap-2"><Button variant="secondary" size="sm" disabled={!pagination.hasPrevPage} onClick={() => setFilters((p) => ({ ...p, page: p.page - 1 }))}>Previous</Button><Button variant="secondary" size="sm" disabled={!pagination.hasNextPage} onClick={() => setFilters((p) => ({ ...p, page: p.page + 1 }))}>Next</Button></div></div>
         </>}
       </section>
 
       <ConfirmDialog open={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} onConfirm={confirmArchive} confirmLabel={isArchiving ? 'Archiving…' : 'Archive'} loading={isArchiving} title="Archive freelancer?" message={archiveTarget ? `Archive ${archiveTarget.displayName || archiveTarget.fullName}? Their history will be preserved.` : ''} />
+      <ConfirmDialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} onConfirm={confirmDelete} confirmLabel={isDeleting ? 'Deleting…' : 'Delete'} loading={isDeleting} title="Permanently Delete?" message={deleteTarget ? `Permanently delete ${deleteTarget.displayName || deleteTarget.fullName}? This cannot be undone.` : ''} />
     </div>
   );
 }
@@ -89,7 +112,7 @@ function ventureNames(freelancer) { return (freelancer.ventureProfiles || []).ma
 function services(freelancer) { return (freelancer.ventureProfiles || []).flatMap((profile) => profile.serviceCategories || []).slice(0, 3); }
 function currentRate(freelancer) { return getCurrentRate((freelancer.ventureProfiles || []).flatMap((profile) => profile.rateCards || [])); }
 function rateSummary(freelancer) { return formatRateSummary(currentRate(freelancer)); }
-function DirectoryRow({ freelancer, onOpen, onArchive, canManage }) { return <tr className="group hover:bg-zinc-50/70"><td className="px-5 py-4"><button type="button" onClick={onOpen} className="flex items-center gap-3 text-left"><Avatar freelancer={freelancer} /><span><span className="block font-medium text-zinc-800 group-hover:text-indigo-700">{freelancer.displayName || freelancer.fullName}</span><span className="mt-0.5 block text-xs text-zinc-400">{freelancer.freelancerCode} · {freelancer.phone}</span></span></button></td><td className="px-4 py-4"><div className="flex flex-wrap gap-1.5">{ventureNames(freelancer).map((name) => <Badge key={name} variant="info" size="sm">{name}</Badge>)}</div><p className="mt-1.5 text-xs capitalize text-zinc-500">{services(freelancer).join(' · ') || 'Services not added'}</p>{rateSummary(freelancer) && <p className="mt-1 text-[11px] font-semibold text-emerald-700">{rateSummary(freelancer)}</p>}</td><td className="px-4 py-4"><span className="flex items-center gap-1.5 text-sm text-zinc-600"><MapPin className="h-3.5 w-3.5 text-zinc-400" />{freelancer.city || 'Location not added'}</span></td><td className="px-4 py-4"><Badge variant={statusTone[freelancer.status] || 'default'}>{freelancer.status}</Badge></td><td className="px-5 py-4 text-right"><div className="flex justify-end gap-2"><Button variant="secondary" size="sm" onClick={onOpen}>View</Button>{canManage && freelancer.status !== 'archived' && <button type="button" onClick={onArchive} className="rounded-lg p-2 text-zinc-400 hover:bg-rose-50 hover:text-rose-600" title="Archive"><Archive className="h-4 w-4" /></button>}</div></td></tr>; }
-function DirectoryCard({ freelancer, onOpen, onArchive, canManage }) { return <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><button type="button" onClick={onOpen} className="flex w-full items-start gap-3 text-left"><Avatar freelancer={freelancer} /><span className="min-w-0 flex-1"><span className="block truncate font-medium text-zinc-800">{freelancer.displayName || freelancer.fullName}</span><span className="mt-0.5 block text-xs text-zinc-400">{freelancer.freelancerCode} · {freelancer.phone}</span></span><Badge variant={statusTone[freelancer.status] || 'default'}>{freelancer.status}</Badge></button><div className="mt-4 flex flex-wrap gap-1.5">{ventureNames(freelancer).map((name) => <Badge key={name} variant="info" size="sm">{name}</Badge>)}</div><p className="mt-3 flex items-center gap-1.5 text-xs text-zinc-500"><MapPin className="h-3.5 w-3.5" />{freelancer.city || 'Location not added'}</p><div className="mt-4 flex gap-2"><Button size="sm" onClick={onOpen}>Open profile</Button>{canManage && freelancer.status !== 'archived' && <Button variant="secondary" size="sm" onClick={onArchive}><Archive className="h-3.5 w-3.5" /> Archive</Button>}</div></div>; }
+function DirectoryRow({ freelancer, onOpen, onArchive, onDelete, onStatusToggle, canManage }) { return <tr className="group hover:bg-zinc-50/70"><td className="px-5 py-4"><button type="button" onClick={onOpen} className="flex items-center gap-3 text-left"><Avatar freelancer={freelancer} /><span><span className="block font-medium text-zinc-800 group-hover:text-indigo-700">{freelancer.displayName || freelancer.fullName}</span><span className="mt-0.5 block text-xs text-zinc-400">{freelancer.freelancerCode} · {freelancer.phone}</span></span></button></td><td className="px-4 py-4"><div className="flex flex-wrap gap-1.5">{ventureNames(freelancer).map((name) => <Badge key={name} variant="info" size="sm">{name}</Badge>)}</div><p className="mt-1.5 text-xs capitalize text-zinc-500">{services(freelancer).join(' · ') || 'Services not added'}</p>{rateSummary(freelancer) && <p className="mt-1 text-[11px] font-semibold text-emerald-700">{rateSummary(freelancer)}</p>}</td><td className="px-4 py-4"><span className="flex items-center gap-1.5 text-sm text-zinc-600"><MapPin className="h-3.5 w-3.5 text-zinc-400" />{freelancer.city || 'Location not added'}</span></td><td className="px-4 py-4"><Badge variant={statusTone[freelancer.status] || 'default'}>{freelancer.status}</Badge></td><td className="px-5 py-4 text-right"><div className="flex justify-end gap-2">{canManage && freelancer.status !== 'archived' && <button type="button" onClick={() => onStatusToggle(freelancer)} className={`rounded-lg p-2 ${freelancer.status === 'active' ? 'text-emerald-600 hover:bg-emerald-50' : 'text-zinc-400 hover:bg-zinc-100'}`} title={freelancer.status === 'active' ? 'Mark Inactive' : 'Mark Active'}><Power className="h-4 w-4" /></button>}<Button variant="secondary" size="sm" onClick={onOpen}>View</Button>{canManage && freelancer.status !== 'archived' && <button type="button" onClick={onArchive} className="rounded-lg p-2 text-zinc-400 hover:bg-rose-50 hover:text-rose-600" title="Archive"><Archive className="h-4 w-4" /></button>}{canManage && freelancer.status === 'archived' && <button type="button" onClick={onDelete} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" title="Permanently Delete"><Trash2 className="h-4 w-4" /></button>}</div></td></tr>; }
+function DirectoryCard({ freelancer, onOpen, onArchive, onDelete, onStatusToggle, canManage }) { return <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><button type="button" onClick={onOpen} className="flex w-full items-start gap-3 text-left"><Avatar freelancer={freelancer} /><span className="min-w-0 flex-1"><span className="block truncate font-medium text-zinc-800">{freelancer.displayName || freelancer.fullName}</span><span className="mt-0.5 block text-xs text-zinc-400">{freelancer.freelancerCode} · {freelancer.phone}</span></span><Badge variant={statusTone[freelancer.status] || 'default'}>{freelancer.status}</Badge></button><div className="mt-4 flex flex-wrap gap-1.5">{ventureNames(freelancer).map((name) => <Badge key={name} variant="info" size="sm">{name}</Badge>)}</div><p className="mt-3 flex items-center gap-1.5 text-xs text-zinc-500"><MapPin className="h-3.5 w-3.5" />{freelancer.city || 'Location not added'}</p><div className="mt-4 flex flex-wrap gap-2"><Button size="sm" onClick={onOpen}>Open profile</Button>{canManage && freelancer.status !== 'archived' && <Button variant="secondary" size="sm" onClick={() => onStatusToggle(freelancer)}><Power className="h-3.5 w-3.5" /> {freelancer.status === 'active' ? 'Make Inactive' : 'Make Active'}</Button>}{canManage && freelancer.status !== 'archived' && <Button variant="secondary" size="sm" onClick={onArchive}><Archive className="h-3.5 w-3.5" /> Archive</Button>}{canManage && freelancer.status === 'archived' && <Button variant="secondary" size="sm" onClick={onDelete} className="!text-rose-600 hover:!bg-rose-50"><Trash2 className="h-3.5 w-3.5" /> Delete</Button>}</div></div>; }
 function Avatar({ freelancer }) { return freelancer.profilePhoto ? <img src={freelancer.profilePhoto} alt="" className="h-10 w-10 rounded-xl object-cover" /> : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-sm font-semibold text-indigo-700">{(freelancer.displayName || freelancer.fullName || 'F')[0].toUpperCase()}</div>; }
 function DirectorySkeleton() { return <div className="space-y-3 p-5">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-16 animate-pulse rounded-lg bg-zinc-100" />)}</div>; }

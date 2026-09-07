@@ -27,6 +27,10 @@ export const freelancerApi = api.injectEndpoints({
       query: ({ id, ...body }) => ({ url: `/freelancers/${id}`, method: 'PATCH', body }),
       invalidatesTags: (_result, _error, { id }) => ['Freelancer', { type: 'Freelancer', id }],
     }),
+    deleteFreelancer: builder.mutation({
+      query: (id) => ({ url: `/freelancers/${id}/hard`, method: 'DELETE' }),
+      invalidatesTags: ['Freelancer'],
+    }),
     archiveFreelancer: builder.mutation({
       query: (id) => ({ url: `/freelancers/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Freelancer'],
@@ -42,4 +46,5 @@ export const {
   useCreateFreelancerPublicMutation,
   useUpdateFreelancerMutation,
   useArchiveFreelancerMutation,
+  useDeleteFreelancerMutation,
 } = freelancerApi;

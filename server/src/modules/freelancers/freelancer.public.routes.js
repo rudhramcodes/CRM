@@ -39,9 +39,15 @@ router.post('/apply', validate(createFreelancerSchema), async (req, res, next) =
       });
     }
 
-    const count = await freelancerService.countByStatus();
-    const total = count.reduce((sum, item) => sum + item.count, 0) + 1;
-    const freelancerCode = `FRL-${String(total).padStart(5, '0')}`;
+    const latest = await import('./freelancer.repository.js').then((m) => m.findLatestFreelancer());
+    let nextNumber = 1;
+    if (latest && latest.freelancerCode) {
+      const match = latest.freelancerCode.match(/FRL-(\d+)/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
+    }
+    const freelancerCode = `FRL-${String(nextNumber).padStart(5, '0')}`;
 
     // Public applications intentionally have no req.user. The service keeps
     // createdBy/updatedBy empty until an internal user takes ownership.

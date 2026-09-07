@@ -15,5 +15,6 @@ router.get('/:id', authorize(...managers), controller.getById);
 router.post('/', authorize(...managers), validate(createFreelancerSchema), controller.create);
 router.patch('/:id', authorize(...managers), validate(updateFreelancerSchema), controller.update);
 router.delete('/:id', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), controller.archive);
+router.delete('/:id/hard', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), controller.remove);
 
 export default router;

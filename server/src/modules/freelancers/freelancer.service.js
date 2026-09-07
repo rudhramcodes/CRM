@@ -2,9 +2,15 @@ import * as freelancerRepo from './freelancer.repository.js';
 import ApiError from '../../utils/ApiError.js';
 
 const nextFreelancerCode = async () => {
-  const count = await freelancerRepo.countByStatus();
-  const total = count.reduce((sum, item) => sum + item.count, 0) + 1;
-  return `FRL-${String(total).padStart(5, '0')}`;
+  const latest = await freelancerRepo.findLatestFreelancer();
+  let nextNumber = 1;
+  if (latest && latest.freelancerCode) {
+    const match = latest.freelancerCode.match(/FRL-(\d+)/);
+    if (match) {
+      nextNumber = parseInt(match[1], 10) + 1;
+    }
+  }
+  return `FRL-${String(nextNumber).padStart(5, '0')}`;
 };
 
 const normalize = (data) => ({
@@ -72,3 +78,8 @@ export const getStats = async () => {
 };
 
 export const countByStatus = () => freelancerRepo.countByStatus();
+
+export const remove = async (id, user) => {
+  await getById(id);
+  return freelancerRepo.deleteById(id);
+};

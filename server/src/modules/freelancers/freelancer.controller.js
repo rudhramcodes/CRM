@@ -28,3 +28,7 @@ export const update = async (req, res, next) => {
 export const archive = async (req, res, next) => {
   try { ApiResponse.success(res, 200, { freelancer: await freelancerService.archive(req.params.id, req.user) }, 'Freelancer archived successfully'); } catch (error) { next(error); }
 };
+
+export const remove = async (req, res, next) => {
+  try { await freelancerService.remove(req.params.id, req.user); ApiResponse.success(res, 200, null, 'Freelancer permanently deleted'); } catch (error) { next(error); }
+};

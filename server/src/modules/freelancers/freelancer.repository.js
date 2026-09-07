@@ -49,3 +49,7 @@ export const countByVenture = () => Freelancer.aggregate([
   { $group: { _id: '$ventureProfiles.venture', count: { $sum: 1 } } },
   { $sort: { count: -1 } },
 ]);
+
+export const deleteById = (id) => Freelancer.findByIdAndDelete(id);
+
+export const findLatestFreelancer = () => Freelancer.findOne({}, 'freelancerCode').sort({ freelancerCode: -1 });
