@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { API_BASE_URL } from '../../constants';
 
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '');
+const API_BASE = API_BASE_URL;
 
 export function CloudinaryImageUpload({
   value,
