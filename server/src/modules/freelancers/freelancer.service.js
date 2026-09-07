@@ -34,10 +34,17 @@ export const getById = async (id) => {
   return freelancer;
 };
 
-export const create = async (data, user) => {
+export const create = async (data, user = null) => {
   const normalized = normalize(data);
   await assertDuplicateFree(normalized);
-  return freelancerRepo.create({ ...normalized, freelancerCode: await nextFreelancerCode(), createdBy: user._id, updatedBy: user._id });
+  const auditFields = user?._id
+    ? { createdBy: user._id, updatedBy: user._id }
+    : {};
+  return freelancerRepo.create({
+    ...normalized,
+    freelancerCode: normalized.freelancerCode || await nextFreelancerCode(),
+    ...auditFields,
+  });
 };
 
 export const update = async (id, data, user) => {
@@ -63,3 +70,5 @@ export const getStats = async () => {
     byVenture: Object.fromEntries(byVenture.map((item) => [item._id, item.count])),
   };
 };
+
+export const countByStatus = () => freelancerRepo.countByStatus();

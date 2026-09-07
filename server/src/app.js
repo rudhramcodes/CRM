@@ -31,6 +31,8 @@ import settingsRoutes from './modules/settings/settings.routes.js';
 import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import freelancerRoutes from './modules/freelancers/freelancer.routes.js';
+import freelancerPublicRoutes from './modules/freelancers/freelancer.public.routes.js';
+import freelancerUploadRoutes from './modules/freelancers/freelancer.upload.routes.js';
 import { startAttendanceCrons } from './modules/attendance/attendance.cron.js';
 
 const app = express();
@@ -110,6 +112,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/freelancers/public', freelancerPublicRoutes);
+app.use('/api/freelancers/upload', freelancerUploadRoutes);
 app.use('/api/freelancers', freelancerRoutes);
 
 startAttendanceCrons();

@@ -59,7 +59,8 @@ const freelancerSchema = new mongoose.Schema({
   emergencyContact: { type: emergencyContactSchema, default: () => ({}) },
   ventureProfiles: { type: [ventureProfileSchema], default: [] },
   status: { type: String, enum: ['active', 'inactive', 'archived'], default: 'active', index: true },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  // Public applications do not have an authenticated CRM user yet.
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false, default: null },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, {
   timestamps: true,

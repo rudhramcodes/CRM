@@ -55,6 +55,9 @@ import UserManagement from '../modules/users/pages/UserManagement';
 import FreelancerList from '../modules/freelancers/pages/FreelancerList';
 import FreelancerForm from '../modules/freelancers/pages/FreelancerForm';
 import FreelancerDetail from '../modules/freelancers/pages/FreelancerDetail';
+import FreelancerPortalForm from '../modules/freelancers/pages/FreelancerPortalForm';
+import FreelancerPortalSuccess from '../modules/freelancers/pages/FreelancerPortalSuccess';
+import FreelancerPortalLayout from '../layouts/FreelancerPortalLayout';
 
 const router = createBrowserRouter([
   {
@@ -155,6 +158,14 @@ const router = createBrowserRouter([
       { path: 'freelancers/:id/edit', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><FreelancerForm /></ProtectedRoute> },
       { path: 'freelancers/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><FreelancerDetail /></ProtectedRoute> },
       { path: 'settings', element: <SettingsPage /> },
+    ],
+  },
+  {
+    path: '/freelancer-portal',
+    element: <FreelancerPortalLayout />,
+    children: [
+      { index: true, element: <FreelancerPortalForm /> },
+      { path: 'success', element: <FreelancerPortalSuccess /> },
     ],
   },
   {

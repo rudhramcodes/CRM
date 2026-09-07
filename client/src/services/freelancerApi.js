@@ -20,6 +20,9 @@ export const freelancerApi = api.injectEndpoints({
       query: (body) => ({ url: '/freelancers', method: 'POST', body }),
       invalidatesTags: ['Freelancer'],
     }),
+    createFreelancerPublic: builder.mutation({
+      query: (body) => ({ url: '/freelancers/public/apply', method: 'POST', body }),
+    }),
     updateFreelancer: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/freelancers/${id}`, method: 'PATCH', body }),
       invalidatesTags: (_result, _error, { id }) => ['Freelancer', { type: 'Freelancer', id }],
@@ -36,6 +39,7 @@ export const {
   useGetFreelancerStatsQuery,
   useGetFreelancerByIdQuery,
   useCreateFreelancerMutation,
+  useCreateFreelancerPublicMutation,
   useUpdateFreelancerMutation,
   useArchiveFreelancerMutation,
 } = freelancerApi;

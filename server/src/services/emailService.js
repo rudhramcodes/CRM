@@ -391,7 +391,7 @@ export const renderClientOnboardingEmail = ({ clientName, companyName, clientId,
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-container" style="max-width:600px;width:100%;">
 
 <tr><td align="center" style="padding-bottom:32px;">
-  <a href="https://rudhram.in" target="_blank" style="text-decoration:none;">
+  <a href="https://rudhramenterprises.com" target="_blank" style="text-decoration:none;">
     <img src="https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png" alt="Rudhram" width="160" style="width:160px;max-width:160px;height:auto;display:block;border:0;" class="fluid">
   </a>
 </td></tr>
@@ -487,7 +487,7 @@ export const renderClientCredentialsEmail = ({ clientName, email, password, port
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-container" style="max-width:600px;width:100%;">
 
 <tr><td align="center" style="padding-bottom:32px;">
-  <a href="https://rudhram.in" target="_blank" style="text-decoration:none;">
+  <a href="https://rudhramenterprises.com" target="_blank" style="text-decoration:none;">
     <img src="https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png" alt="Rudhram" width="160" style="width:160px;max-width:160px;height:auto;display:block;border:0;" class="fluid">
   </a>
 </td></tr>
@@ -556,5 +556,209 @@ export const sendClientCredentialsEmail = async (to, { clientName, email, passwo
     to,
     subject: `Your Rudhram Portal Login Credentials`,
     html: renderClientCredentialsEmail({ clientName, email, password, portalUrl }),
+  });
+};
+
+const BRAND_LABELS = {
+  panigrahna: 'Panigrahna',
+  aghori: 'Aghori',
+  house_of_joggi: 'House of Joggi',
+  damrru: 'Damrru',
+  tandavs: 'Tandavs',
+  kapaalik: 'Kapaalik',
+  kalyannam: 'Kalyannam',
+  storage_media_solution: 'Storage Media Solution',
+};
+
+const formatINR = (val) =>
+  `\u20B9${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+export const renderFreelancerSubmissionEmail = ({ freelancer }) => {
+  const ventureDetails = freelancer.ventureProfiles
+    .map((vp) => {
+      const services = vp.serviceCategories?.length ? vp.serviceCategories.join(', ') : '—';
+      const rates = vp.rateCards?.length
+        ? vp.rateCards.map((r) => `${r.rateBasis}: ${formatINR(r.amount)} ${r.currency}`).join('; ')
+        : '—';
+      return `
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid ${LIGHT_GOLD};font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:120px;vertical-align:top;">${BRAND_LABELS[vp.venture] || vp.venture}</td>
+          <td style="padding:12px 16px;border-bottom:1px solid ${LIGHT_GOLD};font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};">${vp.internalTitle || '—'}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid ${LIGHT_GOLD};font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Services</td>
+          <td style="padding:12px 16px;border-bottom:1px solid ${LIGHT_GOLD};font-family:${EMAIL_BODY_FONT};font-size:13px;color:${DARK_BROWN};">${services}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid ${LIGHT_GOLD};font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Skill Level</td>
+          <td style="padding:12px 16px;border-bottom:1px solid ${LIGHT_GOLD};font-family:${EMAIL_BODY_FONT};font-size:13px;color:${DARK_BROWN};">${vp.skillLevel}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid ${LIGHT_GOLD};font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Rates</td>
+          <td style="padding:12px 16px;border-bottom:1px solid ${LIGHT_GOLD};font-family:${EMAIL_BODY_FONT};font-size:13px;color:${DARK_BROWN};">${rates}</td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>New Freelancer Application</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .fluid { max-width: 100% !important; height: auto !important; margin-left: auto !important; margin-right: auto !important; }
+    .mobile-padding { padding-left: 24px !important; padding-right: 24px !important; }
+    .details-table td { padding: 10px 12px !important; font-size: 12px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:${CREAM};font-family:${EMAIL_BODY_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-container" style="max-width:600px;width:100%;">
+
+<tr><td align="center" style="padding-bottom:32px;">
+  <a href="https://rudhramenterprises.com" target="_blank" style="text-decoration:none;">
+    <img src="https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png" alt="Rudhram" width="160" style="width:160px;max-width:160px;height:auto;display:block;border:0;" class="fluid">
+  </a>
+</td></tr>
+
+<tr><td style="background:#ffffff;border:1px solid ${LIGHT_GOLD};border-radius:20px;overflow:hidden;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td style="height:4px;background:linear-gradient(90deg,${GOLD},${LIGHT_GOLD},${GOLD});font-size:0;line-height:0;">&nbsp;</td>
+  </tr></table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:44px 44px 36px;" class="mobile-padding">
+    <tr><td>
+      <h1 style="margin:0 0 6px;font-family:${EMAIL_FONT};font-size:28px;font-weight:700;color:${DARK_BROWN};line-height:1.2;">New Freelancer Application</h1>
+      <p style="margin:0 0 28px;font-family:${EMAIL_FONT};font-size:15px;color:${GOLD};line-height:1.5;">A new freelancer has submitted their profile for review</p>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;border:1px solid ${LIGHT_GOLD};border-radius:14px;overflow:hidden;" class="details-table">
+        <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Applicant Details</td></tr>
+        <tr><td style="padding:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:140px;">Name</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${freelancer.fullName}</td>
+            </tr>
+            ${freelancer.displayName && freelancer.displayName !== freelancer.fullName ? `
+            <tr>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Display Name</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${freelancer.displayName}</td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Phone</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${freelancer.phone}</td>
+            </tr>
+            ${freelancer.email ? `
+            <tr>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Email</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${freelancer.email}</td>
+            </tr>
+            ` : ''}
+            ${freelancer.whatsappNumber ? `
+            <tr>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">WhatsApp</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${freelancer.whatsappNumber}</td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">City</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${freelancer.city || '—'}</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Type</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${freelancer.freelancerType}</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Experience</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${freelancer.experienceYears} years</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Code</td>
+              <td style="padding:14px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${freelancer.freelancerCode}</td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;border:1px solid ${LIGHT_GOLD};border-radius:14px;overflow:hidden;" class="details-table">
+        <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Venture Profiles</td></tr>
+        <tr><td style="padding:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${ventureDetails || '<tr><td style="padding:14px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">No venture profiles provided</td></tr>'}
+          </table>
+        </td></tr>
+      </table>
+
+      ${freelancer.bio ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;border:1px solid ${LIGHT_GOLD};border-radius:14px;overflow:hidden;" class="details-table">
+        <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Bio</td></tr>
+        <tr><td style="padding:18px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;color:${DARK_BROWN};line-height:1.7;">${freelancer.bio}</td></tr>
+      </table>
+      ` : ''}
+
+      <p style="margin:28px 0 0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:#8a7560;line-height:1.7;">Review this application in the admin panel and update the status accordingly.</p>
+    </td></tr>
+  </table>
+</td></tr>
+
+<tr><td align="center" style="padding:32px 16px 0;">
+  <p style="margin:0;font-family:${EMAIL_FONT};font-size:13px;color:${GOLD};line-height:1.6;letter-spacing:0.5px;">RUDHRAM</p>
+  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Manage your business, grow your revenue.</p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+};
+
+export const sendFreelancerSubmissionEmail = async (freelancer) => {
+  const adminEmails = (config.adminEmails || '').split(',').map((e) => e.trim()).filter(Boolean);
+  if (!adminEmails.length) {
+    console.warn('No admin emails configured for freelancer submission notification');
+    return;
+  }
+
+  return sendEmail({
+    to: adminEmails,
+    subject: `New Freelancer Application: ${freelancer.fullName} (${freelancer.freelancerCode})`,
+    html: renderFreelancerSubmissionEmail({ freelancer }),
+  });
+};
+
+export const renderFreelancerApplicantEmail = ({ freelancer }) => {
+  return renderEmail({
+    preheader: 'We have received your freelancer application',
+    heading: 'Application Received',
+    subtext: `Dear ${freelancer.fullName},`,
+    bodyHtml: `
+      <p style="margin:0;font-family:${FONT};font-size:15px;color:${BODY};line-height:1.7;">Thank you for applying to join the Rudhram freelancer network. We have successfully received your application (Code: <strong style="color:${INK};">${freelancer.freelancerCode}</strong>).</p>
+      <p style="margin:16px 0 0;font-family:${FONT};font-size:15px;color:${BODY};line-height:1.7;">Our team will review your profile and keep your details in our secure records. If your profile matches our requirements for any upcoming projects, we will reach out to you directly.</p>
+    `,
+    footerNote: 'Rudhram &middot; Freelancer Network',
+  });
+};
+
+export const sendFreelancerApplicantEmail = async (freelancer) => {
+  if (!freelancer.email) return;
+  return sendEmail({
+    to: freelancer.email,
+    subject: `Application Received - Rudhram Freelancer Network`,
+    html: renderFreelancerApplicantEmail({ freelancer }),
   });
 };
