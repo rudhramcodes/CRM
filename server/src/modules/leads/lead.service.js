@@ -236,7 +236,7 @@ export const updateLead = async (id, data, user) => {
               });
               data.convertedToClient = retryClient._id;
             } else {
-              throw ApiError.conflict(`Duplicate key on "${duplicateField}" — a client with this ${duplicateField} already exists`);
+              throw ApiError.conflict(`Duplicate key on "${duplicateField}" - a client with this ${duplicateField} already exists`);
             }
           } else {
             throw err;

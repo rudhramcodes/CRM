@@ -95,7 +95,8 @@ const clientSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      default: null,
+      // Leave absent until a portal user is attached. Explicit null values
+      // are still indexed by MongoDB's unique sparse index.
     },
     portalInviteToken: {
       type: String,

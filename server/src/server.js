@@ -38,6 +38,18 @@ const fixStaleIndexes = async () => {
   }
 };
 
+/** Remove legacy explicit nulls so the unique sparse user index can work. */
+const removeLegacyNullPortalUsers = async () => {
+  try {
+    const result = await Client.updateMany({ user: { $type: 10 } }, { $unset: { user: 1 } });
+    if (result.modifiedCount > 0) {
+      logger.info(`[client-fix] Removed legacy null portal-user fields from ${result.modifiedCount} client(s)`);
+    }
+  } catch (err) {
+    logger.warn(`[client-fix] Skipped null portal-user cleanup: ${err.message}`);
+  }
+};
+
 const autoSeed = async () => {
   try {
     const existing = await User.findOne({ role: ROLES.SUPER_ADMIN });
@@ -67,6 +79,7 @@ const startServer = async () => {
   try {
     await connectDB();
     await fixStaleIndexes();
+    await removeLegacyNullPortalUsers();
     await autoSeed();
 
     const httpServer = createServer(app);
