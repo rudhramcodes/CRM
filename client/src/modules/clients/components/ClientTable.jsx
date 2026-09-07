@@ -30,6 +30,15 @@ export default function ClientTable({ clients, loading, error, onRowClick, canEd
       ),
     },
     {
+      header: 'Client ID',
+      accessor: 'clientId',
+      cell: ({ value }) => (
+        <span className="whitespace-nowrap rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-medium text-zinc-600">
+          {value || '—'}
+        </span>
+      ),
+    },
+    {
       header: 'Email',
       accessor: 'email',
     },

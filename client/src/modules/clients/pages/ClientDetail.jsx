@@ -155,6 +155,9 @@ export default function ClientDetail() {
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-primary-900">{client.companyName}</h2>
+                <p className="mt-1 font-mono text-xs font-medium tracking-wide text-zinc-500">
+                  {client.clientId || 'Client ID not assigned'}
+                </p>
                 <div className="flex items-center gap-2 mt-1.5">
                   <ClientStatusBadge status={client.status} />
                   {portalActive && (
@@ -176,6 +179,13 @@ export default function ClientDetail() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 pt-6 border-t border-zinc-100">
+            <div className="flex items-center gap-3">
+              <Hash className="w-4 h-4 text-zinc-400 shrink-0" />
+              <div>
+                <p className="text-xs text-zinc-400">Client ID</p>
+                <p className="font-mono text-sm text-primary-900">{client.clientId || '—'}</p>
+              </div>
+            </div>
             <div className="flex items-center gap-3">
               <Building2 className="w-4 h-4 text-zinc-400 shrink-0" />
               <div>
