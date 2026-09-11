@@ -12,6 +12,7 @@ import { useGetProjectByIdQuery } from '../../../services/projectApi';
 import { useGetTasksQuery, useGetTaskByIdQuery, useAddTaskCommentMutation, useDeleteTaskCommentMutation } from '../../../services/taskApi';
 import useSocketEntity from '../../../hooks/useSocketEntity';
 import PortalChatPanel from '../components/PortalChatPanel';
+import PortalDeliverablesCard from '../components/PortalDeliverablesCard';
 
 const STATUS_LABELS = {
   planning: 'Planning',
@@ -45,7 +46,7 @@ export default function PortalProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('deliverables');
   const [expandedTask, setExpandedTask] = useState(null);
 
   const { data: projectData, isLoading, isError, error, refetch: refetchProject } = useGetProjectByIdQuery(id, { skip: !id });
@@ -121,7 +122,11 @@ export default function PortalProjectDetail() {
 
       <div className="flex gap-1 border-b border-zinc-200">
         {[
-          { key: 'overview', label: 'Overview' },
+          {
+            key: 'deliverables',
+            label: `Deliverables & Production (${(project.deliverables || []).length})`,
+          },
+          { key: 'overview', label: 'Milestones & Tasks' },
           { key: 'chat', label: 'Chat' },
         ].map((tab) => (
           <button
@@ -138,7 +143,9 @@ export default function PortalProjectDetail() {
         ))}
       </div>
 
-      {activeTab === 'chat' ? (
+      {activeTab === 'deliverables' ? (
+        <PortalDeliverablesCard project={project} />
+      ) : activeTab === 'chat' ? (
         <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden h-[480px]">
           <PortalChatPanel projectId={id} />
         </div>

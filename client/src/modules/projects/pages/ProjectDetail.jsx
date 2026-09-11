@@ -37,6 +37,7 @@ import ProjectPriorityBadge from '../components/ProjectPriorityBadge';
 import ProjectForm from '../components/ProjectForm';
 import ProjectMilestones from '../components/ProjectMilestones';
 import ProjectTasks from '../components/ProjectTasks';
+import ProjectDeliverablesTracker from '../components/ProjectDeliverablesTracker';
 import ProjectActivityLog from '../components/ProjectActivityLog';
 import ProjectMessageFeed from '../components/ProjectMessageFeed';
 import Button from '../../../components/ui/Button';
@@ -130,6 +131,19 @@ export default function ProjectDetail() {
       }
     },
     [id, updateProjectMilestones],
+  );
+
+  const handleUpdateDeliverablesAndProduction = useCallback(
+    async (patchData) => {
+      try {
+        await updateProject({ id, ...patchData }).unwrap();
+        refetchProject();
+      } catch (err) {
+        toast.error(err?.data?.message || 'Failed to update production data');
+        throw err;
+      }
+    },
+    [id, updateProject, refetchProject],
   );
 
   const handleAddTask = useCallback(async (data) => {
@@ -328,6 +342,12 @@ export default function ProjectDetail() {
           </div>
         </div>
       )}
+
+      <ProjectDeliverablesTracker
+        project={project}
+        onUpdate={handleUpdateDeliverablesAndProduction}
+        canManage={canManage}
+      />
 
       <ProjectMilestones
         milestones={project.milestones || []}

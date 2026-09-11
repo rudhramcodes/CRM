@@ -102,6 +102,91 @@ const teamMemberSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const customFieldSchema = new mongoose.Schema(
+  {
+    label: { type: String, trim: true, default: '' },
+    value: { type: String, trim: true, default: '' },
+  },
+  { _id: false },
+);
+
+const deliverableSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, 'Deliverable title is required'],
+      trim: true,
+    },
+    category: {
+      type: String,
+      enum: ['photo', 'video', 'others'],
+      default: 'others',
+    },
+    details: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'in_progress', 'ready', 'delivered'],
+      default: 'pending',
+    },
+    driveUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    deliveredAt: Date,
+  },
+  { _id: true, timestamps: true },
+);
+
+const inwardDataSchema = new mongoose.Schema(
+  {
+    photo: { type: Boolean, default: false },
+    video: { type: Boolean, default: false },
+    source: { type: String, trim: true, default: '' },
+    storageLocation: { type: String, trim: true, default: '' },
+    status: {
+      type: String,
+      enum: ['pending', 'received', 'partially_received', 'verified'],
+      default: 'pending',
+    },
+    receivedDate: Date,
+    notes: { type: String, trim: true, default: '' },
+    customFields: [customFieldSchema],
+  },
+  { _id: false },
+);
+
+const crewMemberSchema = new mongoose.Schema(
+  {
+    name: { type: String, trim: true, default: '' },
+    role: { type: String, trim: true, default: '' },
+    contact: { type: String, trim: true, default: '' },
+    isFreelancer: { type: Boolean, default: false },
+    notes: { type: String, trim: true, default: '' },
+  },
+  { _id: true },
+);
+
+const teamDeploymentSchema = new mongoose.Schema(
+  {
+    counts: {
+      photographers: { type: Number, default: 0, min: 0 },
+      videographers: { type: Number, default: 0, min: 0 },
+      cinematographers: { type: Number, default: 0, min: 0 },
+      dronePilots: { type: Number, default: 0, min: 0 },
+      editors: { type: Number, default: 0, min: 0 },
+      others: { type: Number, default: 0, min: 0 },
+    },
+    crewMembers: [crewMemberSchema],
+    customDetails: [customFieldSchema],
+  },
+  { _id: false },
+);
+
 const projectSchema = new mongoose.Schema(
   {
     title: {
@@ -149,6 +234,20 @@ const projectSchema = new mongoose.Schema(
     activities: [activitySchema],
     messages: [messageSchema],
     tags: [String],
+    projectCode: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    inwardData: {
+      type: inwardDataSchema,
+      default: () => ({}),
+    },
+    deliverables: [deliverableSchema],
+    teamDeployment: {
+      type: teamDeploymentSchema,
+      default: () => ({ counts: {} }),
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
