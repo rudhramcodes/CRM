@@ -56,6 +56,7 @@ export default function ProjectDeliverablesTracker({ project, onUpdate, canManag
     videographers: project.teamDeployment?.counts?.videographers || 0,
     cinematographers: project.teamDeployment?.counts?.cinematographers || 0,
     dronePilots: project.teamDeployment?.counts?.dronePilots || 0,
+    sameDayEditors: project.teamDeployment?.counts?.sameDayEditors || 0,
     editors: project.teamDeployment?.counts?.editors || 0,
     others: project.teamDeployment?.counts?.others || 0,
   });
@@ -197,6 +198,16 @@ export default function ProjectDeliverablesTracker({ project, onUpdate, canManag
               {project.projectCode && (
                 <span className="text-xs font-semibold px-2 py-0.5 rounded bg-zinc-200 text-zinc-700">
                   {project.projectCode}
+                </span>
+              )}
+              {project.location && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 capitalize">
+                  📍 {project.location}
+                </span>
+              )}
+              {project.duration && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                  ⏱ {project.duration}
                 </span>
               )}
             </div>
@@ -650,12 +661,13 @@ export default function ProjectDeliverablesTracker({ project, onUpdate, canManag
           </div>
 
           {/* Counts Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
             {[
               { key: 'photographers', label: 'Photographers', icon: Camera },
               { key: 'videographers', label: 'Videographers', icon: Video },
               { key: 'cinematographers', label: 'Cinematographers', icon: Film },
               { key: 'dronePilots', label: 'Drone Pilots', icon: Sparkles },
+              { key: 'sameDayEditors', label: 'Same Day Editors', icon: Layers },
               { key: 'editors', label: 'Editors', icon: Layers },
               { key: 'others', label: 'Assistants / Other', icon: Users },
             ].map((role) => {

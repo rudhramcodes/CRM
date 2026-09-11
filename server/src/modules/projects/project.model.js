@@ -178,6 +178,7 @@ const teamDeploymentSchema = new mongoose.Schema(
       videographers: { type: Number, default: 0, min: 0 },
       cinematographers: { type: Number, default: 0, min: 0 },
       dronePilots: { type: Number, default: 0, min: 0 },
+      sameDayEditors: { type: Number, default: 0, min: 0 },
       editors: { type: Number, default: 0, min: 0 },
       others: { type: Number, default: 0, min: 0 },
     },
@@ -235,6 +236,16 @@ const projectSchema = new mongoose.Schema(
     messages: [messageSchema],
     tags: [String],
     projectCode: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    location: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    duration: {
       type: String,
       trim: true,
       default: '',

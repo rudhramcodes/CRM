@@ -31,6 +31,7 @@ export default function PortalDeliverablesCard({ project }) {
     (counts.videographers || 0) +
     (counts.cinematographers || 0) +
     (counts.dronePilots || 0) +
+    (counts.sameDayEditors || 0) +
     (counts.editors || 0) +
     (counts.others || 0);
 
@@ -40,9 +41,24 @@ export default function PortalDeliverablesCard({ project }) {
       <div className="bg-white rounded-xl border border-zinc-200 p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <PackageCheck className="w-5 h-5 text-emerald-600" />
               <h2 className="text-base font-bold text-zinc-900">Project Deliverables Status</h2>
+              {project.projectCode && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-zinc-100 text-zinc-700">
+                  {project.projectCode}
+                </span>
+              )}
+              {project.location && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 capitalize">
+                  📍 {project.location}
+                </span>
+              )}
+              {project.duration && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                  ⏱ {project.duration}
+                </span>
+              )}
             </div>
             <p className="text-xs text-zinc-500 mt-1">
               Track real-time delivery status for photos, highlight videos, albums, and digital assets.
@@ -278,6 +294,13 @@ export default function PortalDeliverablesCard({ project }) {
                     {counts.dronePilots}
                   </span>
                   <span className="text-[11px] text-zinc-500">Drone Pilots</span>
+                </div>
+              )}
+              {counts.sameDayEditors > 0 && (
+                <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 text-center">
+                  <Layers className="w-4 h-4 mx-auto text-pink-600 mb-1" />
+                  <span className="text-base font-bold text-zinc-900 block">{counts.sameDayEditors}</span>
+                  <span className="text-[11px] text-zinc-500">Same Day Edit</span>
                 </div>
               )}
               {counts.editors > 0 && (
