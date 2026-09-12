@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
 import AttendanceWidget from '../components/AttendanceWidget';
@@ -41,6 +42,10 @@ export default function AttendanceCalendar() {
   useEffect(() => {
     dispatch(setPageTitle('Attendance'));
   }, [dispatch]);
+
+  if (user?.role === 'super_admin') {
+    return <Navigate to="/attendance/list" replace />;
+  }
 
   const goTo = (nextAnchor) => {
     setCurrentMonth(nextAnchor);
@@ -92,7 +97,7 @@ export default function AttendanceCalendar() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <AttendanceWidget />
+          {user?.role !== 'super_admin' && <AttendanceWidget />}
 
           <div className="bg-white rounded-xl border border-zinc-200 p-6">
             <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">

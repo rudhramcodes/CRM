@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { X } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -6,6 +6,7 @@ import { NAV_ITEMS } from '../constants';
 import { useGetOrgSettingsQuery } from '../services/settingsApi';
 
 export default function Sidebar({ open, onClose }) {
+  const location = useLocation();
   const user = useSelector((state) => state.auth.user);
   const sidebarOpen = useSelector((state) => state.ui.sidebarOpen);
   const { data: orgSettings } = useGetOrgSettingsQuery();
@@ -15,6 +16,13 @@ export default function Sidebar({ open, onClose }) {
   const visibleNavItems = NAV_ITEMS.filter(
     (item) => user && item.roles.includes(user.role),
   );
+
+  const getNavPath = (item) => {
+    if (item.path === '/attendance' && user?.role === 'super_admin') {
+      return '/attendance/list';
+    }
+    return item.path;
+  };
 
   return (
     <>
@@ -55,24 +63,28 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {visibleNavItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150',
-                  isActive
-                    ? 'bg-zinc-100 text-primary-900'
-                    : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700',
-                )
-              }
-            >
-              <item.icon className="w-4.5 h-4.5 shrink-0" strokeWidth={1.5} />
-              {sidebarOpen && <span>{item.label}</span>}
-            </NavLink>
-          ))}
+          {visibleNavItems.map((item) => {
+            const path = getNavPath(item);
+            const isAttendance = item.path === '/attendance';
+            return (
+              <NavLink
+                key={item.path}
+                to={path}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150',
+                    (isActive || (isAttendance && location.pathname.startsWith('/attendance')))
+                      ? 'bg-zinc-100 text-primary-900'
+                      : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700',
+                  )
+                }
+              >
+                <item.icon className="w-4.5 h-4.5 shrink-0" strokeWidth={1.5} />
+                {sidebarOpen && <span>{item.label}</span>}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {sidebarOpen && user && (

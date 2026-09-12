@@ -1,10 +1,11 @@
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { CalendarDays, ClipboardList, Clock, Plane, Gift, BarChart3 } from 'lucide-react';
 
 const TABS = [
-  { key: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/attendance', roles: ['super_admin', 'admin', 'manager', 'employee'] },
+  { key: 'calendar', label: 'Calendar', icon: CalendarDays, path: '/attendance', roles: ['admin', 'manager', 'employee'] },
   { key: 'records', label: 'Records', icon: ClipboardList, path: '/attendance/list', roles: ['super_admin', 'admin', 'manager'] },
   { key: 'shifts', label: 'Shifts', icon: Clock, path: '/attendance/shifts', roles: ['super_admin', 'admin'] },
   { key: 'leaves', label: 'Leaves', icon: Plane, path: '/attendance/leaves', roles: ['super_admin', 'admin', 'manager', 'employee'] },
@@ -17,8 +18,14 @@ export default function AttendanceLayout() {
   const location = useLocation();
   const { user } = useAuth();
 
-  const activeTab = TABS.find((t) => t.path === location.pathname)?.key || 'calendar';
+  useEffect(() => {
+    if (user?.role === 'super_admin' && (location.pathname === '/attendance' || location.pathname === '/attendance/')) {
+      navigate('/attendance/list', { replace: true });
+    }
+  }, [user?.role, location.pathname, navigate]);
+
   const visibleTabs = TABS.filter((t) => !t.roles || t.roles.includes(user?.role));
+  const activeTab = TABS.find((t) => t.path === location.pathname)?.key || visibleTabs[0]?.key || 'records';
 
   return (
     <div className="space-y-6">
