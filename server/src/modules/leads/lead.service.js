@@ -204,7 +204,7 @@ export const updateLead = async (id, data, user) => {
           }
 
           if (portalUserCreated) {
-            new Promise((resolve) => setTimeout(resolve, 45000))
+            new Promise((resolve) => setTimeout(resolve, 2500))
               .then(() => sendClientCredentialsEmail(clientEmail, {
                 clientName: lead.name,
                 email: clientEmail,

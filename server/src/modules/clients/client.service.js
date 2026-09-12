@@ -117,6 +117,10 @@ export const create = async (data, user) => {
       logger.error(`[create-client] Failed to create portal user: ${err.message}`);
     }
   } else {
+    if (!client.user) {
+      client.user = existingUser._id;
+      await client.save();
+    }
     portalUserCreated = true;
   }
 
@@ -126,16 +130,19 @@ export const create = async (data, user) => {
       companyName: data.companyName,
       clientId: client.clientId,
       brand: data.brand,
-    }).catch((err) => logger.error(`[create-client] Onboarding email failed: ${err.message}`));
-
-    const delayMs = 45000;
-    new Promise((resolve) => setTimeout(resolve, delayMs)).then(() => {
-      return sendClientCredentialsEmail(data.email, {
-        clientName: data.contactPerson,
-        email: data.email,
-        password: CLIENT_DEFAULT_PASSWORD,
+    })
+      .catch((err) => logger.error(`[create-client] Onboarding email failed: ${err.message}`))
+      .finally(() => {
+        setTimeout(() => {
+          sendClientCredentialsEmail(data.email, {
+            clientName: data.contactPerson,
+            email: data.email,
+            password: CLIENT_DEFAULT_PASSWORD,
+          })
+            .then(() => logger.info(`[create-client] Credentials email sent to ${data.email}`))
+            .catch((err) => logger.error(`[create-client] Credentials email failed: ${err.message}`));
+        }, 2500);
       });
-    }).catch((err) => logger.error(`[create-client] Credentials email failed: ${err.message}`));
   }
 
   return client;
@@ -219,17 +226,23 @@ export const convertFromLead = async (leadId, user) => {
       logger.error(`[convert-lead] Failed to create portal user: ${err.message}`);
     }
   } else {
+    if (!client.user) {
+      client.user = existingUser._id;
+      await client.save();
+    }
     portalUserCreated = true;
   }
 
   if (portalUserCreated) {
-    new Promise((resolve) => setTimeout(resolve, 45000)).then(() => {
-      return sendClientCredentialsEmail(lead.email, {
+    setTimeout(() => {
+      sendClientCredentialsEmail(lead.email, {
         clientName: lead.name,
         email: lead.email,
         password: CLIENT_DEFAULT_PASSWORD,
-      });
-    }).catch((err) => logger.error(`[convert-lead] Credentials email failed: ${err.message}`));
+      })
+        .then(() => logger.info(`[convert-lead] Credentials email sent to ${lead.email}`))
+        .catch((err) => logger.error(`[convert-lead] Credentials email failed: ${err.message}`));
+    }, 2500);
   }
 
   return client;
