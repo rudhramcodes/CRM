@@ -331,26 +331,47 @@ export const addMessage = async (projectId, data, user, clientProfile, files = [
   });
 
   if (user.role === 'client') {
-    const memberIds = (project.teamMembers || [])
-      .map((m) => (m.user?._id || m.user))
-      .filter((uid) => String(uid) !== String(user._id));
-    notificationService.createAndSendBulk(memberIds, {
-      referenceId: project._id,
+    // Broadcast notification to ALL internal staff users (Super Admin, Admin, Manager, Employee)
+    const User = (await import('../auth/auth.model.js')).default;
+    const staffUsers = await User.find({
+      role: { $ne: 'client' },
+      isActive: true,
+    }).select('_id');
+
+    const recipientIds = staffUsers
+      .map((u) => u._id.toString())
+      .filter((uid) => uid !== String(user._id));
+
+    const messagePreview = data.text?.trim()
+      ? (data.text.length > 120 ? `${data.text.slice(0, 117)}...` : data.text)
+      : (images?.length ? '📎 Sent an image/attachment' : 'New message');
+
+    const clientNotif = {
+      type: 'project_chat',
+      title: `Client Message • ${project.title}`,
+      message: `${user.name || 'Client'}: ${messagePreview}`,
+      priority: 'high',
+    };
+
+    notificationService.createAndSendBulk(recipientIds, {
+      referenceId: saved._id,
       referenceModel: 'Project',
       actionBy: user._id,
       link: `/projects/${project._id}`,
-      ...chatNotif,
-    }).catch(() => {});
+      ...clientNotif,
+    }).catch((err) => {
+      logger.error('Failed to notify staff of client message', { error: err.message });
+    });
   } else {
     const clientId = project.client?._id || project.client;
     const linkedClient = clientId ? await Client.findById(clientId).select('user').lean() : null;
     if (linkedClient?.user) {
       notificationService.createAndSend({
         recipient: linkedClient.user,
-        referenceId: project._id,
+        referenceId: saved._id,
         referenceModel: 'Project',
         actionBy: user._id,
-        link: `/projects/${project._id}`,
+        link: `/portal/projects/${project._id}`,
         ...chatNotif,
       }).catch(() => {});
     }
@@ -372,7 +393,7 @@ export const addMessage = async (projectId, data, user, clientProfile, files = [
       });
       try {
         await notificationService.createAndSendBulk([...mentionedIds], {
-          referenceId: project._id,
+          referenceId: saved._id,
           referenceModel: 'Project',
           actionBy: user._id,
           link: `/projects/${project._id}`,

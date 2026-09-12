@@ -51,6 +51,7 @@ export default function MeetingList() {
     const params = {};
     if (filters.search) params.search = filters.search;
     if (filters.status) params.status = filters.status;
+    if (filters.client) params.client = filters.client;
     if (filters.dateFrom) params.dateFrom = filters.dateFrom;
     if (filters.dateTo) params.dateTo = filters.dateTo;
     setQueryParams((prev) => ({ ...prev, ...params, page: 1 }));

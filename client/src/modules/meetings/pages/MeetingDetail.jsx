@@ -19,6 +19,8 @@ import {
   Plus,
   RefreshCcw,
   Briefcase,
+  Building2,
+  User,
 } from 'lucide-react';
 import {
   useGetMeetingByIdQuery,
@@ -270,17 +272,33 @@ export default function MeetingDetail() {
           <div className="mt-4 pt-4 border-t border-zinc-100">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="flex items-center gap-3">
-                <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
-                <div>
+                <Building2 className="w-4 h-4 text-zinc-400 shrink-0" />
+                <div className="min-w-0">
                   <p className="text-xs text-zinc-400">Client</p>
-                  <p className="text-sm text-primary-900">{meeting.client?.companyName || '—'}</p>
+                  {meeting.client ? (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/clients/${meeting.client._id || meeting.client}`)}
+                      className="text-sm font-semibold text-primary-900 hover:underline truncate block text-left"
+                    >
+                      {meeting.client.companyName}
+                    </button>
+                  ) : (
+                    <p className="text-sm text-zinc-400">—</p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
-                <div>
+                <User className="w-4 h-4 text-zinc-400 shrink-0" />
+                <div className="min-w-0">
                   <p className="text-xs text-zinc-400">Lead</p>
-                  <p className="text-sm text-primary-900">{meeting.lead?.name || '—'}</p>
+                  {meeting.lead ? (
+                    <p className="text-sm font-semibold text-primary-900 truncate">
+                      {meeting.lead.name}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-zinc-400">—</p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3">

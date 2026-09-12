@@ -16,8 +16,8 @@ export default function ClientPortalLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] flex">
-      <div className="print:hidden">
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 flex relative overflow-x-hidden">
+      <div className="print:hidden relative z-20">
         <ClientSidebar
           open={mobileMenuOpen}
           onClose={() => setMobileMenuOpen(false)}
@@ -25,14 +25,14 @@ export default function ClientPortalLayout() {
       </div>
       <div
         className={cn(
-          'flex-1 flex flex-col transition-all duration-300 min-w-0 print:ml-0',
+          'flex-1 flex flex-col transition-all duration-300 min-w-0 print:ml-0 relative z-10',
           sidebarOpen ? 'lg:ml-56' : 'lg:ml-16',
         )}
       >
-        <div className="print:hidden">
+        <div className="print:hidden sticky top-0 z-30 backdrop-blur-md bg-white/90 border-b border-zinc-200 shadow-sm">
           <Header onMobileMenuOpen={() => setMobileMenuOpen(true)} />
         </div>
-        <main className="flex-1 p-6 lg:p-8 overflow-auto print:p-0 print:overflow-visible">
+        <main className="flex-1 p-5 sm:p-7 lg:p-9 overflow-auto print:p-0 print:overflow-visible">
           <Outlet />
         </main>
       </div>

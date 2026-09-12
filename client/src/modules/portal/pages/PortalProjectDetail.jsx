@@ -42,6 +42,8 @@ const MILESTONE_STATUS_COLORS = {
   completed: 'bg-green-500',
 };
 
+import PortalMilestonesJourney from '../components/PortalMilestonesJourney';
+
 export default function PortalProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -72,18 +74,18 @@ export default function PortalProjectDetail() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-32 w-full rounded-xl" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+      <div className="space-y-4 max-w-7xl mx-auto">
+        <Skeleton className="h-6 w-40 bg-zinc-800" />
+        <Skeleton className="h-32 w-full rounded-2xl bg-zinc-800" />
+        <Skeleton className="h-64 w-full rounded-2xl bg-zinc-800" />
       </div>
     );
   }
 
   if (isError || !project) {
     return (
-      <div className="space-y-4">
-        <Link to="/portal/projects" className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-primary-900 transition-colors">
+      <div className="space-y-4 max-w-7xl mx-auto">
+        <Link to="/portal/projects" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-amber-300 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to projects
         </Link>
         <EmptyState title="Project not found" description={error?.data?.message || 'This project is unavailable.'} />
@@ -92,50 +94,76 @@ export default function PortalProjectDetail() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       <div className="flex items-center justify-between">
-        <Link to="/portal/projects" className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-primary-900 transition-colors">
+        <Link to="/portal/projects" className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to projects
         </Link>
-        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getStatusColor(project.status)}`}>
+        <span className="text-xs px-3 py-1 rounded-full font-semibold border border-primary-200 bg-primary-50 text-primary-900 capitalize">
           {STATUS_LABELS[project.status] || project.status}
         </span>
       </div>
 
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
-        <h1 className="font-heading text-xl font-semibold text-primary-900">{project.name}</h1>
-        <p className="text-sm text-zinc-500 mt-1">{project.description}</p>
-        <div className="flex flex-wrap gap-4 mt-4 text-sm text-zinc-600">
+      {/* Project Hero Card */}
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 sm:p-7 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <span className="text-[11px] font-mono tracking-wider text-zinc-400 uppercase font-medium">PROJECT WORKSPACE</span>
+            <h1 className="font-heading text-xl sm:text-2xl font-bold text-zinc-900 mt-0.5">{project.name}</h1>
+          </div>
+          {project.projectCode && (
+            <span className="self-start sm:self-auto font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-100 border border-zinc-200 text-zinc-700 font-semibold">
+              {project.projectCode}
+            </span>
+          )}
+        </div>
+        {project.description && (
+          <p className="text-xs sm:text-sm text-zinc-600 mt-2 leading-relaxed">{project.description}</p>
+        )}
+        <div className="flex flex-wrap gap-5 mt-5 pt-4 border-t border-zinc-100 text-xs text-zinc-500">
           <span className="inline-flex items-center gap-1.5">
-            <CalendarDays className="w-4 h-4 text-zinc-400" /> Started {formatDate(project.startDate)}
+            <CalendarDays className="w-4 h-4 text-primary-900" /> Commenced {formatDate(project.startDate)}
           </span>
           {project.endDate && (
             <span className="inline-flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-zinc-400" /> Ends {formatDate(project.endDate)}
+              <CalendarDays className="w-4 h-4 text-zinc-400" /> Target {formatDate(project.endDate)}
             </span>
           )}
-          <span className="inline-flex items-center gap-1.5">
-            <span className="text-zinc-400">Client:</span> {project.client?.companyName || '—'}
+          {project.location && (
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-zinc-400" /> {project.location}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1.5 text-zinc-700">
+            Brand: <span className="capitalize font-semibold text-primary-900">{project.brand || 'Rudhram'}</span>
           </span>
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-zinc-200">
+      {/* Visual Subway-Line Milestones Journey */}
+      <PortalMilestonesJourney
+        milestones={project.milestones || []}
+        currentStatus={project.status}
+        projectId={id}
+      />
+
+      {/* Navigation Tabs */}
+      <div className="flex gap-2 border-b border-zinc-200 pb-2 overflow-x-auto">
         {[
           {
             key: 'deliverables',
-            label: `Deliverables & Production (${(project.deliverables || []).length})`,
+            label: `Deliverables & Assets (${(project.deliverables || []).length})`,
           },
-          { key: 'overview', label: 'Milestones & Tasks' },
-          { key: 'chat', label: 'Chat' },
+          { key: 'overview', label: `Scope & Milestones (${milestones.length})` },
+          { key: 'chat', label: 'Team Collaboration Chat' },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
               activeTab === tab.key
-                ? 'border-primary-900 text-primary-900'
-                : 'border-transparent text-zinc-500 hover:text-zinc-800'
+                ? 'bg-primary-900 text-white shadow-xs font-semibold'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
             }`}
           >
             {tab.label}
@@ -146,26 +174,26 @@ export default function PortalProjectDetail() {
       {activeTab === 'deliverables' ? (
         <PortalDeliverablesCard project={project} />
       ) : activeTab === 'chat' ? (
-        <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden h-[480px]">
+        <div className="rounded-2xl border border-zinc-200/80 overflow-hidden h-[540px] bg-white shadow-xs">
           <PortalChatPanel projectId={id} />
         </div>
       ) : (
         <div className="grid lg:grid-cols-5 gap-5">
-          <div className="lg:col-span-2 bg-white rounded-xl border border-zinc-200 p-5">
-            <h2 className="text-sm font-semibold text-primary-900 mb-4">Milestones</h2>
+          <div className="lg:col-span-2 rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xs">
+            <h2 className="text-sm font-bold text-zinc-900 font-heading mb-4">Milestone Deliveries</h2>
             {milestones.length === 0 ? (
-              <EmptyState title="No milestones yet" description="Our team will add milestones as the project progresses." />
+              <EmptyState title="No milestones yet" description="Production milestones will sync as execution continues." />
             ) : (
               <ol className="relative border-l border-zinc-200 ml-3 space-y-6">
                 {milestones.map((m) => (
                   <li key={m._id} className="relative pl-6">
                     <span
-                      className={`absolute -left-[7px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white ${MILESTONE_STATUS_COLORS[m.status] || 'bg-zinc-200'}`}
+                      className={`absolute -left-[7px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white ${MILESTONE_STATUS_COLORS[m.status] || 'bg-zinc-300'}`}
                     />
-                    <p className="text-sm font-medium text-primary-900">{m.title}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5">
+                    <p className="text-xs font-semibold text-zinc-800">{m.title}</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">
                       {m.status === 'completed' ? 'Completed' : m.status === 'in_progress' ? 'In progress' : 'Pending'}
-                      {m.dueDate && ` · due ${formatDate(m.dueDate)}`}
+                      {m.dueDate && ` &bull; due ${formatDate(m.dueDate)}`}
                     </p>
                   </li>
                 ))}
@@ -173,15 +201,15 @@ export default function PortalProjectDetail() {
             )}
           </div>
 
-          <div className="lg:col-span-3 bg-white rounded-xl border border-zinc-200 p-5">
-            <h2 className="text-sm font-semibold text-primary-900 mb-4">Tasks ({tasks.length})</h2>
+          <div className="lg:col-span-3 rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xs">
+            <h2 className="text-sm font-bold text-zinc-900 font-heading mb-4">Tasks Breakdown ({tasks.length})</h2>
             {tasksLoading ? (
               <div className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full bg-zinc-200" />
+                <Skeleton className="h-10 w-full bg-zinc-200" />
               </div>
             ) : tasks.length === 0 ? (
-              <EmptyState title="No tasks yet" description="Tasks will appear here once our team starts working." />
+              <EmptyState title="No tasks visible" description="Detailed task schedules will populate once scheduled." />
             ) : (
               <div className="divide-y divide-zinc-100">
                 {tasks.map((task) => (

@@ -268,12 +268,34 @@ export const addComment = async (taskId, text, user, clientProfile) => {
 
   processMentions(text, user, taskId, task.title, task.project?._id || task.project).catch(() => {});
 
-  if (task.assignedTo && !task.assignedTo._id.equals(user._id)) {
+  if (user?.role === 'client') {
+    const User = (await import('../auth/auth.model.js')).default;
+    const allStaff = await User.find({ role: { $ne: 'client' }, isActive: true }).select('_id');
+    const recipientIds = allStaff
+      .map((u) => u._id.toString())
+      .filter((uid) => uid !== String(user._id));
+
+    const newCommentId = updated.comments?.[updated.comments.length - 1]?._id || task._id;
+    const commentNotif = {
+      type: 'task_comment',
+      title: `Client Comment • ${task.title}`,
+      message: `${user.name || 'Client'}: ${text.slice(0, 120)}`,
+      priority: 'high',
+    };
+    notificationService.createAndSendBulk(recipientIds, {
+      referenceId: newCommentId,
+      referenceModel: 'Task',
+      actionBy: user._id,
+      link: `/projects/${task.project?._id || task.project}`,
+      ...commentNotif,
+    }).catch(() => {});
+  } else if (task.assignedTo && !task.assignedTo._id.equals(user._id)) {
     const notif = notificationService.buildNotification('task_comment', {
       taskTitle: task.title, actorName: user.name,
     });
+    const newCommentId = updated.comments?.[updated.comments.length - 1]?._id || task._id;
     notificationService.createAndSend({
-      recipient: task.assignedTo._id, referenceId: task._id, referenceModel: 'Task',
+      recipient: task.assignedTo._id, referenceId: newCommentId, referenceModel: 'Task',
       actionBy: user._id, link: `/projects/${task.project?._id || task.project}`, ...notif,
     }).catch(() => {});
   }

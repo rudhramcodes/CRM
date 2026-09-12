@@ -25,6 +25,7 @@ import {
 } from '../../../services/clientApi';
 import ClientStatusBadge from '../components/ClientStatusBadge';
 import ClientForm from '../components/ClientForm';
+import MeetingForm from '../../meetings/components/MeetingForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
@@ -43,6 +44,7 @@ export default function ClientDetail() {
   const user = useSelector((state) => state.auth.user);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
 
   const { data: clientData, isLoading, error } = useGetClientByIdQuery(id);
   const [deleteClient, { isLoading: isDeleting }] = useDeleteClientMutation();
@@ -122,6 +124,12 @@ export default function ClientDetail() {
         </button>
 
         <div className="flex items-center gap-2">
+          {canManage && (
+            <Button variant="secondary" size="sm" onClick={() => setShowMeetingModal(true)}>
+              <Calendar className="w-3.5 h-3.5" />
+              Schedule Meeting
+            </Button>
+          )}
           {canManage && !portalActive && (
             <Button variant="secondary" size="sm" onClick={handleInvite} loading={isInviting}>
               <KeyRound className="w-3.5 h-3.5" />
@@ -314,6 +322,22 @@ export default function ClientDetail() {
         title="Delete Client?"
         message="Are you sure you want to delete this client? This action cannot be undone."
       />
+
+      <Modal
+        open={showMeetingModal}
+        onClose={() => setShowMeetingModal(false)}
+        title={`Schedule Meeting with ${client.companyName}`}
+        size="lg"
+      >
+        <MeetingForm
+          defaultClient={client._id}
+          onSuccess={() => {
+            setShowMeetingModal(false);
+            toast.success('Meeting scheduled successfully');
+          }}
+          onCancel={() => setShowMeetingModal(false)}
+        />
+      </Modal>
     </div>
   );
 }

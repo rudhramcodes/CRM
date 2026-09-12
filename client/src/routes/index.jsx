@@ -25,6 +25,7 @@ import PortalProjectDetail from '../modules/portal/pages/PortalProjectDetail';
 import PortalMeetings from '../modules/portal/pages/PortalMeetings';
 import PortalMeetingNew from '../modules/portal/pages/PortalMeetingNew';
 import PortalMeetingDetail from '../modules/portal/pages/PortalMeetingDetail';
+import PortalInvoices from '../modules/portal/pages/PortalInvoices';
 import LeadList from '../modules/leads/pages/LeadList';
 import LeadDetail from '../modules/leads/pages/LeadDetail';
 import LeadForm from '../modules/leads/components/LeadForm';
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
       { path: 'profile', element: <PortalProfile /> },
       { path: 'projects', element: <PortalProjects /> },
       { path: 'projects/:id', element: <PortalProjectDetail /> },
+      { path: 'invoices', element: <PortalInvoices /> },
       { path: 'meetings', element: <PortalMeetings /> },
       { path: 'meetings/new', element: <PortalMeetingNew /> },
       { path: 'meetings/:id', element: <PortalMeetingDetail /> },

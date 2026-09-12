@@ -43,18 +43,21 @@ export default function Header({ onMobileMenuOpen }) {
     const Icon = cfg.icon;
     toast.custom((t) => (
       <div onClick={() => { toast.dismiss(t.id); navigate(notificationPath(notification)); }}
-        className={cn('flex items-start gap-3 px-4 py-3 bg-white rounded-lg shadow-lg border border-zinc-200 cursor-pointer hover:bg-zinc-50 transition-all w-80')}>
-        <div className={cn('w-8 h-8 rounded-full flex items-center justify-center shrink-0', cfg.iconBg)}>
+        className={cn('flex items-start gap-3 px-4 py-3 bg-white rounded-xl shadow-xl border border-zinc-200 cursor-pointer hover:bg-zinc-50 transition-all w-84')}>
+        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5', cfg.iconBg)}>
           <Icon className="w-4 h-4" strokeWidth={1.5} />
         </div>
         <div className="flex-1 min-w-0">
+          {notification.title && (
+            <p className="text-xs font-semibold text-zinc-900 truncate mb-0.5">{notification.title}</p>
+          )}
           <p className="text-sm text-zinc-700 leading-snug">{notification.message}</p>
-          <p className="text-[11px] text-zinc-400 mt-0.5">
-            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+          <p className="text-[10px] text-zinc-400 mt-1">
+            {formatDistanceToNow(new Date(notification.createdAt || Date.now()), { addSuffix: true })}
           </p>
         </div>
       </div>
-    ), { duration: 4000, position: 'top-right' });
+    ), { duration: 5000, position: 'top-right' });
   }, [navigate]);
 
   const handleSoundToggle = async () => {

@@ -39,6 +39,15 @@ const config = {
     accountsUrl: process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho.com/oauth/v2',
     meetingApi: process.env.ZOHO_MEETING_API || 'https://meeting.zoho.com/api/v2',
   },
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtppro.zoho.in',
+    port: parseInt(process.env.SMTP_PORT, 10) || 465,
+    secure: process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT, 10) === 465,
+    user: process.env.SMTP_USER || 'admin@rudhramenterprises.com',
+    pass: process.env.SMTP_PASS || '',
+    fromEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'admin@rudhramenterprises.com',
+    fromName: process.env.SMTP_FROM_NAME || 'Rudhram Enterprises',
+  },
   resend: {
     apiKey: process.env.RESEND_API_KEY || '',
     fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@rudhramenterprises.com',

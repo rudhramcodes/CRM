@@ -1,44 +1,87 @@
+import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import config from '../config/index.js';
 import logger from '../utils/logger.js';
 
+let transporter = null;
 let resend = null;
 
-const getClient = () => {
+const getTransporter = () => {
+  if (transporter) return transporter;
+  if (!config.smtp?.user || !config.smtp?.pass) return null;
+  transporter = nodemailer.createTransport({
+    host: config.smtp.host,
+    port: config.smtp.port,
+    secure: config.smtp.secure,
+    auth: {
+      user: config.smtp.user,
+      pass: config.smtp.pass,
+    },
+  });
+  return transporter;
+};
+
+const getResendClient = () => {
   if (resend) return resend;
-  if (!config.resend.apiKey) return null;
+  if (!config.resend?.apiKey) return null;
   resend = new Resend(config.resend.apiKey);
   return resend;
 };
 
-export const sendEmail = async ({ to, subject, html, attachments }) => {
-  const client = getClient();
+export const sendEmail = async ({ to, subject, html, attachments, from, fromName, replyTo }) => {
+  const senderEmail = from || config.smtp?.fromEmail || config.resend?.fromEmail || config.smtp?.user || 'admin@rudhramenterprises.com';
+  const senderName = fromName || config.smtp?.fromName || config.resend?.fromName || 'Rudhram Enterprises';
+  const fromHeader = `"${senderName}" <${senderEmail}>`;
 
-  if (!client) {
-    logger.info(`[EMAIL FALLBACK] To: ${to} | Subject: ${subject}\n${html}`);
-    return { id: 'dev-fallback' };
-  }
+  const smtpClient = getTransporter();
 
-  try {
-    const { data, error } = await client.emails.send({
-      from: `${config.resend.fromName} <${config.resend.fromEmail}>`,
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      html,
-      attachments,
-    });
+  if (smtpClient) {
+    try {
+      const info = await smtpClient.sendMail({
+        from: fromHeader,
+        to: Array.isArray(to) ? to.join(', ') : to,
+        replyTo: replyTo || senderEmail,
+        subject,
+        html,
+        attachments,
+      });
 
-    if (error) {
-      logger.error(`Resend failed: ${error.message}`);
-      throw error;
+      logger.info(`Email sent via Zoho SMTP (${senderEmail}): ${info.messageId} | to: ${to} | subject: ${subject}`);
+      return { id: info.messageId, provider: 'smtp' };
+    } catch (err) {
+      logger.error(`Zoho SMTP failed: ${err.message}. Checking Resend fallback...`);
+      const resendClient = getResendClient();
+      if (!resendClient) throw err;
     }
-
-    logger.info(`Email sent: ${data?.id} | to: ${to} | subject: ${subject}`);
-    return data;
-  } catch (err) {
-    logger.error(`Email send failed: ${err.message}`);
-    throw err;
   }
+
+  const resendClient = getResendClient();
+  if (resendClient) {
+    try {
+      const { data, error } = await resendClient.emails.send({
+        from: fromHeader,
+        to: Array.isArray(to) ? to : [to],
+        replyTo: replyTo || senderEmail,
+        subject,
+        html,
+        attachments,
+      });
+
+      if (error) {
+        logger.error(`Resend failed: ${error.message}`);
+        throw error;
+      }
+
+      logger.info(`Email sent via Resend fallback: ${data?.id} | to: ${to} | subject: ${subject}`);
+      return { id: data?.id, provider: 'resend' };
+    } catch (err) {
+      logger.error(`Email send failed: ${err.message}`);
+      throw err;
+    }
+  }
+
+  logger.info(`[EMAIL FALLBACK] From: ${fromHeader} | To: ${to} | Subject: ${subject}\n${html}`);
+  return { id: 'dev-fallback' };
 };
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";

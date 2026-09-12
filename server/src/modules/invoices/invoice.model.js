@@ -97,13 +97,19 @@ const invoiceSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: {
+      virtuals: true,
       transform(_doc, ret) {
         delete ret.__v;
         return ret;
       },
     },
+    toObject: { virtuals: true },
   },
 );
+
+invoiceSchema.virtual('totalAmount').get(function () {
+  return this.total;
+});
 
 invoiceSchema.pre('save', function (next) {
   if (this.items && this.items.length > 0) {

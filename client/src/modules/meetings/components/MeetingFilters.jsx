@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Building2 } from 'lucide-react';
 import { MEETING_STATUS } from '../../../constants';
 import { DatePickerSimple } from '../../../components/ui/DatePickerSimple';
 import {
@@ -9,14 +9,19 @@ import {
   SelectContent,
   SelectItem,
 } from '../../../components/ui/Select';
+import { useGetClientsQuery } from '../../../services/clientApi';
 
 export default function MeetingFilters({ onFilterChange }) {
   const [filters, setFilters] = useState({
     search: '',
     status: '',
+    client: '',
     dateFrom: '',
     dateTo: '',
   });
+
+  const { data: clientsData } = useGetClientsQuery({ limit: 100 });
+  const clients = clientsData?.data || (Array.isArray(clientsData) ? clientsData : []) || [];
 
   const handleChange = useCallback(
     (key, value) => {
@@ -28,12 +33,12 @@ export default function MeetingFilters({ onFilterChange }) {
   );
 
   const clearFilters = useCallback(() => {
-    const cleared = { search: '', status: '', dateFrom: '', dateTo: '' };
+    const cleared = { search: '', status: '', client: '', dateFrom: '', dateTo: '' };
     setFilters(cleared);
     onFilterChange?.(cleared);
   }, [onFilterChange]);
 
-  const hasFilters = filters.search || filters.status || filters.dateFrom || filters.dateTo;
+  const hasFilters = filters.search || filters.status || filters.client || filters.dateFrom || filters.dateTo;
 
   return (
     <div className="bg-white rounded-xl border border-zinc-200 p-4">
@@ -51,6 +56,30 @@ export default function MeetingFilters({ onFilterChange }) {
               className="w-full pl-8 pr-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900"
             />
           </div>
+        </div>
+
+        {/* Client Filter */}
+        <div className="min-w-[170px]">
+          <label className="block text-xs font-medium text-zinc-500 mb-1 flex items-center gap-1">
+            <Building2 className="w-3 h-3 text-zinc-400" />
+            Client
+          </label>
+          <Select
+            value={filters.client || 'all'}
+            onValueChange={(value) => handleChange('client', value === 'all' ? '' : value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All Clients" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {clients.map((c) => (
+                <SelectItem key={c._id} value={c._id}>
+                  {c.companyName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Status */}

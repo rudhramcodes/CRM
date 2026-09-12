@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Calendar, Clock, ExternalLink, Repeat } from 'lucide-react';
+import { Edit2, Trash2, Calendar, Clock, ExternalLink, Repeat, Building2, User } from 'lucide-react';
 import MeetingStatusBadge from './MeetingStatusBadge';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
@@ -149,13 +149,19 @@ export default function MeetingTable({
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="text-sm text-zinc-700">
+                  <div className="text-sm">
                     {meeting.client ? (
-                      <span>{meeting.client.companyName}</span>
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium">
+                        <Building2 className="w-3 h-3 text-emerald-600" />
+                        {meeting.client.companyName}
+                      </span>
                     ) : meeting.lead ? (
-                      <span className="text-zinc-400">{meeting.lead.name}</span>
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 text-xs font-medium">
+                        <User className="w-3 h-3 text-blue-600" />
+                        {meeting.lead.name}
+                      </span>
                     ) : (
-                      <span className="text-zinc-300">—</span>
+                      <span className="text-zinc-300 text-xs">—</span>
                     )}
                   </div>
                 </td>

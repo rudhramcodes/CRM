@@ -92,6 +92,6 @@ export const clientsQuerySchema = z.object({
   status: z.enum(['active', 'inactive']).optional(),
   brand: z.string().optional(),
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(10),
+  limit: z.coerce.number().int().positive().max(500).optional().default(10),
   sort: z.string().optional(),
 });

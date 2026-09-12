@@ -36,7 +36,7 @@ export const updateUserRoleSchema = z.object({
 
 export const usersQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(10),
+  limit: z.coerce.number().int().positive().max(500).optional().default(10),
   search: z.string().optional(),
   role: z.enum(ROLES_LIST).optional(),
   isActive: z.coerce.boolean().optional(),

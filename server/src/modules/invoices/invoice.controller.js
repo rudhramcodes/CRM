@@ -3,7 +3,7 @@ import * as invoiceService from './invoice.service.js';
 
 export const list = async (req, res, next) => {
   try {
-    const result = await invoiceService.getInvoices(req.query);
+    const result = await invoiceService.getInvoices(req.query, req.user, req.clientProfile);
     ApiResponse.paginated(res, result.invoices, result.pagination);
   } catch (error) {
     next(error);
@@ -12,7 +12,7 @@ export const list = async (req, res, next) => {
 
 export const getById = async (req, res, next) => {
   try {
-    const invoice = await invoiceService.getInvoiceById(req.params.id);
+    const invoice = await invoiceService.getInvoiceById(req.params.id, req.user, req.clientProfile);
     ApiResponse.success(res, 200, { invoice });
   } catch (error) {
     next(error);
@@ -21,7 +21,7 @@ export const getById = async (req, res, next) => {
 
 export const getHtml = async (req, res, next) => {
   try {
-    const html = await invoiceService.getInvoiceHtml(req.params.id);
+    const html = await invoiceService.getInvoiceHtml(req.params.id, req.user, req.clientProfile);
     res.type('html').send(html);
   } catch (error) {
     next(error);
@@ -30,8 +30,8 @@ export const getHtml = async (req, res, next) => {
 
 export const downloadPdf = async (req, res, next) => {
   try {
-    const invoice = await invoiceService.getInvoiceById(req.params.id);
-    const pdf = await invoiceService.getInvoicePdf(req.params.id);
+    const invoice = await invoiceService.getInvoiceById(req.params.id, req.user, req.clientProfile);
+    const pdf = await invoiceService.getInvoicePdf(req.params.id, req.user, req.clientProfile);
     const filename = `invoice-${invoice.invoiceNumber || req.params.id}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

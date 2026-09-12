@@ -60,8 +60,15 @@ export const createInvoice = async (data, user) => {
   return invoiceRepository.create(payload);
 };
 
-export const getInvoices = async (query) => {
+export const getInvoices = async (query, user, clientProfile) => {
   const { page, limit, sortBy, sortOrder, ...filters } = query;
+  if (clientProfile) {
+    filters.client = clientProfile._id;
+    // Clients see their invoices (sent, partially_paid, paid, overdue, draft), excluding cancelled unless requested
+    if (!filters.status) {
+      filters.status = { $nin: ['cancelled'] };
+    }
+  }
   return invoiceRepository.findAll(filters, { page, limit, sortBy, sortOrder });
 };
 
@@ -77,28 +84,39 @@ const markOverdueIfPastDue = async (invoice) => {
   }
 };
 
-export const getInvoiceById = async (id) => {
+const assertClientInvoiceAccess = (invoice, clientProfile) => {
+  if (!clientProfile || !invoice) return;
+  const invoiceClientId = invoice.client?._id || invoice.client;
+  if (String(invoiceClientId) !== String(clientProfile._id)) {
+    throw ApiError.forbidden('Access denied');
+  }
+};
+
+export const getInvoiceById = async (id, user, clientProfile) => {
   const invoice = await invoiceRepository.findById(id);
   if (!invoice) {
     throw ApiError.notFound('Invoice not found');
   }
+  assertClientInvoiceAccess(invoice, clientProfile);
   await markOverdueIfPastDue(invoice);
   return invoiceRepository.findById(id);
 };
 
-export const getInvoiceHtml = async (id) => {
+export const getInvoiceHtml = async (id, user, clientProfile) => {
   const invoice = await invoiceRepository.findById(id);
   if (!invoice) {
     throw ApiError.notFound('Invoice not found');
   }
+  assertClientInvoiceAccess(invoice, clientProfile);
   return generateInvoiceHtml(invoice);
 };
 
-export const getInvoicePdf = async (id) => {
+export const getInvoicePdf = async (id, user, clientProfile) => {
   const invoice = await invoiceRepository.findById(id);
   if (!invoice) {
     throw ApiError.notFound('Invoice not found');
   }
+  assertClientInvoiceAccess(invoice, clientProfile);
   return generateInvoicePdf(invoice);
 };
 

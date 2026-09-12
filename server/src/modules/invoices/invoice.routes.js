@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as invoiceController from './invoice.controller.js';
 import validate, { validateQuery } from '../../middleware/validate.js';
 import { verifyToken, authorize } from '../../middleware/auth.js';
+import { attachClientProfile } from '../../middleware/clientPortal.js';
 import { ROLES } from '../../constants/index.js';
 import {
   createInvoiceSchema,
@@ -22,26 +23,30 @@ router.get(
 
 router.get(
   '/',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.CLIENT),
+  attachClientProfile,
   validateQuery(invoicesQuerySchema),
   invoiceController.list,
 );
 
 router.get(
   '/:id',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.CLIENT),
+  attachClientProfile,
   invoiceController.getById,
 );
 
 router.get(
   '/:id/html',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.CLIENT),
+  attachClientProfile,
   invoiceController.getHtml,
 );
 
 router.get(
   '/:id/pdf',
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.CLIENT),
+  attachClientProfile,
   invoiceController.downloadPdf,
 );
 
