@@ -12,7 +12,7 @@ import ClockOutSummary from './ClockOutSummary';
 import Button from '../../../components/ui/Button';
 import Switch from '../../../components/ui/Switch';
 import { format } from 'date-fns';
-import { Play, LogOut, Coffee, PlayCircle, Plane, Gift, CalendarOff } from 'lucide-react';
+import { Play, LogOut, Coffee, PlayCircle, Plane, Gift, CalendarOff, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatHours, formatMinutes } from '../../../utils/formatters';
 
@@ -46,7 +46,7 @@ const getLocation = () => {
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => resolve(null),
-      { timeout: 5000, enableHighAccuracy: false }
+      { timeout: 10000, enableHighAccuracy: true }
     );
   });
 };
@@ -62,6 +62,7 @@ export default function AttendanceWidget() {
 
   const [showSummary, setShowSummary] = useState(false);
   const [isWFH, setIsWFH] = useState(false);
+  const [clockInError, setClockInError] = useState(null);
 
   const today = data?.data?.attendance;
   const todayKey = format(new Date(), 'yyyy-MM-dd');
@@ -97,6 +98,7 @@ export default function AttendanceWidget() {
   const currentClockInTime = activeSession?.clockIn?.time || null;
 
   const handleClockIn = async () => {
+    setClockInError(null);
     if (blockedKind) {
       toast.error(BLOCKED_STATUS[blockedKind].title);
       return;
@@ -106,7 +108,7 @@ export default function AttendanceWidget() {
       await clockIn({ isWFH, location }).unwrap();
       toast.success(isWFH ? 'Clocked in (WFH)' : 'Clocked in successfully');
     } catch (err) {
-      toast.error(err?.data?.message || 'Clock in failed');
+      setClockInError(err?.data?.message || 'Clock in failed');
     }
   };
 
@@ -278,6 +280,16 @@ export default function AttendanceWidget() {
                   <>Clock-in is not allowed on Sunday.</>
                 )}
               </p>
+            </div>
+          </div>
+        )}
+
+        {clockInError && !isClockedIn && (
+          <div className="mb-6 px-4 py-3 rounded-lg border bg-red-50 text-red-800 border-red-200 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0 text-red-600" />
+            <div>
+              <p className="text-sm font-medium">Cannot Clock In</p>
+              <p className="text-xs mt-0.5 opacity-90">{clockInError}</p>
             </div>
           </div>
         )}

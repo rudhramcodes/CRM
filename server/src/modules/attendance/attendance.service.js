@@ -245,6 +245,15 @@ export const clockIn = async (employeeId, data, ip) => {
       resolvedLocation = await resolveLocationDetails(data.location);
     }
 
+    if (!data?.isWFH) {
+      if (resolvedLocation.lat == null || resolvedLocation.lng == null) {
+        throw ApiError.badRequest('Location access is required to clock in from the office. Please enable GPS.');
+      }
+      if (!resolvedLocation.isOffice) {
+        throw ApiError.badRequest('You must be within 100 meters of the office to clock in. If you are working from home, please select the WFH option.');
+      }
+    }
+
     // Push new session
     const newSession = {
       clockIn: {

@@ -2,7 +2,7 @@ export const RUDHRAM_OFFICE = {
   name: 'Office (Rudhram Enterprises)',
   lat: 21.1490864,
   lng: 72.7760101,
-  radiusMeters: 200,
+  radiusMeters: 100,
 };
 
 export const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
