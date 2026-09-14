@@ -44,7 +44,7 @@ export default function LiveTimer({ clockInTime, isRunning, isPaused, breakSecon
       <div className="text-center flex flex-col items-center">
         <AnimateDigits
           value="00:00:00"
-          className="text-5xl md:text-6xl font-mono font-bold text-zinc-300 tracking-wider justify-center"
+          className="text-5xl md:text-6xl font-heading font-medium text-zinc-300 tracking-wider justify-center"
         />
         <p className="text-sm text-zinc-400 mt-2">{idleMessage}</p>
       </div>
@@ -55,7 +55,7 @@ export default function LiveTimer({ clockInTime, isRunning, isPaused, breakSecon
     <div className="text-center flex flex-col items-center">
       <AnimateDigits
         value={formatTime(elapsed)}
-        className={`text-5xl md:text-6xl font-mono font-bold tracking-wider justify-center ${
+        className={`text-5xl md:text-6xl font-heading font-medium tracking-wider justify-center ${
           isPaused ? 'text-amber-500' : 'text-primary-900'
         }`}
       />

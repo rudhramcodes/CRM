@@ -805,3 +805,35 @@ export const sendFreelancerApplicantEmail = async (freelancer) => {
     html: renderFreelancerApplicantEmail({ freelancer }),
   });
 };
+
+export const renderNewLeadEmail = ({ leadName, email, phone, company, brand, source, notes, detailsUrl }) => {
+  const brandLabel = BRAND_LABELS[brand] || brand || 'Unknown';
+  return renderEmail({
+    preheader: `New Lead: ${leadName} (${brandLabel})`,
+    heading: 'New Lead Captured',
+    subtext: `A new lead has been added for <strong style="color:${INK};">${brandLabel}</strong>.`,
+    bodyHtml: `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:10px;overflow:hidden;margin-bottom:16px;">
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};width:120px;">Name</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${leadName}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Email</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${email || '—'}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Phone</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${phone || '—'}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Company</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${company || '—'}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Brand</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${brandLabel}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Source</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${source || '—'}</td></tr>
+        <tr><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${MUTED};">Notes</td><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${BODY};">${notes || '—'}</td></tr>
+      </table>
+    `,
+    cta: { url: detailsUrl, text: 'View Lead Details' },
+    footerNote: 'Rudhram &middot; Lead Management',
+  });
+};
+
+export const sendNewLeadEmail = async (to, { leadName, email, phone, company, brand, source, notes, leadId }) => {
+  const detailsUrl = `${config.clientUrl}/leads/${leadId}`;
+  return sendEmail({
+    to,
+    subject: `New Lead: ${leadName} - ${BRAND_LABELS[brand] || brand || 'Unknown'}`,
+    html: renderNewLeadEmail({ leadName, email, phone, company, brand, source, notes, detailsUrl }),
+  });
+};
+

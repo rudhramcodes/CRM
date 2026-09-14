@@ -60,6 +60,10 @@ import FreelancerPortalForm from '../modules/freelancers/pages/FreelancerPortalF
 import FreelancerPortalSuccess from '../modules/freelancers/pages/FreelancerPortalSuccess';
 import FreelancerPortalLayout from '../layouts/FreelancerPortalLayout';
 
+import InquiryPortalLayout from '../layouts/InquiryPortalLayout';
+import InquirySelection from '../modules/portal/pages/InquirySelection';
+import InquiryForm from '../modules/portal/pages/InquiryForm';
+
 const router = createBrowserRouter([
   {
     path: '/auth',
@@ -168,6 +172,14 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <FreelancerPortalForm /> },
       { path: 'success', element: <FreelancerPortalSuccess /> },
+    ],
+  },
+  {
+    path: '/inquiry',
+    element: <InquiryPortalLayout />,
+    children: [
+      { index: true, element: <InquirySelection /> },
+      { path: ':brand', element: <InquiryForm /> },
     ],
   },
   {

@@ -19,7 +19,15 @@ export default function LeadTable({ leads, loading, error, onRowClick, searchabl
             </span>
           </div>
           <div>
-            <p className="font-medium text-primary-900">{row.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-primary-900">{row.name}</p>
+              {!row.isRead && (
+                <span className="relative flex h-2 w-2 mb-0.5" title="Unread lead">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+              )}
+            </div>
             {row.company && (
               <p className="text-xs text-zinc-400">{row.company}</p>
             )}

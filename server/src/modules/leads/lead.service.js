@@ -6,7 +6,7 @@ import * as notificationService from '../notifications/notification.service.js';
 import generateClientId from '../../utils/generateClientId.js';
 import * as XLSX from 'xlsx';
 import { LEAD_STATUS, LEAD_BRANDS } from '../../constants/index.js';
-import { sendClientOnboardingEmail, sendClientCredentialsEmail } from '../../services/emailService.js';
+import { sendClientOnboardingEmail, sendClientCredentialsEmail, sendNewLeadEmail } from '../../services/emailService.js';
 import User from '../auth/auth.model.js';
 
 const CLIENT_DEFAULT_PASSWORD = 'client@rudhram';
@@ -94,10 +94,28 @@ export const createLead = async (data, user) => {
   const lead = await leadRepository.create(leadData);
 
   const { default: User } = await import('../auth/auth.model.js');
-  const allUsers = await User.find({ isActive: true }).select('_id');
+  const allUsers = await User.find({ isActive: true }).select('_id email role');
   const recipientIds = allUsers
     .map((u) => String(u._id))
-    .filter((uid) => uid !== String(user._id));
+    .filter((uid) => uid !== String(user._id) || data.source === 'website');
+
+  // Send email to super_admin, admin, manager
+  const emailRecipients = allUsers
+    .filter((u) => ['super_admin', 'admin', 'manager'].includes(u.role) && u.email)
+    .map((u) => u.email);
+
+  if (emailRecipients.length > 0) {
+    sendNewLeadEmail(emailRecipients, {
+      leadName: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      company: lead.company,
+      brand: lead.brand,
+      source: lead.source,
+      notes: lead.notes?.[0]?.text || '',
+      leadId: lead._id,
+    }).catch((err) => logger.error(`[lead-create] Email failed: ${err.message}`));
+  }
 
   const notif = notificationService.buildNotification('lead_created', {
     leadName: lead.name, source: lead.source || 'manual',
@@ -135,6 +153,12 @@ export const getLeadById = async (id) => {
   if (!lead) {
     throw ApiError.notFound('Lead not found');
   }
+  
+  if (!lead.isRead) {
+    lead.isRead = true;
+    await lead.save();
+  }
+  
   return lead;
 };
 

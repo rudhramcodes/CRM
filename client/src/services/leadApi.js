@@ -25,6 +25,14 @@ export const leadApi = api.injectEndpoints({
       invalidatesTags: ['Lead'],
     }),
 
+    submitPublicInquiry: builder.mutation({
+      query: (body) => ({
+        url: '/leads/public/inquiry',
+        method: 'POST',
+        body,
+      }),
+    }),
+
     updateLead: builder.mutation({
       query: ({ id, ...body }) => ({
         url: `/leads/${id}`,
@@ -102,4 +110,5 @@ export const {
   useAddLeadNoteMutation,
   useGetLeadStatsQuery,
   useImportLeadsMutation,
+  useSubmitPublicInquiryMutation,
 } = leadApi;

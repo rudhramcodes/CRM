@@ -1,5 +1,33 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Goldenbook';
+  src: url('/fonts/Goldenbook%20Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Goldenbook';
+  src: url('/fonts/Goldenbook%20Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Apex New Trial';
+  src: url('/fonts/ApexNewTrial-Book.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Apex New Trial';
+  src: url('/fonts/ApexNewTrial-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
 @theme {
   --color-primary-50: #f2f2f2;
   --color-primary-100: #e6e6e6;
@@ -18,6 +46,8 @@
 
   --font-sans: 'Manrope', system-ui, sans-serif;
   --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-golden: 'Goldenbook', serif;
+  --font-apex: 'Apex New Trial', sans-serif;
   --radius: 0.5rem;
 }
 

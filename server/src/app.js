@@ -18,6 +18,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import authRoutes from './modules/auth/auth.routes.js';
 import usersRoutes from './modules/users/users.routes.js';
 import leadRoutes from './modules/leads/lead.routes.js';
+import leadPublicRoutes from './modules/leads/lead.public.routes.js';
 import clientRoutes from './modules/clients/client.routes.js';
 import meetingRoutes from './modules/meetings/meeting.routes.js';
 import projectRoutes from './modules/projects/project.routes.js';
@@ -99,6 +100,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/leads/public', leadPublicRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/meetings', meetingRoutes);
