@@ -18,9 +18,6 @@ export default function Sidebar({ open, onClose }) {
   );
 
   const getNavPath = (item) => {
-    if (item.path === '/attendance' && user?.role === 'super_admin') {
-      return '/attendance/list';
-    }
     return item.path;
   };
 

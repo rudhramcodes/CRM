@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   useGetTodayStatusQuery,
   useGetHolidaysQuery,
@@ -66,6 +66,10 @@ export default function AttendanceWidget() {
 
   const today = data?.data?.attendance;
   const todayKey = format(new Date(), 'yyyy-MM-dd');
+
+  useEffect(() => {
+    if (today?.isWFH) setIsWFH(true);
+  }, [today?.isWFH]);
   const holidayToday = useMemo(() => {
     const holidays = Array.isArray(holidaysData?.data)
       ? holidaysData.data
@@ -258,7 +262,7 @@ export default function AttendanceWidget() {
           </div>
         )}
 
-        {!isClockedIn && !blockedKind && completedSessions.length === 0 && (
+        {!isClockedIn && !blockedKind && (
           <div className="mb-6 px-4 py-3 bg-zinc-50 rounded-lg">
             <Switch checked={isWFH} onChange={setIsWFH} label="Work From Home" />
           </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { AnimateDigits } from '../../../components/ui/AnimateDigits';
 
 function formatTime(totalSeconds) {
   const h = Math.floor(totalSeconds / 3600);
@@ -40,22 +41,24 @@ export default function LiveTimer({ clockInTime, isRunning, isPaused, breakSecon
 
   if (!isRunning) {
     return (
-      <div className="text-center">
-        <p className="text-5xl md:text-6xl font-mono font-bold text-zinc-300 tracking-wider">
-          00:00:00
-        </p>
+      <div className="text-center flex flex-col items-center">
+        <AnimateDigits
+          value="00:00:00"
+          className="text-5xl md:text-6xl font-mono font-bold text-zinc-300 tracking-wider justify-center"
+        />
         <p className="text-sm text-zinc-400 mt-2">{idleMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className="text-center">
-      <p className={`text-5xl md:text-6xl font-mono font-bold tracking-wider ${
-        isPaused ? 'text-amber-500' : 'text-primary-900'
-      }`}>
-        {formatTime(elapsed)}
-      </p>
+    <div className="text-center flex flex-col items-center">
+      <AnimateDigits
+        value={formatTime(elapsed)}
+        className={`text-5xl md:text-6xl font-mono font-bold tracking-wider justify-center ${
+          isPaused ? 'text-amber-500' : 'text-primary-900'
+        }`}
+      />
       <p className="text-sm mt-2 font-medium">
         {isPaused ? (
           <span className="text-amber-500 flex items-center justify-center gap-1.5">
