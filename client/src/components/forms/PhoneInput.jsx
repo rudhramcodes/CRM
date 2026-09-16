@@ -15,7 +15,21 @@ function getFlagEmoji(cca2) {
   return String.fromCodePoint(...codePoints);
 }
 
-export default function PhoneInput({ value, onChange, error, label, placeholder, ...props }) {
+export default function PhoneInput({ 
+  value, 
+  onChange, 
+  error, 
+  label, 
+  placeholder,
+  className,
+  buttonClassName,
+  inputClassName,
+  labelClassName,
+  name,
+  required,
+  disabled,
+  ...props 
+}) {
   const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [open, setOpen] = useState(false);
@@ -83,19 +97,21 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
     : COUNTRIES;
 
   return (
-    <div className="space-y-1.5">
+    <div className={cn('space-y-1.5', className)}>
       {label && (
-        <label className="block text-sm font-medium text-zinc-700">{label}</label>
+        <label className={cn('block text-sm font-medium text-zinc-700', labelClassName)}>{label}</label>
       )}
-      <div className="flex w-full" ref={dropdownRef}>
+      <div className="flex w-full relative" ref={dropdownRef}>
         <div className="relative">
           <button
             type="button"
+            disabled={disabled}
             onClick={() => setOpen(!open)}
             className={cn(
-              'flex items-center gap-1 px-2.5 h-10 border rounded-l-lg text-sm bg-zinc-50',
-              'hover:bg-zinc-100 transition-colors min-w-[80px]',
+              'flex items-center gap-1.5 px-3 h-10 border rounded-l-lg text-sm bg-zinc-50',
+              'hover:bg-zinc-100 transition-colors min-w-[84px] cursor-pointer focus:outline-none',
               error ? 'border-red-300' : 'border-zinc-200',
+              buttonClassName,
             )}
           >
             <span className="text-base leading-none">{getFlagEmoji(selectedCountry.cca2)}</span>
@@ -104,8 +120,8 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
           </button>
 
           {open && (
-            <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-zinc-200 rounded-lg shadow-lg z-[60] overflow-hidden">
-              <div className="p-2 border-b border-zinc-100">
+            <div className="absolute top-full left-0 mt-1.5 w-72 bg-white border border-zinc-200 rounded-xl shadow-xl z-[70] overflow-hidden">
+              <div className="p-2 border-b border-zinc-100 bg-zinc-50/50">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
                   <input
@@ -113,12 +129,12 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search country or code..."
-                    className="w-full pl-8 pr-2.5 py-1.5 text-sm border border-zinc-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-900"
+                    className="w-full pl-8 pr-2.5 py-1.5 text-xs sm:text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-900 bg-white"
                     autoFocus
                   />
                 </div>
               </div>
-              <div className="overflow-y-auto max-h-56">
+              <div className="overflow-y-auto max-h-56 divide-y divide-zinc-50">
                 {filtered.length === 0 ? (
                   <p className="text-xs text-zinc-400 text-center py-6">No countries found</p>
                 ) : (
@@ -128,13 +144,13 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
                       type="button"
                       onClick={() => selectCountry(c)}
                       className={cn(
-                        'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-zinc-50 transition-colors',
-                        selectedCountry.cca2 === c.cca2 && 'bg-primary-50 text-primary-900 font-medium',
+                        'w-full flex items-center gap-2.5 px-3 py-2 text-xs sm:text-sm text-left hover:bg-zinc-50 transition-colors cursor-pointer',
+                        selectedCountry.cca2 === c.cca2 && 'bg-zinc-100/90 text-zinc-900 font-semibold',
                       )}
                     >
                       <span className="text-base leading-none w-6 shrink-0">{getFlagEmoji(c.cca2)}</span>
-                      <span className="flex-1 truncate">{c.name}</span>
-                      <span className="text-zinc-400 text-xs shrink-0">{c.code}</span>
+                      <span className="flex-1 truncate text-zinc-700">{c.name}</span>
+                      <span className="text-zinc-400 text-xs font-mono shrink-0">{c.code}</span>
                     </button>
                   ))
                 )}
@@ -145,6 +161,9 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
 
         <input
           type="tel"
+          name={name}
+          required={required}
+          disabled={disabled}
           inputMode="numeric"
           autoComplete="tel-national"
           value={phoneNumber}
@@ -152,10 +171,11 @@ export default function PhoneInput({ value, onChange, error, label, placeholder,
           placeholder={placeholder || '98765 43210'}
           maxLength={PHONE_MAX_LENGTH}
           className={cn(
-            'flex-1 px-3 h-10 border border-l-0 rounded-r-lg text-sm transition-colors bg-zinc-50',
-            'focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900',
-            'placeholder:text-zinc-400 text-primary-900',
+            'flex-1 px-3.5 h-10 border border-l-0 rounded-r-lg text-sm transition-colors bg-zinc-50',
+            'focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900',
+            'placeholder:text-zinc-400 text-zinc-900',
             error ? 'border-red-300' : 'border-zinc-200',
+            inputClassName,
           )}
           {...props}
         />

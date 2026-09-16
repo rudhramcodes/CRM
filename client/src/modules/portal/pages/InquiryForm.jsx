@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSubmitPublicInquiryMutation } from '../../../services/leadApi';
+import PhoneInput from '../../../components/forms/PhoneInput';
 import toast from 'react-hot-toast';
 
 export default function InquiryForm() {
@@ -10,6 +11,8 @@ export default function InquiryForm() {
   const navigate = useNavigate();
   const [submitInquiry, { isLoading }] = useSubmitPublicInquiryMutation();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   const normalizedBrand = brand?.toLowerCase();
   const isValidBrand = ['panigrahna', 'aghori'].includes(normalizedBrand);
@@ -41,11 +44,18 @@ export default function InquiryForm() {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!phone || phone.trim().length < 6) {
+      setPhoneError('Please enter a valid phone number');
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+    setPhoneError('');
+
     const formData = new FormData(e.target);
     const data = {
       name: formData.get('name'),
       email: formData.get('email'),
-      phone: formData.get('phone'),
+      phone: phone.trim(),
       company: formData.get('company'),
       brand: normalizedBrand,
       notes: [{ text: formData.get('notes') }]
@@ -136,44 +146,51 @@ export default function InquiryForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Full Name *</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 font-heading">Full Name *</label>
               <input 
                 type="text" 
                 name="name"
                 required
-                className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-sm outline-none transition-all focus:bg-white focus:border-zinc-900"
+                className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-sm outline-none transition-all focus:bg-white focus:border-zinc-900"
                 placeholder="Jane Doe"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Email Address *</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 font-heading">Email Address *</label>
               <input 
                 type="email" 
                 name="email"
                 required
-                className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-sm outline-none transition-all focus:bg-white focus:border-zinc-900"
+                className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-sm outline-none transition-all focus:bg-white focus:border-zinc-900"
                 placeholder="jane@example.com"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Phone Number *</label>
-              <input 
-                type="tel" 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start">
+            <div>
+              <PhoneInput 
+                label="Phone Number *"
                 name="phone"
                 required
-                className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-sm outline-none transition-all focus:bg-white focus:border-zinc-900"
-                placeholder="+91 98765 43210"
+                value={phone}
+                onChange={(val) => {
+                  setPhone(val || '');
+                  if (phoneError) setPhoneError('');
+                }}
+                error={phoneError}
+                placeholder="98765 43210"
+                labelClassName="text-xs font-semibold uppercase tracking-wider text-zinc-500 font-heading"
+                buttonClassName="h-11 sm:h-12 rounded-l-xl bg-zinc-50 border-zinc-200 hover:bg-zinc-100"
+                inputClassName="h-11 sm:h-12 rounded-r-xl bg-zinc-50 border-zinc-200 focus:bg-white focus:border-zinc-900 focus:ring-0 text-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Company or Organization</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 font-heading">Company or Organization</label>
               <input 
                 type="text" 
                 name="company"
-                className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-sm outline-none transition-all focus:bg-white focus:border-zinc-900"
+                className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-sm outline-none transition-all focus:bg-white focus:border-zinc-900"
                 placeholder="Optional"
               />
             </div>
