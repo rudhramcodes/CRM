@@ -18,8 +18,8 @@ const VENTURES = [
     headline: 'Preserving Sacred Unions and Authentic Love Stories',
     description:
       'Crafting bespoke wedding cinema, visual poetry, and candid moments to preserve your most cherished memories across generations.',
-    // Pre-cached wedding photography image
-    imageUrl: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?q=80&w=900&auto=format&fit=crop',
+    // Pre-cached wedding photography image (black and white)
+    imageUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/e_grayscale/v1783500769/RA13.jpg',
     link: '/inquiry/panigrahna',
     offerings: [
       { label: 'Cinematic Films', detail: '4K Cinema Productions' },
