@@ -35,6 +35,9 @@ export default function InquiryForm() {
 
   const brandName = normalizedBrand === 'panigrahna' ? 'Panigrahana' : 'Aghhori';
   const brandCategory = normalizedBrand === 'panigrahna' ? 'Wedding Cinematography' : 'Advertising and Media Productions';
+  const brandLogo = normalizedBrand === 'panigrahna'
+    ? 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784704090/pg-logo-with-name.png'
+    : 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535471/ag-logo.avif';
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,8 +67,15 @@ export default function InquiryForm() {
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="flex flex-col items-center justify-center space-y-6 text-center w-full max-w-lg mx-auto p-10 sm:p-14 rounded-3xl bg-white border border-zinc-200/90 shadow-lg" 
       >
-        <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-900">
-          <CheckCircle2 className="w-8 h-8" strokeWidth={1.8} />
+        <div className="h-12 flex items-center justify-center mb-1">
+          <img 
+            src={brandLogo} 
+            alt={brandName}
+            className="h-full w-auto max-w-[160px] object-contain"
+          />
+        </div>
+        <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-900">
+          <CheckCircle2 className="w-7 h-7" strokeWidth={1.8} />
         </div>
         <div className="space-y-2">
           <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight font-heading">
@@ -101,8 +111,15 @@ export default function InquiryForm() {
         <span>Back to Selection</span>
       </Link>
 
-      {/* Header */}
-      <div className="text-center mb-10 space-y-2">
+      {/* Header with Venture Logo */}
+      <div className="text-center mb-10 flex flex-col items-center space-y-2.5">
+        <div className="h-12 sm:h-14 flex items-center justify-center mb-1">
+          <img 
+            src={brandLogo} 
+            alt={brandName}
+            className="h-full w-auto max-w-[190px] object-contain"
+          />
+        </div>
         <span className="text-[11px] font-bold tracking-widest uppercase text-zinc-400 font-heading">
           {brandCategory}
         </span>

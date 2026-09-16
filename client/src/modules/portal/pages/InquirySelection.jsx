@@ -233,11 +233,11 @@ export default function InquirySelection() {
                   {/* Right Column: Venture Details & Offerings */}
                   <div className="lg:col-span-7 flex flex-col justify-between space-y-4 py-1">
                     <div>
-                      <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-zinc-400 font-heading">
+                      <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-zinc-400 font-heading block mb-1.5">
                         {venture.category}
                       </span>
 
-                      <h3 className="text-xl sm:text-2xl lg:text-[1.7rem] font-bold text-zinc-900 tracking-tight mt-1 mb-2 font-heading leading-tight">
+                      <h3 className="text-xl sm:text-2xl lg:text-[1.7rem] font-bold text-zinc-900 tracking-tight mb-2 font-heading leading-tight">
                         {venture.headline}
                       </h3>
 
