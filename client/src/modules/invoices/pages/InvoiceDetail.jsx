@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Send, XCircle, Trash2, Printer, Edit2, Download, CheckCircle, CreditCard,
@@ -57,6 +57,7 @@ export default function InvoiceDetail() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false });
+  const iframeRef = useRef(null);
 
   const invoice = data?.data?.invoice;
   const { data: invoiceHtml } = useGetInvoiceHtmlQuery(id, { skip: !id });
@@ -184,7 +185,14 @@ export default function InvoiceDetail() {
     }
   };
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      iframeRef.current.contentWindow.focus();
+      iframeRef.current.contentWindow.print();
+    } else {
+      window.print();
+    }
+  };
 
   const handleDownloadPdf = async () => {
     setIsDownloading(true);
@@ -304,7 +312,31 @@ export default function InvoiceDetail() {
           </div>
         </div>
         {invoiceHtml ? (
-          <div className="p-8 print:p-0" dangerouslySetInnerHTML={{ __html: invoiceHtml }} />
+          <div className="p-4 sm:p-6 flex justify-center bg-zinc-100/50 print:p-0">
+            <iframe
+              ref={iframeRef}
+              srcDoc={invoiceHtml}
+              title={`Invoice ${invoice.invoiceNumber}`}
+              className="w-full max-w-[850px] border-0 rounded-lg shadow-sm bg-transparent"
+              style={{ minHeight: '1150px' }}
+              onLoad={(e) => {
+                try {
+                  const iframe = e.target;
+                  if (iframe && iframe.contentWindow) {
+                    const doc = iframe.contentWindow.document;
+                    const height = Math.max(
+                      doc.body?.scrollHeight || 0,
+                      doc.documentElement?.scrollHeight || 0,
+                      1130
+                    );
+                    iframe.style.height = `${height + 25}px`;
+                  }
+                } catch {
+                  // Fallback
+                }
+              }}
+            />
+          </div>
         ) : (
           <div className="p-8 text-zinc-400 text-center text-sm">Loading preview...</div>
         )}

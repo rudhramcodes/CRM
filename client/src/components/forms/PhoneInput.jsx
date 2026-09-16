@@ -15,11 +15,11 @@ function getFlagEmoji(cca2) {
   return String.fromCodePoint(...codePoints);
 }
 
-export default function PhoneInput({ 
-  value, 
-  onChange, 
-  error, 
-  label, 
+export default function PhoneInput({
+  value,
+  onChange,
+  error,
+  label,
   placeholder,
   className,
   buttonClassName,
@@ -28,7 +28,7 @@ export default function PhoneInput({
   name,
   required,
   disabled,
-  ...props 
+  ...props
 }) {
   const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -90,10 +90,10 @@ export default function PhoneInput({
 
   const filtered = search
     ? COUNTRIES.filter(
-        (c) =>
-          c.name.toLowerCase().includes(search.toLowerCase()) ||
-          c.code.includes(search),
-      )
+      (c) =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.code.includes(search),
+    )
     : COUNTRIES;
 
   return (

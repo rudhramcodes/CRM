@@ -181,7 +181,6 @@ export const generateInvoiceHtml = (invoice) => {
       height: 100%;
       background-color: #FAF6F0;
       color: #1a1a1a;
-      font-family: 'Californian FB', Georgia, serif;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -196,6 +195,7 @@ export const generateInvoiceHtml = (invoice) => {
       background-image: url('data:image/png;base64,${PAPER_GRAIN_TILE_BASE64}');
       background-repeat: repeat;
       overflow: hidden;
+      font-family: 'Californian FB', Georgia, serif;
     }
 
     /* Centered watermark behind table */
