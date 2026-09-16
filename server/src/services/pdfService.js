@@ -17,6 +17,7 @@ const CALIFORNIAN_FB_BOLD_FONT = loadAssetBase64('../../assets/fonts/Californian
 
 const RUDHRAM_EMBLEM_BASE64 = loadAssetBase64('../../assets/rudhram-emblem.png');
 const RUDHRAM_LOGO_BASE64 = loadAssetBase64('../../assets/rudhram-logo.png');
+const PAPER_GRAIN_TILE_BASE64 = loadAssetBase64('../../assets/paper-grain-tile.jpg');
 
 
 const RUDHRAM_LOGO_URL = 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png';
@@ -189,11 +190,18 @@ export const generateInvoiceHtml = (invoice) => {
 
     body {
       background-color: #FAF6F0;
-      background-image: 
-        radial-gradient(rgba(163, 112, 56, 0.12) 1px, transparent 1px),
-        radial-gradient(rgba(163, 112, 56, 0.08) 1px, transparent 1px);
-      background-size: 4px 4px;
-      background-position: 0 0, 2px 2px;
+    }
+
+    .grain-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: url('data:image/jpeg;base64,${PAPER_GRAIN_TILE_BASE64}');
+      background-size: cover; /* Prevents repeating seams */
+      background-position: center;
+      opacity: 0.35; /* Lightens the dark texture */
+      mix-blend-mode: multiply;
+      pointer-events: none;
+      z-index: 1;
     }
 
     /* Screen display vs Print */
@@ -237,7 +245,7 @@ export const generateInvoiceHtml = (invoice) => {
       top: 55%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 650px;
+      width: 600px;
       opacity: 0.12;
       pointer-events: none;
       z-index: 2; /* Sit between grain and content */
@@ -516,6 +524,9 @@ export const generateInvoiceHtml = (invoice) => {
   </style>
 </head>
 <body>
+  <!-- Fixed Background Grain -->
+  <div class="grain-overlay"></div>
+
   <!-- Fixed Background Watermark -->
   <div class="watermark-bg">
     <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" alt="Watermark" class="wm-logo" />
