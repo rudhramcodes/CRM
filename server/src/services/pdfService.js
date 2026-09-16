@@ -17,7 +17,7 @@ const CALIFORNIAN_FB_BOLD_FONT = loadAssetBase64('../../assets/fonts/Californian
 
 const RUDHRAM_EMBLEM_BASE64 = loadAssetBase64('../../assets/rudhram-emblem.png');
 const RUDHRAM_LOGO_BASE64 = loadAssetBase64('../../assets/rudhram-logo.png');
-const PAPER_GRAIN_TILE_BASE64 = loadAssetBase64('../../assets/paper-grain-tile.png');
+
 
 const RUDHRAM_LOGO_URL = 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png';
 
@@ -152,6 +152,7 @@ export const generateInvoiceHtml = (invoice) => {
       font-weight: 400;
       font-style: normal;
     }
+
     @font-face {
       font-family: 'Californian FB';
       src: url(data:font/truetype;base64,${CALIFORNIAN_FB_BOLD_FONT}) format('truetype');
@@ -183,62 +184,76 @@ export const generateInvoiceHtml = (invoice) => {
       color: #1a1a1a;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-    }
-
-    .invoice-page {
-      position: relative;
-      width: 794px;
-      min-height: 1123px;
-      margin: 0 auto;
-      padding: 44px 52px 40px;
-      background-color: #FAF6F0;
-      background-image: url('data:image/png;base64,${PAPER_GRAIN_TILE_BASE64}');
-      background-repeat: repeat;
-      overflow: hidden;
       font-family: 'Californian FB', Georgia, serif;
     }
 
-    /* Centered watermark behind table */
+    body {
+      background-color: #FAF6F0;
+      background-image: 
+        radial-gradient(rgba(163, 112, 56, 0.12) 1px, transparent 1px),
+        radial-gradient(rgba(163, 112, 56, 0.08) 1px, transparent 1px);
+      background-size: 4px 4px;
+      background-position: 0 0, 2px 2px;
+    }
+
+    /* Screen display vs Print */
+    .invoice-page {
+      position: relative;
+      z-index: 3; /* Sit above the watermark and grain */
+      width: 794px;
+      margin: 0 auto;
+      padding: 24px 36px 36px; /* Padding for web preview */
+      background-color: transparent;
+    }
+
+    @media print {
+      .invoice-page {
+        width: 100%;
+        margin: 0;
+        padding: 0 44px; /* Left and right margins for print */
+      }
+      body {
+        margin: 0; 
+      }
+    }
+
+    /* Table for repeating header/footer */
+    .layout-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .layout-table > thead > tr > td {
+      padding-top: 44px;
+      padding-bottom: 24px;
+    }
+    .layout-table > tfoot > tr > td {
+      padding-top: 24px;
+      padding-bottom: 40px;
+    }
+
+    /* Centered watermark */
     .watermark-bg {
-      position: absolute;
-      top: 54%;
+      position: fixed;
+      top: 55%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 540px;
+      width: 650px;
       opacity: 0.12;
       pointer-events: none;
-      z-index: 1;
+      z-index: 2; /* Sit between grain and content */
       text-align: center;
     }
     .watermark-bg .wm-logo {
-      height: 240px;
-      width: auto;
+      width: 100%;
+      height: auto;
       display: block;
-      margin: 0 auto 4px;
-      filter: sepia(100%) hue-rotate(350deg) saturate(250%);
-    }
-    .watermark-bg .wm-sub {
-      font-family: 'Goldenbook', serif;
-      font-size: 22px;
-      letter-spacing: 0.24em;
-      color: #A37038;
-      text-transform: lowercase;
-      margin-top: 0;
-    }
-
-    .content-wrap {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      min-height: 1039px;
+      margin: 0 auto;
     }
 
     /* Top Branding - Centered */
     .top-branding {
       text-align: center;
-      margin-bottom: 18px;
+      margin-bottom: 24px;
     }
     .top-branding .rudhram-logo-full {
       height: 100px;
@@ -248,19 +263,18 @@ export const generateInvoiceHtml = (invoice) => {
     }
     .top-branding .rudhram-sub {
       font-family: 'Goldenbook', serif;
-      font-size: 13px;
-      letter-spacing: 0.22em;
+      font-size: 14px;
+      letter-spacing: 0.24em;
       color: #9E6E38;
       text-transform: lowercase;
       margin-top: 0;
     }
 
-    /* Invoice Meta Row: left = INVOICE + meta, right = venture logo */
+    /* Invoice Meta Row */
     .invoice-meta-row {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 8px;
     }
 
     .header-left {
@@ -271,24 +285,22 @@ export const generateInvoiceHtml = (invoice) => {
       font-family: 'Goldenbook', serif;
       font-size: 32px;
       font-weight: 700;
-      letter-spacing: 0.01em;
+      letter-spacing: 0.02em;
       color: #1a1a1a;
-      margin: 0 0 10px 0;
+      margin: 0 0 12px 0;
       line-height: 1;
     }
 
     .meta-list {
-      font-family: 'Californian FB', serif;
       font-size: 14.5px;
-      line-height: 1.55;
-      color: #1a1a1a;
+      line-height: 1.6;
     }
     .meta-item {
       display: flex;
     }
     .meta-lbl {
       width: 90px;
-      font-weight: 700;
+      font-weight: 500;
     }
 
     .header-right {
@@ -297,7 +309,6 @@ export const generateInvoiceHtml = (invoice) => {
       flex-direction: column;
       align-items: flex-end;
       justify-content: flex-start;
-      padding-top: 6px;
     }
     .header-right img {
       height: 78px;
@@ -311,112 +322,109 @@ export const generateInvoiceHtml = (invoice) => {
       grid-template-columns: 1fr 1fr;
       gap: 32px;
       margin-top: 10px;
-      margin-bottom: 28px;
-      font-family: 'Californian FB', serif;
+      margin-bottom: 32px;
       font-size: 13.5px;
-      line-height: 1.35;
-      color: #1a1a1a;
+      line-height: 1.45;
     }
 
     .company-title {
-      font-size: 14.5px;
+      font-size: 18px; /* Specifically increased per rules */
       font-weight: 700;
       text-transform: uppercase;
       color: #1a1a1a;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
 
     .billed-label {
       font-family: 'Goldenbook', serif;
-      font-size: 12.5px;
+      font-size: 16px;
       font-weight: 700;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
       color: #1a1a1a;
-      margin-bottom: 3px;
+      margin-bottom: 6px;
     }
     .client-name {
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 16px;
+      font-weight: 500;
       text-transform: uppercase;
       color: #1a1a1a;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
 
     /* Items Table */
     .items-table {
       width: 100%;
       border-collapse: collapse;
+      margin-bottom: 12px;
+      page-break-inside: auto;
+    }
+    .items-table tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
     }
     .items-table th {
       font-family: 'Goldenbook', serif;
-      font-size: 13.5px;
+      font-size: 14px;
       font-weight: 700;
       letter-spacing: 0.06em;
       color: #1a1a1a;
-      padding: 9px 12px;
+      padding: 10px 14px;
       border-top: 1.5px solid #BA8E58;
       border-bottom: 1.5px solid #BA8E58;
     }
-    .items-table th.th-desc {
-      text-align: left;
-    }
-    .items-table th.th-amount {
-      text-align: right;
-    }
+    .items-table th.th-desc { text-align: left; }
+    .items-table th.th-amount { text-align: right; }
 
     .items-table td {
-      font-family: 'Californian FB', serif;
       font-size: 14.5px;
-      padding: 10px 12px;
+      padding: 12px 14px;
       color: #1a1a1a;
+      vertical-align: top;
     }
-    .items-table td.td-desc {
-      text-align: left;
-    }
-    .items-table td.td-amount {
-      text-align: right;
+    .items-table td.td-desc { text-align: left; }
+    .items-table td.td-amount { 
+      text-align: right; 
       font-variant-numeric: tabular-nums;
     }
 
     .items-table tr.last-row td {
       border-bottom: 1.5px solid #BA8E58;
-      padding-bottom: 14px;
+      padding-bottom: 16px;
     }
 
     /* Notes & Calculation Section */
     .summary-grid {
       display: grid;
-      grid-template-columns: 1fr 280px;
-      gap: 24px;
-      margin-top: 14px;
+      grid-template-columns: 1fr 300px;
+      gap: 32px;
+      margin-top: 16px;
       align-items: start;
+      page-break-inside: avoid;
     }
 
     .notes-box {
-      font-family: 'Californian FB', serif;
       font-size: 13.5px;
-      line-height: 1.45;
+      line-height: 1.5;
     }
     .notes-box .note-label {
       font-family: 'Goldenbook', serif;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: 0.05em;
-      color: #1a1a1a;
-      display: inline-block;
-      margin-right: 6px;
+      display: block;
+      margin-bottom: 4px;
     }
 
     .calc-stack {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 6px;
     }
     .calc-line {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 2px 12px;
+      padding: 2px 14px;
       color: #1a1a1a;
     }
     .calc-line.subtotal-line,
@@ -424,51 +432,45 @@ export const generateInvoiceHtml = (invoice) => {
       font-family: 'Goldenbook', serif;
       font-weight: 700;
       letter-spacing: 0.04em;
-      font-size: 13px;
+      font-size: 14px;
     }
     .calc-line.discount-line {
       font-family: 'Goldenbook', serif;
       font-weight: 700;
       letter-spacing: 0.04em;
-      font-size: 13px;
+      font-size: 14px;
       color: #2e7d32;
     }
     .calc-line .calc-val {
       font-family: 'Californian FB', serif;
-      font-size: 14.5px;
-      font-weight: 700;
-      letter-spacing: 0;
+      font-size: 15px;
+      font-weight: 500;
       font-variant-numeric: tabular-nums;
     }
 
-    .total-bar,
-    .total-band {
-      margin-top: 4px;
+    .total-bar {
+      margin-top: 6px;
       background-color: #C6AD8D !important;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 7px 12px;
+      padding: 9px 14px;
       width: 100%;
-      box-sizing: border-box;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .total-bar .lbl,
-    .total-band .lbl {
+    .total-bar .lbl {
       font-family: 'Goldenbook', serif;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: 0.08em;
       color: #1a1a1a;
     }
-    .total-bar .val,
-    .total-band .val {
+    .total-bar .val {
       font-family: 'Californian FB', serif;
-      font-size: 15.5px;
+      font-size: 16.5px;
       font-weight: 700;
       color: #1a1a1a;
-      letter-spacing: 0;
       font-variant-numeric: tabular-nums;
     }
 
@@ -477,178 +479,190 @@ export const generateInvoiceHtml = (invoice) => {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-top: 36px;
-      padding-top: 10px;
     }
 
     .bank-box {
-      font-family: 'Californian FB', serif;
-      font-size: 13px;
-      line-height: 1.42;
+      font-size: 13.5px;
+      line-height: 1.5;
       color: #1a1a1a;
     }
     .bank-box .bank-title {
       font-family: 'Goldenbook', serif;
-      font-size: 13.5px;
+      font-size: 16px;
       font-weight: 700;
       letter-spacing: 0.06em;
       color: #1a1a1a;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .sign-box {
       text-align: right;
-      font-family: 'Californian FB', serif;
       color: #1a1a1a;
     }
     .sign-top {
       font-family: 'Goldenbook', serif;
-      font-size: 11px;
+      font-size: 13px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+      font-weight: 700;
       color: #1a1a1a;
-      margin-bottom: 44px;
+      margin-bottom: 52px;
     }
     .sign-bottom {
-      font-family: 'Californian FB', serif;
-      font-size: 12.5px;
+      font-size: 14px;
+      font-weight: 500;
       color: #1a1a1a;
     }
   </style>
 </head>
 <body>
+  <!-- Fixed Background Watermark -->
+  <div class="watermark-bg">
+    <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" alt="Watermark" class="wm-logo" />
+  </div>
+
   <div class="invoice-page">
-    <!-- Center Watermark -->
-    <div class="watermark-bg">
-      <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" alt="Watermark" class="wm-logo" />
-      <div class="wm-sub">enterprises</div>
-    </div>
-
-    <div class="content-wrap">
-      <div>
-        <!-- Top Branding (Centered) -->
-        <div class="top-branding">
-          <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" class="rudhram-logo-full" alt="Rudhram" />
-          <div class="rudhram-sub">enterprises</div>
-        </div>
-
-        <!-- Invoice Meta + Venture Logo -->
-        <div class="invoice-meta-row">
-          <div class="header-left">
-            <h1 class="invoice-heading">INVOICE</h1>
-            <div class="meta-list">
-              <div class="meta-item"><span class="meta-lbl">Invoice No.</span> <span>${esc(invoice.invoiceNumber || '-')}</span></div>
-              <div class="meta-item"><span class="meta-lbl">Client Id :</span> <span>${esc(client.clientId || '-')}</span></div>
-              <div class="meta-item"><span class="meta-lbl">Project No :</span> <span>${esc(invoice.project?.projectNumber || invoice.project?.title || '-')}</span></div>
-              <div class="meta-item"><span class="meta-lbl">Date:</span> <span>${fmtDate(invoice.issueDate)}</span></div>
+    <table class="layout-table">
+      <!-- HEADER: Repeats on every page -->
+      <thead>
+        <tr>
+          <td>
+            <div class="top-branding">
+              <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" class="rudhram-logo-full" alt="Rudhram" />
+              <div class="rudhram-sub">enterprises</div>
             </div>
-          </div>
 
-          <div class="header-right">
-            ${ventureLogoHtml}
-          </div>
-        </div>
+            <div class="invoice-meta-row">
+              <div class="header-left">
+                <h1 class="invoice-heading">INVOICE</h1>
+                <div class="meta-list">
+                  <div class="meta-item"><span class="meta-lbl">Invoice No.</span> <span>${esc(invoice.invoiceNumber || '-')}</span></div>
+                  <div class="meta-item"><span class="meta-lbl">Client Id :</span> <span>${esc(client.clientId || '-')}</span></div>
+                  <div class="meta-item"><span class="meta-lbl">Project No :</span> <span>${esc(invoice.project?.projectNumber || invoice.project?.title || '-')}</span></div>
+                  <div class="meta-item"><span class="meta-lbl">Date:</span> <span>${fmtDate(invoice.issueDate)}</span></div>
+                </div>
+              </div>
 
-        <!-- Parties -->
-        <div class="parties-grid">
-          <div>
-            <div class="company-title">${COMPANY.legalName}</div>
-            <div>${COMPANY.addressLine1}</div>
-            <div>${COMPANY.addressLine2}</div>
-            <div>${COMPANY.addressLine3}</div>
-            <div>${COMPANY.email}</div>
-            <div>Mobile</div>
-            <div>GST NO:</div>
-          </div>
-
-          <div>
-            <div class="billed-label">BILLED TO:</div>
-            <div class="client-name">${esc(client.companyName || client.contactPerson || '-')}</div>
-            ${clientAddress.street ? `<div>${esc(clientAddress.street)}</div>` : '<div>Rio Empire 905,</div>'}
-            ${clientAddress.city || clientAddress.state
-              ? `<div>${esc(clientAddress.city ? `${clientAddress.city}, ` : '')}${esc(clientAddress.state || '')}${clientAddress.pincode ? ` - ${clientAddress.pincode}` : ''}</div>`
-              : '<div>Nr. Reliance Mart, Adajan Gam, Pal,</div><div>Surat, Gujarat - 395009</div>'}
-            <div>Email ${esc(client.email || '')}</div>
-            <div>Mobile ${esc(client.phone || '')}</div>
-            <div>GST NO: ${esc(client.gstNumber || '')}</div>
-          </div>
-        </div>
-
-        <!-- Items Table -->
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th class="th-desc">DESCRIPTION</th>
-              <th class="th-amount">AMOUNT (₹)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map((item, idx, arr) => `
-              <tr class="${idx === arr.length - 1 ? 'last-row' : ''}">
-                <td class="td-desc">${esc(item.description)}</td>
-                <td class="td-amount">${fmtPlain(item.amount || (item.quantity * item.unitPrice))}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <!-- Notes & Totals -->
-        <div class="summary-grid">
-          <div class="notes-box">
-            <span class="note-label">NOTE:</span>
-            <span>${esc(invoice.notes || '')}</span>
-          </div>
-
-          <div class="calc-stack">
-            <div class="calc-line subtotal-line">
-              <span>SUBTOTAL</span>
-              <span class="calc-val">${fmtPlain(subtotal)}</span>
+              <div class="header-right">
+                ${ventureLogoHtml}
+              </div>
             </div>
-            ${taxAmount > 0 || taxRate > 0 ? `
-            <div class="calc-line gst-line">
-              <span>GST (${taxRate}%)</span>
-              <span class="calc-val">${fmtPlain(taxAmount)}</span>
-            </div>` : ''}
-            ${invoice.discountAmount > 0 || invoice.discountPercent > 0 ? `
-            <div class="calc-line discount-line">
-              <span>DISCOUNT (${invoice.discountPercent || 0}%)</span>
-              <span class="calc-val">-${fmtPlain(invoice.discountAmount)}</span>
-            </div>` : ''}
-            <div class="total-bar">
-              <span class="lbl">TOTAL</span>
-              <span class="val">${fmtPlain(total)}</span>
-            </div>
-            ${invoice.paidAmount > 0 ? `
-            <div class="calc-line" style="margin-top:2px;color:#2e7d32;">
-              <span>AMOUNT PAID</span>
-              <span class="calc-val">-${fmtPlain(invoice.paidAmount)}</span>
-            </div>
-            <div class="calc-line" style="font-weight:700;color:#9E6E38;">
-              <span>BALANCE DUE</span>
-              <span class="calc-val">${fmtPlain(invoice.balanceDue)}</span>
-            </div>` : ''}
-          </div>
-        </div>
-      </div>
+          </td>
+        </tr>
+      </thead>
 
-      <!-- Footer -->
-      <div class="footer-grid">
-        <div class="bank-box">
-          <div class="bank-title">BANK DETAILS</div>
-          <div>Bank Name: ${BANK.bankName}</div>
-          <div>Account Name: ${BANK.accountHolder}</div>
-          <div>Account No: ${BANK.accountNumber}</div>
-          <div>IFSC Code: ${BANK.ifscCode}</div>
-          <div>GST: ${COMPANY.gstin}</div>
-          <div>UPI ID: ${BANK.upiId}</div>
-        </div>
+      <!-- BODY: Can span across multiple pages -->
+      <tbody>
+        <tr>
+          <td>
+            <!-- Parties -->
+            <div class="parties-grid">
+              <div>
+                <div class="company-title">${COMPANY.legalName}</div>
+                <div>${COMPANY.addressLine1}</div>
+                <div>${COMPANY.addressLine2}</div>
+                <div>${COMPANY.addressLine3}</div>
+                <div>${COMPANY.email}</div>
+                <div>Mobile: ${COMPANY.contact}</div>
+                <div>GST NO: ${COMPANY.gstin}</div>
+              </div>
 
-        <div class="sign-box">
-          <div class="sign-top">AUTHORIZED SIGNATURE</div>
-          <div class="sign-bottom">Rudhram Entertainment</div>
-        </div>
-      </div>
-    </div>
+              <div>
+                <div class="billed-label">BILLED TO:</div>
+                <div class="client-name">${esc(client.companyName || client.contactPerson || '-')}</div>
+                ${clientAddress.street ? `<div>${esc(clientAddress.street)}</div>` : '<div>Rio Empire 905,</div>'}
+                ${clientAddress.city || clientAddress.state
+                  ? `<div>${esc(clientAddress.city ? `${clientAddress.city}, ` : '')}${esc(clientAddress.state || '')}${clientAddress.pincode ? ` - ${clientAddress.pincode}` : ''}</div>`
+                  : '<div>Nr. Reliance Mart, Adajan Gam, Pal,</div><div>Surat, Gujarat - 395009</div>'}
+                <div>Email: ${esc(client.email || '')}</div>
+                <div>Mobile: ${esc(client.phone || '')}</div>
+                <div>GST NO: ${esc(client.gstNumber || '')}</div>
+              </div>
+            </div>
+
+            <!-- Items Table -->
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th class="th-desc">DESCRIPTION</th>
+                  <th class="th-amount">AMOUNT (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map((item, idx, arr) => `
+                  <tr class="${idx === arr.length - 1 ? 'last-row' : ''}">
+                    <td class="td-desc">${esc(item.description)}</td>
+                    <td class="td-amount">${fmtPlain(item.amount || (item.quantity * item.unitPrice))}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <!-- Notes & Totals -->
+            <div class="summary-grid">
+              <div class="notes-box">
+                <span class="note-label">NOTE:</span>
+                <span>${esc(invoice.notes || '')}</span>
+              </div>
+
+              <div class="calc-stack">
+                <div class="calc-line subtotal-line">
+                  <span>SUBTOTAL</span>
+                  <span class="calc-val">${fmtPlain(subtotal)}</span>
+                </div>
+                ${taxAmount > 0 || taxRate > 0 ? `
+                <div class="calc-line gst-line">
+                  <span>GST (${taxRate}%)</span>
+                  <span class="calc-val">${fmtPlain(taxAmount)}</span>
+                </div>` : ''}
+                ${invoice.discountAmount > 0 || invoice.discountPercent > 0 ? `
+                <div class="calc-line discount-line">
+                  <span>DISCOUNT (${invoice.discountPercent || 0}%)</span>
+                  <span class="calc-val">-${fmtPlain(invoice.discountAmount)}</span>
+                </div>` : ''}
+                <div class="total-bar">
+                  <span class="lbl">TOTAL</span>
+                  <span class="val">${fmtPlain(total)}</span>
+                </div>
+                ${invoice.paidAmount > 0 ? `
+                <div class="calc-line" style="margin-top:2px;color:#2e7d32;">
+                  <span>AMOUNT PAID</span>
+                  <span class="calc-val">-${fmtPlain(invoice.paidAmount)}</span>
+                </div>
+                <div class="calc-line" style="font-weight:700;color:#9E6E38;">
+                  <span>BALANCE DUE</span>
+                  <span class="calc-val">${fmtPlain(invoice.balanceDue)}</span>
+                </div>` : ''}
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+
+      <!-- FOOTER: Repeats on every page (or sticks to the end) -->
+      <tfoot>
+        <tr>
+          <td>
+            <div class="footer-grid">
+              <div class="bank-box">
+                <div class="bank-title">BANK DETAILS</div>
+                <div>Bank Name: ${BANK.bankName}</div>
+                <div>Account Name: ${BANK.accountHolder}</div>
+                <div>Account No: ${BANK.accountNumber}</div>
+                <div>IFSC Code: ${BANK.ifscCode}</div>
+                <div>GST: ${COMPANY.gstin}</div>
+                <div>UPI ID: ${BANK.upiId}</div>
+              </div>
+
+              <div class="sign-box">
+                <div class="sign-top">AUTHORIZED SIGNATURE</div>
+                <div class="sign-bottom">Rudhram Entertainment</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
   </div>
 </body>
 </html>`;
@@ -666,7 +680,7 @@ export const generateInvoicePdf = async (invoice) => {
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const raw = await page.pdf({
       format: 'A4',
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      // We removed the forced 0 margin to let @page take effect
       printBackground: true,
       preferCSSPageSize: true,
     });
