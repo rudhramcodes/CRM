@@ -36,7 +36,7 @@ const VENTURES = [
     description:
       'Producing high impact television commercials, brand campaigns, corporate event shoots, and visual advertising for leading enterprises.',
     // Pre-cached commercial production image
-    imageUrl: 'https://i.pinimg.com/736x/9a/f6/3e/9af63e29f2bf8dc2f6dd9605aff2bcf7.jpg',
+    imageUrl: 'aghhori-cover.jpg',
     link: '/inquiry/aghori',
     offerings: [
       { label: 'TV Commercials', detail: 'Ad Films and Broadcast' },
@@ -156,9 +156,8 @@ export default function InquirySelection() {
                 <button
                   key={v.id}
                   onClick={() => swapCards(i)}
-                  className={`relative z-10 px-5 py-1.5 rounded-full text-xs font-semibold tracking-wider font-heading cursor-pointer transition-colors duration-200 ${
-                    isSelected ? 'text-zinc-900' : 'text-zinc-500 hover:text-zinc-800'
-                  }`}
+                  className={`relative z-10 px-5 py-1.5 rounded-full text-xs font-semibold tracking-wider font-heading cursor-pointer transition-colors duration-200 ${isSelected ? 'text-zinc-900' : 'text-zinc-500 hover:text-zinc-800'
+                    }`}
                 >
                   {isSelected && (
                     <motion.div
@@ -215,9 +214,8 @@ export default function InquirySelection() {
                   WebkitBackfaceVisibility: 'hidden',
                   willChange: 'transform, opacity'
                 }}
-                className={`w-full bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-zinc-200/90 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.08)] overflow-hidden min-h-[460px] sm:min-h-[470px] ${
-                  isFront ? 'cursor-default' : 'cursor-pointer hover:opacity-80'
-                }`}
+                className={`w-full bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-zinc-200/90 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.08)] overflow-hidden min-h-[460px] sm:min-h-[470px] ${isFront ? 'cursor-default' : 'cursor-pointer hover:opacity-80'
+                  }`}
               >
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 p-6 sm:p-7 lg:p-8 items-stretch h-full">
                   {/* Left Column: Equal-Height Image Frame */}
@@ -270,11 +268,10 @@ export default function InquirySelection() {
                             swapCards(index);
                           }
                         }}
-                        className={`inline-flex items-center gap-2.5 px-7 py-3 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 font-heading shadow-md ${
-                          isFront
+                        className={`inline-flex items-center gap-2.5 px-7 py-3 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 font-heading shadow-md ${isFront
                             ? 'bg-zinc-900 text-white hover:bg-zinc-800 hover:scale-[1.02] active:scale-[0.98]'
                             : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
-                        }`}
+                          }`}
                       >
                         <span>{isFront ? `Inquire About ${venture.name}` : `View ${venture.name}`}</span>
                         <ArrowRight className="w-4 h-4" />
@@ -294,9 +291,8 @@ export default function InquirySelection() {
               key={v.id}
               onClick={() => swapCards(i)}
               aria-label={`View ${v.name}`}
-              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                activeIndex === i ? 'w-7 bg-zinc-900' : 'w-1.5 bg-zinc-200 hover:bg-zinc-400'
-              }`}
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${activeIndex === i ? 'w-7 bg-zinc-900' : 'w-1.5 bg-zinc-200 hover:bg-zinc-400'
+                }`}
             />
           ))}
         </div>
