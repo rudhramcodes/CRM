@@ -36,7 +36,7 @@ const VENTURES = [
     description:
       'Producing high impact television commercials, brand campaigns, corporate event shoots, and visual advertising for leading enterprises.',
     // Pre-cached commercial production image
-    imageUrl: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=900&auto=format&fit=crop',
+    imageUrl: 'https://i.pinimg.com/736x/9a/f6/3e/9af63e29f2bf8dc2f6dd9605aff2bcf7.jpg',
     link: '/inquiry/aghori',
     offerings: [
       { label: 'TV Commercials', detail: 'Ad Films and Broadcast' },
@@ -225,7 +225,7 @@ export default function InquirySelection() {
                     <img
                       src={venture.imageUrl}
                       alt={venture.name}
-                      className="absolute inset-0 w-full h-full object-cover object-center"
+                      className="absolute inset-0 w-full h-full object-cover object-center scale-[1.3]"
                       loading="eager"
                     />
                   </div>
