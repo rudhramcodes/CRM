@@ -33,11 +33,11 @@ const VENTURES = {
     name: 'AGHHORI',
     logoUrl: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784535471/ag-logo.avif',
   },
-  house_of_joggi:         { code: 'HG', name: 'HOUSE OF JOGGI' },
-  damrru:                 { code: 'DM', name: 'DAMRRU' },
-  tandavs:                { code: 'TD', name: 'TANDAVS' },
-  kapaalik:               { code: 'KP', name: 'KAPAALIK' },
-  kalyannam:              { code: 'KL', name: 'KALYANNAM' },
+  house_of_joggi: { code: 'HG', name: 'HOUSE OF JOGGI' },
+  damrru: { code: 'DM', name: 'DAMRRU' },
+  tandavs: { code: 'TD', name: 'TANDAVS' },
+  kapaalik: { code: 'KP', name: 'KAPAALIK' },
+  kalyannam: { code: 'KL', name: 'KALYANNAM' },
   storage_media_solution: { code: 'SM', name: 'STORAGE MEDIA SOLUTION' },
 };
 
@@ -127,7 +127,7 @@ export const generateInvoiceHtml = (invoice) => {
   const items = invoice.items && invoice.items.length > 0
     ? invoice.items
     : [{ description: 'Creative Development & Execution', amount: invoice.total || 0 }];
-  
+
   const brand = invoice.brand || client.brand || invoice.project?.brand;
   const ventureLogoHtml = getVentureLogoHtml(brand);
   const subtotal = invoice.subtotal ?? invoice.total ?? 0;
@@ -583,8 +583,8 @@ export const generateInvoiceHtml = (invoice) => {
                 <div class="client-name">${esc(client.companyName || client.contactPerson || '-')}</div>
                 ${clientAddress.street ? `<div>${esc(clientAddress.street)}</div>` : '<div>Rio Empire 905,</div>'}
                 ${clientAddress.city || clientAddress.state
-                  ? `<div>${esc(clientAddress.city ? `${clientAddress.city}, ` : '')}${esc(clientAddress.state || '')}${clientAddress.pincode ? ` - ${clientAddress.pincode}` : ''}</div>`
-                  : '<div>Nr. Reliance Mart, Adajan Gam, Pal,</div><div>Surat, Gujarat - 395009</div>'}
+      ? `<div>${esc(clientAddress.city ? `${clientAddress.city}, ` : '')}${esc(clientAddress.state || '')}${clientAddress.pincode ? ` - ${clientAddress.pincode}` : ''}</div>`
+      : '<div>Nr. Reliance Mart, Adajan Gam, Pal,</div><div>Surat, Gujarat - 395009</div>'}
                 <div>Email: ${esc(client.email || '')}</div>
                 <div>Mobile: ${esc(client.phone || '')}</div>
                 <div>GST NO: ${esc(client.gstNumber || '')}</div>

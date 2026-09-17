@@ -89,6 +89,7 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `${d.actorName} marked "${d.projectName}" as ${d.newStatus}`,
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: false, cliq: true },
+    cliqChannel: 'projects',
   },
   project_chat: {
     title: 'New message',
@@ -101,6 +102,7 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `New lead "${d.leadName}" from ${d.source}`,
     priority: NOTIFICATION_PRIORITIES.LOW,
     channels: { email: false, cliq: true },
+    cliqChannel: 'sales',
   },
   lead_assigned: {
     title: 'Lead Assigned',
@@ -113,12 +115,14 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `"${d.leadName}" has been converted to a client`,
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: false, cliq: true },
+    cliqChannel: 'sales',
   },
   meeting_scheduled: {
     title: 'Meeting Scheduled',
     message: (d) => `Meeting "${d.meetingTitle}" scheduled ${d.date}`,
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: true, cliq: true },
+    cliqChannel: 'management',
   },
   meeting_reminder: {
     title: 'Meeting Reminder',
@@ -131,24 +135,28 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `Invoice #${d.invoiceNumber} marked as paid`,
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: true, cliq: true },
+    cliqChannel: 'finance',
   },
   invoice_overdue: {
     title: 'Invoice Overdue',
     message: (d) => `Invoice #${d.invoiceNumber} is overdue`,
     priority: NOTIFICATION_PRIORITIES.HIGH,
     channels: { email: true, cliq: true },
+    cliqChannel: 'finance',
   },
   payment_received: {
     title: 'Payment Received',
     message: (d) => `₹${d.amount} payment received for #${d.invoiceNumber}`,
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: true, cliq: true },
+    cliqChannel: 'finance',
   },
   contract_expiry: {
     title: 'Contract Expiring',
     message: (d) => `${d.clientName} contract expires ${d.date}`,
     priority: NOTIFICATION_PRIORITIES.HIGH,
     channels: { email: true, cliq: true },
+    cliqChannel: 'finance',
   },
   task_deleted: {
     title: 'Task Deleted',

@@ -56,6 +56,14 @@ const config = {
   adminEmails: process.env.ADMIN_EMAILS || '',
   cliq: {
     webhookUrl: process.env.ZOHO_CLIQ_WEBHOOK_URL || '',
+    channels: {
+      sales: process.env.ZOHO_CLIQ_WEBHOOK_SALES || '',
+      projects: process.env.ZOHO_CLIQ_WEBHOOK_PROJECTS || '',
+      finance: process.env.ZOHO_CLIQ_WEBHOOK_FINANCE || '',
+      support: process.env.ZOHO_CLIQ_WEBHOOK_SUPPORT || '',
+      management: process.env.ZOHO_CLIQ_WEBHOOK_MANAGEMENT || '',
+      general: process.env.ZOHO_CLIQ_WEBHOOK_GENERAL || '',
+    }
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',

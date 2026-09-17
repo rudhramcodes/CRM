@@ -26,7 +26,7 @@ async function generateGrainTile() {
   const el = await page.$('svg');
   const outPath = path.join(process.cwd(), 'assets', 'paper-grain-tile.png');
   await el.screenshot({ path: outPath, type: 'png' });
-  
+
   const stats = fs.statSync(outPath);
   console.log(`Generated paper-grain-tile.png: ${stats.size} bytes`);
   await browser.close();
