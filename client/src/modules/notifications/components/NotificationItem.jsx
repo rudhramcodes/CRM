@@ -11,7 +11,7 @@ const priorityStyles = {
 
 const priorityLabels = { high: 'High', medium: 'Medium', low: 'Low' };
 
-export default function NotificationItem({ notification, onMarkRead, onDelete }) {
+export default function NotificationItem({ notification, onMarkRead, onDelete, isDeleting = false }) {
   const navigate = useNavigate();
   const config = NOTIFICATION_CONFIG[notification.type] || NOTIFICATION_CONFIG.system;
   const Icon = config.icon;
@@ -76,14 +76,25 @@ export default function NotificationItem({ notification, onMarkRead, onDelete })
       {/* Delete */}
       {onDelete && (
         <button
-          onClick={(e) => { e.stopPropagation(); onDelete(notification._id); }}
-          aria-label="Delete notification"
-          title="Delete notification"
-          className="text-zinc-300 hover:text-red-500 transition-colors p-1 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isDeleting) onDelete(notification._id);
+          }}
+          disabled={isDeleting}
+          aria-label={isDeleting ? 'Deleting notification...' : 'Delete notification'}
+          title={isDeleting ? 'Deleting...' : 'Delete notification'}
+          className="text-zinc-300 hover:text-red-500 transition-colors p-1 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          {isDeleting ? (
+            <svg className="w-3.5 h-3.5 animate-spin text-zinc-400" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
         </button>
       )}
     </div>

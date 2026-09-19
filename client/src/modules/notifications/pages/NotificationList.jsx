@@ -19,6 +19,7 @@ import { useEffect } from 'react';
 export default function NotificationList() {
   const dispatch = useDispatch();
   const [filters, setFilters] = useState({ limit: 20, page: 1 });
+  const [deletingIds, setDeletingIds] = useState(() => new Set());
 
   const { data, isLoading, isFetching, isError, refetch } = useGetNotificationsQuery(filters);
   const [markRead] = useMarkNotificationReadMutation();
@@ -48,9 +49,16 @@ export default function NotificationList() {
 
   const handleDelete = useCallback(async (id) => {
     try {
+      setDeletingIds((prev) => new Set(prev).add(id));
       await deleteNotif(id).unwrap();
     } catch {
       toast.error('Failed to delete notification');
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   }, [deleteNotif]);
 
@@ -130,7 +138,9 @@ export default function NotificationList() {
       {!isLoading && !isError && notifications.length > 0 && (
         <>
           {isFetching && (
-            <div className="text-center py-2 text-xs text-zinc-400">Updating...</div>
+            <div className="flex items-center justify-center py-2" aria-live="polite" aria-busy="true">
+              <Loader size="sm" />
+            </div>
           )}
           <div className="mt-2 bg-white border border-zinc-200 rounded-lg overflow-hidden">
             {notifications.map((n) => (
@@ -139,6 +149,7 @@ export default function NotificationList() {
                 notification={n}
                 onMarkRead={handleMarkRead}
                 onDelete={handleDelete}
+                isDeleting={deletingIds.has(n._id)}
               />
             ))}
           </div>
