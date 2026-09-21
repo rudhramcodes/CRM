@@ -37,37 +37,75 @@ const clientFormSchema = z.object({
     .regex(/^$|^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN number format')
     .optional()
     .or(z.literal('')),
-  address: z.string().optional().or(z.literal('')),
+  address: z
+    .object({
+      street: z.string().max(1000).optional().or(z.literal('')),
+      city: z.string().max(200).optional().or(z.literal('')),
+      state: z.string().max(200).optional().or(z.literal('')),
+      pincode: z.string().max(100).optional().or(z.literal('')),
+      country: z.string().max(200).optional().or(z.literal('')),
+    })
+    .optional(),
   status: z.string().optional(),
   notes: z.string().optional(),
 });
 
-const getFormValues = (client) => client ? ({
-  brand: client.brand || '',
-  companyName: client.companyName || '',
-  contactPerson: client.contactPerson || '',
-  email: client.email || '',
-  phone: client.phone || '',
-  gstNumber: client.gstNumber || '',
-  panNumber: client.panNumber || '',
-  address: client.address
-    ? [client.address.street, client.address.city, client.address.state, client.address.pincode]
-        .filter(Boolean)
-        .join(', ')
-    : '',
-  status: client.status || 'active',
-  notes: '',
-}) : {
-  brand: '',
-  companyName: '',
-  contactPerson: '',
-  email: '',
-  phone: '',
-  gstNumber: '',
-  panNumber: '',
-  address: '',
-  status: 'active',
-  notes: '',
+const getFormValues = (client) => {
+  if (!client) {
+    return {
+      brand: '',
+      companyName: '',
+      contactPerson: '',
+      email: '',
+      phone: '',
+      gstNumber: '',
+      panNumber: '',
+      address: {
+        street: '',
+        city: '',
+        state: '',
+        pincode: '',
+        country: 'India',
+      },
+      status: 'active',
+      notes: '',
+    };
+  }
+
+  let street = '';
+  let city = '';
+  let state = '';
+  let pincode = '';
+  let country = 'India';
+
+  if (typeof client.address === 'string') {
+    street = client.address;
+  } else if (client.address && typeof client.address === 'object') {
+    street = client.address.street || '';
+    city = client.address.city || '';
+    state = client.address.state || '';
+    pincode = client.address.pincode || '';
+    country = client.address.country || 'India';
+  }
+
+  return {
+    brand: client.brand || '',
+    companyName: client.companyName || '',
+    contactPerson: client.contactPerson || '',
+    email: client.email || '',
+    phone: client.phone || '',
+    gstNumber: client.gstNumber || '',
+    panNumber: client.panNumber || '',
+    address: {
+      street,
+      city,
+      state,
+      pincode,
+      country,
+    },
+    status: client.status || 'active',
+    notes: '',
+  };
 };
 
 export default function ClientForm({ client, onSuccess, onCancel }) {
@@ -97,7 +135,6 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
 
   const onSubmit = async (data) => {
     try {
-      const addressParts = (data.address || '').split(',').map((s) => s.trim());
       const payload = {
         brand: data.brand,
         companyName: data.companyName,
@@ -107,10 +144,11 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
         gstNumber: data.gstNumber || undefined,
         panNumber: data.panNumber || undefined,
         address: {
-          street: addressParts[0] || '',
-          city: addressParts[1] || '',
-          state: addressParts[2] || '',
-          pincode: addressParts[3] || '',
+          street: (data.address?.street || '').trim(),
+          city: (data.address?.city || '').trim(),
+          state: (data.address?.state || '').trim(),
+          pincode: (data.address?.pincode || '').trim(),
+          country: (data.address?.country || '').trim() || 'India',
         },
         status: data.status || 'active',
       };
@@ -221,12 +259,43 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
         />
       </div>
 
-      <FormTextarea
-        label="Address"
-        placeholder="Street, City, State, Pincode (comma separated)"
-        error={errors.address?.message}
-        {...register('address')}
-      />
+      <div className="pt-3 border-t border-zinc-100">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Address Details</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <FormInput
+              label="Street / Address"
+              placeholder="Flat / Building, Road, Area, Landmark"
+              error={errors.address?.street?.message}
+              {...register('address.street')}
+            />
+          </div>
+          <FormInput
+            label="City"
+            placeholder="City"
+            error={errors.address?.city?.message}
+            {...register('address.city')}
+          />
+          <FormInput
+            label="State"
+            placeholder="State"
+            error={errors.address?.state?.message}
+            {...register('address.state')}
+          />
+          <FormInput
+            label="Pincode"
+            placeholder="Pincode / Postal Code"
+            error={errors.address?.pincode?.message}
+            {...register('address.pincode')}
+          />
+          <FormInput
+            label="Country"
+            placeholder="Country"
+            error={errors.address?.country?.message}
+            {...register('address.country')}
+          />
+        </div>
+      </div>
 
       {!isEditing && (
         <FormTextarea

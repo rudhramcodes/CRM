@@ -1,12 +1,29 @@
 import { z } from 'zod';
 
-const addressSchema = z.object({
-  street: z.string().max(200).optional().or(z.literal('')),
-  city: z.string().max(100).optional().or(z.literal('')),
-  state: z.string().max(100).optional().or(z.literal('')),
-  pincode: z.string().max(20).optional().or(z.literal('')),
-  country: z.string().max(100).optional().or(z.literal('')),
+const cleanAddressString = (max) =>
+  z
+    .preprocess((v) => (v === null || v === undefined ? '' : String(v).trim()), z.string().max(max))
+    .optional()
+    .default('');
+
+const addressObjectSchema = z.object({
+  street: cleanAddressString(1000),
+  city: cleanAddressString(200),
+  state: cleanAddressString(200),
+  pincode: cleanAddressString(100),
+  country: z
+    .preprocess((v) => (v === null || v === undefined || v === '' ? 'India' : String(v).trim()), z.string().max(200))
+    .optional()
+    .default('India'),
 });
+
+const addressSchema = z.preprocess((val) => {
+  if (val === null || val === undefined) return {};
+  if (typeof val === 'string') {
+    return { street: val, city: '', state: '', pincode: '', country: 'India' };
+  }
+  return val;
+}, addressObjectSchema.optional());
 
 const BRANDS = ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam', 'storage_media_solution'];
 
