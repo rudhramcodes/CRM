@@ -72,6 +72,27 @@ export const BRANDS = [
   { value: 'storage_media_solution', label: 'Storage Media Solution' },
 ];
 
+export const BRAND_METAS = {
+  panigrahna: {
+    label: 'Panigrahna',
+    logo: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1790058616/Panigrahna_3_cn65kz.avif',
+    gradient: 'from-rose-500 to-amber-500',
+    initial: 'P',
+  },
+  aghori: {
+    label: 'Aghori',
+    logo: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1790058616/Aghhori_2_ug2a6r.avif',
+    gradient: 'from-zinc-800 to-zinc-950',
+    initial: 'A',
+  },
+  house_of_joggi: { label: 'House of Joggi', gradient: 'from-indigo-600 to-violet-600', initial: 'H' },
+  damrru: { label: 'Damrru', gradient: 'from-amber-500 to-orange-600', initial: 'D' },
+  tandavs: { label: 'Tandavs', gradient: 'from-emerald-500 to-teal-600', initial: 'T' },
+  kapaalik: { label: 'Kapaalik', gradient: 'from-purple-600 to-pink-600', initial: 'K' },
+  kalyannam: { label: 'Kalyannam', gradient: 'from-yellow-500 to-amber-600', initial: 'K' },
+  storage_media_solution: { label: 'Storage Media Solution', gradient: 'from-blue-600 to-cyan-600', initial: 'S' },
+};
+
 export const LEAD_BRANDS = [
   { value: 'panigrahna', label: 'Panigrahna' },
   { value: 'aghori', label: 'Aghori' },

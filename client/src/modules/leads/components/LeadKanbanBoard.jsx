@@ -15,18 +15,43 @@ import { cn } from '../../../utils/cn';
 
 const COLUMN_ID_PREFIX = 'kanban-col-';
 
-const STATUS_COLORS = {
-  new: { dot: 'bg-sky-500', bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-700' },
-  contacted: { dot: 'bg-amber-500', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
-  meeting_scheduled: { dot: 'bg-violet-500', bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700' },
-  proposal_sent: { dot: 'bg-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700' },
-  won: { dot: 'bg-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
-  lost: { dot: 'bg-rose-500', bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
+const STATUS_CONFIGS = {
+  new: {
+    dot: 'bg-sky-500',
+    badge: 'bg-sky-50 text-sky-700 border-sky-200/80',
+    headerBg: 'bg-sky-50/30',
+  },
+  contacted: {
+    dot: 'bg-amber-500',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    headerBg: 'bg-amber-50/30',
+  },
+  meeting_scheduled: {
+    dot: 'bg-violet-500',
+    badge: 'bg-violet-50 text-violet-700 border-violet-200/80',
+    headerBg: 'bg-violet-50/30',
+  },
+  proposal_sent: {
+    dot: 'bg-indigo-500',
+    badge: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
+    headerBg: 'bg-indigo-50/30',
+  },
+  won: {
+    dot: 'bg-emerald-500',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    headerBg: 'bg-emerald-50/30',
+  },
+  lost: {
+    dot: 'bg-rose-500',
+    badge: 'bg-rose-50 text-rose-700 border-rose-200/80',
+    headerBg: 'bg-rose-50/30',
+  },
 };
 
-function KanbanColumn({ status, label, color, leads, onLeadClick }) {
+function KanbanColumn({ status, label, leads, onLeadClick }) {
   const droppableId = COLUMN_ID_PREFIX + status;
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
+  const cfg = STATUS_CONFIGS[status] || STATUS_CONFIGS.new;
 
   const leadIds = useMemo(() => leads.map((l) => l._id), [leads]);
 
@@ -34,43 +59,55 @@ function KanbanColumn({ status, label, color, leads, onLeadClick }) {
     <div
       ref={setNodeRef}
       className={cn(
-        'flex flex-col bg-zinc-50/50 rounded-xl border min-w-[280px] w-[280px] transition-colors',
-        isOver ? 'border-primary-900/30 bg-primary-50/30' : 'border-zinc-200',
+        'flex flex-col bg-zinc-50/80 rounded-2xl border min-w-[285px] w-[285px] transition-all duration-200 shrink-0 shadow-2xs',
+        isOver
+          ? 'border-primary-900/40 bg-zinc-100/90 shadow-md ring-2 ring-primary-900/10'
+          : 'border-zinc-200/80',
       )}
     >
-      <div className="flex items-center justify-between px-3.5 py-3 border-b border-zinc-200 shrink-0">
+      {/* Column Header */}
+      <div className={cn('flex items-center justify-between px-3.5 py-3 border-b border-zinc-200/70 rounded-t-2xl', cfg.headerBg)}>
         <div className="flex items-center gap-2">
-          <span className={cn('w-2.5 h-2.5 rounded-full', color.dot)} />
-          <span className="text-sm font-semibold text-zinc-700">{label}</span>
+          <span className={cn('w-2 h-2 rounded-full shrink-0', cfg.dot)} />
+          <span className="text-xs sm:text-sm font-semibold text-primary-900 tracking-tight">{label}</span>
         </div>
-        <span className={cn(
-          'text-xs font-semibold px-2 py-0.5 rounded-full',
-          color.bg, color.text,
-        )}>
+        <span
+          className={cn(
+            'text-[11px] font-bold px-2 py-0.5 rounded-full border shadow-2xs',
+            cfg.badge,
+          )}
+        >
           {leads.length}
         </span>
       </div>
 
+      {/* Cards Scrollable Stream */}
       <SortableContext items={leadIds} strategy={verticalListSortingStrategy}>
-        <div className={cn(
-          'flex flex-col gap-2 p-2 overflow-y-auto flex-1 min-h-[100px] transition-colors',
-          leads.length === 0 && 'flex items-center justify-center',
-        )}>
+        <div
+          className={cn(
+            'flex flex-col gap-2.5 p-2.5 overflow-y-auto flex-1 min-h-[160px] max-h-[calc(100vh-320px)] transition-colors',
+            leads.length === 0 && 'flex items-center justify-center',
+          )}
+        >
           {leads.length === 0 ? (
-            <div className={cn(
-              'flex flex-col items-center justify-center w-full py-8 rounded-lg border-2 border-dashed transition-colors',
-              isOver ? 'border-primary-900/40 bg-primary-50/50' : 'border-zinc-200',
-            )}>
-              <span className={cn(
-                'text-xs font-medium',
-                isOver ? 'text-primary-600' : 'text-zinc-300',
-              )}>
-                {isOver ? 'Drop here' : 'No leads'}
+            <div
+              className={cn(
+                'flex flex-col items-center justify-center w-full py-10 px-4 rounded-xl border-2 border-dashed transition-all',
+                isOver ? 'border-primary-900/40 bg-white/80' : 'border-zinc-200/80 bg-white/40',
+              )}
+            >
+              <span
+                className={cn(
+                  'text-xs font-medium',
+                  isOver ? 'text-primary-900 font-semibold' : 'text-zinc-400',
+                )}
+              >
+                {isOver ? 'Drop lead here' : 'No leads in stage'}
               </span>
             </div>
           ) : (
             leads.map((lead) => (
-              <div key={lead._id} onClick={() => onLeadClick?.(lead)}>
+              <div key={lead._id} onClick={() => onLeadClick?.(lead)} className="cursor-pointer">
                 <LeadKanbanCard lead={lead} />
               </div>
             ))
@@ -145,16 +182,19 @@ export default function LeadKanbanBoard({ leads = [], loading, onLeadClick, onSt
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full min-h-[400px] text-sm text-zinc-400">
-        Loading board...
+      <div className="flex items-center justify-center h-full min-h-[400px] text-sm font-medium text-zinc-400 bg-white rounded-2xl border border-zinc-200/80 p-8">
+        Loading sales pipeline board...
       </div>
     );
   }
 
   if (!leads.length) {
     return (
-      <div className="flex items-center justify-center h-full min-h-[400px] text-sm text-zinc-400">
-        No leads to display. Create some leads to see them on the board.
+      <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-sm text-zinc-500 bg-white rounded-2xl border border-zinc-200/80 p-8 text-center">
+        <p className="font-semibold text-primary-900 text-base mb-1">No leads to display</p>
+        <p className="text-xs text-zinc-400 max-w-sm">
+          Create some leads or adjust your venture / search filters to view your active pipeline stages.
+        </p>
       </div>
     );
   }
@@ -166,13 +206,12 @@ export default function LeadKanbanBoard({ leads = [], loading, onLeadClick, onSt
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-3 overflow-x-auto pb-3 min-h-[400px] h-full">
+      <div className="flex gap-4 overflow-x-auto pb-4 pt-1 min-h-[450px] scrollbar-thin">
         {LEAD_STATUS.map(({ value, label }) => (
           <KanbanColumn
             key={value}
             status={value}
             label={label}
-            color={STATUS_COLORS[value]}
             leads={columns[value] || []}
             onLeadClick={onLeadClick}
           />

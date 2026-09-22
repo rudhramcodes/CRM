@@ -8,15 +8,21 @@ export default function EmptyState({
   className,
 }) {
   return (
-    <div className={cn('flex flex-col items-center justify-center py-12 px-4 text-center', className)}>
+    <div className={cn('flex flex-col items-center justify-center py-12 sm:py-16 px-4 text-center', className)}>
       {Icon && (
-        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-          <Icon className="w-8 h-8 text-slate-400" />
+        <div className="w-14 h-14 bg-zinc-100/80 border border-zinc-200/70 rounded-2xl flex items-center justify-center mb-4 shadow-2xs">
+          <Icon className="w-7 h-7 text-zinc-400" strokeWidth={1.75} />
         </div>
       )}
-      <h3 className="text-lg font-medium text-slate-900 mb-1">{title || 'No data found'}</h3>
-      {description && <p className="text-sm text-slate-500 max-w-sm">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+      <h3 className="font-heading text-base sm:text-lg font-bold text-primary-900 mb-1 tracking-tight">
+        {title || 'No records found'}
+      </h3>
+      {description && (
+        <p className="text-xs sm:text-sm text-zinc-500 max-w-sm leading-relaxed">
+          {description}
+        </p>
+      )}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }

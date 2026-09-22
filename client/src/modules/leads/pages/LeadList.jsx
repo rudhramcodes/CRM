@@ -2,9 +2,33 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, Users, Columns3, LayoutList, XCircle, Trash2, X, CheckSquare, Download, Upload } from 'lucide-react';
+import {
+  Plus,
+  Users,
+  Columns3,
+  LayoutList,
+  XCircle,
+  Trash2,
+  X,
+  CheckSquare,
+  Download,
+  Upload,
+  TrendingUp,
+  Sparkles,
+  PhoneCall,
+  CalendarCheck,
+  FileCheck2,
+  Trophy,
+} from 'lucide-react';
 import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
-import { useGetLeadsQuery, useGetLeadStatsQuery, useDeleteLeadMutation, useUpdateLeadMutation, useBulkDeleteLeadsMutation, useBulkUpdateLeadsMutation } from '../../../services/leadApi';
+import {
+  useGetLeadsQuery,
+  useGetLeadStatsQuery,
+  useDeleteLeadMutation,
+  useUpdateLeadMutation,
+  useBulkDeleteLeadsMutation,
+  useBulkUpdateLeadsMutation,
+} from '../../../services/leadApi';
 import LeadTable from '../components/LeadTable';
 import LeadKanbanBoard from '../components/LeadKanbanBoard';
 import LeadFilters from '../components/LeadFilters';
@@ -16,13 +40,13 @@ import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Modal from '../../../components/ui/Modal';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
-import { LEAD_STATUS, LEAD_BRANDS } from '../../../constants';
-
-const BRAND_LABELS = LEAD_BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
+import { LEAD_STATUS, LEAD_BRANDS, BRAND_METAS } from '../../../constants';
 import { downloadLeadsCsv, downloadLeadsExcel, downloadLeadsPdf } from '../../../utils/exportLeads';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '../../../utils/cn';
 import toast from 'react-hot-toast';
 
+const BRAND_LABELS = LEAD_BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
 const BULK_STATUS_OPTIONS = LEAD_STATUS.filter((s) => !['won', 'lost'].includes(s.value));
 
 export default function LeadList() {
@@ -37,6 +61,7 @@ export default function LeadList() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [activeBrand, setActiveBrand] = useState('');
 
   useEffect(() => {
     dispatch(setPageTitle('Leads'));
@@ -57,8 +82,6 @@ export default function LeadList() {
   const kanbanLeads = kanbanData?.data || [];
   const pagination = leadsData?.pagination;
   const stats = statsData?.data || {};
-
-  const [activeBrand, setActiveBrand] = useState('');
 
   const handleBrandChange = useCallback((brand) => {
     setActiveBrand(brand);
@@ -115,6 +138,7 @@ export default function LeadList() {
       await updateLead({ id: lostReasonTarget, status: 'lost', lostReason: lostReasonInput.trim() || undefined }).unwrap();
       setLostReasonTarget(null);
       setLostReasonInput('');
+      toast.success('Lead marked as lost');
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update lead status');
     }
@@ -133,7 +157,6 @@ export default function LeadList() {
   }, []);
 
   const handleSelectionChange = useCallback((ids) => setSelectedIds(ids), []);
-
   const selectedLeads = leads.filter((l) => selectedIds.includes(l._id));
 
   const confirmBulkDelete = useCallback(async () => {
@@ -175,241 +198,358 @@ export default function LeadList() {
     }
   }, [deleteTarget, deleteLead]);
 
-  const statCards = LEAD_STATUS.map((s) => ({
-    label: s.label,
-    value: stats[s.value] || 0,
-    status: s.value,
-  }));
+  // Derived KPI metrics
+  const totalCount = stats.total || 0;
+  const newCount = stats.new || 0;
+  const contactedCount = stats.contacted || 0;
+  const inPipelineCount = (stats.meeting_scheduled || 0) + (stats.proposal_sent || 0);
+  const wonCount = stats.won || 0;
+  const winRate = totalCount > 0 ? Math.round((wonCount / totalCount) * 100) : 0;
+
+  const kpis = [
+    {
+      title: 'Total Pipeline',
+      value: totalCount,
+      desc: 'All recorded inquiries',
+      icon: Users,
+      iconColor: 'text-zinc-700 bg-zinc-100',
+    },
+    {
+      title: 'New Inquiries',
+      value: newCount,
+      desc: 'Pending initial outreach',
+      icon: Sparkles,
+      iconColor: 'text-sky-600 bg-sky-50',
+    },
+    {
+      title: 'Contacted',
+      value: contactedCount,
+      desc: 'In dialogue / qualification',
+      icon: PhoneCall,
+      iconColor: 'text-amber-600 bg-amber-50',
+    },
+    {
+      title: 'Active Deal Stages',
+      value: inPipelineCount,
+      desc: 'Meeting or proposal sent',
+      icon: CalendarCheck,
+      iconColor: 'text-indigo-600 bg-indigo-50',
+    },
+    {
+      title: 'Won & Converted',
+      value: wonCount,
+      desc: `${winRate}% conversion rate`,
+      icon: Trophy,
+      iconColor: 'text-emerald-600 bg-emerald-50',
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-12">
+      {/* Top Header & Actions Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-primary-900">Leads</h2>
-          <p className="text-sm text-zinc-500 mt-1">
-            Track and manage your sales pipeline
+          <h2 className="text-xl sm:text-2xl font-bold text-primary-900 tracking-tight">
+            Leads Pipeline
+          </h2>
+          <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
+            Track, qualify, and convert business inquiries across all ventures
           </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Refresh Action */}
           <button
-            onClick={() => { refetchLeads(); refetchStats(); }}
+            onClick={() => {
+              refetchLeads();
+              refetchStats();
+            }}
             disabled={isFetchingLeads}
-            className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
-            title="Refresh leads"
+            className="p-2 rounded-xl text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50 border border-zinc-200/80 bg-white shadow-2xs cursor-pointer active:scale-95"
+            title="Refresh pipeline data"
           >
             <RefreshCwIcon className={`w-4 h-4 ${isFetchingLeads ? 'animate-spin' : ''}`} />
           </button>
-          <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
+
+          {/* Segmented View Switcher */}
+          <div className="flex items-center bg-zinc-100/90 rounded-xl p-1 border border-zinc-200/80">
             <button
               onClick={() => setView('table')}
-              className={`p-1.5 rounded-md text-sm transition-colors ${
-                view === 'table' ? 'bg-white text-primary-900 shadow-sm' : 'text-zinc-400 hover:text-zinc-600'
-              }`}
-              title="Table view"
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                view === 'table'
+                  ? 'bg-white text-primary-900 shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-800',
+              )}
+              title="Tabular list view"
             >
-              <LayoutList className="w-4 h-4" />
+              <LayoutList className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Table</span>
             </button>
             <button
               onClick={() => setView('board')}
-              className={`p-1.5 rounded-md text-sm transition-colors ${
-                view === 'board' ? 'bg-white text-primary-900 shadow-sm' : 'text-zinc-400 hover:text-zinc-600'
-              }`}
-              title="Board view"
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                view === 'board'
+                  ? 'bg-white text-primary-900 shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-800',
+              )}
+              title="Kanban stage board"
             >
-              <Columns3 className="w-4 h-4" />
+              <Columns3 className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Board</span>
             </button>
           </div>
+
+          {/* Import Button */}
           {canImport && (
-            <Button variant="outline" onClick={() => setImportOpen(true)}>
-              <Upload className="w-4 h-4" />
-              Import
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+              className="rounded-xl border-zinc-200/80 text-xs shadow-2xs font-semibold"
+            >
+              <Upload className="w-3.5 h-3.5 mr-1.5" />
+              Import CSV
             </Button>
           )}
+
+          {/* Add Lead CTA */}
           {canCreate && (
-            <Button onClick={() => navigate('/leads/new')}>
-              <Plus className="w-4 h-4" />
+            <Button
+              onClick={() => navigate('/leads/new')}
+              className="rounded-xl text-xs font-semibold shadow-md shadow-primary-900/10"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
               Add Lead
             </Button>
           )}
         </div>
       </div>
 
-      {/* Stats */}
+      {/* KPI Stats Ribbon */}
       {statsLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))}
         </div>
-      ) : stats.total > 0 && (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {statCards.map((card) => (
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          {kpis.map((kpi, idx) => {
+            const Icon = kpi.icon;
+            return (
               <div
-                key={card.status}
-                className="bg-white rounded-xl border border-zinc-200 p-4 text-center"
+                key={idx}
+                className="bg-white rounded-2xl border border-zinc-200/80 p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-zinc-300/80 transition-all duration-200 flex flex-col justify-between"
               >
-                <p className="text-2xl font-semibold text-primary-900">{card.value}</p>
-                <div className="mt-1 flex justify-center">
-                  <LeadStatusBadge status={card.status} />
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                    {kpi.title}
+                  </span>
+                  <div className={cn('w-7 h-7 rounded-xl flex items-center justify-center shrink-0 shadow-2xs', kpi.iconColor)}>
+                    <Icon className="w-3.5 h-3.5" strokeWidth={2} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-primary-900 tracking-tight">
+                    {kpi.value}
+                  </p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5 truncate font-normal">
+                    {kpi.desc}
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {stats.byBrand && Object.keys(stats.byBrand).length > 0 && (
-            <div className="bg-white rounded-xl border border-zinc-200 p-4">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">By Venture</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(stats.byBrand).map(([brand, count]) => (
-                  <div key={brand} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 rounded-lg border border-zinc-100">
-                    <span className="text-sm font-medium text-zinc-700">{BRAND_LABELS[brand] || brand}</span>
-                    <span className="text-sm font-bold text-primary-900">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+            );
+          })}
+        </div>
       )}
 
-      {/* Brand Tabs */}
-      <div className="flex flex-wrap gap-1.5">
+      {/* Venture Brand Switcher Tab Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
         <button
           onClick={() => handleBrandChange('')}
-          className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+          className={cn(
+            'flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
             !activeBrand
-              ? 'bg-primary-900 text-white shadow-sm'
-              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-          }`}
+              ? 'bg-primary-900 text-white border-primary-900 shadow-sm'
+              : 'bg-white text-zinc-600 hover:text-primary-900 hover:bg-zinc-50 border-zinc-200/80',
+          )}
         >
-          All
-        </button>
-        {LEAD_BRANDS.map((b) => (
-          <button
-            key={b.value}
-            onClick={() => handleBrandChange(b.value)}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              activeBrand === b.value
-                ? 'bg-primary-900 text-white shadow-sm'
-                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-            }`}
+          <span>All Ventures</span>
+          <span
+            className={cn(
+              'px-1.5 py-0.2 rounded-full text-[10px]',
+              !activeBrand ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-500',
+            )}
           >
-            {b.label}
-          </button>
-        ))}
+            {totalCount}
+          </span>
+        </button>
+
+        {LEAD_BRANDS.map((b) => {
+          const count = stats.byBrand?.[b.value] || 0;
+          const meta = BRAND_METAS[b.value];
+          const isSelected = activeBrand === b.value;
+
+          return (
+            <button
+              key={b.value}
+              onClick={() => handleBrandChange(b.value)}
+              className={cn(
+                'flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
+                isSelected
+                  ? 'bg-primary-900 text-white border-primary-900 shadow-sm'
+                  : 'bg-white text-zinc-600 hover:text-primary-900 hover:bg-zinc-50 border-zinc-200/80',
+              )}
+            >
+              {meta?.logo ? (
+                <img
+                  src={meta.logo}
+                  alt={b.label}
+                  className="w-4 h-4 rounded-sm object-contain shrink-0"
+                />
+              ) : meta ? (
+                <div
+                  className={cn(
+                    'w-4 h-4 rounded-sm flex items-center justify-center text-[9px] text-white shrink-0 bg-gradient-to-br',
+                    meta.gradient,
+                  )}
+                >
+                  {b.label[0]}
+                </div>
+              ) : null}
+              <span>{b.label}</span>
+              {count > 0 && (
+                <span
+                  className={cn(
+                    'px-1.5 py-0.2 rounded-full text-[10px]',
+                    isSelected ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-500',
+                  )}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Filters */}
+      {/* Filters Bar */}
       <LeadFilters onFilterChange={handleFilterChange} />
 
-      {/* Bulk actions bar */}
+      {/* Animated Floating Bulk Action Bar */}
       <AnimatePresence>
         {view === 'table' && selectedIds.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.15 }}
-            className="flex flex-wrap items-center gap-3 rounded-xl border border-primary-100 bg-primary-50/80 px-4 py-2.5 shadow-sm"
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white/95 backdrop-blur-xl px-5 py-3 shadow-[0_12px_36px_-8px_rgba(0,0,0,0.15)] sticky top-20 z-20"
           >
-            <div className="flex items-center gap-2 mr-auto">
-              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-primary-900/10">
-                <CheckSquare className="w-3.5 h-3.5 text-primary-900" />
+            <div className="flex items-center gap-2.5">
+              <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-primary-900 text-white text-xs font-bold shadow-2xs">
+                {selectedIds.length}
               </span>
-              <span className="text-sm font-medium text-primary-900">
-                {selectedIds.length} {selectedIds.length === 1 ? 'lead' : 'leads'} selected
+              <span className="text-xs sm:text-sm font-semibold text-primary-900">
+                {selectedIds.length === 1 ? '1 lead' : `${selectedIds.length} leads`} selected
               </span>
             </div>
 
-            {canDelete && (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => setBulkDeleteOpen(true)}
-                loading={isBulkDeleting}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select onValueChange={(val) => handleBulkStatusChange(val)} disabled={isBulkUpdating}>
+                <SelectTrigger className="h-9 w-auto gap-1.5 text-xs font-medium rounded-xl border-zinc-200/90 shadow-2xs">
+                  <SelectValue placeholder="Update stage" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+                  {BULK_STATUS_OPTIONS.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select onValueChange={(val) => handleDownload(val)}>
+                <SelectTrigger className="h-9 w-auto gap-1.5 text-xs font-medium rounded-xl border-zinc-200/90 shadow-2xs">
+                  <Download className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <SelectValue placeholder="Export" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+                  <SelectItem value="csv">Download CSV</SelectItem>
+                  <SelectItem value="excel">Download Excel</SelectItem>
+                  <SelectItem value="pdf">Download PDF</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {canDelete && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setBulkDeleteOpen(true)}
+                  loading={isBulkDeleting}
+                  className="rounded-xl text-xs h-9"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  Delete
+                </Button>
+              )}
+
+              <button
+                onClick={() => setSelectedIds([])}
+                className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors ml-1 cursor-pointer"
+                title="Clear selection"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete
-              </Button>
-            )}
-
-            <Select onValueChange={(val) => handleBulkStatusChange(val)} disabled={isBulkUpdating}>
-              <SelectTrigger className="h-8 w-auto gap-1.5 text-xs">
-                <SelectValue placeholder="Change status" />
-              </SelectTrigger>
-              <SelectContent>
-                {BULK_STATUS_OPTIONS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select onValueChange={(val) => handleDownload(val)}>
-              <SelectTrigger className="h-8 w-auto gap-1.5 text-xs">
-                <Download className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                <SelectValue placeholder="Download" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="csv">CSV</SelectItem>
-                <SelectItem value="excel">Excel</SelectItem>
-                <SelectItem value="pdf">PDF</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <button
-              onClick={() => setSelectedIds([])}
-              className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
-              title="Clear selection"
-            >
-              <X className="w-4 h-4" />
-            </button>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Table / Board */}
+      {/* Main Content Area: Table or Kanban */}
       {view === 'table' ? (
         isLoading ? (
-          <div className="bg-white rounded-xl border border-zinc-200">
-            <TableSkeleton rows={5} />
+          <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-2xs">
+            <TableSkeleton rows={6} />
           </div>
         ) : error ? (
-          <div className="bg-white rounded-xl border border-zinc-200 p-12">
+          <div className="bg-white rounded-2xl border border-zinc-200/80 p-12 text-center shadow-2xs">
             <EmptyState
               icon={Users}
               title="Failed to load leads"
-              description={error?.data?.message || 'Something went wrong. Please try again.'}
+              description={error?.data?.message || 'Something went wrong. Please try refreshing.'}
             />
           </div>
         ) : (
-          <LeadTable
-            leads={leads}
-            loading={false}
-            error={null}
-            onRowClick={(row) => navigate(`/leads/${row._id}`)}
-            canEdit={canEdit}
-            canDelete={canDelete}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onStatusChange={handleStatusChange}
-            serverPagination
-            page={pagination?.page || 1}
-            pageSize={pagination?.limit || 10}
-            total={pagination?.total}
-            totalPages={pagination?.pages}
-            hasNextPage={pagination?.hasNextPage}
-            hasPrevPage={pagination?.hasPrevPage}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-            selectable
-            selectedIds={selectedIds}
-            onSelectionChange={handleSelectionChange}
-          />
+          <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)] overflow-hidden">
+            <LeadTable
+              leads={leads}
+              loading={false}
+              error={null}
+              onRowClick={(row) => navigate(`/leads/${row._id}`)}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onStatusChange={handleStatusChange}
+              serverPagination
+              page={pagination?.page || 1}
+              pageSize={pagination?.limit || 10}
+              total={pagination?.total}
+              totalPages={pagination?.pages}
+              hasNextPage={pagination?.hasNextPage}
+              hasPrevPage={pagination?.hasPrevPage}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              selectable
+              selectedIds={selectedIds}
+              onSelectionChange={handleSelectionChange}
+            />
+          </div>
         )
       ) : (
-        <div className="bg-white rounded-xl border border-zinc-200 p-4 min-h-[500px]">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 min-h-[500px] shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
           <LeadKanbanBoard
             leads={kanbanLeads}
             loading={kanbanLoading}
@@ -419,6 +559,7 @@ export default function LeadList() {
         </div>
       )}
 
+      {/* Lost Reason Modal */}
       <Modal
         open={!!lostReasonTarget}
         onClose={() => setLostReasonTarget(null)}
@@ -426,49 +567,53 @@ export default function LeadList() {
         size="sm"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-red-600">
-            <XCircle className="w-5 h-5" />
-            <p className="text-sm text-zinc-600">Please provide a reason for marking this lead as lost.</p>
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-red-50/70 border border-red-200/80 text-red-700">
+            <XCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm">
+              Please specify the reason for losing this opportunity to help improve future conversion.
+            </p>
           </div>
           <textarea
             value={lostReasonInput}
             onChange={(e) => setLostReasonInput(e.target.value)}
-            placeholder="e.g. Price too high, went with competitor, not interested..."
-            className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-900 resize-none"
+            placeholder="e.g. Budget mismatch, chose competitor, deferred to next quarter..."
+            className="w-full px-3.5 py-2.5 border border-zinc-200/90 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 resize-none shadow-2xs"
             rows={3}
             maxLength={500}
             autoFocus
           />
-          <div className="flex items-center justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setLostReasonTarget(null)}>
+          <div className="flex items-center justify-end gap-2.5 pt-1">
+            <Button type="button" variant="secondary" onClick={() => setLostReasonTarget(null)} className="rounded-xl text-xs">
               Cancel
             </Button>
-            <Button type="button" onClick={confirmLostReason}>
+            <Button type="button" variant="danger" onClick={confirmLostReason} className="rounded-xl text-xs">
               Confirm Lost
             </Button>
           </div>
         </div>
       </Modal>
 
+      {/* Single Delete Confirmation */}
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
         title="Delete Lead?"
-        message={deleteTarget ? `Delete lead "${deleteTarget.name}"? This cannot be undone.` : ''}
+        message={deleteTarget ? `Are you sure you want to delete lead "${deleteTarget.name}"? This action cannot be undone.` : ''}
       />
 
+      {/* Bulk Delete Confirmation */}
       <ConfirmDialog
         open={bulkDeleteOpen}
         onClose={() => setBulkDeleteOpen(false)}
         onConfirm={confirmBulkDelete}
-        title="Delete Leads?"
-        message={`Delete ${selectedIds.length} selected ${selectedIds.length === 1 ? 'lead' : 'leads'}? This cannot be undone.`}
+        title="Delete Selected Leads?"
+        message={`Are you sure you want to permanently delete ${selectedIds.length} selected ${selectedIds.length === 1 ? 'lead' : 'leads'}? This cannot be undone.`}
         confirmLabel={isBulkDeleting ? 'Deleting...' : 'Delete'}
       />
 
+      {/* Lead CSV Import Modal */}
       <LeadImportModal open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 }
-

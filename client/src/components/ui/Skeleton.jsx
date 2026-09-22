@@ -1,28 +1,29 @@
 import { cn } from '../../utils/cn';
 
 export default function Skeleton({ className }) {
-  return <div className={cn('animate-pulse bg-zinc-200 rounded', className)} />;
+  return <div className={cn('animate-pulse bg-zinc-200/70 rounded-xl', className)} />;
 }
 
 export function StatCardSkeleton() {
   return (
-    <div className="bg-white rounded-lg border border-zinc-200 p-4 space-y-3">
-      <Skeleton className="h-4 w-20" />
-      <Skeleton className="h-7 w-12" />
+    <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 space-y-3 shadow-2xs">
+      <Skeleton className="h-4 w-24 rounded-lg" />
+      <Skeleton className="h-8 w-16 rounded-xl" />
+      <Skeleton className="h-3 w-32 rounded-md" />
     </div>
   );
 }
 
 export function TableSkeleton({ rows = 5 }) {
   return (
-    <div className="divide-y divide-zinc-100">
+    <div className="divide-y divide-zinc-100 bg-white rounded-2xl border border-zinc-200/80 overflow-hidden shadow-2xs">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex gap-4 p-4">
-          <Skeleton className="h-5 flex-1" />
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-5 w-20" />
-          <Skeleton className="h-5 w-20" />
-          <Skeleton className="h-5 w-24" />
+        <div key={i} className="flex items-center gap-4 p-4">
+          <Skeleton className="h-5 flex-1 rounded-lg" />
+          <Skeleton className="h-5 w-28 rounded-lg" />
+          <Skeleton className="h-5 w-20 rounded-lg" />
+          <Skeleton className="h-5 w-20 rounded-lg" />
+          <Skeleton className="h-5 w-24 rounded-lg" />
         </div>
       ))}
     </div>
@@ -32,14 +33,14 @@ export function TableSkeleton({ rows = 5 }) {
 export function DetailSkeleton() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex justify-between">
-        <Skeleton className="h-5 w-32" />
+      <div className="flex justify-between items-center">
+        <Skeleton className="h-6 w-40 rounded-xl" />
         <div className="flex gap-2">
-          <Skeleton className="h-9 w-24" />
-          <Skeleton className="h-9 w-24" />
+          <Skeleton className="h-10 w-24 rounded-xl" />
+          <Skeleton className="h-10 w-24 rounded-xl" />
         </div>
       </div>
-      <Skeleton className="h-[600px] w-full rounded-lg" />
+      <Skeleton className="h-[450px] w-full rounded-2xl" />
     </div>
   );
 }

@@ -1,11 +1,30 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Eye,
+  EyeOff,
+  AlertCircle,
+  ShieldAlert,
+  Lock,
+  ArrowRight,
+  Loader2,
+  CheckCircle2,
+  X,
+} from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setUser } from '../../app/store/authSlice';
 import { cn } from '../../utils/cn';
 import { API_BASE_URL } from '../../constants';
 import axios from 'axios';
+import { PremiumInput } from '../../components/ui/PremiumFields';
+
+const PWD_GUIDE = [
+  { key: 'min', label: 'At least 8 characters', test: (v) => v.length >= 8 },
+  { key: 'upper', label: 'One uppercase letter', test: (v) => /[A-Z]/.test(v) },
+  { key: 'lower', label: 'One lowercase letter', test: (v) => /[a-z]/.test(v) },
+  { key: 'number', label: 'One number (0-9)', test: (v) => /[0-9]/.test(v) },
+];
 
 export default function ChangePassword() {
   const navigate = useNavigate();
@@ -15,6 +34,7 @@ export default function ChangePassword() {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -27,11 +47,26 @@ export default function ChangePassword() {
     e.preventDefault();
     setError('');
 
-    if (!form.currentPassword) { setError('Current password is required'); return; }
-    if (!form.newPassword) { setError('New password is required'); return; }
-    if (form.newPassword.length < 6) { setError('New password must be at least 6 characters'); return; }
-    if (form.newPassword !== form.confirmPassword) { setError('Passwords do not match'); return; }
-    if (form.currentPassword === form.newPassword) { setError('New password must be different from current password'); return; }
+    if (!form.currentPassword) {
+      setError('Current password is required');
+      return;
+    }
+    if (!form.newPassword) {
+      setError('New password is required');
+      return;
+    }
+    if (form.newPassword.length < 8) {
+      setError('New password must be at least 8 characters');
+      return;
+    }
+    if (form.newPassword !== form.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (form.currentPassword === form.newPassword) {
+      setError('New password must be different from current password');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -55,93 +90,178 @@ export default function ChangePassword() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-2">
-        <ShieldCheck className="w-5 h-5 text-amber-500" />
-        <h2 className="font-heading text-lg font-semibold text-primary-900">Change Your Password</h2>
+      {/* Security notice header */}
+      <div className="mb-5 flex items-center gap-3">
+        <div className="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-700 shadow-sm shrink-0">
+          <ShieldAlert className="w-5 h-5" strokeWidth={1.8} />
+        </div>
+        <div>
+          <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider bg-amber-100/60 px-2 py-0.5 rounded-md">
+            Security Action Required
+          </span>
+          <h2 className="font-heading text-lg sm:text-xl font-semibold tracking-tight text-primary-900 mt-1">
+            Change your password
+          </h2>
+        </div>
       </div>
-      <p className="text-sm text-zinc-500 mb-6">
-        For your security, please change your default password before continuing.
+
+      <p className="text-zinc-500 text-sm mb-6 leading-relaxed">
+        For your security, you must update your temporary or default password before entering the CRM workspace.
       </p>
 
-      {error && (
-        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2.5" role="alert">
-          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" strokeWidth={1.5} />
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div>
-          <label htmlFor="currentPassword" className="block text-sm font-medium text-zinc-700 mb-1.5">
-            Current Password
-          </label>
-          <div className="relative">
-            <input
-              id="currentPassword"
-              type={showCurrent ? 'text' : 'password'}
-              required
-              value={form.currentPassword}
-              onChange={handleChange('currentPassword')}
-              className={cn(
-                'w-full px-3 py-2.5 pr-10 bg-zinc-50 border rounded-lg text-sm text-primary-900 placeholder-zinc-400 transition-colors outline-none focus:ring-1',
-                'border-zinc-200 focus:ring-primary-900 focus:border-primary-900',
-              )}
-              placeholder="Enter current password"
-            />
+      {/* Error Alert */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              x: [0, -6, 6, -4, 4, -2, 0],
+            }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.35 }}
+            className="mb-5 p-3.5 bg-red-50/90 border border-red-200/80 rounded-2xl flex items-start gap-3 shadow-sm"
+            role="alert"
+          >
+            <div className="w-7 h-7 rounded-xl bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
+              <AlertCircle className="w-4 h-4 text-red-600" strokeWidth={1.8} />
+            </div>
+            <p className="text-xs sm:text-sm font-medium text-red-800 flex-1 min-w-0 pt-0.5">
+              {error}
+            </p>
             <button
               type="button"
-              onClick={() => setShowCurrent(!showCurrent)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors p-1"
-              tabIndex={-1}
+              onClick={() => setError('')}
+              className="text-red-400 hover:text-red-700 p-1 rounded-lg hover:bg-red-100/50 transition-colors shrink-0"
+              aria-label="Dismiss error"
             >
-              {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <X className="w-3.5 h-3.5" strokeWidth={2} />
             </button>
-          </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5" noValidate>
+        {/* Current Password */}
+        <div>
+          <PremiumInput
+            label="Current Password"
+            id="currentPassword"
+            type={showCurrent ? 'text' : 'password'}
+            required
+            value={form.currentPassword}
+            onChange={handleChange('currentPassword')}
+            placeholder="Enter current password"
+            icon={<Lock className="w-4 h-4" strokeWidth={1.8} />}
+            trailingAction={
+              <button
+                type="button"
+                onClick={() => setShowCurrent(!showCurrent)}
+                className="text-zinc-400 hover:text-zinc-700 transition-colors p-1.5 rounded-lg hover:bg-zinc-100"
+                tabIndex={-1}
+                aria-label={showCurrent ? 'Hide password' : 'Show password'}
+              >
+                {showCurrent ? (
+                  <EyeOff className="w-4 h-4" strokeWidth={1.8} />
+                ) : (
+                  <Eye className="w-4 h-4" strokeWidth={1.8} />
+                )}
+              </button>
+            }
+          />
         </div>
 
+        {/* New Password */}
         <div>
-          <label htmlFor="newPassword" className="block text-sm font-medium text-zinc-700 mb-1.5">
-            New Password
-          </label>
-          <div className="relative">
-            <input
-              id="newPassword"
-              type={showNew ? 'text' : 'password'}
-              required
-              value={form.newPassword}
-              onChange={handleChange('newPassword')}
-              className={cn(
-                'w-full px-3 py-2.5 pr-10 bg-zinc-50 border rounded-lg text-sm text-primary-900 placeholder-zinc-400 transition-colors outline-none focus:ring-1',
-                'border-zinc-200 focus:ring-primary-900 focus:border-primary-900',
-              )}
-              placeholder="Enter new password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowNew(!showNew)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors p-1"
-              tabIndex={-1}
+          <PremiumInput
+            label="New Password"
+            id="newPassword"
+            type={showNew ? 'text' : 'password'}
+            required
+            value={form.newPassword}
+            onChange={handleChange('newPassword')}
+            placeholder="Enter a strong new password"
+            icon={<Lock className="w-4 h-4" strokeWidth={1.8} />}
+            trailingAction={
+              <button
+                type="button"
+                onClick={() => setShowNew(!showNew)}
+                className="text-zinc-400 hover:text-zinc-700 transition-colors p-1.5 rounded-lg hover:bg-zinc-100"
+                tabIndex={-1}
+                aria-label={showNew ? 'Hide password' : 'Show password'}
+              >
+                {showNew ? (
+                  <EyeOff className="w-4 h-4" strokeWidth={1.8} />
+                ) : (
+                  <Eye className="w-4 h-4" strokeWidth={1.8} />
+                )}
+              </button>
+            }
+          />
+
+          {/* Password Checklist */}
+          {form.newPassword.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="mt-3 p-3 bg-zinc-50 rounded-xl border border-zinc-200/60 space-y-1.5"
             >
-              {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+                Password requirements
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {PWD_GUIDE.map((rule) => {
+                  const pass = rule.test(form.newPassword);
+                  return (
+                    <div
+                      key={rule.key}
+                      className={cn(
+                        'text-xs flex items-center gap-1.5 transition-colors',
+                        pass ? 'text-emerald-700 font-medium' : 'text-zinc-400',
+                      )}
+                    >
+                      {pass ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" strokeWidth={2} />
+                      ) : (
+                        <div className="w-3.5 h-3.5 rounded-full border border-zinc-300 shrink-0" />
+                      )}
+                      <span>{rule.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
         </div>
 
+        {/* Confirm New Password */}
         <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-zinc-700 mb-1.5">
-            Confirm New Password
-          </label>
-          <input
+          <PremiumInput
+            label="Confirm New Password"
             id="confirmPassword"
-            type="password"
+            type={showConfirm ? 'text' : 'password'}
             required
             value={form.confirmPassword}
             onChange={handleChange('confirmPassword')}
-            className={cn(
-              'w-full px-3 py-2.5 bg-zinc-50 border rounded-lg text-sm text-primary-900 placeholder-zinc-400 transition-colors outline-none focus:ring-1',
-              'border-zinc-200 focus:ring-primary-900 focus:border-primary-900',
-            )}
-            placeholder="Confirm new password"
+            placeholder="Repeat your new password"
+            icon={<Lock className="w-4 h-4" strokeWidth={1.8} />}
+            trailingAction={
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="text-zinc-400 hover:text-zinc-700 transition-colors p-1.5 rounded-lg hover:bg-zinc-100"
+                tabIndex={-1}
+                aria-label={showConfirm ? 'Hide password' : 'Show password'}
+              >
+                {showConfirm ? (
+                  <EyeOff className="w-4 h-4" strokeWidth={1.8} />
+                ) : (
+                  <Eye className="w-4 h-4" strokeWidth={1.8} />
+                )}
+              </button>
+            }
           />
         </div>
 
@@ -149,25 +269,26 @@ export default function ChangePassword() {
           type="submit"
           disabled={loading}
           className={cn(
-            'w-full py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
+            'w-full mt-2 py-3.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 group cursor-pointer select-none',
             loading
               ? 'bg-primary-900/70 text-white/80 cursor-not-allowed'
-              : 'bg-primary-900 text-white hover:bg-primary-800 active:bg-primary-700',
+              : 'bg-primary-900 text-white hover:bg-black active:scale-[0.985] shadow-[0_10px_25px_-5px_rgba(11,11,11,0.25)] hover:shadow-[0_12px_28px_-4px_rgba(11,11,11,0.35)]',
           )}
         >
           {loading ? (
             <>
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Changing password...
+              <Loader2 className="animate-spin h-4 w-4" />
+              <span>Saving password...</span>
             </>
           ) : (
-            'Change Password & Continue'
+            <>
+              <span>Update password &amp; continue</span>
+              <ArrowRight className="w-4 h-4 text-white/80 group-hover:translate-x-0.5 transition-transform duration-150" />
+            </>
           )}
         </button>
       </form>
     </div>
   );
 }
+

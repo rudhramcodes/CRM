@@ -39,8 +39,8 @@ export function PremiumInput({
   const pulseGlow = () => {
     if (!inputRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     animate(inputRef.current, {
-      boxShadow: ['0 0 0 0 rgba(255,255,255,0)', '0 0 0 5px rgba(255,255,255,0.08)', '0 0 0 3px rgba(255,255,255,0.03)'],
-      duration: 520,
+      boxShadow: ['0 0 0 0 rgba(11,11,11,0)', '0 0 0 4px rgba(11,11,11,0.06)', '0 0 0 2px rgba(11,11,11,0.03)'],
+      duration: 450,
       ease: 'out(3)',
     });
   };

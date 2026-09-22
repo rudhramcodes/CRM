@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -7,6 +8,7 @@ export default function Modal({
   open,
   onClose,
   title,
+  description,
   children,
   size = 'md',
   showClose = true,
@@ -22,48 +24,72 @@ export default function Modal({
 
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && open) onClose();
+      if (e.key === 'Escape' && open) onClose?.();
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [open, onClose]);
-
-  if (!open) return null;
 
   const sizeClasses = {
     sm: 'max-w-sm',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
+    full: 'max-w-5xl',
   };
 
-  // Portal to body so nested modals never render inside a parent form/modal
-  // (nested <form>s and transform-based containing blocks break overlays).
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div
-        className={cn(
-          'relative bg-white rounded-xl shadow-xl w-full max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95',
-          sizeClasses[size],
-        )}
-      >
-        {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
-            <h3 className="font-heading text-base font-semibold text-primary-900">{title}</h3>
-            {showClose && (
-              <button
-                onClick={onClose}
-                className="p-1 rounded-md hover:bg-slate-100 text-slate-400"
-              >
-                <X className="w-5 h-5" />
-              </button>
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-md"
+            onClick={onClose}
+          />
+
+          {/* Dialog Container */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+            className={cn(
+              'relative bg-white rounded-2xl sm:rounded-[1.75rem] border border-zinc-200/80 shadow-[0_24px_80px_-20px_rgba(0,0,0,0.35)] w-full max-h-[90vh] flex flex-col overflow-hidden z-10 my-auto',
+              sizeClasses[size] || sizeClasses.md,
             )}
-          </div>
-        )}
-        <div className="p-6 overflow-y-auto">{children}</div>
-      </div>
-    </div>,
+          >
+            {title && (
+              <div className="flex items-start justify-between px-6 py-4.5 border-b border-zinc-100/90 bg-zinc-50/40 shrink-0">
+                <div>
+                  <h3 className="font-heading text-lg font-bold text-primary-900 tracking-tight">
+                    {title}
+                  </h3>
+                  {description && (
+                    <p className="text-xs text-zinc-500 mt-0.5">{description}</p>
+                  )}
+                </div>
+                {showClose && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="p-1.5 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-primary-900 transition-colors -mr-1"
+                    aria-label="Close modal"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="p-6 overflow-y-auto flex-1">{children}</div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>,
     document.body,
   );
 }
