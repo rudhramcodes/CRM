@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Building2, User, Mail, CreditCard, Hash, MapPin } from 'lucide-react';
 import FormInput from '../../../components/forms/FormInput';
 import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
@@ -29,12 +29,12 @@ const clientFormSchema = z.object({
     .or(z.literal('')),
   gstNumber: z
     .string()
-    .regex(/^$|^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Invalid GST number format')
+    .regex(/^$|^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Invalid GST number format (e.g. 22AAAAA0000A1Z5)')
     .optional()
     .or(z.literal('')),
   panNumber: z
     .string()
-    .regex(/^$|^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN number format')
+    .regex(/^$|^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN number format (e.g. ABCDE1234F)')
     .optional()
     .or(z.literal('')),
   address: z
@@ -120,6 +120,7 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(clientFormSchema),
@@ -141,8 +142,8 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
         contactPerson: data.contactPerson,
         email: data.email,
         phone: data.phone || undefined,
-        gstNumber: data.gstNumber || undefined,
-        panNumber: data.panNumber || undefined,
+        gstNumber: data.gstNumber ? data.gstNumber.toUpperCase().trim() : undefined,
+        panNumber: data.panNumber ? data.panNumber.toUpperCase().trim() : undefined,
         address: {
           street: (data.address?.street || '').trim(),
           city: (data.address?.city || '').trim(),
@@ -159,7 +160,7 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
 
       if (isEditing) {
         await updateClient({ id: client._id, ...payload }).unwrap();
-        toast.success('Client updated successfully');
+        toast.success('Client profile updated successfully');
         onSuccess?.();
       } else {
         const created = await createClient(payload).unwrap();
@@ -171,45 +172,63 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {!onCancel && (
-        <button
-          type="button"
-          onClick={() => navigate('/clients')}
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+  const isStandalone = !onCancel && !client;
+
+  const content = (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Top Banner if Standalone */}
+      {isStandalone && (
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-primary-900 tracking-tight">
+              Create Client Account
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
+              Register a corporate or individual client profile with billing and portal access
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/clients')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-500 hover:text-primary-900 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-200/80 transition-all cursor-pointer shadow-2xs"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to Clients
+          </button>
+        </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+      {/* Primary Details Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
         <FormSelect
           name="brand"
           control={control}
           label="Brand / Venture *"
           options={BRANDS}
-          placeholder="Select brand"
+          placeholder="Select brand / venture"
           error={errors.brand?.message}
         />
+
         <FormInput
           label="Company Name *"
-          placeholder="Acme Corp"
+          placeholder="e.g. Acme Enterprises Ltd"
           autoCapitalize="words"
           autoComplete="organization"
           error={errors.companyName?.message}
           {...register('companyName')}
         />
+
         <FormInput
-          label="Contact Person *"
-          placeholder="John Doe"
+          label="Contact Person Name *"
+          placeholder="e.g. John Doe"
           autoCapitalize="words"
           autoComplete="name"
           error={errors.contactPerson?.message}
           {...register('contactPerson')}
         />
+
         <FormInput
-          label="Email *"
+          label="Work Email Address *"
           type="email"
           placeholder="john@company.com"
           autoComplete="email"
@@ -217,12 +236,13 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
           error={errors.email?.message}
           {...register('email')}
         />
+
         <Controller
           name="phone"
           control={control}
           render={({ field }) => (
             <PhoneInput
-              label="Phone"
+              label="Phone Number"
               placeholder="98765 43210"
               value={field.value}
               onChange={field.onChange}
@@ -230,92 +250,141 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
             />
           )}
         />
+
+        <FormSelect
+          name="status"
+          control={control}
+          label="Account Status"
+          options={CLIENT_STATUS}
+          error={errors.status?.message}
+        />
+
         <FormInput
-          label="GST Number"
+          label="GST Identification Number (GSTIN)"
           placeholder="22AAAAA0000A1Z5"
           maxLength={15}
           autoCapitalize="characters"
           autoComplete="off"
-          helperText="15-character GSTIN"
+          helperText="15-character alphanumeric GSTIN"
           error={errors.gstNumber?.message}
-          {...register('gstNumber')}
+          {...register('gstNumber', {
+            onChange: (e) => setValue('gstNumber', e.target.value.toUpperCase()),
+          })}
         />
+
         <FormInput
           label="PAN Number"
           placeholder="ABCDE1234F"
           maxLength={10}
           autoCapitalize="characters"
           autoComplete="off"
-          helperText="10 chars · 5 letters + 4 digits + 1 letter"
+          helperText="10-character Permanent Account Number"
           error={errors.panNumber?.message}
-          {...register('panNumber')}
-        />
-        <FormSelect
-          name="status"
-          control={control}
-          label="Status"
-          options={CLIENT_STATUS}
-          error={errors.status?.message}
+          {...register('panNumber', {
+            onChange: (e) => setValue('panNumber', e.target.value.toUpperCase()),
+          })}
         />
       </div>
 
-      <div className="pt-3 border-t border-zinc-100">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Address Details</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Address Details Section */}
+      <div className="pt-4 border-t border-zinc-100">
+        <div className="flex items-center gap-2 mb-3">
+          <MapPin className="w-4 h-4 text-zinc-400" />
+          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-600">
+            Registered Address
+          </h4>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
           <div className="sm:col-span-2">
             <FormInput
-              label="Street / Address"
-              placeholder="Flat / Building, Road, Area, Landmark"
+              label="Street / Office Address"
+              placeholder="Suite, building number, street, locality"
               error={errors.address?.street?.message}
               {...register('address.street')}
             />
           </div>
           <FormInput
             label="City"
-            placeholder="City"
+            placeholder="e.g. Mumbai"
             error={errors.address?.city?.message}
             {...register('address.city')}
           />
           <FormInput
-            label="State"
-            placeholder="State"
+            label="State / Province"
+            placeholder="e.g. Maharashtra"
             error={errors.address?.state?.message}
             {...register('address.state')}
           />
           <FormInput
-            label="Pincode"
-            placeholder="Pincode / Postal Code"
+            label="Postal Code / PIN"
+            placeholder="e.g. 400001"
             error={errors.address?.pincode?.message}
             {...register('address.pincode')}
           />
           <FormInput
             label="Country"
-            placeholder="Country"
+            placeholder="India"
             error={errors.address?.country?.message}
             {...register('address.country')}
           />
         </div>
       </div>
 
+      {/* Initial Notes only for new clients */}
       {!isEditing && (
-        <FormTextarea
-          label="Notes"
-          placeholder="Add any initial notes about this client..."
-          error={errors.notes?.message}
-          {...register('notes')}
-        />
+        <div className="pt-2">
+          <FormTextarea
+            label="Initial Account Notes"
+            placeholder="Add context on key stakeholders, deal origins, or billing agreements..."
+            error={errors.notes?.message}
+            rows={3}
+            {...register('notes')}
+          />
+        </div>
       )}
 
-      <div className="flex items-center justify-end gap-3 pt-2">
-        {onCancel && (
-          <Button type="button" variant="secondary" onClick={onCancel}>
+      {/* Action Buttons */}
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-100">
+        {onCancel ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onCancel}
+            className="rounded-xl text-xs font-semibold px-4"
+          >
+            Cancel
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => navigate('/clients')}
+            className="rounded-xl text-xs font-semibold px-4"
+          >
             Cancel
           </Button>
         )}
-        <Button type="submit" loading={isCreating || isUpdating}>
-          {isEditing ? 'Update Client' : 'Create Client'}
+        <Button
+          type="submit"
+          loading={isCreating || isUpdating}
+          className="rounded-xl text-xs font-semibold px-6 shadow-md shadow-primary-900/10"
+        >
+          {isEditing ? 'Update Client Profile' : 'Create Client Account'}
         </Button>
       </div>
     </form>
   );
+
+  if (isStandalone) {
+    return (
+      <div className="max-w-3xl mx-auto py-4">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 sm:p-8 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return content;
 }
+

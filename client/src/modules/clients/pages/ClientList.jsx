@@ -2,18 +2,22 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, UserCheck } from 'lucide-react';
+import { Plus, UserCheck, Users, UserMinus, Sparkles, Building2 } from 'lucide-react';
 import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
-import { useGetClientsQuery, useGetClientStatsQuery, useUpdateClientMutation, useDeleteClientMutation } from '../../../services/clientApi';
+import {
+  useGetClientsQuery,
+  useGetClientStatsQuery,
+  useUpdateClientMutation,
+  useDeleteClientMutation,
+} from '../../../services/clientApi';
 import ClientTable from '../components/ClientTable';
 import ClientFilters from '../components/ClientFilters';
 import Button from '../../../components/ui/Button';
 import EmptyState from '../../../components/ui/EmptyState';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
-import { LEAD_BRANDS } from '../../../constants';
-
-const BRAND_LABELS = LEAD_BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
+import { LEAD_BRANDS, BRAND_METAS } from '../../../constants';
+import { cn } from '../../../utils/cn';
 import toast from 'react-hot-toast';
 
 export default function ClientList() {
@@ -28,8 +32,20 @@ export default function ClientList() {
     dispatch(setPageTitle('Clients'));
   }, [dispatch]);
 
-  const { data: clientsData, isLoading, error, refetch: refetchClients, isFetching: isFetchingClients } = useGetClientsQuery(queryParams);
-  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetClientStatsQuery();
+  const {
+    data: clientsData,
+    isLoading,
+    error,
+    refetch: refetchClients,
+    isFetching: isFetchingClients,
+  } = useGetClientsQuery(queryParams);
+
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    refetch: refetchStats,
+  } = useGetClientStatsQuery();
+
   const [updateClient] = useUpdateClientMutation();
   const [deleteClient] = useDeleteClientMutation();
 
@@ -48,24 +64,38 @@ export default function ClientList() {
   }, []);
 
   const handleFilterChange = useCallback((filters) => {
-    setQueryParams({ ...filters, page: 1 });
+    setQueryParams((prev) => {
+      const next = { ...prev, page: 1 };
+      for (const [key, val] of Object.entries(filters)) {
+        if (val) next[key] = val;
+        else delete next[key];
+      }
+      return next;
+    });
   }, []);
 
   const canCreate = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canEdit = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
-  const handleEdit = useCallback((row) => {
-    navigate(`/clients/${row._id}`);
-  }, [navigate]);
+  const handleEdit = useCallback(
+    (row) => {
+      navigate(`/clients/${row._id}`);
+    },
+    [navigate]
+  );
 
-  const handleStatusChange = useCallback(async (clientId, status) => {
-    try {
-      await updateClient({ id: clientId, status }).unwrap();
-    } catch (err) {
-      toast.error(err?.data?.message || 'Failed to update status');
-    }
-  }, [updateClient]);
+  const handleStatusChange = useCallback(
+    async (clientId, status) => {
+      try {
+        await updateClient({ id: clientId, status }).unwrap();
+        toast.success(`Client marked as ${status}`);
+      } catch (err) {
+        toast.error(err?.data?.message || 'Failed to update status');
+      }
+    },
+    [updateClient]
+  );
 
   const handleDelete = useCallback((row) => setDeleteTarget(row), []);
 
@@ -88,107 +118,204 @@ export default function ClientList() {
     }
   }, [deleteTarget, deleteClient]);
 
+  // Derived KPI metrics
+  const totalCount = stats.total || 0;
+  const activeCount = stats.active || 0;
+  const inactiveCount = stats.inactive || 0;
+  const activePercent = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0;
+
+  const kpis = [
+    {
+      title: 'Total Clients',
+      value: totalCount,
+      desc: 'All corporate & individual accounts',
+      icon: Building2,
+      iconColor: 'text-zinc-700 bg-zinc-100',
+    },
+    {
+      title: 'Active Accounts',
+      value: activeCount,
+      desc: `${activePercent}% retention rate`,
+      icon: UserCheck,
+      iconColor: 'text-emerald-600 bg-emerald-50',
+    },
+    {
+      title: 'Inactive / Archived',
+      value: inactiveCount,
+      desc: 'Pending renewal or closed',
+      icon: UserMinus,
+      iconColor: 'text-amber-600 bg-amber-50',
+    },
+    {
+      title: 'Active Ventures',
+      value: Object.keys(stats.byBrand || {}).length,
+      desc: 'Brands with active clients',
+      icon: Sparkles,
+      iconColor: 'text-indigo-600 bg-indigo-50',
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-12">
+      {/* Top Header & Actions Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-primary-900">Clients</h2>
-          <p className="text-sm text-zinc-500 mt-1">
-            Manage your client relationships
+          <h2 className="text-xl sm:text-2xl font-bold text-primary-900 tracking-tight">
+            Client Directory
+          </h2>
+          <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
+            Manage corporate client accounts, billing profiles, and portal credentials
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => { refetchClients(); refetchStats(); }}
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Refresh Action */}
+          <button
+            onClick={() => {
+              refetchClients();
+              refetchStats();
+            }}
             disabled={isFetchingClients}
-            className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
-            title="Refresh clients"
+            className="p-2 rounded-xl text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50 border border-zinc-200/80 bg-white shadow-2xs cursor-pointer active:scale-95"
+            title="Refresh client data"
           >
             <RefreshCwIcon className={`w-4 h-4 ${isFetchingClients ? 'animate-spin' : ''}`} />
           </button>
+
+          {/* Add Client CTA */}
           {canCreate && (
-            <Button onClick={() => navigate('/clients/new')}>
-              <Plus className="w-4 h-4" />
+            <Button
+              onClick={() => navigate('/clients/new')}
+              className="rounded-xl text-xs font-semibold shadow-md shadow-primary-900/10"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
               Add Client
             </Button>
           )}
         </div>
       </div>
 
-      {/* Stats */}
+      {/* KPI Stats Ribbon */}
       {statsLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {Array.from({ length: 3 }).map((_, i) => <StatCardSkeleton key={i} />)}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))}
         </div>
-      ) : stats.total > 0 && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-white rounded-xl border border-zinc-200 p-4 text-center">
-              <p className="text-2xl font-semibold text-primary-900">{stats.total}</p>
-              <p className="text-xs text-zinc-500 mt-1">Total Clients</p>
-            </div>
-            <div className="bg-white rounded-xl border border-zinc-200 p-4 text-center">
-              <p className="text-2xl font-semibold text-green-700">{stats.active || 0}</p>
-              <p className="text-xs text-zinc-500 mt-1">Active</p>
-            </div>
-            <div className="bg-white rounded-xl border border-zinc-200 p-4 text-center">
-              <p className="text-2xl font-semibold text-red-700">{stats.inactive || 0}</p>
-              <p className="text-xs text-zinc-500 mt-1">Inactive</p>
-            </div>
-          </div>
-
-          {stats.byBrand && Object.keys(stats.byBrand).length > 0 && (
-            <div className="bg-white rounded-xl border border-zinc-200 p-4">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">By Venture</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(stats.byBrand).map(([brand, count]) => (
-                  <div key={brand} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 rounded-lg border border-zinc-100">
-                    <span className="text-sm font-medium text-zinc-700">{BRAND_LABELS[brand] || brand}</span>
-                    <span className="text-sm font-bold text-primary-900">{count}</span>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          {kpis.map((kpi, idx) => {
+            const Icon = kpi.icon;
+            return (
+              <div
+                key={idx}
+                className="bg-white rounded-2xl border border-zinc-200/80 p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-zinc-300/80 transition-all duration-200 flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                    {kpi.title}
+                  </span>
+                  <div
+                    className={cn(
+                      'w-7 h-7 rounded-xl flex items-center justify-center shrink-0 shadow-2xs',
+                      kpi.iconColor
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5" strokeWidth={2} />
                   </div>
-                ))}
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-primary-900 tracking-tight">
+                    {kpi.value}
+                  </p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5 truncate font-normal">
+                    {kpi.desc}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </>
+            );
+          })}
+        </div>
       )}
 
-      <div className="flex flex-wrap gap-1.5">
+      {/* Venture Brand Switcher Tab Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
         <button
           onClick={() => handleBrandChange('')}
-          className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+          className={cn(
+            'flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
             !activeBrand
-              ? 'bg-primary-900 text-white shadow-sm'
-              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-          }`}
+              ? 'bg-primary-900 text-white border-primary-900 shadow-sm'
+              : 'bg-white text-zinc-600 hover:text-primary-900 hover:bg-zinc-50 border-zinc-200/80'
+          )}
         >
-          All
-        </button>
-        {LEAD_BRANDS.map((b) => (
-          <button
-            key={b.value}
-            onClick={() => handleBrandChange(b.value)}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              activeBrand === b.value
-                ? 'bg-primary-900 text-white shadow-sm'
-                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-            }`}
+          <span>All Ventures</span>
+          <span
+            className={cn(
+              'px-1.5 py-0.2 rounded-full text-[10px]',
+              !activeBrand ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-500'
+            )}
           >
-            {b.label}
-          </button>
-        ))}
+            {totalCount}
+          </span>
+        </button>
+
+        {LEAD_BRANDS.map((b) => {
+          const count = stats.byBrand?.[b.value] || 0;
+          const meta = BRAND_METAS[b.value];
+          const isSelected = activeBrand === b.value;
+
+          return (
+            <button
+              key={b.value}
+              onClick={() => handleBrandChange(b.value)}
+              className={cn(
+                'flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
+                isSelected
+                  ? 'bg-primary-900 text-white border-primary-900 shadow-sm'
+                  : 'bg-white text-zinc-600 hover:text-primary-900 hover:bg-zinc-50 border-zinc-200/80'
+              )}
+            >
+              {meta?.logo ? (
+                <img
+                  src={meta.logo}
+                  alt={b.label}
+                  className="w-4 h-4 rounded-sm object-contain shrink-0"
+                />
+              ) : (
+                <div
+                  className={cn(
+                    'w-3.5 h-3.5 rounded-sm flex items-center justify-center text-[8px] font-bold text-white shrink-0 bg-gradient-to-br',
+                    meta?.gradient || 'from-zinc-600 to-zinc-800'
+                  )}
+                >
+                  {meta?.initial || b.label?.[0]}
+                </div>
+              )}
+              <span>{b.label}</span>
+              <span
+                className={cn(
+                  'px-1.5 py-0.2 rounded-full text-[10px]',
+                  isSelected ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-500'
+                )}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Filters */}
+      {/* Filters Bar */}
       <ClientFilters onFilterChange={handleFilterChange} />
 
-      {/* Table */}
+      {/* Table Section */}
       {isLoading ? (
-        <div className="bg-white rounded-xl border border-zinc-200">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]">
           <TableSkeleton rows={5} />
         </div>
       ) : error ? (
-        <div className="bg-white rounded-xl border border-zinc-200 p-12">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-12 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]">
           <EmptyState
             icon={UserCheck}
             title="Failed to load clients"
@@ -196,6 +323,7 @@ export default function ClientList() {
           />
         </div>
       ) : (
+        <div className="bg-white rounded-2xl border border-zinc-200/80 overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]">
           <ClientTable
             clients={clients}
             loading={false}
@@ -207,24 +335,31 @@ export default function ClientList() {
             onDelete={handleDelete}
             onStatusChange={handleStatusChange}
             serverPagination
-          page={pagination?.page || 1}
-          pageSize={pagination?.limit || 10}
-          total={pagination?.total}
-          totalPages={pagination?.pages}
-          hasNextPage={pagination?.hasNextPage}
-          hasPrevPage={pagination?.hasPrevPage}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+            page={pagination?.page || 1}
+            pageSize={pagination?.limit || 10}
+            total={pagination?.total}
+            totalPages={pagination?.pages}
+            hasNextPage={pagination?.hasNextPage}
+            hasPrevPage={pagination?.hasPrevPage}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        </div>
       )}
 
+      {/* Delete Confirmation Modal */}
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
-        title="Delete Client?"
-        message={deleteTarget ? `Delete client "${deleteTarget.companyName}"? This cannot be undone.` : ''}
+        title="Delete Client Profile?"
+        message={
+          deleteTarget
+            ? `Are you sure you want to delete client "${deleteTarget.companyName}"? This action cannot be undone.`
+            : ''
+        }
       />
     </div>
   );
 }
+

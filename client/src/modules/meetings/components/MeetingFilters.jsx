@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Search, Building2 } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Search, Building2, X } from 'lucide-react';
 import { MEETING_STATUS } from '../../../constants';
 import { DatePickerSimple } from '../../../components/ui/DatePickerSimple';
 import {
@@ -23,108 +23,115 @@ export default function MeetingFilters({ onFilterChange }) {
   const { data: clientsData } = useGetClientsQuery({ limit: 100 });
   const clients = clientsData?.data || (Array.isArray(clientsData) ? clientsData : []) || [];
 
-  const handleChange = useCallback(
-    (key, value) => {
-      const updated = { ...filters, [key]: value };
-      setFilters(updated);
-      onFilterChange?.(updated);
-    },
-    [filters, onFilterChange],
-  );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const activeFilters = {};
+      if (filters.search) activeFilters.search = filters.search;
+      if (filters.status) activeFilters.status = filters.status;
+      if (filters.client) activeFilters.client = filters.client;
+      if (filters.dateFrom) activeFilters.dateFrom = filters.dateFrom;
+      if (filters.dateTo) activeFilters.dateTo = filters.dateTo;
+      onFilterChange?.(activeFilters);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [filters, onFilterChange]);
+
+  const handleChange = useCallback((key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   const clearFilters = useCallback(() => {
-    const cleared = { search: '', status: '', client: '', dateFrom: '', dateTo: '' };
-    setFilters(cleared);
-    onFilterChange?.(cleared);
-  }, [onFilterChange]);
+    setFilters({ search: '', status: '', client: '', dateFrom: '', dateTo: '' });
+  }, []);
 
-  const hasFilters = filters.search || filters.status || filters.client || filters.dateFrom || filters.dateTo;
+  const hasFilters =
+    filters.search || filters.status || filters.client || filters.dateFrom || filters.dateTo;
 
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 p-4">
-      <div className="flex flex-wrap items-end gap-3">
-        {/* Search */}
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-medium text-zinc-500 mb-1">Search</label>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => handleChange('search', e.target.value)}
-              placeholder="Search meetings..."
-              className="w-full pl-8 pr-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900"
-            />
-          </div>
-        </div>
-
-        {/* Client Filter */}
-        <div className="min-w-[170px]">
-          <label className="block text-xs font-medium text-zinc-500 mb-1 flex items-center gap-1">
-            <Building2 className="w-3 h-3 text-zinc-400" />
-            Client
-          </label>
-          <Select
-            value={filters.client || 'all'}
-            onValueChange={(value) => handleChange('client', value === 'all' ? '' : value)}
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
+      {/* Search Input */}
+      <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+        <input
+          type="text"
+          value={filters.search}
+          onChange={(e) => handleChange('search', e.target.value)}
+          placeholder="Search meetings by title, agenda..."
+          className="w-full pl-10 pr-9 py-2 bg-white border border-zinc-200/90 rounded-xl text-xs sm:text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 transition-all shadow-2xs"
+        />
+        {filters.search && (
+          <button
+            type="button"
+            onClick={() => handleChange('search', '')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-zinc-400 hover:text-zinc-600 rounded-md hover:bg-zinc-100 transition-colors"
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All Clients" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Clients</SelectItem>
-              {clients.map((c) => (
-                <SelectItem key={c._id} value={c._id}>
-                  {c.companyName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2.5 flex-wrap">
+        {/* Client Filter */}
+        <Select
+          value={filters.client || 'all'}
+          onValueChange={(value) => handleChange('client', value === 'all' ? '' : value)}
+        >
+          <SelectTrigger className="w-full sm:w-44 rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
+            <SelectValue placeholder="All Clients" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+            <SelectItem value="all">All Clients</SelectItem>
+            {clients.map((c) => (
+              <SelectItem key={c._id} value={c._id}>
+                {c.companyName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Status */}
-        <div className="min-w-[150px]">
-          <label className="block text-xs font-medium text-zinc-500 mb-1">Status</label>
-          <Select
-            value={filters.status || 'all'}
-            onValueChange={(value) => handleChange('status', value === 'all' ? '' : value)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              {MEETING_STATUS.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select
+          value={filters.status || 'all'}
+          onValueChange={(value) => handleChange('status', value === 'all' ? '' : value)}
+        >
+          <SelectTrigger className="w-full sm:w-36 rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+            <SelectItem value="all">All Status</SelectItem>
+            {MEETING_STATUS.map((s) => (
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Date From */}
-        <DatePickerSimple
-          value={filters.dateFrom}
-          onChange={(val) => handleChange('dateFrom', val)}
-          label="From Date"
-          placeholder="From date"
-        />
+        <div className="w-36">
+          <DatePickerSimple
+            value={filters.dateFrom}
+            onChange={(val) => handleChange('dateFrom', val)}
+            placeholder="From date"
+          />
+        </div>
 
         {/* Date To */}
-        <DatePickerSimple
-          value={filters.dateTo}
-          onChange={(val) => handleChange('dateTo', val)}
-          label="To Date"
-          placeholder="To date"
-        />
+        <div className="w-36">
+          <DatePickerSimple
+            value={filters.dateTo}
+            onChange={(val) => handleChange('dateTo', val)}
+            placeholder="To date"
+          />
+        </div>
 
         {/* Clear */}
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="px-3 py-2 text-xs text-zinc-500 hover:text-zinc-700 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:text-primary-900 bg-white hover:bg-zinc-100 border border-zinc-200/80 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer"
           >
+            <X className="w-3.5 h-3.5" />
             Clear
           </button>
         )}
@@ -132,3 +139,4 @@ export default function MeetingFilters({ onFilterChange }) {
     </div>
   );
 }
+

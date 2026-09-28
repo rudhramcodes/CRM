@@ -1,9 +1,27 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Loader2, CheckCircle2, Zap, Building2, User, Users } from 'lucide-react';
+import {
+  Loader2,
+  CheckCircle2,
+  Zap,
+  Building2,
+  User,
+  Users,
+  Calendar,
+  Clock,
+  Video,
+  MapPin,
+  ExternalLink,
+  Repeat,
+  Sparkles,
+  Search,
+  Check,
+  X,
+  FileText
+} from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import FormInput from '../../../components/forms/FormInput';
 import FormSelect from '../../../components/forms/FormSelect';
@@ -13,8 +31,12 @@ import StartTimePicker from '../../../components/forms/StartTimePicker';
 import DurationPicker from '../../../components/forms/DurationPicker';
 import LinkInput from '../../../components/forms/LinkInput';
 import Button from '../../../components/ui/Button';
-import { MEETING_STATUS, LEAD_BRANDS } from '../../../constants';
-import { useCreateMeetingMutation, useGenerateMeetingLinkMutation, useUpdateMeetingMutation } from '../../../services/meetingApi';
+import { MEETING_STATUS, LEAD_BRANDS, BRAND_METAS } from '../../../constants';
+import {
+  useCreateMeetingMutation,
+  useGenerateMeetingLinkMutation,
+  useUpdateMeetingMutation,
+} from '../../../services/meetingApi';
 import { useGetUsersQuery } from '../../../services/userApi';
 import { useGetClientsQuery } from '../../../services/clientApi';
 import { useGetLeadsQuery } from '../../../services/leadApi';
@@ -32,7 +54,7 @@ const meetingFormSchema = z
     date: z.string().min(1, 'Date is required'),
     startTime: z.string().min(1, 'Start time is required'),
     endTime: z.string().min(1, 'End time is required'),
-    meetingLink: z.string().url('Invalid URL').optional().or(z.literal('')),
+    meetingLink: z.string().url('Invalid URL format').optional().or(z.literal('')),
     location: z.string().max(200).optional().or(z.literal('')),
     notes: z.string().max(5000).optional().or(z.literal('')),
     status: z.string().optional(),
@@ -43,17 +65,20 @@ const meetingFormSchema = z
     recurrenceType: z.string().optional(),
     recurrenceOccurrences: z.coerce.number().int().min(2).max(100).optional(),
   })
-  .refine((data) => {
-    const toMin = (t) => {
-      const [h, m] = t.split(':').map(Number);
-      return h * 60 + m;
-    };
-    const diff = (toMin(data.endTime) - toMin(data.startTime) + 24 * 60) % (24 * 60);
-    return diff > 0;
-  }, {
-    message: 'End time must be after start time',
-    path: ['endTime'],
-  });
+  .refine(
+    (data) => {
+      const toMin = (t) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+      };
+      const diff = (toMin(data.endTime) - toMin(data.startTime) + 24 * 60) % (24 * 60);
+      return diff > 0;
+    },
+    {
+      message: 'End time must be after start time',
+      path: ['endTime'],
+    }
+  );
 
 export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClient, defaultLead }) {
   const [createMeeting, { isLoading: isCreating }] = useCreateMeetingMutation();
@@ -63,6 +88,8 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
   const { data: usersData, isLoading: isUsersLoading } = useGetUsersQuery({ limit: 100 });
   const { data: clientsData, isLoading: isClientsLoading } = useGetClientsQuery({ limit: 100 });
   const { data: leadsData, isLoading: isLeadsLoading } = useGetLeadsQuery({ limit: 100 });
+
+  const [attendeeSearch, setAttendeeSearch] = useState('');
 
   const isEditing = !!meeting;
 
@@ -83,35 +110,43 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
     return leadsData?.data || (Array.isArray(leadsData) ? leadsData : []) || [];
   }, [leadsData]);
 
-  const formValues = useMemo(() => meeting ? ({
-    title: meeting.title || '',
-    date: meeting.date ? meeting.date.split('T')[0] : '',
-    startTime: meeting.startTime || '',
-    endTime: meeting.endTime || '',
-    meetingLink: meeting.meetingLink || '',
-    location: meeting.location || '',
-    notes: meeting.notes || '',
-    status: meeting.status || 'scheduled',
-    brand: meeting.brand || '',
-    client: meeting.client?._id || (typeof meeting.client === 'string' ? meeting.client : '') || defaultClient || '',
-    lead: meeting.lead?._id || (typeof meeting.lead === 'string' ? meeting.lead : '') || defaultLead || '',
-    attendees: (meeting.attendees || []).map((a) => a?._id || a),
-    recurrenceType: 'none',
-  }) : {
-    title: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-    meetingLink: '',
-    location: '',
-    notes: '',
-    status: 'scheduled',
-    brand: '',
-    client: defaultClient || '',
-    lead: defaultLead || '',
-    attendees: [],
-    recurrenceType: 'none',
-  }, [meeting, defaultClient, defaultLead]);
+  const formValues = useMemo(
+    () =>
+      meeting
+        ? {
+            title: meeting.title || '',
+            date: meeting.date ? meeting.date.split('T')[0] : '',
+            startTime: meeting.startTime || '',
+            endTime: meeting.endTime || '',
+            meetingLink: meeting.meetingLink || '',
+            location: meeting.location || '',
+            notes: meeting.notes || '',
+            status: meeting.status || 'scheduled',
+            brand: meeting.brand || '',
+            client: meeting.client?._id || (typeof meeting.client === 'string' ? meeting.client : '') || defaultClient || '',
+            lead: meeting.lead?._id || (typeof meeting.lead === 'string' ? meeting.lead : '') || defaultLead || '',
+            attendees: (meeting.attendees || []).map((a) => a?._id || a),
+            recurrenceType: 'none',
+            recurrenceOccurrences: 3,
+          }
+        : {
+            title: '',
+            date: '',
+            startTime: '',
+            endTime: '',
+            meetingLink: '',
+            location: '',
+            notes: '',
+            status: 'scheduled',
+            brand: '',
+            client: defaultClient || '',
+            lead: defaultLead || '',
+            attendees: [],
+            recurrenceType: 'none',
+            recurrenceOccurrences: 3,
+          },
+    [meeting, defaultClient, defaultLead]
+  );
 
   const {
     register,
@@ -127,11 +162,14 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
 
   const startTimeValue = watch('startTime');
   const selectedClientId = watch('client');
+  const selectedBrand = watch('brand');
+  const meetingLinkValue = watch('meetingLink');
+  const recurrenceTypeValue = watch('recurrenceType');
   const prevStartTime = useRef(startTimeValue);
 
   const selectedClient = useMemo(
     () => clients.find((c) => c._id === selectedClientId),
-    [clients, selectedClientId],
+    [clients, selectedClientId]
   );
 
   // Auto-fill venture / brand if client has brand and brand is empty
@@ -145,7 +183,9 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
   useEffect(() => {
     if (selectedClient) {
       const clientUser = users.find(
-        (u) => (selectedClient.user && u._id === selectedClient.user) || (selectedClient.email && u.email?.toLowerCase() === selectedClient.email?.toLowerCase()),
+        (u) =>
+          (selectedClient.user && u._id === selectedClient.user) ||
+          (selectedClient.email && u.email?.toLowerCase() === selectedClient.email?.toLowerCase())
       );
       if (clientUser) {
         const currentAttendees = watch('attendees') || [];
@@ -166,39 +206,51 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
   const onAutoGenerateLink = async () => {
     const { title, date, startTime, endTime } = watch();
     if (!title || !date || !startTime || !endTime) {
-      toast.error('Fill title, date and time first to auto-generate a Zoho Meeting link');
+      toast.error('Please fill in title, date and start/end time first');
       return;
     }
     try {
       const link = await generateMeetingLink({ title, date, startTime, endTime }).unwrap();
       setValue('meetingLink', link, { shouldValidate: true });
-      toast.success('Zoho Meeting link generated');
+      toast.success('Zoho Meeting link generated & synced!');
     } catch (error) {
-      toast.error(error?.data?.message || 'Could not generate link');
+      toast.error(error?.data?.message || 'Could not auto-generate link');
     }
   };
+
+  const filteredUsers = useMemo(() => {
+    if (!attendeeSearch.trim()) return users;
+    const q = attendeeSearch.toLowerCase();
+    return users.filter(
+      (u) =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.role?.toLowerCase().includes(q)
+    );
+  }, [users, attendeeSearch]);
 
   const onSubmit = async (data) => {
     try {
       const payload = {
-        title: data.title,
+        title: data.title.trim(),
         date: data.date,
         startTime: data.startTime,
         endTime: data.endTime,
-        meetingLink: data.meetingLink || undefined,
-        location: data.location || undefined,
-        notes: data.notes || undefined,
+        meetingLink: data.meetingLink?.trim() || undefined,
+        location: data.location?.trim() || undefined,
+        notes: data.notes?.trim() || undefined,
         status: data.status || 'scheduled',
         brand: data.brand || null,
         client: data.client || null,
         lead: data.lead || null,
         attendees: data.attendees || [],
       };
+
       if (!isEditing && data.recurrenceType && data.recurrenceType !== 'none') {
         payload.recurrence = {
           type: data.recurrenceType,
           interval: 1,
-          occurrences: data.recurrenceOccurrences || 3,
+          occurrences: Number(data.recurrenceOccurrences) || 3,
         };
       }
 
@@ -212,349 +264,502 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
         onSuccess?.();
       }
     } catch (error) {
-      const msg = error?.data?.message || 'Something went wrong';
+      const msg = error?.data?.message || 'Something went wrong while saving the meeting';
       toast.error(msg);
     }
   };
 
+  const brandMeta = selectedBrand ? BRAND_METAS[selectedBrand] : null;
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Title */}
-        <div className="sm:col-span-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* 1. Header Overview Section */}
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-900">
+              <Calendar className="w-4 h-4" />
+            </span>
+            <h3 className="text-sm font-semibold text-zinc-900 font-display">
+              {isEditing ? 'Edit Meeting Details' : 'New Session Scheduling'}
+            </h3>
+          </div>
+          {brandMeta && (
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-zinc-100 border border-zinc-200/80 text-xs font-medium text-zinc-700">
+              {brandMeta.logo ? (
+                <img src={brandMeta.logo} alt={brandMeta.label} className="w-4 h-4 rounded-full object-cover" />
+              ) : (
+                <span className="w-4 h-4 rounded-full bg-primary-900 text-white flex items-center justify-center text-[9px] font-bold">
+                  {brandMeta.initial || 'V'}
+                </span>
+              )}
+              <span>{brandMeta.label}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
           <FormInput
-            label="Meeting Title *"
-            placeholder="Executive Sync / Strategy Briefing"
+            label="Meeting Subject / Title *"
+            placeholder="e.g. Creative Direction Review & Milestone Alignment"
             error={errors.title?.message}
             {...register('title')}
           />
-        </div>
 
-        {/* Client & Lead Linking Block */}
-        <div className="sm:col-span-2 space-y-3 p-3.5 rounded-xl bg-zinc-50 border border-zinc-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-primary-900" />
-              Meeting With / Related Client
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Venture / Brand */}
+            <Controller
+              name="brand"
+              control={control}
+              render={({ field }) => (
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-1.5">
+                    Venture / Brand
+                  </label>
+                  <select
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 transition-all"
+                  >
+                    <option value="">No specific venture (Cross-entity)</option>
+                    {LEAD_BRANDS.map((b) => (
+                      <option key={b.value} value={b.value}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            />
+
+            {/* Status */}
+            <FormSelect
+              name="status"
+              control={control}
+              label="Meeting Status"
+              options={MEETING_STATUS}
+              error={errors.status?.message}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Client & Lead Linking Context */}
+      <div className="rounded-2xl border border-zinc-200/80 bg-[#fbfbfa] p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-200/60">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-zinc-100 text-zinc-700">
+              <Building2 className="w-4 h-4" />
             </span>
-            <span className="text-[11px] text-zinc-400">Select Client or Lead</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Controller
-              name="client"
-              control={control}
-              render={({ field }) => (
-                <div>
-                  <label className="block text-xs font-medium text-zinc-700 mb-1">
-                    Client
-                  </label>
-                  <select
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value || null)}
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900"
-                  >
-                    <option value="">No client selected (Internal or Lead meeting)</option>
-                    {clients.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.companyName} {c.contactPerson ? `— ${c.contactPerson}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            />
-
-            <Controller
-              name="lead"
-              control={control}
-              render={({ field }) => (
-                <div>
-                  <label className="block text-xs font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                    <User className="w-3 h-3 text-zinc-400" />
-                    Lead (Optional)
-                  </label>
-                  <select
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value || null)}
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900"
-                  >
-                    <option value="">No lead selected</option>
-                    {leads.map((l) => (
-                      <option key={l._id} value={l._id}>
-                        {l.name} {l.company ? `(${l.company})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            />
-          </div>
-
-          {selectedClient && (
-            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <span className="font-semibold">{selectedClient.companyName}</span>
-                {selectedClient.contactPerson && <span> &bull; {selectedClient.contactPerson}</span>}
-                {selectedClient.email && <span className="text-emerald-700"> ({selectedClient.email})</span>}
-                <p className="text-[11px] text-emerald-700 mt-0.5">
-                  ✓ Meeting will be visible in client portal & invitation email will be delivered to client.
-                </p>
-              </div>
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800">
+                Client / Lead Association
+              </h4>
+              <p className="text-[11px] text-zinc-500">Link session to a registered client or pipeline prospect</p>
             </div>
-          )}
+          </div>
+          <span className="text-[11px] font-medium text-zinc-400">Optional Context</span>
         </div>
 
-        {/* Date */}
-        <Controller
-          name="date"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              label="Date *"
-              value={field.value}
-              onChange={field.onChange}
-              error={errors.date?.message}
-            />
-          )}
-        />
-
-        <div />
-
-        {/* Start Time */}
-        <Controller
-          name="startTime"
-          control={control}
-          render={({ field }) => (
-            <StartTimePicker
-              label="Start Time *"
-              value={field.value}
-              onChange={field.onChange}
-              error={errors.startTime?.message}
-            />
-          )}
-        />
-
-        {/* End Time */}
-        <Controller
-          name="endTime"
-          control={control}
-          render={({ field }) => (
-            <DurationPicker
-              label="End Time *"
-              value={field.value}
-              onChange={field.onChange}
-              error={errors.endTime?.message}
-              startTime={startTimeValue}
-            />
-          )}
-        />
-
-        {/* Meeting Link */}
-        <Controller
-          name="meetingLink"
-          control={control}
-          render={({ field }) => (
-            <div>
-              <LinkInput
-                label="Meeting Link"
-                placeholder="https://meet.zoho.com/abc123"
-                value={field.value}
-                onChange={field.onChange}
-                error={errors.meetingLink?.message}
-              />
-              <div className="flex items-center gap-2 mt-1.5">
-                <button
-                  type="button"
-                  onClick={onAutoGenerateLink}
-                  disabled={isGeneratingLink}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border transition-colors',
-                    field.value
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                      : 'border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100',
-                    isGeneratingLink && 'opacity-50 cursor-not-allowed',
-                  )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Controller
+            name="client"
+            control={control}
+            render={({ field }) => (
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 mb-1.5 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-zinc-400" />
+                  Registered Client
+                </label>
+                <select
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 transition-all"
                 >
-                  {isGeneratingLink ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : field.value ? (
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  ) : (
-                    <Zap className="w-3.5 h-3.5" />
-                  )}
-                  {isGeneratingLink
-                    ? 'Generating link...'
-                    : field.value
-                      ? 'Link generated'
-                      : 'Generate Zoho Meeting link'}
-                </button>
-                {field.value && (
-                  <button
-                    type="button"
-                    onClick={() => field.onChange('')}
-                    className="text-[11px] text-zinc-400 hover:text-zinc-600 underline"
-                  >
-                    Remove
-                  </button>
+                  <option value="">No client selected</option>
+                  {clients.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.companyName} {c.contactPerson ? `(${c.contactPerson})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          />
+
+          <Controller
+            name="lead"
+            control={control}
+            render={({ field }) => (
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 mb-1.5 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-zinc-400" />
+                  Lead Prospect
+                </label>
+                <select
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 transition-all"
+                >
+                  <option value="">No lead prospect selected</option>
+                  {leads.map((l) => (
+                    <option key={l._id} value={l._id}>
+                      {l.name} {l.company ? `— ${l.company}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          />
+        </div>
+
+        {selectedClient && (
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-900">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-emerald-950">{selectedClient.companyName}</span>
+                {selectedClient.contactPerson && (
+                  <span className="text-emerald-800 font-medium">({selectedClient.contactPerson})</span>
+                )}
+                {selectedClient.email && (
+                  <span className="text-emerald-700 font-mono text-[11px]">&lt;{selectedClient.email}&gt;</span>
                 )}
               </div>
-              <p className="text-[11px] text-zinc-400 mt-1.5">
-                Optional. For online meetings, generate or paste a link. Leave blank for office or in-person meetings.
+              <p className="text-[11px] text-emerald-700/90 mt-0.5">
+                Session automatically syncs to Client Portal timeline & calendar invites.
               </p>
             </div>
-          )}
-        />
+          </div>
+        )}
+      </div>
 
-        {/* Location */}
-        <FormInput
-          label="Location"
-          placeholder="Conference Room / Virtual"
-          error={errors.location?.message}
-          {...register('location')}
-        />
+      {/* 3. Schedule, Time & Recurrence */}
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b border-zinc-100">
+          <span className="p-1.5 rounded-lg bg-zinc-100 text-zinc-700">
+            <Clock className="w-4 h-4" />
+          </span>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800">
+            Timing & Schedule
+          </h4>
+        </div>
 
-        {/* Status */}
-        <FormSelect
-          name="status"
-          control={control}
-          label="Status"
-          options={MEETING_STATUS}
-          error={errors.status?.message}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Controller
+            name="date"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                label="Date *"
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.date?.message}
+              />
+            )}
+          />
 
-        {/* Venture / Brand */}
-        <Controller
-          name="brand"
-          control={control}
-          render={({ field }) => (
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1.5">Venture</label>
-              <select
-                value={field.value || ''}
-                onChange={(e) => field.onChange(e.target.value || null)}
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-primary-900 focus:border-primary-900"
-              >
-                <option value="">Select venture...</option>
-                {LEAD_BRANDS.map((b) => (
-                  <option key={b.value} value={b.value}>{b.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        />
+          <Controller
+            name="startTime"
+            control={control}
+            render={({ field }) => (
+              <StartTimePicker
+                label="Start Time *"
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.startTime?.message}
+              />
+            )}
+          />
 
-        {/* Recurrence */}
+          <Controller
+            name="endTime"
+            control={control}
+            render={({ field }) => (
+              <DurationPicker
+                label="End Time *"
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.endTime?.message}
+                startTime={startTimeValue}
+              />
+            )}
+          />
+        </div>
+
+        {/* Recurrence Rule for new sessions */}
         {!isEditing && (
-          <>
+          <div className="pt-2 border-t border-zinc-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormSelect
               name="recurrenceType"
               control={control}
-              label="Repeat"
+              label="Recurrence Series"
               options={REPEAT_OPTIONS}
               error={errors.recurrenceType?.message}
             />
-            {watch('recurrenceType') !== 'none' && (
+            {recurrenceTypeValue !== 'none' && (
               <FormInput
                 type="number"
-                label="Occurrences"
+                label="Total Repeat Occurrences"
                 placeholder="3"
                 min={2}
-                max={100}
+                max={50}
                 error={errors.recurrenceOccurrences?.message}
                 {...register('recurrenceOccurrences')}
               />
             )}
-          </>
+          </div>
         )}
       </div>
 
-      {/* Attendees */}
+      {/* 4. Virtual Conference Link & Location */}
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-zinc-100 text-zinc-700">
+              <Video className="w-4 h-4" />
+            </span>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800">
+              Conference Link & Room Location
+            </h4>
+          </div>
+          <button
+            type="button"
+            onClick={onAutoGenerateLink}
+            disabled={isGeneratingLink}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs',
+              meetingLinkValue
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                : 'bg-primary-900 text-white hover:bg-primary-950 active:scale-95',
+              isGeneratingLink && 'opacity-60 cursor-not-allowed'
+            )}
+          >
+            {isGeneratingLink ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : meetingLinkValue ? (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            ) : (
+              <Zap className="w-3.5 h-3.5 text-amber-300" />
+            )}
+            <span>
+              {isGeneratingLink
+                ? 'Provisioning Room...'
+                : meetingLinkValue
+                ? 'Re-generate Zoho Link'
+                : 'Auto-Generate Zoho Link'}
+            </span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Controller
+            name="meetingLink"
+            control={control}
+            render={({ field }) => (
+              <div>
+                <LinkInput
+                  label="Virtual Meeting URL"
+                  placeholder="https://meet.zoho.in/join/... or Google Meet"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.meetingLink?.message}
+                />
+                {field.value && (
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <a
+                      href={field.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-900 hover:underline"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Test Join Link
+                    </a>
+                    <span className="text-zinc-300">&bull;</span>
+                    <button
+                      type="button"
+                      onClick={() => field.onChange('')}
+                      className="text-[11px] text-zinc-400 hover:text-red-600 transition-colors"
+                    >
+                      Remove link
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          />
+
+          <FormInput
+            label="Physical Location / Conference Room"
+            placeholder="e.g. 4th Floor Design Studio / Remote"
+            error={errors.location?.message}
+            {...register('location')}
+          />
+        </div>
+      </div>
+
+      {/* 5. Attendees Selection */}
       <Controller
         name="attendees"
         control={control}
-        render={({ field }) => (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-zinc-700 flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-zinc-500" />
-                Attendees {users.length > 0 && <span className="text-xs text-zinc-400">({field.value.length} selected)</span>}
-              </label>
-              <span className="text-xs text-zinc-400">Staff & Client Portal users</span>
-            </div>
-            {isUsersLoading ? (
-              <div className="p-4 text-center text-xs text-zinc-400 flex items-center justify-center gap-2 rounded-lg border border-zinc-200">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-400" />
-                Loading team members...
+        render={({ field }) => {
+          const selectedSet = new Set(field.value || []);
+          const toggleAttendee = (id) => {
+            if (selectedSet.has(id)) {
+              field.onChange((field.value || []).filter((v) => v !== id));
+            } else {
+              field.onChange([...(field.value || []), id]);
+            }
+          };
+
+          return (
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-100">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-zinc-100 text-zinc-700">
+                    <Users className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800">
+                      Attendees & Team Invites
+                    </h4>
+                    <span className="text-[11px] text-zinc-500">
+                      {selectedSet.size} attendee{selectedSet.size !== 1 ? 's' : ''} assigned
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      placeholder="Search colleagues..."
+                      value={attendeeSearch}
+                      onChange={(e) => setAttendeeSearch(e.target.value)}
+                      className="w-44 sm:w-56 pl-8 pr-3 py-1.5 rounded-lg border border-zinc-200 text-xs bg-zinc-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-900"
+                    />
+                    {attendeeSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setAttendeeSearch('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            ) : users.length === 0 ? (
-              <p className="text-xs text-zinc-400">No users available</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto rounded-lg border border-zinc-200 p-3">
-                {users.map((u) => {
-                  const checked = field.value.includes(u._id);
-                  const isClientUser = u.role === 'client';
-                  return (
-                    <label
-                      key={u._id}
-                      className={cn(
-                        'flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors',
-                        checked ? 'bg-primary-50/70' : 'hover:bg-zinc-50',
-                        isClientUser && 'border border-emerald-100 bg-emerald-50/30',
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-zinc-300 accent-primary-900"
-                        checked={checked}
-                        onChange={() =>
-                          field.onChange(
-                            checked
-                              ? field.value.filter((id) => id !== u._id)
-                              : [...field.value, u._id],
-                          )
-                        }
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-zinc-800">{u.name || u.email}</p>
-                        {u.name && <p className="truncate text-[10px] text-zinc-400">{u.email}</p>}
-                      </div>
-                      <span
+
+              {isUsersLoading ? (
+                <div className="p-6 text-center text-xs text-zinc-400 flex items-center justify-center gap-2 rounded-xl bg-zinc-50 border border-zinc-200/60">
+                  <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+                  Loading team directory...
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="p-4 text-center text-xs text-zinc-400 rounded-xl bg-zinc-50 border border-zinc-200/60">
+                  No colleagues match &ldquo;{attendeeSearch}&rdquo;
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                  {filteredUsers.map((u) => {
+                    const isSelected = selectedSet.has(u._id);
+                    const isClientUser = u.role === 'client';
+
+                    return (
+                      <div
+                        key={u._id}
+                        onClick={() => toggleAttendee(u._id)}
                         className={cn(
-                          'ml-auto text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded',
-                          isClientUser
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-zinc-100 text-zinc-500',
+                          'flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all select-none',
+                          isSelected
+                            ? 'bg-primary-900/5 border-primary-900/30 shadow-xs'
+                            : 'bg-white border-zinc-200/80 hover:bg-zinc-50 hover:border-zinc-300'
                         )}
                       >
-                        {u.role}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                        <div
+                          className={cn(
+                            'w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors',
+                            isSelected
+                              ? 'bg-primary-900 border-primary-900 text-white'
+                              : 'border-zinc-300 bg-white'
+                          )}
+                        >
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+
+                        <div className="w-7 h-7 rounded-full bg-zinc-100 border border-zinc-200/80 flex items-center justify-center font-bold text-xs text-zinc-700 shrink-0">
+                          {u.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-zinc-900 leading-tight">
+                            {u.name || u.email}
+                          </p>
+                          <p className="truncate text-[10px] text-zinc-400 leading-tight mt-0.5">
+                            {u.email}
+                          </p>
+                        </div>
+
+                        <span
+                          className={cn(
+                            'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md border shrink-0',
+                            isClientUser
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-zinc-100 text-zinc-600 border-zinc-200'
+                          )}
+                        >
+                          {u.role}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }}
       />
 
-      {/* Discussion Notes */}
-      <FormTextarea
-        label="Discussion Notes"
-        placeholder="What was discussed in the meeting? Agenda, decisions, action items..."
-        error={errors.notes?.message}
-        {...register('notes')}
-      />
+      {/* 6. Discussion Notes / Agenda */}
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b border-zinc-100">
+          <span className="p-1.5 rounded-lg bg-zinc-100 text-zinc-700">
+            <FileText className="w-4 h-4" />
+          </span>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800">
+            Discussion Agenda & Notes
+          </h4>
+        </div>
 
-      {/* Footer */}
+        <FormTextarea
+          rows={4}
+          placeholder="Outline briefing objectives, required deliverables, key topics to resolve, or recording summary..."
+          error={errors.notes?.message}
+          {...register('notes')}
+        />
+      </div>
+
+      {/* 7. Action Footer */}
       <div className="flex items-center justify-end gap-3 pt-2">
         {onCancel && (
-          <Button type="button" variant="secondary" onClick={onCancel}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            className="rounded-xl px-5 py-2.5 text-xs font-semibold text-zinc-700 border-zinc-200 hover:bg-zinc-100"
+          >
             Cancel
           </Button>
         )}
-        <Button type="submit" loading={isCreating || isUpdating}>
-          {isEditing ? 'Update Meeting' : 'Schedule Meeting'}
+        <Button
+          type="submit"
+          loading={isCreating || isUpdating}
+          className="rounded-xl px-6 py-2.5 text-xs font-semibold bg-primary-900 text-white hover:bg-primary-950 shadow-sm"
+        >
+          {isEditing ? 'Save Changes' : 'Schedule Meeting'}
         </Button>
       </div>
     </form>
