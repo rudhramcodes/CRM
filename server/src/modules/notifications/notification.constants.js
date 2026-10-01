@@ -102,7 +102,7 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `New lead "${d.leadName}" from ${d.source}`,
     priority: NOTIFICATION_PRIORITIES.LOW,
     channels: { email: false, cliq: true },
-    cliqChannel: 'sales',
+    cliqChannel: 'leads',
   },
   lead_assigned: {
     title: 'Lead Assigned',
@@ -115,7 +115,7 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `"${d.leadName}" has been converted to a client`,
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: false, cliq: true },
-    cliqChannel: 'sales',
+    cliqChannel: 'leads',
   },
   meeting_scheduled: {
     title: 'Meeting Scheduled',

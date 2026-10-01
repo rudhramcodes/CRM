@@ -57,7 +57,8 @@ const config = {
   cliq: {
     webhookUrl: process.env.ZOHO_CLIQ_WEBHOOK_URL || '',
     channels: {
-      sales: process.env.ZOHO_CLIQ_WEBHOOK_SALES || '',
+      leads: process.env.ZOHO_CLIQ_WEBHOOK_LEADS || process.env.ZOHO_CLIQ_WEBHOOK_SALES || '',
+      sales: process.env.ZOHO_CLIQ_WEBHOOK_LEADS || process.env.ZOHO_CLIQ_WEBHOOK_SALES || '',
       projects: process.env.ZOHO_CLIQ_WEBHOOK_PROJECTS || '',
       finance: process.env.ZOHO_CLIQ_WEBHOOK_FINANCE || '',
       support: process.env.ZOHO_CLIQ_WEBHOOK_SUPPORT || '',
