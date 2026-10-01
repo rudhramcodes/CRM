@@ -365,8 +365,12 @@ export const generateInvoiceHtml = (invoice) => {
       margin-bottom: 12px;
       page-break-inside: auto;
     }
+    .items-table thead {
+      display: table-header-group;
+    }
     .items-table tr {
       page-break-inside: avoid;
+      break-inside: avoid;
       page-break-after: auto;
     }
     .items-table th {
@@ -486,6 +490,10 @@ export const generateInvoiceHtml = (invoice) => {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
+      margin-top: 36px;
+      padding-bottom: 40px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .bank-box {
@@ -645,14 +653,8 @@ export const generateInvoiceHtml = (invoice) => {
                 </div>` : ''}
               </div>
             </div>
-          </td>
-        </tr>
-      </tbody>
 
-      <!-- FOOTER: Repeats on every page (or sticks to the end) -->
-      <tfoot>
-        <tr>
-          <td>
+            <!-- FOOTER: Appears only on the last page after all items and totals -->
             <div class="footer-grid">
               <div class="bank-box">
                 <div class="bank-title">BANK DETAILS</div>
@@ -671,7 +673,7 @@ export const generateInvoiceHtml = (invoice) => {
             </div>
           </td>
         </tr>
-      </tfoot>
+      </tbody>
     </table>
   </div>
 </body>
