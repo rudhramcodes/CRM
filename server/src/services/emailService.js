@@ -126,7 +126,8 @@ export const renderEmail = ({ preheader = '', heading, subtext = '', bodyHtml = 
         ${ctaHtml}
       </td></tr>
       <tr><td align="center" style="padding:28px 16px 0;">
-        <p style="margin:0;font-family:${FONT};font-size:12px;color:${MUTED};line-height:1.6;">Rudhram &mdash; Manage your business, grow your revenue.</p>
+        <p style="margin:0;font-family:${FONT};font-size:12px;color:${MUTED};line-height:1.6;">Rudhram &mdash; Leading What's Next</p>
+        <p style="margin:4px 0 0;font-family:${FONT};font-size:12px;color:${MUTED};line-height:1.6;">Support: <a href="mailto:support@rudhramenterprises.com" style="color:${MUTED};text-decoration:none;">support@rudhramenterprises.com</a> &middot; <a href="tel:+918655695623" style="color:${MUTED};text-decoration:none;">+91 8655695623</a></p>
         ${footerNote ? `<p style="margin:6px 0 0;font-family:${FONT};font-size:12px;color:${MUTED};line-height:1.6;">${footerNote}</p>` : ''}
       </td></tr>
     </table>
@@ -384,17 +385,103 @@ const LIGHT_GOLD = '#DCC19D';
 const EMAIL_FONT = "'Bricolage Grotesque', Georgia, serif";
 const EMAIL_BODY_FONT = "'Manrope', Helvetica, Arial, sans-serif";
 
-export const renderClientOnboardingEmail = ({ clientName, companyName, clientId, brand }) => {
+export const RE_PHONE = '8655695623';
+export const RE_EMAIL = 'support@rudhramenterprises.com';
+
+export const BRAND_PHONE_MAP = {
+  re: '8655695623',
+  ag: '8655695624',
+  aghori: '8655695624',
+  aghhori: '8655695624',
+  pg: '8655695625',
+  panigrahna: '8655695625',
+  hg: '8655695626',
+  house_of_joggi: '8655695626',
+  houseofjoogi: '8655695626',
+  house_of_joogi: '8655695626',
+  kl: '8655695627',
+  kalyannam: '8655695627',
+  td: '8655695628',
+  tandavs: '8655695628',
+  dm: '8655695629',
+  damrru: '8655695629',
+  kp: '-',
+  kapaalik: '-',
+  storage_media_solution: '-',
+};
+
+export const BRAND_EMAIL_MAP = {
+  re: 'support@rudhramenterprises.com',
+  damrru: 'damrru@rudhramenterprises.com',
+  dm: 'damrru@rudhramenterprises.com',
+  panigrahna: 'panigrahna@rudhramenterprises.com',
+  pg: 'panigrahna@rudhramenterprises.com',
+  aghori: 'aghhori@rudhramenterprises.com',
+  aghhori: 'aghhori@rudhramenterprises.com',
+  ag: 'aghhori@rudhramenterprises.com',
+  house_of_joggi: 'houseofjoogi@rudhramenterprises.com',
+  houseofjoogi: 'houseofjoogi@rudhramenterprises.com',
+  house_of_joogi: 'houseofjoogi@rudhramenterprises.com',
+  hg: 'houseofjoogi@rudhramenterprises.com',
+  kalyannam: 'kalyannam@rudhramenterprises.com',
+  kl: 'kalyannam@rudhramenterprises.com',
+  kapaalik: 'kapaalik@rudhramenterprises.com',
+  kp: 'kapaalik@rudhramenterprises.com',
+  tandavs: 'tandavs@rudhramenterprises.com',
+  td: 'tandavs@rudhramenterprises.com',
+  storage_media_solution: 'support@rudhramenterprises.com',
+};
+
+export const getBrandSupportInfo = (brand) => {
+  const brandKey = (brand || '').toLowerCase().trim();
   const brandLabel = {
     panigrahna: 'Panigrahna',
     aghori: 'Aghori',
+    aghhori: 'Aghori',
     house_of_joggi: 'House of Joggi',
+    houseofjoogi: 'House of Joggi',
+    house_of_joogi: 'House of Joggi',
     damrru: 'Damrru',
     tandavs: 'Tandavs',
     kapaalik: 'Kapaalik',
     kalyannam: 'Kalyannam',
     storage_media_solution: 'Storage Media Solution',
-  }[brand] || brand;
+    ag: 'Aghori',
+    pg: 'Panigrahna',
+    hg: 'House of Joggi',
+    kl: 'Kalyannam',
+    td: 'Tandavs',
+    dm: 'Damrru',
+    kp: 'Kapaalik',
+    re: 'Rudhram Enterprises',
+  }[brandKey] || brand || 'Rudhram';
+
+  const brandPhone = BRAND_PHONE_MAP[brandKey] || '-';
+  const brandPhoneFormatted = brandPhone === '-' ? '-' : `+91 ${brandPhone}`;
+  const rePhoneFormatted = `+91 ${RE_PHONE}`;
+
+  const brandEmail = BRAND_EMAIL_MAP[brandKey] || RE_EMAIL;
+  const reEmail = RE_EMAIL;
+
+  return {
+    brandLabel,
+    brandPhone,
+    brandPhoneFormatted,
+    rePhone: RE_PHONE,
+    rePhoneFormatted,
+    brandEmail,
+    reEmail,
+  };
+};
+
+export const renderClientOnboardingEmail = ({ clientName, companyName, clientId, brand }) => {
+  const { brandLabel, brandPhone, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
+  const brandPhoneLink = brandPhone === '-'
+    ? '<span style="color:#8a7560;">-</span>'
+    : `<a href="tel:+91${brandPhone}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${brandPhoneFormatted}</a>`;
+  const rePhoneLink = `<a href="tel:+91${RE_PHONE}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${rePhoneFormatted}</a>`;
+  const reEmailLink = `<a href="mailto:${reEmail}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${reEmail}</a>`;
+  const brandEmailLink = `<a href="mailto:${brandEmail}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${brandEmail}</a>`;
 
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -449,12 +536,13 @@ export const renderClientOnboardingEmail = ({ clientName, companyName, clientId,
       <p style="margin:0 0 28px;font-family:${EMAIL_FONT};font-size:15px;color:${GOLD};line-height:1.5;">Your partnership begins here</p>
       <p style="margin:0 0 20px;font-family:${EMAIL_BODY_FONT};font-size:15px;color:${DARK_BROWN};line-height:1.75;">Dear <strong style="font-weight:600;">${clientName}</strong>,</p>
       <p style="margin:0 0 20px;font-family:${EMAIL_BODY_FONT};font-size:15px;color:${DARK_BROWN};line-height:1.75;">We are delighted to welcome you to Rudhram. Your account has been created and you now have access to our client portal where you can track projects, review invoices, and collaborate with our team.</p>
+      
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;border:1px solid ${LIGHT_GOLD};border-radius:14px;overflow:hidden;" class="details-table">
         <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Your Account Details</td></tr>
         <tr><td style="padding:0;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:140px;">Client ID</td>
+              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:150px;">Client ID</td>
               <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${clientId}</td>
             </tr>
             <tr>
@@ -468,6 +556,7 @@ export const renderClientOnboardingEmail = ({ clientName, companyName, clientId,
           </table>
         </td></tr>
       </table>
+
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;border:1px solid ${LIGHT_GOLD};border-radius:12px;overflow:hidden;">
         <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:14px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Next Steps</td></tr>
         <tr><td style="padding:18px 22px;">
@@ -475,14 +564,44 @@ export const renderClientOnboardingEmail = ({ clientName, companyName, clientId,
           <p style="margin:0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:${DARK_BROWN};line-height:1.7;">For your security, you will be prompted to change your password after your first login.</p>
         </td></tr>
       </table>
-      <p style="margin:28px 0 0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:#8a7560;line-height:1.7;">If you have any questions, your dedicated account manager is here to help. Simply reply to this email or reach out through the portal.</p>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;border:1px solid ${LIGHT_GOLD};border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:16px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:14px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Direct Support & Contact</td></tr>
+        <tr><td style="padding:18px 22px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:170px;vertical-align:top;">Rudhram Enterprises</td>
+              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};">
+                ${rePhoneLink} &nbsp;&middot;&nbsp; ${reEmailLink}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;vertical-align:top;">${brandLabel}</td>
+              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};">
+                ${brandPhoneLink} &nbsp;&middot;&nbsp; ${brandEmailLink}
+              </td>
+            </tr>
+          </table>
+          <p style="margin:12px 0 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;line-height:1.6;">
+            Feel free to contact us via phone or email during business hours, or reach out through your client portal.
+          </p>
+        </td></tr>
+      </table>
+
+      <p style="margin:24px 0 0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:#8a7560;line-height:1.7;">If you have any questions, your dedicated account manager is here to help. Simply reply to this email, call our direct numbers, or reach out through the portal.</p>
     </td></tr>
   </table>
 </td></tr>
 
 <tr><td align="center" style="padding:32px 16px 0;">
   <p style="margin:0;font-family:${EMAIL_FONT};font-size:13px;color:${GOLD};line-height:1.6;letter-spacing:0.5px;">RUDHRAM</p>
-  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Manage your business, grow your revenue.</p>
+  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Leading What's Next</p>
+  <p style="margin:6px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">
+    RE: <a href="tel:+91${RE_PHONE}" style="color:#a89880;text-decoration:none;">${rePhoneFormatted}</a> &middot; <a href="mailto:${reEmail}" style="color:#a89880;text-decoration:none;">${reEmail}</a>
+  </p>
+  <p style="margin:4px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">
+    ${brandLabel}: ${brandPhone !== '-' ? `<a href="tel:+91${brandPhone}" style="color:#a89880;text-decoration:none;">${brandPhoneFormatted}</a> &middot; ` : ''}<a href="mailto:${brandEmail}" style="color:#a89880;text-decoration:none;">${brandEmail}</a>
+  </p>
 </td></tr>
 
 </table>
@@ -500,7 +619,15 @@ export const sendClientOnboardingEmail = async (email, { clientName, companyName
   });
 };
 
-export const renderClientCredentialsEmail = ({ clientName, email, password, portalUrl }) => {
+export const renderClientCredentialsEmail = ({ clientName, email, password, portalUrl, brand }) => {
+  const { brandLabel, brandPhone, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
+  const brandPhoneLink = brandPhone === '-'
+    ? '<span style="color:#8a7560;">-</span>'
+    : `<a href="tel:+91${brandPhone}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${brandPhoneFormatted}</a>`;
+  const rePhoneLink = `<a href="tel:+91${RE_PHONE}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${rePhoneFormatted}</a>`;
+  const reEmailLink = `<a href="mailto:${reEmail}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${reEmail}</a>`;
+  const brandEmailLink = `<a href="mailto:${brandEmail}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${brandEmail}</a>`;
+
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -576,6 +703,26 @@ export const renderClientCredentialsEmail = ({ clientName, email, password, port
         </td></tr>
       </table>
 
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;border:1px solid ${LIGHT_GOLD};border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:14px 18px;background:${CREAM};font-family:${EMAIL_FONT};font-size:13px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Need Assistance? Direct Support</td></tr>
+        <tr><td style="padding:14px 18px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:170px;vertical-align:top;">Rudhram Enterprises:</td>
+              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};">
+                ${rePhoneLink} &nbsp;&middot;&nbsp; ${reEmailLink}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;vertical-align:top;">${brandLabel}:</td>
+              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};">
+                ${brandPhoneLink} &nbsp;&middot;&nbsp; ${brandEmailLink}
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+
       <p style="margin:24px 0 0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:#8a7560;line-height:1.7;">If you did not request this account, please contact our support team immediately.</p>
     </td></tr>
   </table>
@@ -583,7 +730,14 @@ export const renderClientCredentialsEmail = ({ clientName, email, password, port
 
 <tr><td align="center" style="padding:32px 16px 0;">
   <p style="margin:0;font-family:${EMAIL_FONT};font-size:13px;color:${GOLD};line-height:1.6;letter-spacing:0.5px;">RUDHRAM</p>
-  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Manage your business, grow your revenue.</p>
+  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Leading What's Next</p>
+  <p style="margin:6px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">
+    RE: <a href="tel:+91${RE_PHONE}" style="color:#a89880;text-decoration:none;">${rePhoneFormatted}</a> &middot; <a href="mailto:${reEmail}" style="color:#a89880;text-decoration:none;">${reEmail}</a>
+  </p>
+  <p style="margin:4px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">
+    ${brandLabel}: ${brandPhone !== '-' ? `<a href="tel:+91${brandPhone}" style="color:#a89880;text-decoration:none;">${brandPhoneFormatted}</a> &middot; ` : ''}<a href="mailto:${brandEmail}" style="color:#a89880;text-decoration:none;">${brandEmail}</a>
+  </p>
+</td></tr>
 </td></tr>
 
 </table>
@@ -593,12 +747,12 @@ export const renderClientCredentialsEmail = ({ clientName, email, password, port
 </html>`;
 };
 
-export const sendClientCredentialsEmail = async (to, { clientName, email, password }) => {
+export const sendClientCredentialsEmail = async (to, { clientName, email, password, brand }) => {
   const portalUrl = `${config.clientUrl}/portal/login`;
   return sendEmail({
     to,
     subject: `Your Rudhram Portal Login Credentials`,
-    html: renderClientCredentialsEmail({ clientName, email, password, portalUrl }),
+    html: renderClientCredentialsEmail({ clientName, email, password, portalUrl, brand }),
   });
 };
 
@@ -760,7 +914,7 @@ export const renderFreelancerSubmissionEmail = ({ freelancer }) => {
 
 <tr><td align="center" style="padding:32px 16px 0;">
   <p style="margin:0;font-family:${EMAIL_FONT};font-size:13px;color:${GOLD};line-height:1.6;letter-spacing:0.5px;">RUDHRAM</p>
-  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Manage your business, grow your revenue.</p>
+  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Leading What's Next</p>
 </td></tr>
 
 </table>

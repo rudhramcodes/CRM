@@ -138,6 +138,7 @@ export const create = async (data, user) => {
             clientName: data.contactPerson,
             email: data.email,
             password: CLIENT_DEFAULT_PASSWORD,
+            brand: data.brand,
           })
             .then(() => logger.info(`[create-client] Credentials email sent to ${data.email}`))
             .catch((err) => logger.error(`[create-client] Credentials email failed: ${err.message}`));
@@ -239,6 +240,7 @@ export const convertFromLead = async (leadId, user) => {
         clientName: lead.name,
         email: lead.email,
         password: CLIENT_DEFAULT_PASSWORD,
+        brand,
       })
         .then(() => logger.info(`[convert-lead] Credentials email sent to ${lead.email}`))
         .catch((err) => logger.error(`[convert-lead] Credentials email failed: ${err.message}`));

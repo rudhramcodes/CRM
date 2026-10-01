@@ -32,3 +32,5 @@ docs
 2026-08-19-client-portal-design.md
 backupsserver/scripts/*.mjs
 superpowers
+mail.html
+server/scripts/generateEmailPreviews.js

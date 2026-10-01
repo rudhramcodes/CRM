@@ -313,6 +313,7 @@ export const updateLead = async (id, data, user) => {
               clientName: lead.name,
               email: clientEmail,
               password: CLIENT_DEFAULT_PASSWORD,
+              brand,
             }))
             .then(() => logger.info(`[lead-convert] Credentials email sent to ${clientEmail}`))
             .catch((err) => logger.error(`[lead-convert] Credentials email failed: ${err.message}`));
