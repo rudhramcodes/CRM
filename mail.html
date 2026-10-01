@@ -689,10 +689,18 @@
         }
 
         // Init
-        window.addEventListener('DOMContentLoaded', () => {
+        function init() {
             renderList();
-            selectEmail(emailsData[0].id);
-        });
+            if (emailsData.length > 0) {
+                selectEmail(emailsData[0].id);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
 </body>
 

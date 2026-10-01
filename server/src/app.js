@@ -41,10 +41,17 @@ const app = express();
 // Trust proxy (required for Render/Heroku/AWS ALB to get correct req.protocol)
 app.set('trust proxy', 1);
 
+const defaultCspDirectives = helmet.contentSecurityPolicy.getDefaultDirectives();
+delete defaultCspDirectives['script-src-attr'];
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      imgSrc: ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com'],
+      ...defaultCspDirectives,
+      'script-src': ["'self'", "'unsafe-inline'"],
+      'script-src-attr': ["'unsafe-inline'"],
+      'img-src': ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com', 'https:'],
+      'frame-src': ["'self'", 'blob:', 'data:'],
     },
   },
 }));
