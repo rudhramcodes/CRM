@@ -12,6 +12,7 @@ import {
   Upload,
   X,
   ListChecks,
+  ChevronDown,
 } from 'lucide-react';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
@@ -260,14 +261,14 @@ export default function LeadImportModal({ open, onClose }) {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-1 border-t border-zinc-100">
-              <p className="text-xs text-zinc-400">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-zinc-100">
+              <p className="text-xs text-zinc-400 text-center sm:text-left">
                 {result.skipped > 0
                   ? 'Tip: download the template and check the column formats'
                   : 'You can import more files anytime'}
               </p>
-              <div className="flex items-center gap-2">
-                <Button variant="secondary" onClick={onClose}>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button variant="secondary" onClick={onClose} className="flex-1 sm:flex-initial text-xs justify-center rounded-xl">
                   Done
                 </Button>
                 <Button
@@ -276,31 +277,36 @@ export default function LeadImportModal({ open, onClose }) {
                     setFile(null);
                     setView('upload');
                   }}
+                  className="flex-1 sm:flex-initial text-xs justify-center rounded-xl"
                 >
-                  <RefreshCwIcon className="w-3.5 h-3.5" />
-                  Import another file
+                  <RefreshCwIcon className="w-3.5 h-3.5 mr-1" />
+                  Import another
                 </Button>
               </div>
             </div>
           </motion.div>
         ) : (
-          <motion.div key="upload" {...viewMotion} className="space-y-5">
-            <div className="grid grid-cols-3 gap-2">
+          <motion.div key="upload" {...viewMotion} className="space-y-4 sm:space-y-5">
+            {/* 3 Steps Ribbon */}
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
               {STEPS.map((step, i) => (
                 <div
                   key={step.label}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50/60 px-3 py-3 text-center"
+                  className="flex flex-col items-center gap-1 sm:gap-2 rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-2 sm:p-3 text-center"
                 >
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-zinc-200 text-primary-900 text-xs font-bold shadow-sm">
+                  <span className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white border border-zinc-200 text-primary-900 text-[11px] sm:text-xs font-bold shadow-2xs">
                     {i + 1}
                   </span>
-                  <step.icon className="w-4 h-4 text-zinc-400" />
-                  <p className="text-xs font-medium text-zinc-600">{step.label}</p>
+                  <step.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400" />
+                  <p className="text-[10px] sm:text-xs font-medium text-zinc-600 leading-tight">
+                    {step.label}
+                  </p>
                 </div>
               ))}
             </div>
 
             <div>
+              {/* Dropzone Container */}
               <div
                 onDragEnter={onDragEnter}
                 onDragOver={onDragOver}
@@ -316,7 +322,7 @@ export default function LeadImportModal({ open, onClose }) {
                   }
                 }}
                 className={cn(
-                  'relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-12 text-center cursor-pointer outline-none transition-all duration-200',
+                  'relative flex flex-col items-center justify-center gap-2.5 sm:gap-3 rounded-2xl border-2 border-dashed px-4 py-5 sm:py-8 text-center cursor-pointer outline-none transition-all duration-200',
                   dragReject
                     ? 'border-red-300 bg-red-50/60'
                     : dragActive
@@ -332,7 +338,7 @@ export default function LeadImportModal({ open, onClose }) {
                     exit={{ scale: 0.8, opacity: 0 }}
                     transition={{ duration: 0.15 }}
                     className={cn(
-                      'flex items-center justify-center w-14 h-14 rounded-full',
+                      'flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 rounded-full',
                       dragReject
                         ? 'bg-red-100'
                         : dragActive
@@ -341,11 +347,11 @@ export default function LeadImportModal({ open, onClose }) {
                     )}
                   >
                     {dragReject ? (
-                      <AlertCircle className="w-6 h-6 text-red-600" />
+                      <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
                     ) : dragActive ? (
-                      <ArrowDownToLine className="w-6 h-6 text-white animate-bounce" />
+                      <ArrowDownToLine className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-bounce" />
                     ) : (
-                      <FileSpreadsheet className="w-6 h-6 text-primary-900" />
+                      <FileSpreadsheet className="w-5 h-5 sm:w-6 sm:h-6 text-primary-900" />
                     )}
                   </motion.span>
                 </AnimatePresence>
@@ -360,21 +366,21 @@ export default function LeadImportModal({ open, onClose }) {
                   >
                     {dragReject ? (
                       <>
-                        <p className="text-sm font-medium text-red-700">Only spreadsheet files are allowed</p>
-                        <p className="text-xs text-red-500/80 mt-1">Choose a {EXTENSIONS_TEXT} file</p>
+                        <p className="text-xs sm:text-sm font-medium text-red-700">Only spreadsheet files are allowed</p>
+                        <p className="text-[10px] sm:text-xs text-red-500/80 mt-0.5">Choose a {EXTENSIONS_TEXT} file</p>
                       </>
                     ) : dragActive ? (
                       <>
-                        <p className="text-sm font-semibold text-primary-900">Drop your file to import</p>
-                        <p className="text-xs text-primary-900/60 mt-1">Release to start importing</p>
+                        <p className="text-xs sm:text-sm font-semibold text-primary-900">Drop your file to import</p>
+                        <p className="text-[10px] sm:text-xs text-primary-900/60 mt-0.5">Release to start importing</p>
                       </>
                     ) : (
                       <>
-                        <p className="text-sm font-medium text-zinc-800">
-                          Drag &amp; drop your file here, or{' '}
+                        <p className="text-xs sm:text-sm font-medium text-zinc-800">
+                          Drag &amp; drop file here, or{' '}
                           <span className="underline underline-offset-2 text-primary-900 font-semibold">browse</span>
                         </p>
-                        <p className="text-xs text-zinc-400 mt-1">{EXTENSIONS_TEXT} · up to 5MB · up to 1000 leads</p>
+                        <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">{EXTENSIONS_TEXT} · up to 5MB · up to 1000 leads</p>
                       </>
                     )}
                   </motion.div>
@@ -400,9 +406,9 @@ export default function LeadImportModal({ open, onClose }) {
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+                    <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
                       <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                      <p className="text-sm text-red-700">{fileError}</p>
+                      <p className="text-xs sm:text-sm text-red-700">{fileError}</p>
                     </div>
                   </motion.div>
                 )}
@@ -414,21 +420,21 @@ export default function LeadImportModal({ open, onClose }) {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="mt-3 flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3"
+                    className="mt-2.5 flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50/80 px-3.5 py-2.5"
                   >
-                    <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-100 shrink-0">
-                      <FileUp className="w-5 h-5 text-green-700" />
+                    <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-green-100 shrink-0">
+                      <FileUp className="w-4 h-4 text-green-700" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-zinc-800 truncate">{file.name}</p>
-                      <p className="text-xs text-zinc-400">{formatFileSize(file.size)}</p>
+                      <p className="text-xs sm:text-sm font-semibold text-zinc-800 truncate">{file.name}</p>
+                      <p className="text-[11px] text-zinc-400">{formatFileSize(file.size)}</p>
                     </div>
                     <button
                       onClick={() => {
                         setFile(null);
                         setFileError(null);
                       }}
-                      className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                       title="Remove file"
                     >
                       <X className="w-4 h-4" />
@@ -438,46 +444,57 @@ export default function LeadImportModal({ open, onClose }) {
               </AnimatePresence>
             </div>
 
-            <div className="rounded-2xl border border-zinc-200 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-zinc-50/80 border-b border-zinc-200">
+            {/* Responsive Columns Guide Table (Collapsible Accordion) */}
+            <details className="group rounded-2xl border border-zinc-200/90 overflow-hidden bg-white" open>
+              <summary className="flex items-center justify-between px-3.5 py-2.5 sm:px-4 sm:py-3 bg-zinc-50/80 border-b border-zinc-200/80 cursor-pointer list-none select-none hover:bg-zinc-100/70 transition-colors">
                 <div className="flex items-center gap-2">
                   <Table2 className="w-4 h-4 text-primary-900" />
-                  <p className="text-sm font-semibold text-primary-900">Columns in your file</p>
+                  <p className="text-xs sm:text-sm font-semibold text-primary-900">Columns in your file</p>
+                  <span className="text-[10px] font-semibold bg-zinc-200/70 text-zinc-600 px-1.5 py-0.2 rounded-full">
+                    {COLUMN_GUIDE.length}
+                  </span>
                 </div>
-                <span className="text-xs text-zinc-400">First row must be headers</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <span className="text-[10px] sm:text-xs hidden sm:inline">First row must be headers</span>
+                  <ChevronDown className="w-4 h-4 text-zinc-400 transition-transform duration-200 group-open:rotate-180" />
+                </div>
+              </summary>
+              <div className="overflow-x-auto max-h-48 sm:max-h-56 overflow-y-auto">
+                <table className="w-full text-xs sm:text-sm">
                   <tbody className="divide-y divide-zinc-100">
                     {COLUMN_GUIDE.map((col) => (
                       <tr key={col.name} className="hover:bg-zinc-50/60">
-                        <td className="px-4 py-2 font-medium text-zinc-800 whitespace-nowrap">{col.name}</td>
-                        <td className="px-4 py-2 w-20">
+                        <td className="px-3 sm:px-4 py-2 font-semibold text-zinc-800 whitespace-nowrap text-xs">
+                          {col.name}
+                        </td>
+                        <td className="px-2 sm:px-3 py-2 w-16 sm:w-20">
                           {col.required ? (
-                            <span className="inline-flex px-1.5 py-0.5 rounded-md bg-red-50 text-red-600 text-[11px] font-semibold">
+                            <span className="inline-flex px-1.5 py-0.5 rounded-md bg-red-50 text-red-600 text-[10px] font-bold">
                               Required
                             </span>
                           ) : (
-                            <span className="text-xs text-zinc-400">Optional</span>
+                            <span className="text-[10px] sm:text-xs text-zinc-400 font-medium">Optional</span>
                           )}
                         </td>
-                        <td className="px-4 py-2 text-zinc-500">{col.format}</td>
+                        <td className="px-3 sm:px-4 py-2 text-[11px] sm:text-xs text-zinc-500 break-words">
+                          {col.format}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="px-4 py-3 border-t border-zinc-200 bg-zinc-50/40">
-                <ul className="space-y-1.5">
+              <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 border-t border-zinc-200/80 bg-zinc-50/40">
+                <ul className="space-y-1">
                   {RULES.map((rule) => (
-                    <li key={rule} className="flex items-start gap-2 text-xs text-zinc-600">
-                      <ListChecks className="w-3.5 h-3.5 text-primary-900/60 shrink-0 mt-px" />
-                      {rule}
+                    <li key={rule} className="flex items-start gap-1.5 text-[11px] text-zinc-600 leading-normal">
+                      <ListChecks className="w-3.5 h-3.5 text-primary-900/60 shrink-0 mt-0.5" />
+                      <span>{rule}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </div>
+            </details>
 
             <AnimatePresence>
               {apiError && (
@@ -487,29 +504,45 @@ export default function LeadImportModal({ open, onClose }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5">
                     <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-red-700">Import failed</p>
-                      <p className="text-sm text-red-600/90 mt-0.5">{apiError}</p>
-                      <p className="text-xs text-red-500 mt-1">No changes were made. Check the file and try again.</p>
+                      <p className="text-xs sm:text-sm font-semibold text-red-700">Import failed</p>
+                      <p className="text-xs text-red-600/90 mt-0.5">{apiError}</p>
+                      <p className="text-[11px] text-red-500 mt-1">No changes were made. Check the file and try again.</p>
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <div className="flex items-center justify-between pt-1 border-t border-zinc-100">
-              <Button variant="ghost" onClick={downloadTemplate}>
-                <Download className="w-3.5 h-3.5" />
+            {/* Modal Bottom Action Controls */}
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2.5 pt-2.5 border-t border-zinc-100">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={downloadTemplate}
+                className="w-full sm:w-auto text-xs justify-center rounded-xl font-medium"
+              >
+                <Download className="w-3.5 h-3.5 mr-1 text-zinc-500" />
                 Download template
               </Button>
-              <div className="flex items-center gap-2">
-                <Button variant="secondary" onClick={onClose}>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onClose}
+                  className="flex-1 sm:flex-initial text-xs justify-center rounded-xl"
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleImport} disabled={!file || hasErrors || isImporting}>
-                  <Upload className="w-3.5 h-3.5" />
+                <Button
+                  type="button"
+                  onClick={handleImport}
+                  disabled={!file || hasErrors || isImporting}
+                  className="flex-1 sm:flex-initial text-xs justify-center rounded-xl font-semibold shadow-2xs"
+                >
+                  <Upload className="w-3.5 h-3.5 mr-1" />
                   Import leads
                 </Button>
               </div>

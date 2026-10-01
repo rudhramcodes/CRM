@@ -4,7 +4,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../compo
 import { formatDate } from '../../../utils/formatters';
 import { LEAD_STATUS, LEAD_BRANDS, BRAND_METAS } from '../../../constants';
 import { cn } from '../../../utils/cn';
-import { Edit2, Mail, Phone, Building2 } from 'lucide-react';
+import { Edit2, Mail, Phone, Building2, MessageCircle } from 'lucide-react';
 
 export default function LeadTable({
   leads,
@@ -239,7 +239,7 @@ export default function LeadTable({
 
   return (
     <>
-      {/* Desktop / Tablet Table View (>= md) */}
+      {/* Desktop / Tablet: Full Data Table (>= md) */}
       <div className="hidden md:block">
         <DataTable
           columns={columns}
@@ -266,7 +266,7 @@ export default function LeadTable({
         />
       </div>
 
-      {/* Mobile Touch Card View (< md) */}
+      {/* Mobile: Clean Touch Cards View (< md) */}
       <div className="md:hidden divide-y divide-zinc-100">
         {/* Mobile Select All Header */}
         {selectable && leads.length > 0 && (
@@ -300,15 +300,21 @@ export default function LeadTable({
         ) : (
           <div className="p-3 space-y-2.5">
             {leads.map((lead) => {
-              const initials = lead.name
-                ?.split(' ')
-                .map((n) => n[0])
-                .join('')
-                .toUpperCase()
-                .slice(0, 2) || 'LE';
+              const initials =
+                lead.name
+                  ?.split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .toUpperCase()
+                  .slice(0, 2) || 'LE';
               const assignedClientId = lead.clientId || lead.convertedToClient?.clientId;
               const meta = BRAND_METAS[lead.brand];
               const isSelected = selectable && selectedIds.includes(lead._id);
+
+              const rawPhone = lead.phone?.replace(/[^\d]/g, '') || '';
+              const waLink = rawPhone
+                ? `https://wa.me/${rawPhone.length === 10 ? `91${rawPhone}` : rawPhone}`
+                : null;
 
               return (
                 <div
@@ -356,7 +362,7 @@ export default function LeadTable({
                           )}
                         </div>
                         {lead.company ? (
-                          <p className="text-[11px] text-zinc-500 truncate flex items-center gap-1 mt-0.5">
+                          <p className="text-[11px] text-zinc-500 truncate flex items-center gap-1 mt-0.5 font-medium">
                             <Building2 className="w-3 h-3 text-zinc-400 shrink-0" />
                             <span className="truncate">{lead.company}</span>
                           </p>
@@ -417,17 +423,31 @@ export default function LeadTable({
                     )}
                   </div>
 
-                  {/* Quick Action Contact Buttons: 1-tap call & 1-tap email */}
+                  {/* Quick Action Contact Buttons: 1-tap call, WA & email */}
                   <div className="flex items-center gap-2 pt-1 border-t border-zinc-100">
                     {lead.phone ? (
-                      <a
-                        href={`tel:${lead.phone}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/70 text-xs font-semibold text-zinc-700 active:scale-95 transition-all cursor-pointer"
-                      >
-                        <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="truncate">{lead.phone}</span>
-                      </a>
+                      <div className="flex-1 flex items-center gap-1.5">
+                        <a
+                          href={`tel:${lead.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/70 text-xs font-semibold text-zinc-700 active:scale-95 transition-all cursor-pointer truncate shadow-2xs"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span className="truncate">{lead.phone}</span>
+                        </a>
+                        {waLink && (
+                          <a
+                            href={waLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/70 text-emerald-700 active:scale-95 transition-all cursor-pointer shrink-0 shadow-2xs"
+                            title="WhatsApp Chat"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </div>
                     ) : (
                       <div className="flex-1 text-center py-1 text-[11px] text-zinc-400">No phone</div>
                     )}
@@ -436,7 +456,7 @@ export default function LeadTable({
                       <a
                         href={`mailto:${lead.email}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/70 text-xs font-semibold text-zinc-700 active:scale-95 transition-all cursor-pointer"
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/70 text-xs font-semibold text-zinc-700 active:scale-95 transition-all cursor-pointer shadow-2xs"
                       >
                         <Mail className="w-3.5 h-3.5 text-blue-600" />
                         <span className="truncate">Email</span>
@@ -450,7 +470,7 @@ export default function LeadTable({
                           e.stopPropagation();
                           onEdit?.(lead);
                         }}
-                        className="p-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/70 text-zinc-500 hover:text-primary-900 active:scale-95 transition-all cursor-pointer shrink-0"
+                        className="p-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/70 text-zinc-500 hover:text-primary-900 active:scale-95 transition-all cursor-pointer shrink-0 shadow-2xs"
                         title="Edit lead"
                       >
                         <Edit2 className="w-3.5 h-3.5" />

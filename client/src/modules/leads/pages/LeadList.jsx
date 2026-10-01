@@ -5,18 +5,13 @@ import { setPageTitle } from '../../../app/store/uiSlice';
 import {
   Plus,
   Users,
-  Columns3,
-  LayoutList,
   XCircle,
   X,
-  CheckSquare,
   Download,
   Upload,
-  TrendingUp,
   Sparkles,
   PhoneCall,
   CalendarCheck,
-  FileCheck2,
   Trophy,
 } from 'lucide-react';
 import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
@@ -27,14 +22,11 @@ import {
   useBulkUpdateLeadsMutation,
 } from '../../../services/leadApi';
 import LeadTable from '../components/LeadTable';
-import LeadKanbanBoard from '../components/LeadKanbanBoard';
 import LeadFilters from '../components/LeadFilters';
-import LeadStatusBadge from '../components/LeadStatusBadge';
 import LeadImportModal from '../components/LeadImportModal';
 import Button from '../../../components/ui/Button';
 import EmptyState from '../../../components/ui/EmptyState';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
-import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Modal from '../../../components/ui/Modal';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { LEAD_STATUS, LEAD_BRANDS, BRAND_METAS } from '../../../constants';
@@ -51,7 +43,6 @@ export default function LeadList() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 });
-  const [view, setView] = useState('table');
   const [lostReasonTarget, setLostReasonTarget] = useState(null);
   const [lostReasonInput, setLostReasonInput] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
@@ -63,16 +54,11 @@ export default function LeadList() {
   }, [dispatch]);
 
   const { data: leadsData, isLoading, error, refetch: refetchLeads, isFetching: isFetchingLeads } = useGetLeadsQuery(queryParams);
-  const { data: kanbanData, isLoading: kanbanLoading } = useGetLeadsQuery(
-    { limit: 100 },
-    { skip: view !== 'board' },
-  );
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetLeadStatsQuery();
   const [updateLead] = useUpdateLeadMutation();
   const [bulkUpdateLeads, { isLoading: isBulkUpdating }] = useBulkUpdateLeadsMutation();
 
   const leads = leadsData?.data || [];
-  const kanbanLeads = kanbanData?.data || [];
   const pagination = leadsData?.pagination;
   const stats = statsData?.data || {};
 
@@ -239,36 +225,6 @@ export default function LeadList() {
             <RefreshCwIcon className={`w-4 h-4 ${isFetchingLeads ? 'animate-spin' : ''}`} />
           </button>
 
-          {/* Segmented View Switcher */}
-          <div className="flex items-center bg-zinc-100/90 rounded-xl p-1 border border-zinc-200/80">
-            <button
-              onClick={() => setView('table')}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                view === 'table'
-                  ? 'bg-white text-primary-900 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-800',
-              )}
-              title="Tabular list view"
-            >
-              <LayoutList className="w-3.5 h-3.5" />
-              <span>Table</span>
-            </button>
-            <button
-              onClick={() => setView('board')}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                view === 'board'
-                  ? 'bg-white text-primary-900 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-800',
-              )}
-              title="Kanban stage board"
-            >
-              <Columns3 className="w-3.5 h-3.5" />
-              <span>Board</span>
-            </button>
-          </div>
-
           {/* Import Button */}
           {canImport && (
             <Button
@@ -412,7 +368,7 @@ export default function LeadList() {
 
       {/* Animated Floating Bulk Action Bar */}
       <AnimatePresence>
-        {view === 'table' && selectedIds.length > 0 && (
+        {selectedIds.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -480,52 +436,41 @@ export default function LeadList() {
         )}
       </AnimatePresence>
 
-      {/* Main Content Area: Table or Kanban */}
-      {view === 'table' ? (
-        isLoading ? (
-          <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-2xs">
-            <TableSkeleton rows={6} />
-          </div>
-        ) : error ? (
-          <div className="bg-white rounded-2xl border border-zinc-200/80 p-12 text-center shadow-2xs">
-            <EmptyState
-              icon={Users}
-              title="Failed to load leads"
-              description={error?.data?.message || 'Something went wrong. Please try refreshing.'}
-            />
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)] overflow-hidden">
-            <LeadTable
-              leads={leads}
-              loading={false}
-              error={null}
-              onRowClick={(row) => navigate(`/leads/${row._id}`)}
-              canEdit={canEdit}
-              onEdit={handleEdit}
-              onStatusChange={handleStatusChange}
-              serverPagination
-              page={pagination?.page || 1}
-              pageSize={pagination?.limit || 10}
-              total={pagination?.total}
-              totalPages={pagination?.pages}
-              hasNextPage={pagination?.hasNextPage}
-              hasPrevPage={pagination?.hasPrevPage}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-              selectable
-              selectedIds={selectedIds}
-              onSelectionChange={handleSelectionChange}
-            />
-          </div>
-        )
+      {/* Main Content Area: Responsive LeadTable (Table on desktop, touch cards on mobile) */}
+      {isLoading ? (
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-2xs">
+          <TableSkeleton rows={6} />
+        </div>
+      ) : error ? (
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-12 text-center shadow-2xs">
+          <EmptyState
+            icon={Users}
+            title="Failed to load leads"
+            description={error?.data?.message || 'Something went wrong. Please try refreshing.'}
+          />
+        </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 min-h-[500px] shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
-          <LeadKanbanBoard
-            leads={kanbanLeads}
-            loading={kanbanLoading}
-            onLeadClick={(lead) => navigate(`/leads/${lead._id}`)}
+        <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)] overflow-hidden">
+          <LeadTable
+            leads={leads}
+            loading={false}
+            error={null}
+            onRowClick={(row) => navigate(`/leads/${row._id}`)}
+            canEdit={canEdit}
+            onEdit={handleEdit}
             onStatusChange={handleStatusChange}
+            serverPagination
+            page={pagination?.page || 1}
+            pageSize={pagination?.limit || 10}
+            total={pagination?.total}
+            totalPages={pagination?.pages}
+            hasNextPage={pagination?.hasNextPage}
+            hasPrevPage={pagination?.hasPrevPage}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            selectable
+            selectedIds={selectedIds}
+            onSelectionChange={handleSelectionChange}
           />
         </div>
       )}

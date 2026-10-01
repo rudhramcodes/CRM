@@ -41,7 +41,7 @@ export default function Modal({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6 overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -59,14 +59,14 @@ export default function Modal({
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: 'spring', stiffness: 420, damping: 32 }}
             className={cn(
-              'relative bg-white rounded-2xl sm:rounded-[1.75rem] border border-zinc-200/80 shadow-[0_24px_80px_-20px_rgba(0,0,0,0.35)] w-full max-h-[90vh] flex flex-col overflow-hidden z-10 my-auto',
+              'relative bg-white rounded-2xl sm:rounded-[1.75rem] border border-zinc-200/80 shadow-[0_24px_80px_-20px_rgba(0,0,0,0.35)] w-full max-h-[92vh] flex flex-col overflow-hidden z-10 my-auto',
               sizeClasses[size] || sizeClasses.md,
             )}
           >
             {title && (
-              <div className="flex items-start justify-between px-6 py-4.5 border-b border-zinc-100/90 bg-zinc-50/40 shrink-0">
+              <div className="flex items-start justify-between px-4 py-3 sm:px-6 sm:py-4.5 border-b border-zinc-100/90 bg-zinc-50/40 shrink-0">
                 <div>
-                  <h3 className="font-heading text-lg font-bold text-primary-900 tracking-tight">
+                  <h3 className="font-heading text-base sm:text-lg font-bold text-primary-900 tracking-tight">
                     {title}
                   </h3>
                   {description && (
@@ -85,7 +85,7 @@ export default function Modal({
                 )}
               </div>
             )}
-            <div className="p-6 overflow-y-auto flex-1">{children}</div>
+            <div className="p-3.5 sm:p-6 overflow-y-auto flex-1">{children}</div>
           </motion.div>
         </div>
       )}
