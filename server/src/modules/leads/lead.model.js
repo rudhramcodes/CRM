@@ -20,6 +20,11 @@ const noteSchema = new mongoose.Schema(
 
 const leadSchema = new mongoose.Schema(
   {
+    clientId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     name: {
       type: String,
       required: [true, 'Lead name is required'],
@@ -110,6 +115,7 @@ const leadSchema = new mongoose.Schema(
   },
 );
 
+leadSchema.index({ clientId: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ status: 1 });
 leadSchema.index({ assignedTo: 1 });

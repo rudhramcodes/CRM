@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
-import { Plus, UserCheck, Users, UserMinus, Sparkles, Building2 } from 'lucide-react';
+import { Plus, UserCheck, Sparkles, Building2 } from 'lucide-react';
 import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import {
   useGetClientsQuery,
@@ -24,7 +24,7 @@ export default function ClientList() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 });
+  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10, status: 'active' });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [activeBrand, setActiveBrand] = useState('');
 
@@ -51,12 +51,12 @@ export default function ClientList() {
 
   const clients = clientsData?.data || [];
   const pagination = clientsData?.pagination;
-  const stats = statsData?.data || {};
+  const stats = statsData?.data || statsData || {};
 
   const handleBrandChange = useCallback((brand) => {
     setActiveBrand(brand);
     setQueryParams((prev) => {
-      const next = { ...prev, page: 1 };
+      const next = { ...prev, page: 1, status: 'active' };
       if (brand) next.brand = brand;
       else delete next.brand;
       return next;
@@ -65,11 +65,9 @@ export default function ClientList() {
 
   const handleFilterChange = useCallback((filters) => {
     setQueryParams((prev) => {
-      const next = { ...prev, page: 1 };
-      for (const [key, val] of Object.entries(filters)) {
-        if (val) next[key] = val;
-        else delete next[key];
-      }
+      const next = { ...prev, page: 1, status: 'active' };
+      if (filters.search) next.search = filters.search;
+      else delete next.search;
       return next;
     });
   }, []);
@@ -119,36 +117,30 @@ export default function ClientList() {
   }, [deleteTarget, deleteClient]);
 
   // Derived KPI metrics
+  // Derived KPI metrics
   const totalCount = stats.total || 0;
-  const activeCount = stats.active || 0;
-  const inactiveCount = stats.inactive || 0;
-  const activePercent = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0;
+  const activeCount = stats.active || totalCount || 0;
+  const activePercent = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 100;
+  const activeVenturesCount = Object.keys(stats.byBrand || {}).length;
 
   const kpis = [
     {
-      title: 'Total Clients',
-      value: totalCount,
-      desc: 'All corporate & individual accounts',
-      icon: Building2,
-      iconColor: 'text-zinc-700 bg-zinc-100',
-    },
-    {
-      title: 'Active Accounts',
+      title: 'Active Clients',
       value: activeCount,
-      desc: `${activePercent}% retention rate`,
+      desc: 'Verified active corporate & individual accounts',
       icon: UserCheck,
       iconColor: 'text-emerald-600 bg-emerald-50',
     },
     {
-      title: 'Inactive / Archived',
-      value: inactiveCount,
-      desc: 'Pending renewal or closed',
-      icon: UserMinus,
-      iconColor: 'text-amber-600 bg-amber-50',
+      title: 'Client Retention',
+      value: `${activePercent}%`,
+      desc: 'Active accounts conversion ratio',
+      icon: Building2,
+      iconColor: 'text-zinc-700 bg-zinc-100',
     },
     {
       title: 'Active Ventures',
-      value: Object.keys(stats.byBrand || {}).length,
+      value: activeVenturesCount,
       desc: 'Brands with active clients',
       icon: Sparkles,
       iconColor: 'text-indigo-600 bg-indigo-50',
@@ -197,13 +189,13 @@ export default function ClientList() {
 
       {/* KPI Stats Ribbon */}
       {statsLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          {Array.from({ length: 3 }).map((_, i) => (
             <StatCardSkeleton key={i} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           {kpis.map((kpi, idx) => {
             const Icon = kpi.icon;
             return (
@@ -256,7 +248,7 @@ export default function ClientList() {
               !activeBrand ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-500'
             )}
           >
-            {totalCount}
+            {activeCount}
           </span>
         </button>
 

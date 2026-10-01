@@ -14,7 +14,7 @@ export const findById = async (id) => {
     .populate('assignedTo', 'name email avatar')
     .populate('notes.createdBy', 'name email avatar role')
     .populate('createdBy', 'name email')
-    .populate('convertedToClient', 'companyName email phone status');
+    .populate('convertedToClient', 'clientId companyName email phone status brand');
 };
 
 export const findByEmail = async (email) => {
@@ -35,7 +35,13 @@ export const findAll = async (query = {}, options = {}) => {
 
   if (query.search) {
     const searchRegex = new RegExp(escapeRegex(query.search), 'i');
-    filter.$or = [{ name: searchRegex }, { email: searchRegex }, { company: searchRegex }, { phone: searchRegex }];
+    filter.$or = [
+      { name: searchRegex },
+      { email: searchRegex },
+      { company: searchRegex },
+      { phone: searchRegex },
+      { clientId: searchRegex },
+    ];
   }
 
   if (query.status) {
@@ -60,7 +66,7 @@ export const findAll = async (query = {}, options = {}) => {
       .skip(skip)
       .limit(limit)
       .populate('assignedTo', 'name email avatar')
-      .populate('convertedToClient', 'companyName email phone status'),
+      .populate('convertedToClient', 'clientId companyName email phone status brand'),
     Lead.countDocuments(filter),
   ]);
 
@@ -71,7 +77,7 @@ export const updateById = async (id, data) => {
   return Lead.findByIdAndUpdate(id, data, { new: true, runValidators: true })
     .populate('assignedTo', 'name email avatar')
     .populate('notes.createdBy', 'name email avatar role')
-    .populate('convertedToClient', 'companyName email phone status');
+    .populate('convertedToClient', 'clientId companyName email phone status brand');
 };
 
 export const deleteById = async (id) => {

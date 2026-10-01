@@ -72,6 +72,14 @@ function LeadCardContent({ lead }) {
 
       {/* Meta Chips: Source, Contact channels */}
       <div className="flex items-center gap-1.5 flex-wrap">
+        {(lead.clientId || lead.convertedToClient?.clientId) && (
+          <span
+            className="font-mono text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200/80 shrink-0"
+            title={`Assigned Client ID: ${lead.clientId || lead.convertedToClient?.clientId}`}
+          >
+            {lead.clientId || lead.convertedToClient?.clientId}
+          </span>
+        )}
         <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200/60 capitalize truncate">
           {lead.source?.replace(/_/g, ' ') || 'Direct'}
         </span>

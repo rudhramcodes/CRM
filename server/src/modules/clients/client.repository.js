@@ -39,6 +39,7 @@ export const findAll = async (query = {}, options = {}) => {
   if (query.search) {
     const searchRegex = new RegExp(escapeRegex(query.search), 'i');
     filter.$or = [
+      { clientId: searchRegex },
       { companyName: searchRegex },
       { contactPerson: searchRegex },
       { email: searchRegex },

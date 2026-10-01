@@ -42,16 +42,26 @@ export default function LeadTable({
           .toUpperCase()
           .slice(0, 2) || 'LE';
 
+        const assignedClientId = row.clientId || row.convertedToClient?.clientId;
+
         return (
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-zinc-100 border border-zinc-200/80 rounded-xl flex items-center justify-center shrink-0 shadow-2xs">
               <span className="text-primary-900 font-bold text-xs">{initials}</span>
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-semibold text-primary-900 text-xs sm:text-sm truncate leading-snug">
                   {row.name}
                 </p>
+                {assignedClientId && (
+                  <span
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-zinc-100/90 font-mono text-[10px] font-semibold text-zinc-600 border border-zinc-200/80 shrink-0"
+                    title={`Assigned Client ID: ${assignedClientId} (${row.convertedToClient?.status || 'inactive'})`}
+                  >
+                    {assignedClientId}
+                  </span>
+                )}
                 {!row.isRead && (
                   <span className="relative flex h-2 w-2 mb-0.5 shrink-0" title="Unread lead">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>

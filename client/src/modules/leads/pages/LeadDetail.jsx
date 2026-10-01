@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../../app/store/uiSlice';
 import {
@@ -238,6 +238,22 @@ export default function LeadDetail() {
                   {lead.name}
                 </h1>
                 <LeadStatusBadge status={lead.status} />
+                {(lead.clientId || lead.convertedToClient?.clientId) && (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-100 font-mono text-xs font-semibold text-zinc-700 border border-zinc-200"
+                    title={`Assigned Client ID: ${lead.clientId || lead.convertedToClient?.clientId}`}
+                  >
+                    <span
+                      className={cn(
+                        'w-1.5 h-1.5 rounded-full',
+                        lead.convertedToClient?.status === 'active' || lead.status === 'won'
+                          ? 'bg-emerald-500'
+                          : 'bg-zinc-400'
+                      )}
+                    />
+                    ID: {lead.clientId || lead.convertedToClient?.clientId}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-500 flex-wrap">
@@ -367,6 +383,51 @@ export default function LeadDetail() {
             </p>
           </div>
         </div>
+
+        {/* Linked Client Record Banner */}
+        {(lead.convertedToClient || lead.clientId) && (
+          <div className="mt-5 p-4 rounded-xl bg-zinc-50/80 border border-zinc-200/80 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-primary-900 font-bold text-xs shadow-2xs">
+                CL
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-zinc-900 font-mono">
+                    {lead.convertedToClient?.clientId || lead.clientId}
+                  </span>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 text-[10px] font-semibold rounded-full border',
+                      (lead.convertedToClient?.status === 'active' || lead.status === 'won')
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-zinc-100 text-zinc-600 border-zinc-200'
+                    )}
+                  >
+                    {(lead.convertedToClient?.status === 'active' || lead.status === 'won')
+                      ? 'Active Client Account'
+                      : 'Initial Inactive Client'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Linked Account: {lead.convertedToClient?.companyName || lead.company || lead.name}
+                  {lead.convertedToClient?.status === 'inactive' && (
+                    <span className="text-zinc-400"> &bull; Will activate automatically when marked won</span>
+                  )}
+                </p>
+              </div>
+            </div>
+            {lead.convertedToClient?._id && (
+              <Link
+                to={`/clients/${lead.convertedToClient._id}`}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary-900 hover:underline"
+              >
+                <span>View Client Details</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Notes & Activity Timeline */}

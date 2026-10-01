@@ -2,6 +2,7 @@ import ApiError from '../../utils/ApiError.js';
 import logger from '../../utils/logger.js';
 import * as leadRepository from './lead.repository.js';
 import * as clientRepository from '../clients/client.repository.js';
+import Client from '../clients/client.model.js';
 import * as notificationService from '../notifications/notification.service.js';
 import generateClientId from '../../utils/generateClientId.js';
 import * as XLSX from 'xlsx';
@@ -74,8 +75,55 @@ export const createLead = async (data, user) => {
     throw ApiError.conflict('A lead with this email already exists');
   }
 
+  const brand = data.brand || 'panigrahna';
+
+  // Check if a client with this email already exists or generate new inactive client
+  let client = await clientRepository.findByEmail(data.email);
+  let clientId = client?.clientId || null;
+
+  if (!client) {
+    try {
+      clientId = await generateClientId(brand);
+      client = await clientRepository.create({
+        clientId,
+        brand,
+        companyName: data.company || `${data.name}'s Company`,
+        contactPerson: data.name,
+        email: data.email,
+        phone: data.phone || null,
+        status: 'inactive',
+        createdBy: user._id,
+      });
+    } catch (err) {
+      if (err.code === 11000) {
+        client = await clientRepository.findByEmail(data.email);
+        if (client) {
+          clientId = client.clientId;
+        } else {
+          clientId = await generateClientId(brand);
+          client = await clientRepository.create({
+            clientId,
+            brand,
+            companyName: data.company || `${data.name}'s Company`,
+            contactPerson: data.name,
+            email: data.email,
+            phone: data.phone || null,
+            status: 'inactive',
+            createdBy: user._id,
+          });
+        }
+      } else {
+        logger.error(`[lead-create] Failed to create initial inactive client: ${err.message}`);
+        throw err;
+      }
+    }
+  }
+
   const leadData = {
     ...data,
+    brand,
+    clientId,
+    convertedToClient: client?._id || null,
     createdBy: user._id,
     assignedTo: data.assignedTo || user._id,
   };
@@ -92,6 +140,12 @@ export const createLead = async (data, user) => {
   }
 
   const lead = await leadRepository.create(leadData);
+
+  // Link client back to lead if not already set
+  if (client && !client.convertedFrom) {
+    client.convertedFrom = lead._id;
+    await client.save().catch((err) => logger.warn(`[lead-create] Linking client.convertedFrom failed: ${err.message}`));
+  }
 
   const { default: User } = await import('../auth/auth.model.js');
   const allUsers = await User.find({ isActive: true }).select('_id email role');
@@ -176,18 +230,30 @@ export const updateLead = async (id, data, user) => {
   }
 
   if (data.status && data.status !== lead.status) {
-    // If status is changed to 'won', auto-convert to client FIRST
-    // Client creation must succeed before we mark the lead as won
-    if (data.status === 'won' && !lead.convertedToClient) {
-      let existingClient = await clientRepository.findByEmail(data.email || lead.email);
-      if (existingClient) {
-        data.convertedToClient = existingClient._id;
+    // If status is changed to 'won', auto-activate client
+    if (data.status === 'won') {
+      let client = null;
+      if (lead.convertedToClient) {
+        client = await clientRepository.findById(lead.convertedToClient);
+      }
+      if (!client) {
+        client = await clientRepository.findByEmail(data.email || lead.email);
+      }
+
+      const clientEmail = data.email || lead.email;
+      const brand = lead.brand || 'panigrahna';
+
+      if (client) {
+        client.status = 'active';
+        if (!client.convertedFrom) client.convertedFrom = lead._id;
+        await client.save();
+        data.convertedToClient = client._id;
+        data.clientId = client.clientId;
       } else {
-        const brand = lead.brand || 'panigrahna';
-        const clientEmail = data.email || lead.email;
         try {
-          const client = await clientRepository.create({
-            clientId: await generateClientId(brand),
+          const clientId = lead.clientId || (await generateClientId(brand));
+          client = await clientRepository.create({
+            clientId,
             companyName: lead.company || `${lead.name}'s Company`,
             contactPerson: lead.name,
             email: clientEmail,
@@ -198,80 +264,97 @@ export const updateLead = async (id, data, user) => {
             createdBy: user._id,
           });
           data.convertedToClient = client._id;
-
-          sendClientOnboardingEmail(clientEmail, {
-            clientName: lead.name,
-            companyName: lead.company || `${lead.name}'s Company`,
-            clientId: client.clientId,
-            brand,
-          }).catch((err) => logger.error(`[lead-convert] Onboarding email failed: ${err.message}`));
-
-          const existingUser = await User.findOne({ email: clientEmail });
-          let portalUserCreated = false;
-          if (!existingUser) {
-            try {
-              await User.create({
-                name: lead.name,
-                email: clientEmail,
-                password: CLIENT_DEFAULT_PASSWORD,
-                role: 'client',
-                mustChangePassword: true,
-                createdBy: user._id,
-              });
-              portalUserCreated = true;
-              logger.info(`[lead-convert] Portal user created for ${clientEmail}`);
-            } catch (userErr) {
-              logger.error(`[lead-convert] Portal user creation failed: ${userErr.message}`);
-            }
-          } else {
-            portalUserCreated = true;
-          }
-
-          if (portalUserCreated) {
-            new Promise((resolve) => setTimeout(resolve, 2500))
-              .then(() => sendClientCredentialsEmail(clientEmail, {
-                clientName: lead.name,
-                email: clientEmail,
-                password: CLIENT_DEFAULT_PASSWORD,
-              }))
-              .then(() => logger.info(`[lead-convert] Credentials email sent to ${clientEmail}`))
-              .catch((err) => logger.error(`[lead-convert] Credentials email failed: ${err.message}`));
-          }
+          data.clientId = client.clientId;
         } catch (err) {
           if (err.code === 11000) {
-            const duplicateField = Object.keys(err.keyValue || {})[0] || 'unknown';
-            logger.warn(`[lead-convert] E11000 on field "${duplicateField}" for lead ${lead._id}`);
-
-            existingClient = await clientRepository.findByEmail(clientEmail);
-            if (existingClient) {
-              data.convertedToClient = existingClient._id;
-            } else if (duplicateField === 'clientId') {
-              const retryClientId = await generateClientId(brand);
-              const retryClient = await clientRepository.create({
-                clientId: retryClientId,
-                companyName: lead.company || `${lead.name}'s Company`,
-                contactPerson: lead.name,
-                email: clientEmail,
-                phone: lead.phone,
-                brand,
-                convertedFrom: lead._id,
-                status: 'active',
-                createdBy: user._id,
-              });
-              data.convertedToClient = retryClient._id;
-            } else {
-              throw ApiError.conflict(`Duplicate key on "${duplicateField}" - a client with this ${duplicateField} already exists`);
+            client = await clientRepository.findByEmail(clientEmail);
+            if (client) {
+              client.status = 'active';
+              await client.save();
+              data.convertedToClient = client._id;
+              data.clientId = client.clientId;
             }
-          } else {
-            throw err;
           }
         }
       }
+
+      if (client) {
+        sendClientOnboardingEmail(clientEmail, {
+          clientName: lead.name,
+          companyName: lead.company || `${lead.name}'s Company`,
+          clientId: client.clientId,
+          brand,
+        }).catch((err) => logger.error(`[lead-convert] Onboarding email failed: ${err.message}`));
+
+        const existingUser = await User.findOne({ email: clientEmail });
+        let portalUserCreated = false;
+        if (!existingUser) {
+          try {
+            await User.create({
+              name: lead.name,
+              email: clientEmail,
+              password: CLIENT_DEFAULT_PASSWORD,
+              role: 'client',
+              mustChangePassword: true,
+              createdBy: user._id,
+            });
+            portalUserCreated = true;
+            logger.info(`[lead-convert] Portal user created for ${clientEmail}`);
+          } catch (userErr) {
+            logger.error(`[lead-convert] Portal user creation failed: ${userErr.message}`);
+          }
+        } else {
+          portalUserCreated = true;
+        }
+
+        if (portalUserCreated) {
+          new Promise((resolve) => setTimeout(resolve, 2500))
+            .then(() => sendClientCredentialsEmail(clientEmail, {
+              clientName: lead.name,
+              email: clientEmail,
+              password: CLIENT_DEFAULT_PASSWORD,
+            }))
+            .then(() => logger.info(`[lead-convert] Credentials email sent to ${clientEmail}`))
+            .catch((err) => logger.error(`[lead-convert] Credentials email failed: ${err.message}`));
+        }
+      }
+
       data.convertedAt = new Date();
     }
 
     data.statusChangedAt = new Date();
     data.statusChangedBy = user._id;
+  }
+
+  // If lead basic info changed and client is still inactive, sync to inactive client
+  if (lead.convertedToClient) {
+    const linkedClient = await clientRepository.findById(lead.convertedToClient);
+    if (linkedClient && linkedClient.status === 'inactive') {
+      let clientChanged = false;
+      if (data.name && data.name !== linkedClient.contactPerson) {
+        linkedClient.contactPerson = data.name;
+        clientChanged = true;
+      }
+      if (data.company !== undefined && data.company !== linkedClient.companyName) {
+        linkedClient.companyName = data.company || `${data.name || lead.name}'s Company`;
+        clientChanged = true;
+      }
+      if (data.phone !== undefined && data.phone !== linkedClient.phone) {
+        linkedClient.phone = data.phone;
+        clientChanged = true;
+      }
+      if (data.email && data.email !== linkedClient.email) {
+        linkedClient.email = data.email;
+        clientChanged = true;
+      }
+      if (data.brand && data.brand !== linkedClient.brand) {
+        linkedClient.brand = data.brand;
+        clientChanged = true;
+      }
+      if (clientChanged) {
+        await linkedClient.save().catch((err) => logger.warn(`[updateLead] Syncing inactive client failed: ${err.message}`));
+      }
+    }
   }
 
   if (data.assignedTo) {
@@ -448,8 +531,45 @@ export const importLeads = async (file, user) => {
 
   let imported = 0;
   if (validLeads.length > 0) {
+    for (const leadItem of validLeads) {
+      const b = leadItem.brand || 'panigrahna';
+      let client = await clientRepository.findByEmail(leadItem.email);
+      let clientId;
+      if (client) {
+        clientId = client.clientId;
+      } else {
+        try {
+          clientId = await generateClientId(b);
+          client = await clientRepository.create({
+            clientId,
+            brand: b,
+            companyName: leadItem.company || `${leadItem.name}'s Company`,
+            contactPerson: leadItem.name,
+            email: leadItem.email,
+            phone: leadItem.phone || null,
+            status: 'inactive',
+            createdBy: user._id,
+          });
+        } catch (err) {
+          if (err.code === 11000) {
+            client = await clientRepository.findByEmail(leadItem.email);
+            clientId = client?.clientId || null;
+          }
+        }
+      }
+      leadItem.clientId = clientId;
+      leadItem.convertedToClient = client?._id || null;
+    }
+
     const result = await leadRepository.insertMany(validLeads);
     imported = result.length;
+
+    // Link back client.convertedFrom to lead
+    for (const leadDoc of result) {
+      if (leadDoc.convertedToClient) {
+        await Client.findByIdAndUpdate(leadDoc.convertedToClient, { convertedFrom: leadDoc._id }).catch(() => {});
+      }
+    }
   }
 
   return { imported, skipped: errors.length, errors };
