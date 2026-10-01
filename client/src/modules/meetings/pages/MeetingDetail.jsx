@@ -207,7 +207,7 @@ export default function MeetingDetail() {
   return (
     <div className="space-y-6 max-w-5xl pb-16">
       {/* Top Breadcrumb & Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <button
           onClick={() => navigate('/meetings')}
           className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-zinc-500 hover:text-primary-900 transition-colors w-fit group cursor-pointer"
@@ -216,69 +216,80 @@ export default function MeetingDetail() {
           <span>Back to Meetings</span>
         </button>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Quick Status Selector */}
-          {canManage && (
-            <Select value={meeting.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="h-9 w-auto gap-2 text-xs font-semibold rounded-xl bg-white border-zinc-200/90 shadow-2xs">
-                <MeetingStatusBadge status={meeting.status} />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                {MEETING_STATUS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          {/* Left Actions: Status Selector + Video Link */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Quick Status Selector */}
+            {canManage && (
+              <Select value={meeting.status} onValueChange={handleStatusChange}>
+                <SelectTrigger className="h-8 sm:h-9 w-auto gap-1.5 text-xs font-semibold rounded-xl bg-white border-zinc-200/90 shadow-2xs">
+                  <MeetingStatusBadge status={meeting.status} />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+                  {MEETING_STATUS.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
-          {/* Direct Video Launcher */}
-          {meeting.meetingLink && (
-            <a
-              href={meeting.meetingLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95"
-            >
-              <Video className="w-3.5 h-3.5" />
-              <span>Join Video Meeting</span>
-              <ExternalLink className="w-3 h-3 opacity-75" />
-            </a>
-          )}
+            {/* Direct Video Launcher */}
+            {meeting.meetingLink && (
+              <a
+                href={meeting.meetingLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-8 sm:h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-95"
+              >
+                <Video className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Join Video Meeting</span>
+                <span className="sm:hidden">Join</span>
+                <ExternalLink className="w-3 h-3 opacity-75 hidden sm:inline" />
+              </a>
+            )}
+          </div>
 
-          {canManage && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowEditModal(true)}
-              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs"
-            >
-              <Edit2 className="w-3.5 h-3.5 mr-1 text-zinc-500" />
-              Edit
-            </Button>
-          )}
+          {/* Right Actions: Edit & Delete (justified to end on mobile) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 ml-auto sm:ml-0 shrink-0">
+            {canManage && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(true)}
+                className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs h-8 sm:h-9 w-8 sm:w-auto p-0 sm:px-3"
+                title="Edit Meeting"
+                aria-label="Edit Meeting"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-zinc-500" />
+                <span className="hidden sm:inline sm:ml-1">Edit</span>
+              </Button>
+            )}
 
-          {canDelete && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handleDelete}
-              loading={isDeleting}
-              className="rounded-xl text-xs font-semibold shadow-2xs"
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1" />
-              Delete
-            </Button>
-          )}
+            {canDelete && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDelete}
+                loading={isDeleting}
+                className="rounded-xl text-xs font-semibold shadow-2xs h-8 sm:h-9 w-8 sm:w-auto p-0 sm:px-3"
+                title="Delete Meeting"
+                aria-label="Delete Meeting"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline sm:ml-1">Delete</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Hero Meeting Banner Card */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 sm:p-7 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-14 h-14 bg-primary-900 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+      <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-7 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6">
+          <div className="flex items-start sm:items-center gap-3.5 sm:gap-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-primary-900 text-white rounded-2xl flex items-center justify-center font-bold text-base sm:text-lg shadow-sm shrink-0">
               <Calendar className="w-6 h-6" />
             </div>
             <div>

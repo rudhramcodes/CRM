@@ -150,74 +150,84 @@ export default function ClientDetail() {
           <span>Back to Client Directory</span>
         </button>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Quick Status Selector */}
-          {canManage && (
-            <Select value={client.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="h-8 sm:h-9 w-auto gap-1.5 text-xs font-semibold rounded-xl bg-white border-zinc-200/90 shadow-2xs">
-                <ClientStatusBadge status={client.status} />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                {CLIENT_STATUS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          {/* Left Actions: Status Selector + Meeting + Invite */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Quick Status Selector */}
+            {canManage && (
+              <Select value={client.status} onValueChange={handleStatusChange}>
+                <SelectTrigger className="h-8 sm:h-9 w-auto gap-1.5 text-xs font-semibold rounded-xl bg-white border-zinc-200/90 shadow-2xs">
+                  <ClientStatusBadge status={client.status} />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+                  {CLIENT_STATUS.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
-          {canManage && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowMeetingModal(true)}
-              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs h-8 sm:h-9 px-2.5 sm:px-3"
-            >
-              <Calendar className="w-3.5 h-3.5 mr-1 text-zinc-500" />
-              <span className="hidden sm:inline">Schedule Meeting</span>
-              <span className="sm:hidden">Meeting</span>
-            </Button>
-          )}
+            {canManage && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMeetingModal(true)}
+                className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs h-8 sm:h-9 px-2.5 sm:px-3"
+              >
+                <Calendar className="w-3.5 h-3.5 mr-1 text-zinc-500" />
+                <span className="hidden sm:inline">Schedule Meeting</span>
+                <span className="sm:hidden">Meeting</span>
+              </Button>
+            )}
 
-          {canManage && !portalActive && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleInvite}
-              loading={isInviting}
-              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs text-primary-900 h-8 sm:h-9 px-2.5 sm:px-3"
-            >
-              <KeyRound className="w-3.5 h-3.5 mr-1 text-zinc-500" />
-              <span className="hidden sm:inline">Send Portal Invite</span>
-              <span className="sm:hidden">Invite</span>
-            </Button>
-          )}
+            {canManage && !portalActive && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleInvite}
+                loading={isInviting}
+                className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs text-primary-900 h-8 sm:h-9 px-2.5 sm:px-3"
+              >
+                <KeyRound className="w-3.5 h-3.5 mr-1 text-zinc-500" />
+                <span className="hidden sm:inline">Send Portal Invite</span>
+                <span className="sm:hidden">Invite</span>
+              </Button>
+            )}
+          </div>
 
-          {canManage && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowEditModal(true)}
-              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs h-8 sm:h-9 px-2.5 sm:px-3"
-            >
-              <Edit2 className="w-3.5 h-3.5 sm:mr-1 text-zinc-500" />
-              <span>Edit</span>
-            </Button>
-          )}
+          {/* Right Actions: Edit & Delete (justified to end on mobile) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 ml-auto sm:ml-0 shrink-0">
+            {canManage && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(true)}
+                className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs h-8 sm:h-9 w-8 sm:w-auto p-0 sm:px-3"
+                title="Edit Client"
+                aria-label="Edit Client"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-zinc-500" />
+                <span className="hidden sm:inline sm:ml-1">Edit</span>
+              </Button>
+            )}
 
-          {canDelete && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handleDelete}
-              loading={isDeleting}
-              className="rounded-xl text-xs font-semibold shadow-2xs h-8 sm:h-9 px-2.5 sm:px-3"
-            >
-              <Trash2 className="w-3.5 h-3.5 sm:mr-1" />
-              <span>Delete</span>
-            </Button>
-          )}
+            {canDelete && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDelete}
+                loading={isDeleting}
+                className="rounded-xl text-xs font-semibold shadow-2xs h-8 sm:h-9 w-8 sm:w-auto p-0 sm:px-3"
+                title="Delete Client"
+                aria-label="Delete Client"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline sm:ml-1">Delete</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

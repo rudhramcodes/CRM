@@ -53,7 +53,8 @@ export default function MeetingTable({
 
   return (
     <div className="bg-white rounded-2xl border border-zinc-200/80 overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]">
-      <div className="overflow-x-auto">
+      {/* Desktop Table View (>= md) */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-zinc-100 bg-zinc-50/70 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
@@ -254,6 +255,164 @@ export default function MeetingTable({
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Touch Cards View (< md) */}
+      <div className="md:hidden divide-y divide-zinc-100">
+        {meetings.map((meeting) => {
+          const brandKey =
+            meeting.brand ||
+            meeting.client?.brand ||
+            meeting.lead?.brand;
+          const meta = BRAND_METAS[brandKey];
+          const brandLabel = BRAND_LABELS[brandKey] || brandKey;
+
+          return (
+            <div
+              key={meeting._id}
+              onClick={() => onRowClick?.(meeting)}
+              className="p-4 space-y-3 bg-white hover:bg-zinc-50/60 active:bg-zinc-100/50 transition-all cursor-pointer"
+            >
+              {/* Header: Date/Time Badge + Status Dropdown */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100/90 border border-zinc-200/70 text-xs font-semibold text-zinc-700">
+                  <Calendar className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span>{formatDate(meeting.date)}</span>
+                  <span className="text-zinc-300">•</span>
+                  <span className="text-zinc-500 font-normal">
+                    {meeting.startTime} - {meeting.endTime}
+                  </span>
+                </div>
+
+                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                  {canEdit && onStatusChange ? (
+                    <Select
+                      value={meeting.status}
+                      onValueChange={(val) => onStatusChange(meeting._id, val)}
+                    >
+                      <SelectTrigger className="h-7 w-auto gap-1 border-0 bg-transparent p-0 shadow-none cursor-pointer focus:ring-0">
+                        <MeetingStatusBadge status={meeting.status} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+                        {MEETING_STATUS.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <MeetingStatusBadge status={meeting.status} />
+                  )}
+                </div>
+              </div>
+
+              {/* Title & Recurring Tag */}
+              <div>
+                <h4 className="text-sm font-bold text-primary-900 leading-snug">
+                  {meeting.title}
+                </h4>
+                {meeting.seriesId && (
+                  <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/70 text-[10px] font-semibold">
+                    <Repeat className="w-2.5 h-2.5" />
+                    Recurring Series
+                  </span>
+                )}
+              </div>
+
+              {/* Badges: Venture & Related Entity */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {meta ? (
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-zinc-50 border border-zinc-200/70 text-[11px] font-semibold text-zinc-700">
+                    {meta.logo ? (
+                      <img
+                        src={meta.logo}
+                        alt={meta.label}
+                        className="w-3.5 h-3.5 rounded object-contain shrink-0"
+                      />
+                    ) : (
+                      <div
+                        className={cn(
+                          'w-3.5 h-3.5 rounded flex items-center justify-center text-[8px] font-bold text-white shrink-0 bg-gradient-to-br',
+                          meta.gradient
+                        )}
+                      >
+                        {meta.initial || 'V'}
+                      </div>
+                    )}
+                    <span>{meta.label || brandLabel}</span>
+                  </div>
+                ) : brandKey ? (
+                  <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md bg-zinc-100 text-zinc-700 border border-zinc-200/60">
+                    {brandLabel}
+                  </span>
+                ) : null}
+
+                {meeting.client ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[11px] font-medium">
+                    <Building2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span className="truncate max-w-[150px]">{meeting.client.companyName}</span>
+                  </span>
+                ) : meeting.lead ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-sky-50 text-sky-800 border border-sky-200/80 text-[11px] font-medium">
+                    <User className="w-3 h-3 text-sky-600 shrink-0" />
+                    <span className="truncate max-w-[150px]">{meeting.lead.name}</span>
+                  </span>
+                ) : null}
+
+                {meeting.location && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400">
+                    <Clock className="w-3 h-3" />
+                    <span className="truncate max-w-[140px]">{meeting.location}</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Bottom Row: Join Video Meeting & Actions */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100">
+                {meeting.meetingLink ? (
+                  <a
+                    href={meeting.meetingLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold border border-indigo-200/80 shadow-2xs transition-colors"
+                  >
+                    <Video className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Join Meeting</span>
+                    <ExternalLink className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                  </a>
+                ) : (
+                  <span className="text-[11px] text-zinc-400">In-person session</span>
+                )}
+
+                {/* Edit & Delete Action Buttons */}
+                <div className="flex items-center gap-1.5 ml-auto" onClick={(e) => e.stopPropagation()}>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit?.(meeting)}
+                      className="p-2 rounded-xl text-zinc-500 hover:text-primary-900 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 transition-colors shadow-2xs cursor-pointer active:scale-95"
+                      title="Edit meeting"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete?.(meeting)}
+                      className="p-2 rounded-xl text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/80 border border-rose-200/80 transition-colors shadow-2xs cursor-pointer active:scale-95"
+                      title="Delete meeting"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

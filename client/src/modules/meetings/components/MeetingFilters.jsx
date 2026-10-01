@@ -48,9 +48,9 @@ export default function MeetingFilters({ onFilterChange }) {
     filters.search || filters.status || filters.client || filters.dateFrom || filters.dateTo;
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 flex-wrap">
       {/* Search Input */}
-      <div className="relative flex-1 min-w-[200px] max-w-sm">
+      <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
         <input
           type="text"
@@ -70,45 +70,49 @@ export default function MeetingFilters({ onFilterChange }) {
         )}
       </div>
 
-      <div className="flex items-center gap-2.5 flex-wrap">
+      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
         {/* Client Filter */}
-        <Select
-          value={filters.client || 'all'}
-          onValueChange={(value) => handleChange('client', value === 'all' ? '' : value)}
-        >
-          <SelectTrigger className="w-full sm:w-44 rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
-            <SelectValue placeholder="All Clients" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-            <SelectItem value="all">All Clients</SelectItem>
-            {clients.map((c) => (
-              <SelectItem key={c._id} value={c._id}>
-                {c.companyName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="col-span-1 sm:w-44">
+          <Select
+            value={filters.client || 'all'}
+            onValueChange={(value) => handleChange('client', value === 'all' ? '' : value)}
+          >
+            <SelectTrigger className="w-full rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
+              <SelectValue placeholder="All Clients" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+              <SelectItem value="all">All Clients</SelectItem>
+              {clients.map((c) => (
+                <SelectItem key={c._id} value={c._id}>
+                  {c.companyName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Status */}
-        <Select
-          value={filters.status || 'all'}
-          onValueChange={(value) => handleChange('status', value === 'all' ? '' : value)}
-        >
-          <SelectTrigger className="w-full sm:w-36 rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
-            <SelectValue placeholder="All Status" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-            <SelectItem value="all">All Status</SelectItem>
-            {MEETING_STATUS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="col-span-1 sm:w-36">
+          <Select
+            value={filters.status || 'all'}
+            onValueChange={(value) => handleChange('status', value === 'all' ? '' : value)}
+          >
+            <SelectTrigger className="w-full rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+              <SelectItem value="all">All Status</SelectItem>
+              {MEETING_STATUS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Date From */}
-        <div className="w-36">
+        <div className="col-span-1 sm:w-36">
           <DatePickerSimple
             value={filters.dateFrom}
             onChange={(val) => handleChange('dateFrom', val)}
@@ -117,7 +121,7 @@ export default function MeetingFilters({ onFilterChange }) {
         </div>
 
         {/* Date To */}
-        <div className="w-36">
+        <div className="col-span-1 sm:w-36">
           <DatePickerSimple
             value={filters.dateTo}
             onChange={(val) => handleChange('dateTo', val)}
@@ -129,7 +133,7 @@ export default function MeetingFilters({ onFilterChange }) {
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:text-primary-900 bg-white hover:bg-zinc-100 border border-zinc-200/80 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer"
+            className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:text-primary-900 bg-white hover:bg-zinc-100 border border-zinc-200/80 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer h-9"
           >
             <X className="w-3.5 h-3.5" />
             Clear

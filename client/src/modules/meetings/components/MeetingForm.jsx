@@ -40,6 +40,8 @@ import {
 import { useGetUsersQuery } from '../../../services/userApi';
 import { useGetClientsQuery } from '../../../services/clientApi';
 import { useGetLeadsQuery } from '../../../services/leadApi';
+import VentureDropdown from './VentureDropdown';
+import EntityCombobox from './EntityCombobox';
 
 const REPEAT_OPTIONS = [
   { value: 'none', label: 'Does not repeat' },
@@ -204,9 +206,17 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
   }, [startTimeValue, setValue]);
 
   const onAutoGenerateGoogleMeetLink = () => {
-    const link = import.meta.env.VITE_GOOGLE_MEET_DEFAULT_URL || 'https://meet.google.com/agw-dnrs-jfv';
+    const defaultUrl = import.meta.env.VITE_GOOGLE_MEET_DEFAULT_URL;
+    let link;
+    if (defaultUrl) {
+      link = defaultUrl;
+    } else {
+      const chars = 'abcdefghijklmnopqrstuvwxyz';
+      const part = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      link = `https://meet.google.com/${part(3)}-${part(4)}-${part(3)}`;
+    }
     setValue('meetingLink', link, { shouldValidate: true });
-    toast.success('Google Meet link applied!');
+    toast.success('Google Meet link generated!');
   };
 
   const onAutoGenerateZohoLink = async () => {
@@ -321,23 +331,11 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
               name="brand"
               control={control}
               render={({ field }) => (
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-1.5">
-                    Venture / Brand
-                  </label>
-                  <select
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value || null)}
-                    className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 transition-all"
-                  >
-                    <option value="">No specific venture (Cross-entity)</option>
-                    {LEAD_BRANDS.map((b) => (
-                      <option key={b.value} value={b.value}>
-                        {b.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <VentureDropdown
+                  value={field.value}
+                  onChange={(val) => field.onChange(val)}
+                  error={errors.brand?.message}
+                />
               )}
             />
 
@@ -375,24 +373,15 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
             name="client"
             control={control}
             render={({ field }) => (
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 mb-1.5 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-zinc-400" />
-                  Registered Client
-                </label>
-                <select
-                  value={field.value || ''}
-                  onChange={(e) => field.onChange(e.target.value || null)}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 transition-all"
-                >
-                  <option value="">No client selected</option>
-                  {clients.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.companyName} {c.contactPerson ? `(${c.contactPerson})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <EntityCombobox
+                type="client"
+                value={field.value}
+                onChange={(val) => field.onChange(val)}
+                items={clients}
+                label="Registered Client"
+                placeholder="Select registered client (Optional)..."
+                error={errors.client?.message}
+              />
             )}
           />
 
@@ -400,24 +389,15 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
             name="lead"
             control={control}
             render={({ field }) => (
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 mb-1.5 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-zinc-400" />
-                  Lead Prospect
-                </label>
-                <select
-                  value={field.value || ''}
-                  onChange={(e) => field.onChange(e.target.value || null)}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 transition-all"
-                >
-                  <option value="">No lead prospect selected</option>
-                  {leads.map((l) => (
-                    <option key={l._id} value={l._id}>
-                      {l.name} {l.company ? `— ${l.company}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <EntityCombobox
+                type="lead"
+                value={field.value}
+                onChange={(val) => field.onChange(val)}
+                items={leads}
+                label="Lead Prospect"
+                placeholder="Select lead prospect (Optional)..."
+                error={errors.lead?.message}
+              />
             )}
           />
         </div>
@@ -534,28 +514,23 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Google Meet Button (Recommended) */}
+            {/* Google Meet Button */}
             <button
               type="button"
               onClick={onAutoGenerateGoogleMeetLink}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs active:scale-95',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs active:scale-95 cursor-pointer border',
                 isMeetLink
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
-                  : 'bg-primary-900 text-white hover:bg-primary-950 hover:shadow-md'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                  : 'bg-white hover:bg-blue-50/50 text-zinc-700 border-zinc-200/90 hover:border-blue-200 hover:text-blue-700'
               )}
             >
               {isMeetLink ? (
                 <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
               ) : (
-                <Video className="w-3.5 h-3.5 text-sky-400" />
+                <Video className="w-3.5 h-3.5 text-blue-600" />
               )}
-              <span>
-                {isMeetLink ? 'Re-generate Meet' : 'Auto-Generate Google Meet'}
-              </span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wide bg-amber-400 text-amber-950 shadow-xs">
-                Recommended
-              </span>
+              <span>{isMeetLink ? 'Meet Link Active' : 'Generate Google Meet'}</span>
             </button>
 
             {/* Zoho Meeting Button */}
@@ -564,10 +539,10 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
               onClick={onAutoGenerateZohoLink}
               disabled={isGeneratingLink}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs border',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs border cursor-pointer',
                 isZohoLink
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                  : 'bg-white hover:bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-300 active:scale-95',
+                  : 'bg-white hover:bg-emerald-50/50 text-zinc-700 border-zinc-200/90 hover:border-emerald-200 hover:text-emerald-700 active:scale-95',
                 isGeneratingLink && 'opacity-60 cursor-not-allowed'
               )}
             >
@@ -582,8 +557,8 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
                 {isGeneratingLink
                   ? 'Provisioning...'
                   : isZohoLink
-                  ? 'Re-generate Zoho Link'
-                  : 'Auto-Generate Zoho Link'}
+                  ? 'Zoho Link Active'
+                  : 'Generate Zoho Link'}
               </span>
             </button>
           </div>

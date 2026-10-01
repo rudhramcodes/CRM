@@ -199,13 +199,13 @@ export default function MeetingList() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
           {/* Segmented View Switcher */}
           <div className="flex items-center bg-zinc-100/90 rounded-xl p-1 border border-zinc-200/80 shadow-2xs">
             <button
               onClick={() => setView('list')}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                'flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
                 view === 'list'
                   ? 'bg-white text-primary-900 shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-800',
@@ -213,12 +213,12 @@ export default function MeetingList() {
               title="List view"
             >
               <LayoutList className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Table</span>
+              <span>Table</span>
             </button>
             <button
               onClick={() => setView('calendar')}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                'flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
                 view === 'calendar'
                   ? 'bg-white text-primary-900 shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-800',
@@ -226,7 +226,7 @@ export default function MeetingList() {
               title="Calendar view"
             >
               <CalendarDays className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Calendar</span>
+              <span>Calendar</span>
             </button>
           </div>
 
@@ -234,7 +234,7 @@ export default function MeetingList() {
           <button
             onClick={() => refetchMeetings()}
             disabled={isFetchingMeetings}
-            className="p-2 rounded-xl text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50 border border-zinc-200/80 bg-white shadow-2xs cursor-pointer active:scale-95"
+            className="p-2 rounded-xl text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50 border border-zinc-200/80 bg-white shadow-2xs cursor-pointer active:scale-95 shrink-0"
             title="Refresh meetings"
           >
             <RefreshCwIcon className={`w-4 h-4 ${isFetchingMeetings ? 'animate-spin' : ''}`} />
@@ -244,10 +244,11 @@ export default function MeetingList() {
           {canCreate && (
             <Button
               onClick={() => setShowCreateModal(true)}
-              className="rounded-xl text-xs font-semibold shadow-md shadow-primary-900/10"
+              className="rounded-xl text-xs font-semibold shadow-md shadow-primary-900/10 shrink-0"
             >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Schedule Meeting
+              <Plus className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Schedule Meeting</span>
+              <span className="sm:hidden">Schedule</span>
             </Button>
           )}
         </div>
