@@ -8,7 +8,6 @@ import {
   Columns3,
   LayoutList,
   XCircle,
-  Trash2,
   X,
   CheckSquare,
   Download,
@@ -24,9 +23,7 @@ import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import {
   useGetLeadsQuery,
   useGetLeadStatsQuery,
-  useDeleteLeadMutation,
   useUpdateLeadMutation,
-  useBulkDeleteLeadsMutation,
   useBulkUpdateLeadsMutation,
 } from '../../../services/leadApi';
 import LeadTable from '../components/LeadTable';
@@ -55,11 +52,9 @@ export default function LeadList() {
   const user = useSelector((state) => state.auth.user);
   const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 });
   const [view, setView] = useState('table');
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [lostReasonTarget, setLostReasonTarget] = useState(null);
   const [lostReasonInput, setLostReasonInput] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [activeBrand, setActiveBrand] = useState('');
 
@@ -73,9 +68,7 @@ export default function LeadList() {
     { skip: view !== 'board' },
   );
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetLeadStatsQuery();
-  const [deleteLead] = useDeleteLeadMutation();
   const [updateLead] = useUpdateLeadMutation();
-  const [bulkDeleteLeads, { isLoading: isBulkDeleting }] = useBulkDeleteLeadsMutation();
   const [bulkUpdateLeads, { isLoading: isBulkUpdating }] = useBulkUpdateLeadsMutation();
 
   const leads = leadsData?.data || [];
@@ -108,7 +101,6 @@ export default function LeadList() {
 
   const canCreate = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
   const canEdit = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
-  const canDelete = user && ['super_admin', 'admin'].includes(user.role);
   const canImport = user && ['super_admin', 'admin'].includes(user.role);
 
   const handleEdit = useCallback((row) => {
@@ -144,8 +136,6 @@ export default function LeadList() {
     }
   }, [lostReasonTarget, lostReasonInput, updateLead]);
 
-  const handleDelete = useCallback((row) => setDeleteTarget(row), []);
-
   const handlePageChange = useCallback((newPage) => {
     setSelectedIds([]);
     setQueryParams((prev) => ({ ...prev, page: newPage }));
@@ -158,17 +148,6 @@ export default function LeadList() {
 
   const handleSelectionChange = useCallback((ids) => setSelectedIds(ids), []);
   const selectedLeads = leads.filter((l) => selectedIds.includes(l._id));
-
-  const confirmBulkDelete = useCallback(async () => {
-    try {
-      await bulkDeleteLeads(selectedIds).unwrap();
-      toast.success(`${selectedIds.length} ${selectedIds.length === 1 ? 'lead' : 'leads'} deleted successfully`);
-      setBulkDeleteOpen(false);
-      setSelectedIds([]);
-    } catch (err) {
-      toast.error(err?.data?.message || 'Failed to delete leads');
-    }
-  }, [bulkDeleteLeads, selectedIds]);
 
   const handleBulkStatusChange = useCallback(async (status) => {
     try {
@@ -186,17 +165,6 @@ export default function LeadList() {
     else if (format === 'excel') downloadLeadsExcel(selectedLeads);
     else if (format === 'pdf') downloadLeadsPdf(selectedLeads);
   }, [selectedLeads]);
-
-  const confirmDelete = useCallback(async () => {
-    if (!deleteTarget) return;
-    try {
-      await deleteLead(deleteTarget._id).unwrap();
-      toast.success('Lead deleted successfully');
-      setDeleteTarget(null);
-    } catch (err) {
-      toast.error(err?.data?.message || 'Failed to delete lead');
-    }
-  }, [deleteTarget, deleteLead]);
 
   // Derived KPI metrics
   const totalCount = stats.total || 0;
@@ -482,19 +450,6 @@ export default function LeadList() {
                 </SelectContent>
               </Select>
 
-              {canDelete && (
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => setBulkDeleteOpen(true)}
-                  loading={isBulkDeleting}
-                  className="rounded-xl text-xs h-9"
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1" />
-                  Delete
-                </Button>
-              )}
-
               <button
                 onClick={() => setSelectedIds([])}
                 className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors ml-1 cursor-pointer"
@@ -529,9 +484,7 @@ export default function LeadList() {
               error={null}
               onRowClick={(row) => navigate(`/leads/${row._id}`)}
               canEdit={canEdit}
-              canDelete={canDelete}
               onEdit={handleEdit}
-              onDelete={handleDelete}
               onStatusChange={handleStatusChange}
               serverPagination
               page={pagination?.page || 1}
@@ -592,25 +545,6 @@ export default function LeadList() {
           </div>
         </div>
       </Modal>
-
-      {/* Single Delete Confirmation */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={confirmDelete}
-        title="Delete Lead?"
-        message={deleteTarget ? `Are you sure you want to delete lead "${deleteTarget.name}"? This action cannot be undone.` : ''}
-      />
-
-      {/* Bulk Delete Confirmation */}
-      <ConfirmDialog
-        open={bulkDeleteOpen}
-        onClose={() => setBulkDeleteOpen(false)}
-        onConfirm={confirmBulkDelete}
-        title="Delete Selected Leads?"
-        message={`Are you sure you want to permanently delete ${selectedIds.length} selected ${selectedIds.length === 1 ? 'lead' : 'leads'}? This cannot be undone.`}
-        confirmLabel={isBulkDeleting ? 'Deleting...' : 'Delete'}
-      />
 
       {/* Lead CSV Import Modal */}
       <LeadImportModal open={importOpen} onClose={() => setImportOpen(false)} />

@@ -5,7 +5,6 @@ import { setPageTitle } from '../../../app/store/uiSlice';
 import {
   ArrowLeft,
   Edit2,
-  Trash2,
   MessageSquare,
   Send,
   User,
@@ -23,7 +22,6 @@ import {
 } from 'lucide-react';
 import {
   useGetLeadByIdQuery,
-  useDeleteLeadMutation,
   useUpdateLeadMutation,
   useAddLeadNoteMutation,
 } from '../../../services/leadApi';
@@ -31,7 +29,6 @@ import LeadStatusBadge from '../components/LeadStatusBadge';
 import LeadForm from '../components/LeadForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
-import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import EmptyState from '../../../components/ui/EmptyState';
 import { DetailSkeleton } from '../../../components/ui/Skeleton';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
@@ -46,13 +43,11 @@ export default function LeadDetail() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLostModal, setShowLostModal] = useState(false);
   const [lostReasonInput, setLostReasonInput] = useState('');
   const [noteText, setNoteText] = useState('');
 
   const { data: leadData, isLoading, error, refetch } = useGetLeadByIdQuery(id);
-  const [deleteLead, { isLoading: isDeleting }] = useDeleteLeadMutation();
   const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
   const [addNote, { isLoading: isAddingNote }] = useAddLeadNoteMutation();
 
@@ -63,18 +58,6 @@ export default function LeadDetail() {
       dispatch(setPageTitle(lead.name));
     }
   }, [lead, dispatch]);
-
-  const handleDelete = () => setShowDeleteConfirm(true);
-
-  const confirmDelete = useCallback(async () => {
-    try {
-      await deleteLead(id).unwrap();
-      toast.success('Lead deleted successfully');
-      navigate('/leads');
-    } catch (error) {
-      toast.error(error?.data?.message || 'Failed to delete lead');
-    }
-  }, [id, deleteLead, navigate]);
 
   const handleStatusChange = async (newStatus) => {
     if (newStatus === 'lost') {
@@ -125,7 +108,6 @@ export default function LeadDetail() {
   const brandMeta = lead?.brand ? BRAND_METAS[lead.brand] : null;
   const brandObj = LEAD_BRANDS.find((b) => b.value === lead?.brand);
   const canManage = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
-  const canDelete = user && ['super_admin', 'admin'].includes(user.role);
 
   // Clean phone number for whatsapp link
   const rawPhone = lead?.phone?.replace(/[^\d]/g, '') || '';
@@ -207,19 +189,6 @@ export default function LeadDetail() {
             >
               <Edit2 className="w-3.5 h-3.5 mr-1 text-zinc-500" />
               Edit
-            </Button>
-          )}
-
-          {canDelete && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handleDelete}
-              loading={isDeleting}
-              className="rounded-xl text-xs font-semibold shadow-2xs"
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1" />
-              Delete
             </Button>
           )}
         </div>
@@ -578,15 +547,6 @@ export default function LeadDetail() {
           </div>
         </div>
       </Modal>
-
-      {/* Confirm Delete Lead Dialog */}
-      <ConfirmDialog
-        open={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={confirmDelete}
-        title="Delete Lead?"
-        message={`Are you sure you want to permanently delete lead "${lead.name}"? This action cannot be undone.`}
-      />
     </div>
   );
 }

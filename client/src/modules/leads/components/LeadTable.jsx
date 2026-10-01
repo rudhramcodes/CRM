@@ -4,7 +4,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../compo
 import { formatDate } from '../../../utils/formatters';
 import { LEAD_STATUS, LEAD_BRANDS, BRAND_METAS } from '../../../constants';
 import { cn } from '../../../utils/cn';
-import { Edit2, Trash2, Mail, Phone, Building2 } from 'lucide-react';
+import { Edit2, Mail, Phone, Building2 } from 'lucide-react';
 
 export default function LeadTable({
   leads,
@@ -13,9 +13,7 @@ export default function LeadTable({
   onRowClick,
   searchable,
   canEdit,
-  canDelete,
   onEdit,
-  onDelete,
   onStatusChange,
   serverPagination,
   page,
@@ -203,7 +201,7 @@ export default function LeadTable({
         <span className="text-xs text-zinc-400 whitespace-nowrap">{formatDate(value)}</span>
       ),
     },
-    ...(canEdit || canDelete
+    ...(canEdit
       ? [
           {
             header: 'Actions',
@@ -211,30 +209,16 @@ export default function LeadTable({
             sortable: false,
             cell: ({ row }) => (
               <div className="flex items-center gap-1">
-                {canEdit && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit?.(row);
-                    }}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors cursor-pointer"
-                    title="Edit lead"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete?.(row);
-                    }}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                    title="Delete lead"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.(row);
+                  }}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors cursor-pointer"
+                  title="Edit lead"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             ),
           },
