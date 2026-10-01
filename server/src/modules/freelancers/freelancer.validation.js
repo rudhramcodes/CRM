@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { RATE_BASES, RATE_CURRENCIES, VENTURE_SERVICE_CATALOG } from './freelancer.catalog.js';
 
-const ventureValues = ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam', 'storage_media_solution'];
+const ventureValues = ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam'];
 const optionalString = z.string().trim().optional().default('');
 const stringArray = z.array(z.string().trim().min(1)).optional().default([]);
 const rateCard = z.object({

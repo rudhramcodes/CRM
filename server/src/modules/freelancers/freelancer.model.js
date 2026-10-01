@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const ventureProfileSchema = new mongoose.Schema({
   venture: {
     type: String,
-    enum: ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam', 'storage_media_solution'],
+    enum: ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam'],
     required: true,
   },
   internalTitle: { type: String, trim: true, default: '' },

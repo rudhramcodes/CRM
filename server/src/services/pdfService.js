@@ -38,7 +38,6 @@ const VENTURES = {
   tandavs: { code: 'TD', name: 'TANDAVS' },
   kapaalik: { code: 'KP', name: 'KAPAALIK' },
   kalyannam: { code: 'KL', name: 'KALYANNAM' },
-  storage_media_solution: { code: 'SM', name: 'STORAGE MEDIA SOLUTION' },
 };
 
 const COMPANY = {

@@ -407,7 +407,6 @@ export const BRAND_PHONE_MAP = {
   damrru: '8655695629',
   kp: '-',
   kapaalik: '-',
-  storage_media_solution: '-',
 };
 
 export const BRAND_EMAIL_MAP = {
@@ -429,7 +428,6 @@ export const BRAND_EMAIL_MAP = {
   kp: 'kapaalik@rudhramenterprises.com',
   tandavs: 'tandavs@rudhramenterprises.com',
   td: 'tandavs@rudhramenterprises.com',
-  storage_media_solution: 'support@rudhramenterprises.com',
 };
 
 export const getBrandSupportInfo = (brand) => {
@@ -445,7 +443,6 @@ export const getBrandSupportInfo = (brand) => {
     tandavs: 'Tandavs',
     kapaalik: 'Kapaalik',
     kalyannam: 'Kalyannam',
-    storage_media_solution: 'Storage Media Solution',
     ag: 'Aghori',
     pg: 'Panigrahna',
     hg: 'House of Joggi',
@@ -764,7 +761,6 @@ const BRAND_LABELS = {
   tandavs: 'Tandavs',
   kapaalik: 'Kapaalik',
   kalyannam: 'Kalyannam',
-  storage_media_solution: 'Storage Media Solution',
 };
 
 const formatINR = (val) =>

@@ -69,7 +69,6 @@ export const BRANDS = [
   { value: 'tandavs', label: 'Tandavs' },
   { value: 'kapaalik', label: 'Kapaalik' },
   { value: 'kalyannam', label: 'Kalyannam' },
-  { value: 'storage_media_solution', label: 'Storage Media Solution' },
 ];
 
 export const BRAND_METAS = {
@@ -90,7 +89,6 @@ export const BRAND_METAS = {
   tandavs: { label: 'Tandavs', gradient: 'from-emerald-500 to-teal-600', initial: 'T' },
   kapaalik: { label: 'Kapaalik', gradient: 'from-purple-600 to-pink-600', initial: 'K' },
   kalyannam: { label: 'Kalyannam', gradient: 'from-yellow-500 to-amber-600', initial: 'K' },
-  storage_media_solution: { label: 'Storage Media Solution', gradient: 'from-blue-600 to-cyan-600', initial: 'S' },
 };
 
 export const LEAD_BRANDS = [
@@ -101,7 +99,6 @@ export const LEAD_BRANDS = [
   { value: 'tandavs', label: 'Tandavs' },
   { value: 'kapaalik', label: 'Kapaalik' },
   { value: 'kalyannam', label: 'Kalyannam' },
-  { value: 'storage_media_solution', label: 'Storage Media Solution' },
 ];
 
 export const MEETING_STATUS = [

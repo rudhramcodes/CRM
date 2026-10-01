@@ -18,7 +18,6 @@ const BRAND_LABELS = {
   tandavs: 'Tandavs',
   kapaalik: 'Kapaalik',
   kalyannam: 'Kalyannam',
-  storage_media_solution: 'Storage Media Solution',
 };
 
 const FREELANCER_TYPES = [

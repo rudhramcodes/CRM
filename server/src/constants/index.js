@@ -78,7 +78,6 @@ export const LEAD_BRANDS = [
   'tandavs',
   'kapaalik',
   'kalyannam',
-  'storage_media_solution',
 ];
 
 export const BRANDS = LEAD_BRANDS;
@@ -91,7 +90,6 @@ export const VENTURE_CODES = {
   tandavs: 'TD',
   kalyannam: 'KL',
   kapaalik: 'KP',
-  storage_media_solution: 'SM',
 };
 
 export const MEETING_STATUS = {

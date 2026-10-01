@@ -25,7 +25,7 @@ const addressSchema = z.preprocess((val) => {
   return val;
 }, addressObjectSchema.optional());
 
-const BRANDS = ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam', 'storage_media_solution'];
+const BRANDS = ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam'];
 
 export const createClientSchema = z.object({
   brand: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.enum(BRANDS, { required_error: 'Please select a brand/venture' })),

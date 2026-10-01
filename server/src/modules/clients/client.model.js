@@ -38,7 +38,7 @@ const clientSchema = new mongoose.Schema(
     },
     brand: {
       type: String,
-      enum: ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam', 'storage_media_solution'],
+      enum: ['panigrahna', 'aghori', 'house_of_joggi', 'damrru', 'tandavs', 'kapaalik', 'kalyannam'],
       required: [true, 'Brand/venture is required'],
       trim: true,
     },
