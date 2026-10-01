@@ -5,6 +5,7 @@ import { setPageTitle } from '../app/store/uiSlice';
 import { useGetVentureDashboardQuery } from '../services/dashboardApi';
 import AnimatedCounter from '../components/ui/AnimatedCounter';
 import ProgressRing from '../components/ui/ProgressRing';
+import { VentureDashboardSkeleton } from '../components/ui/Skeleton';
 import {
   ArrowLeft, Users, UserCheck, IndianRupee, TrendingUp,
   Loader2, AlertCircle, Building2, Layers, ChevronRight,
@@ -94,12 +95,7 @@ export default function VentureDashboard() {
   }, [dispatch, brand]);
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] gap-3">
-        <Loader2 className="w-8 h-8 text-primary-900 animate-spin" />
-        <p className="text-xs text-zinc-400 font-medium font-mono">Loading {meta.label} metrics...</p>
-      </div>
-    );
+    return <VentureDashboardSkeleton />;
   }
 
   if (isError || !data?.data) {

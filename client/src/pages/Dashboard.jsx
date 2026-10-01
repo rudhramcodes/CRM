@@ -5,6 +5,7 @@ import { setPageTitle } from '../app/store/uiSlice';
 import { useGetDashboardOverviewQuery } from '../services/dashboardApi';
 import AnimatedCounter from '../components/ui/AnimatedCounter';
 import ProgressRing from '../components/ui/ProgressRing';
+import { DashboardSkeleton } from '../components/ui/Skeleton';
 import EmployeeDashboard from './EmployeeDashboard';
 import {
   Users, UserCheck, FolderKanban, IndianRupee, Clock, AlertCircle,
@@ -123,12 +124,7 @@ export default function Dashboard() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] gap-3">
-        <Loader2 className="w-8 h-8 text-primary-900 animate-spin" />
-        <p className="text-xs text-zinc-400 font-medium font-mono">Loading dashboard metrics...</p>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (isError || !data?.data) {
