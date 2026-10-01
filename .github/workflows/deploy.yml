@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy to VPS
@@ -20,11 +24,23 @@ jobs:
           port: 22
           command_timeout: 30m
           script: |
-            set -e
+            set -euo pipefail
+
+            # Prevent concurrent deployments on the VPS
+            mkdir -p /var/lock
+            exec 9>/var/lock/crm-deploy.lock
+            flock -w 300 9
+
+            echo "Checking repository..."
+            cd /root/crm
+
+            # Clean stale git lock files if no git process is active
+            if ! pgrep -x "git" > /dev/null 2>&1; then
+              find .git -name '*.lock' -delete 2>/dev/null || true
+            fi
 
             echo "Pulling latest code..."
-            cd /root/crm
-            git fetch origin main
+            git fetch --prune origin main
             git reset --hard origin/main
 
             echo "Installing server dependencies..."
