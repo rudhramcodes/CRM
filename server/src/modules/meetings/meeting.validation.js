@@ -99,6 +99,7 @@ export const generateLinkSchema = z.object({
   date: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date'),
   startTime: z.string().regex(TIME_REGEX, 'Start time must be in HH:mm format'),
   endTime: z.string().regex(TIME_REGEX, 'End time must be in HH:mm format'),
+  provider: z.enum(['zoho', 'google']).optional().default('zoho'),
 });
 
 export const meetingNotesSchema = z.object({

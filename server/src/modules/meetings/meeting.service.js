@@ -252,6 +252,10 @@ export const getMeetingById = async (id, user, clientProfile) => {
 };
 
 export const generateLinkPreview = async (data) => {
+  if (data.provider === 'google') {
+    return process.env.GOOGLE_MEET_DEFAULT_URL || 'https://meet.google.com/agw-dnrs-jfv';
+  }
+
   const link = await generateMeetLink({
     title: data.title,
     date: data.date,

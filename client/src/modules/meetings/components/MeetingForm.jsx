@@ -203,20 +203,29 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
     prevStartTime.current = startTimeValue;
   }, [startTimeValue, setValue]);
 
-  const onAutoGenerateLink = async () => {
+  const onAutoGenerateGoogleMeetLink = () => {
+    const link = import.meta.env.VITE_GOOGLE_MEET_DEFAULT_URL || 'https://meet.google.com/agw-dnrs-jfv';
+    setValue('meetingLink', link, { shouldValidate: true });
+    toast.success('Google Meet link applied!');
+  };
+
+  const onAutoGenerateZohoLink = async () => {
     const { title, date, startTime, endTime } = watch();
     if (!title || !date || !startTime || !endTime) {
       toast.error('Please fill in title, date and start/end time first');
       return;
     }
     try {
-      const link = await generateMeetingLink({ title, date, startTime, endTime }).unwrap();
+      const link = await generateMeetingLink({ title, date, startTime, endTime, provider: 'zoho' }).unwrap();
       setValue('meetingLink', link, { shouldValidate: true });
       toast.success('Zoho Meeting link generated & synced!');
     } catch (error) {
-      toast.error(error?.data?.message || 'Could not auto-generate link');
+      toast.error(error?.data?.message || 'Could not auto-generate Zoho link');
     }
   };
+
+  const isMeetLink = Boolean(meetingLinkValue && meetingLinkValue.includes('meet.google.com'));
+  const isZohoLink = Boolean(meetingLinkValue && (meetingLinkValue.includes('zoho') || meetingLinkValue.includes('zohomeeting')));
 
   const filteredUsers = useMemo(() => {
     if (!attendeeSearch.trim()) return users;
@@ -514,7 +523,7 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
 
       {/* 4. Virtual Conference Link & Location */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100">
           <div className="flex items-center gap-2">
             <span className="p-1.5 rounded-lg bg-zinc-100 text-zinc-700">
               <Video className="w-4 h-4" />
@@ -523,33 +532,61 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
               Conference Link & Room Location
             </h4>
           </div>
-          <button
-            type="button"
-            onClick={onAutoGenerateLink}
-            disabled={isGeneratingLink}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs',
-              meetingLinkValue
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                : 'bg-primary-900 text-white hover:bg-primary-950 active:scale-95',
-              isGeneratingLink && 'opacity-60 cursor-not-allowed'
-            )}
-          >
-            {isGeneratingLink ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : meetingLinkValue ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            ) : (
-              <Zap className="w-3.5 h-3.5 text-amber-300" />
-            )}
-            <span>
-              {isGeneratingLink
-                ? 'Provisioning Room...'
-                : meetingLinkValue
-                ? 'Re-generate Zoho Link'
-                : 'Auto-Generate Zoho Link'}
-            </span>
-          </button>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Google Meet Button (Recommended) */}
+            <button
+              type="button"
+              onClick={onAutoGenerateGoogleMeetLink}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs active:scale-95',
+                isMeetLink
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                  : 'bg-primary-900 text-white hover:bg-primary-950 hover:shadow-md'
+              )}
+            >
+              {isMeetLink ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+              ) : (
+                <Video className="w-3.5 h-3.5 text-sky-400" />
+              )}
+              <span>
+                {isMeetLink ? 'Re-generate Meet' : 'Auto-Generate Google Meet'}
+              </span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wide bg-amber-400 text-amber-950 shadow-xs">
+                Recommended
+              </span>
+            </button>
+
+            {/* Zoho Meeting Button */}
+            <button
+              type="button"
+              onClick={onAutoGenerateZohoLink}
+              disabled={isGeneratingLink}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs border',
+                isZohoLink
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                  : 'bg-white hover:bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-300 active:scale-95',
+                isGeneratingLink && 'opacity-60 cursor-not-allowed'
+              )}
+            >
+              {isGeneratingLink ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : isZohoLink ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              ) : (
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+              )}
+              <span>
+                {isGeneratingLink
+                  ? 'Provisioning...'
+                  : isZohoLink
+                  ? 'Re-generate Zoho Link'
+                  : 'Auto-Generate Zoho Link'}
+              </span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
