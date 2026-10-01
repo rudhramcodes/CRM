@@ -9,6 +9,8 @@ const POPULATE_FIELDS = [
   { path: 'blockedBy', select: 'title status' },
   { path: 'timeEntries.createdBy', select: 'name email avatar' },
   { path: 'comments.createdBy', select: 'name email avatar' },
+  { path: 'watchers', select: 'name email avatar' },
+  { path: 'activities.performedBy', select: 'name email avatar' },
 ];
 
 export const create = (data) => Task.create(data);

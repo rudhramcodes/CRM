@@ -12,6 +12,7 @@ import {
   BarChart3,
   ClipboardCheck,
   BriefcaseBusiness,
+  ListTodo,
 } from 'lucide-react';
 
 export const ROLES = {
@@ -172,6 +173,7 @@ export const NAV_ITEMS = [
   { label: 'Clients', path: '/clients', icon: UserCheck, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Meetings', path: '/meetings', icon: Calendar, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Projects', path: '/projects', icon: FolderKanban, roles: ['super_admin', 'admin', 'manager', 'employee'] },
+  { label: 'Tasks', path: '/tasks', icon: ListTodo, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Invoices', path: '/invoices', icon: Receipt, roles: ['super_admin', 'admin'] },
   { label: 'Payments', path: '/payments', icon: CreditCard, roles: ['super_admin', 'admin'] },
   { label: 'Reports', path: '/reports', icon: BarChart3, roles: ['super_admin', 'admin'] },

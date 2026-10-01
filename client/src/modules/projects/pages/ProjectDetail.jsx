@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Briefcase,
+  FolderKanban,
 } from 'lucide-react';
 import { BRANDS } from '../../../constants';
 import {
@@ -358,6 +359,15 @@ export default function ProjectDetail() {
 
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-primary-900">Tasks ({projectTasks.length})</h3>
+        <button
+          type="button"
+          onClick={() => navigate(`/tasks?project=${id}`)}
+          className="flex items-center gap-1.5 text-xs font-semibold text-primary-900 hover:text-primary-750 px-2.5 py-1 rounded-xl bg-zinc-100 hover:bg-zinc-200/80 transition-colors cursor-pointer shadow-2xs"
+          title="Open project tasks in full Operations Hub"
+        >
+          <FolderKanban className="w-3.5 h-3.5 text-zinc-500" />
+          <span>Open in Tasks Hub</span>
+        </button>
       </div>
       <ProjectTasks
         tasks={projectTasks}

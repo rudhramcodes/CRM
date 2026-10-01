@@ -40,7 +40,7 @@ export const remove = async (req, res, next) => {
 export const getSubtasks = async (req, res, next) => {
   try {
     const tasks = await taskService.getSubtasks(req.params.id, req.user, req.clientProfile);
-    ApiResponse.success(res, 200, { tasks });
+    ApiResponse.success(res, 200, { tasks, subtasks: tasks });
   } catch (err) { next(err); }
 };
 

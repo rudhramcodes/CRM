@@ -12,6 +12,7 @@ export default function Drawer({
   children,
   side = 'right',
   size = 'md',
+  bodyClassName,
 }) {
   useEffect(() => {
     if (open) {
@@ -88,7 +89,7 @@ export default function Drawer({
                 </button>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto p-6">{children}</div>
+            <div className={cn("flex-1 overflow-y-auto p-6", bodyClassName)}>{children}</div>
           </motion.div>
         </div>
       )}

@@ -10,7 +10,7 @@ export const createTaskSchema = z.object({
   status: z.enum(statusValues).optional().default(TASK_STATUS.TODO),
   priority: z.enum(priorityValues).optional().default(TASK_PRIORITY.MEDIUM),
   assignedTo: z.string().optional(),
-  project: z.string().min(1, 'Project is required'),
+  project: z.string().optional(),
   milestone: z.string().optional(),
   dueDate: z.coerce.date().optional(),
   startDate: z.coerce.date().optional(),
@@ -18,6 +18,11 @@ export const createTaskSchema = z.object({
   tags: z.array(z.string()).optional().default([]),
   parent: z.string().optional(),
   dependsOn: z.array(z.string()).optional().default([]),
+  recurring: z.object({
+    enabled: z.boolean(),
+    frequency: z.enum(['daily', 'weekly', 'monthly', 'custom']).optional(),
+    interval: z.number().optional(),
+  }).optional(),
 });
 
 export const updateTaskSchema = z.object({
@@ -36,6 +41,11 @@ export const updateTaskSchema = z.object({
   parent: z.string().nullable().optional(),
   dependsOn: z.array(z.string()).optional(),
   order: z.number().optional(),
+  recurring: z.object({
+    enabled: z.boolean(),
+    frequency: z.enum(['daily', 'weekly', 'monthly', 'custom']).optional(),
+    interval: z.number().optional(),
+  }).optional(),
 });
 
 export const tasksQuerySchema = z.object({

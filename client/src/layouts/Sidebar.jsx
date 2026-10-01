@@ -13,7 +13,7 @@ import { logout } from '../app/store/authSlice';
 const SECTIONS = [
   { id: 'overview', label: 'Overview', paths: ['/dashboard'] },
   { id: 'crm', label: 'CRM & Pipeline', paths: ['/leads', '/clients', '/meetings'] },
-  { id: 'operations', label: 'Operations', paths: ['/projects', '/attendance', '/freelancers'] },
+  { id: 'operations', label: 'Operations', paths: ['/projects', '/tasks', '/attendance', '/freelancers'] },
   { id: 'financials', label: 'Financials', paths: ['/invoices', '/payments', '/reports'] },
   { id: 'system', label: 'Administration', paths: ['/notifications', '/users', '/settings'] },
 ];

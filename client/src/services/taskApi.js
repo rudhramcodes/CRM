@@ -25,7 +25,7 @@ export const taskApi = api.injectEndpoints({
     }),
     getSubtasks: builder.query({
       query: (id) => `/tasks/${id}/subtasks`,
-      providesTags: (result, error, id) => [{ type: 'Task', id }],
+      providesTags: (result, error, id) => [{ type: 'Task', id }, 'Task'],
     }),
     getDependencies: builder.query({
       query: (id) => `/tasks/${id}/dependencies`,
@@ -37,7 +37,7 @@ export const taskApi = api.injectEndpoints({
     }),
     removeDependency: builder.mutation({
       query: ({ id, depId }) => ({ url: `/tasks/${id}/dependencies/${depId}`, method: 'DELETE' }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
     addTaskComment: builder.mutation({
       query: ({ id, text }) => ({ url: `/tasks/${id}/comments`, method: 'POST', body: { text } }),
