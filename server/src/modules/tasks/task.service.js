@@ -35,6 +35,17 @@ export const createTask = async (data, user) => {
   if (data.parent) {
     const parent = await taskRepo.findById(data.parent);
     if (!parent) throw { status: 404, message: 'Parent task not found' };
+    if (['done', 'review'].includes(parent.status)) {
+      await taskRepo.updateById(parent._id, { status: 'in_progress', completedAt: null });
+      await taskRepo.addActivity(parent._id, {
+        action: 'status_changed',
+        field: 'status',
+        oldValue: parent.status,
+        newValue: 'in_progress',
+        performedBy: user._id,
+      });
+      emitEntityUpdate('task', parent._id, 'task_updated');
+    }
   }
   const task = await taskRepo.create(taskData);
   if (data.dependsOn?.length) {
@@ -76,6 +87,39 @@ export const getTaskById = async (id, user, clientProfile) => {
 export const updateTask = async (id, data, user) => {
   const task = await taskRepo.findById(id);
   if (!task) throw { status: 404, message: 'Task not found' };
+
+  // Creator gate: Only task creator can mark task as 'done' (completed)
+  if (data.status === 'done' && task.status !== 'done') {
+    const creatorId = task.createdBy?._id?.toString() || task.createdBy?.toString();
+    const userId = user?._id?.toString();
+    if (!creatorId || creatorId !== userId) {
+      const creatorName = task.createdBy?.name || 'the task creator';
+      throw ApiError.forbidden(`Only the task creator (${creatorName}) can review and mark this task as completed`);
+    }
+  }
+
+  // Change gate: If there are any content changes made to a completed or in-review task, revert it back to in_progress
+  if (data.requestChanges) {
+    data.status = 'in_progress';
+    delete data.requestChanges;
+  } else {
+    const contentKeys = Object.keys(data).filter(
+      (k) => !['status', 'completedAt', 'order', 'checklistProgress', 'totalLoggedHours', 'requestChanges'].includes(k)
+    );
+    const hasContentChanges = contentKeys.some((k) => {
+      const oldVal = task[k];
+      const newVal = data[k];
+      if (newVal === undefined) return false;
+      if (typeof newVal === 'object' && newVal !== null) {
+        return JSON.stringify(oldVal) !== JSON.stringify(newVal);
+      }
+      return String(oldVal ?? '') !== String(newVal ?? '');
+    });
+
+    if (task.status === 'done' && hasContentChanges && data.status !== 'done') {
+      data.status = 'in_progress';
+    }
+  }
 
   // Status gate: check dependencies before allowing in_progress/done
   if (data.status && ['in_progress', 'done'].includes(data.status) && task.dependsOn?.length) {
@@ -338,26 +382,83 @@ export const addChecklistItem = async (taskId, text, user) => {
   const order = (task.checklists?.length || 0);
   const item = { text, order, createdBy: user._id };
   const updated = await taskRepo.addChecklistItem(taskId, item);
+
+  // If task was completed or in review, adding new item puts it back in progress
+  if (['done', 'review'].includes(task.status)) {
+    await taskRepo.updateById(taskId, { status: 'in_progress', completedAt: null });
+    await taskRepo.addActivity(taskId, {
+      action: 'status_changed',
+      field: 'status',
+      oldValue: task.status,
+      newValue: 'in_progress',
+      performedBy: user._id,
+    });
+    emitEntityUpdate('task', taskId, 'task_updated');
+  }
+
   return updated;
 };
 
-export const updateChecklistItem = async (taskId, itemId, data) => {
+export const updateChecklistItem = async (taskId, itemId, data, user) => {
+  const task = await taskRepo.findById(taskId);
+  if (!task) throw { status: 404, message: 'Task not found' };
+
   const updated = await taskRepo.updateChecklistItem(taskId, itemId, data);
   if (!updated) throw { status: 404, message: 'Task or checklist item not found' };
+
   // Recalculate progress
   const total = updated.checklists?.length || 0;
   const done = updated.checklists?.filter((c) => c.checked).length || 0;
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-  return taskRepo.updateById(taskId, { checklistProgress: progress });
+
+  const updateData = { checklistProgress: progress };
+
+  // If item was unchecked or modified while task was done, put back in progress
+  if (['done', 'review'].includes(task.status) && (data.checked === false || data.text !== undefined)) {
+    updateData.status = 'in_progress';
+    updateData.completedAt = null;
+    if (user) {
+      await taskRepo.addActivity(taskId, {
+        action: 'status_changed',
+        field: 'status',
+        oldValue: task.status,
+        newValue: 'in_progress',
+        performedBy: user._id,
+      });
+    }
+    emitEntityUpdate('task', taskId, 'task_updated');
+  }
+
+  return taskRepo.updateById(taskId, updateData);
 };
 
-export const removeChecklistItem = async (taskId, itemId) => {
+export const removeChecklistItem = async (taskId, itemId, user) => {
+  const task = await taskRepo.findById(taskId);
+  if (!task) throw { status: 404, message: 'Task not found' };
+
   const updated = await taskRepo.removeChecklistItem(taskId, itemId);
   if (!updated) throw { status: 404, message: 'Task not found' };
   const total = updated.checklists?.length || 0;
   const done = updated.checklists?.filter((c) => c.checked).length || 0;
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-  return taskRepo.updateById(taskId, { checklistProgress: progress });
+
+  const updateData = { checklistProgress: progress };
+  if (['done', 'review'].includes(task.status)) {
+    updateData.status = 'in_progress';
+    updateData.completedAt = null;
+    if (user) {
+      await taskRepo.addActivity(taskId, {
+        action: 'status_changed',
+        field: 'status',
+        oldValue: task.status,
+        newValue: 'in_progress',
+        performedBy: user._id,
+      });
+    }
+    emitEntityUpdate('task', taskId, 'task_updated');
+  }
+
+  return taskRepo.updateById(taskId, updateData);
 };
 
 export const reorderChecklist = async (taskId, orderedIds) => {
@@ -409,11 +510,47 @@ export const removeTimeEntry = async (taskId, entryId) => {
 };
 
 // Reorder
-export const reorderTasks = async (status, orderedIds) => {
-  await Promise.all(orderedIds.map((id, i) => taskRepo.updateById(id, { status, order: i })));
+export const reorderTasks = async (status, orderedIds, user) => {
+  if (status === 'done') {
+    const tasks = await Promise.all(orderedIds.map((id) => taskRepo.findById(id)));
+    for (const t of tasks) {
+      if (t && t.status !== 'done') {
+        const creatorId = t.createdBy?._id?.toString() || t.createdBy?.toString();
+        const userId = user?._id?.toString();
+        if (creatorId && creatorId !== userId) {
+          const creatorName = t.createdBy?.name || 'the task creator';
+          throw ApiError.forbidden(`Only the task creator (${creatorName}) can review and mark "${t.title}" as completed`);
+        }
+      }
+    }
+  }
+
+  await Promise.all(orderedIds.map((id, i) => {
+    const update = { status, order: i };
+    if (status === 'done') update.completedAt = new Date().toISOString();
+    else if (status && status !== 'done') update.completedAt = null;
+    return taskRepo.updateById(id, update);
+  }));
 };
 
 // Bulk update
-export const bulkUpdate = async (ids, data) => {
+export const bulkUpdate = async (ids, data, user) => {
+  if (data.status === 'done') {
+    const tasks = await Promise.all(ids.map((id) => taskRepo.findById(id)));
+    for (const t of tasks) {
+      if (t && t.status !== 'done') {
+        const creatorId = t.createdBy?._id?.toString() || t.createdBy?.toString();
+        const userId = user?._id?.toString();
+        if (creatorId && creatorId !== userId) {
+          const creatorName = t.createdBy?.name || 'the task creator';
+          throw ApiError.forbidden(`Only the task creator (${creatorName}) can review and mark "${t.title}" as completed`);
+        }
+      }
+    }
+  }
+
+  if (data.status === 'done') data.completedAt = new Date().toISOString();
+  else if (data.status && data.status !== 'done') data.completedAt = null;
+
   await Promise.all(ids.map((id) => taskRepo.updateById(id, data)));
 };

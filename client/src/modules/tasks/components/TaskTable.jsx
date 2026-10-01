@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import {
   Clock,
   CheckSquare,
@@ -40,6 +41,7 @@ export default function TaskTable({
   onPriorityChange,
   onDelete,
 }) {
+  const currentUser = useSelector((state) => state.auth.user);
   const [sortKey, setSortKey] = useState('dueDate');
   const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
 
@@ -239,21 +241,46 @@ export default function TaskTable({
 
                     {/* Status Dropdown */}
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <Select
-                        value={task.status}
-                        onValueChange={(val) => onStatusChange?.(task._id, val)}
-                      >
-                        <SelectTrigger className="h-7 w-auto gap-1 border-0 bg-transparent p-0 shadow-none cursor-pointer focus:ring-0">
-                          <TaskStatusBadge status={task.status} />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                          {TASK_STATUS.map((s) => (
-                            <SelectItem key={s.value} value={s.value}>
-                              {s.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {(() => {
+                        const isCreator = Boolean(
+                          currentUser?._id &&
+                          task?.createdBy &&
+                          (String(task.createdBy._id || task.createdBy) === String(currentUser._id))
+                        );
+                        return (
+                          <Select
+                            value={task.status}
+                            onValueChange={(val) => onStatusChange?.(task._id, val)}
+                          >
+                            <SelectTrigger className="h-7 w-auto gap-1 border-0 bg-transparent p-0 shadow-none cursor-pointer focus:ring-0">
+                              <TaskStatusBadge status={task.status} />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+                              {TASK_STATUS.map((s) => {
+                                const isDoneOption = s.value === 'done';
+                                const isOptionDisabled = isDoneOption && !isCreator;
+                                return (
+                                  <SelectItem
+                                    key={s.value}
+                                    value={s.value}
+                                    disabled={isOptionDisabled}
+                                    className={cn(isOptionDisabled && 'opacity-50 cursor-not-allowed')}
+                                  >
+                                    <div className="flex items-center justify-between w-full gap-2">
+                                      <span>{s.label}</span>
+                                      {isOptionDisabled && (
+                                        <span className="text-[10px] text-amber-600 font-medium">
+                                          (Creator only)
+                                        </span>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        );
+                      })()}
                     </td>
 
                     {/* Priority Dropdown */}

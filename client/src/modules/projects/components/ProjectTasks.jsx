@@ -240,12 +240,38 @@ export default function ProjectTasks({ tasks = [], milestones = [], users = [], 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                           <div>
                             <label className="text-xs text-zinc-400 uppercase tracking-wide">Status</label>
-                            <Select value={task.status || 'todo'} onValueChange={(v) => onUpdate?.(task._id, { status: v })}>
-                              <SelectTrigger className="mt-1 h-8 px-2 py-1 text-sm"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {TASK_STATUS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
+                            {(() => {
+                              const isCreator = Boolean(
+                                user?._id &&
+                                task?.createdBy &&
+                                (String(task.createdBy._id || task.createdBy) === String(user._id))
+                              );
+                              return (
+                                <Select
+                                  value={task.status || 'todo'}
+                                  onValueChange={(v) => {
+                                    if (v === 'done' && !isCreator) {
+                                      toast.error(`Only creator (${task.createdBy?.name || 'task creator'}) can mark completed.`);
+                                      return;
+                                    }
+                                    onUpdate?.(task._id, { status: v });
+                                  }}
+                                >
+                                  <SelectTrigger className="mt-1 h-8 px-2 py-1 text-sm"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    {TASK_STATUS.map((s) => {
+                                      const isDone = s.value === 'done';
+                                      const disabled = isDone && !isCreator;
+                                      return (
+                                        <SelectItem key={s.value} value={s.value} disabled={disabled}>
+                                          {s.label} {disabled ? '(Creator only)' : ''}
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              );
+                            })()}
                           </div>
                           <div>
                             <label className="text-xs text-zinc-400 uppercase tracking-wide">Priority</label>

@@ -91,14 +91,14 @@ export const addChecklistItem = async (req, res, next) => {
 
 export const updateChecklistItem = async (req, res, next) => {
   try {
-    const task = await taskService.updateChecklistItem(req.params.id, req.params.itemId, req.body);
+    const task = await taskService.updateChecklistItem(req.params.id, req.params.itemId, req.body, req.user);
     ApiResponse.success(res, 200, { task }, 'Checklist item updated');
   } catch (err) { next(err); }
 };
 
 export const removeChecklistItem = async (req, res, next) => {
   try {
-    const task = await taskService.removeChecklistItem(req.params.id, req.params.itemId);
+    const task = await taskService.removeChecklistItem(req.params.id, req.params.itemId, req.user);
     ApiResponse.success(res, 200, { task }, 'Checklist item removed');
   } catch (err) { next(err); }
 };
@@ -150,7 +150,7 @@ export const removeTimeEntry = async (req, res, next) => {
 // Reorder
 export const reorderTasks = async (req, res, next) => {
   try {
-    await taskService.reorderTasks(req.body.status, req.body.orderedIds);
+    await taskService.reorderTasks(req.body.status, req.body.orderedIds, req.user);
     ApiResponse.success(res, 200, null, 'Tasks reordered');
   } catch (err) { next(err); }
 };
@@ -158,7 +158,7 @@ export const reorderTasks = async (req, res, next) => {
 // Bulk Update
 export const bulkUpdate = async (req, res, next) => {
   try {
-    await taskService.bulkUpdate(req.body.ids, req.body.data);
+    await taskService.bulkUpdate(req.body.ids, req.body.data, req.user);
     ApiResponse.success(res, 200, null, 'Bulk update completed');
   } catch (err) { next(err); }
 };

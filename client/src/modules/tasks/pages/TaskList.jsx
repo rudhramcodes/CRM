@@ -119,6 +119,18 @@ export default function TaskList() {
 
   const handleStatusChange = useCallback(
     async (taskId, status) => {
+      const targetTask = tasks.find((t) => t._id === taskId);
+      if (status === 'done' && targetTask) {
+        const isCreator = Boolean(
+          user?._id &&
+          targetTask.createdBy &&
+          String(targetTask.createdBy._id || targetTask.createdBy) === String(user._id)
+        );
+        if (!isCreator) {
+          toast.error(`Only the creator (${targetTask.createdBy?.name || 'task creator'}) can review and mark this task as completed.`);
+          return;
+        }
+      }
       try {
         await updateTask({ id: taskId, status }).unwrap();
         toast.success(`Task moved to ${status.replace('_', ' ')}`);
@@ -126,7 +138,7 @@ export default function TaskList() {
         toast.error(err?.data?.message || 'Failed to update status');
       }
     },
-    [updateTask],
+    [updateTask, tasks, user],
   );
 
   const handlePriorityChange = useCallback(
@@ -212,27 +224,43 @@ export default function TaskList() {
 
   const handleBulkMarkDone = useCallback(async () => {
     if (selectedIds.length === 0) return;
+    const nonCreatedTasks = tasks.filter(
+      (t) => selectedIds.includes(t._id) && String(t.createdBy?._id || t.createdBy) !== String(user?._id)
+    );
+    if (nonCreatedTasks.length > 0) {
+      toast.error(`Only creators can mark tasks as Done (${nonCreatedTasks.length} task${nonCreatedTasks.length > 1 ? 's were' : ' was'} not created by you)`);
+      return;
+    }
     try {
       await bulkUpdateTasks({ ids: selectedIds, data: { status: 'done' } }).unwrap();
       toast.success(`${selectedIds.length} tasks marked as Done`);
       setSelectedIds([]);
     } catch (err) {
-      toast.error('Failed to update tasks');
+      toast.error(err?.data?.message || 'Failed to update tasks');
     }
-  }, [selectedIds, bulkUpdateTasks]);
+  }, [selectedIds, tasks, user, bulkUpdateTasks]);
 
   const handleBulkChangeStatus = useCallback(
     async (status) => {
       if (selectedIds.length === 0) return;
+      if (status === 'done') {
+        const nonCreatedTasks = tasks.filter(
+          (t) => selectedIds.includes(t._id) && String(t.createdBy?._id || t.createdBy) !== String(user?._id)
+        );
+        if (nonCreatedTasks.length > 0) {
+          toast.error(`Only creators can mark tasks as Done (${nonCreatedTasks.length} task${nonCreatedTasks.length > 1 ? 's were' : ' was'} not created by you)`);
+          return;
+        }
+      }
       try {
         await bulkUpdateTasks({ ids: selectedIds, data: { status } }).unwrap();
         toast.success(`Updated status for ${selectedIds.length} tasks`);
         setSelectedIds([]);
       } catch (err) {
-        toast.error('Failed to update status');
+        toast.error(err?.data?.message || 'Failed to update status');
       }
     },
-    [selectedIds, bulkUpdateTasks],
+    [selectedIds, tasks, user, bulkUpdateTasks],
   );
 
   const handleBulkChangePriority = useCallback(

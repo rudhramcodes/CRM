@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 import {
   Plus,
   Clock,
@@ -32,6 +34,7 @@ export default function TaskKanban({
   onDelete,
   onOpenCreateModal,
 }) {
+  const currentUser = useSelector((state) => state.auth.user);
   const [quickTitles, setQuickTitles] = useState({});
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
@@ -58,9 +61,23 @@ export default function TaskKanban({
     const taskId = e.dataTransfer.getData('text/plain') || draggedTaskId;
     setDragOverColumn(null);
     setDraggedTaskId(null);
-    if (taskId && columnId) {
-      onStatusChange?.(taskId, columnId);
+    if (!taskId || !columnId) return;
+
+    if (columnId === 'done') {
+      const task = tasks.find((t) => t._id === taskId);
+      const isCreator = Boolean(
+        currentUser?._id &&
+        task?.createdBy &&
+        (String(task.createdBy._id || task.createdBy) === String(currentUser._id))
+      );
+      if (!isCreator) {
+        toast.error(`Only creator (${task?.createdBy?.name || 'task creator'}) can mark this as Done. Moved to Review instead.`);
+        onStatusChange?.(taskId, 'review');
+        return;
+      }
     }
+
+    onStatusChange?.(taskId, columnId);
   };
 
   const handleQuickAddSubmit = (columnId, e) => {
@@ -234,21 +251,35 @@ export default function TaskKanban({
 
                       {/* Title with fast 1-click round checkbox */}
                       <div className="flex items-start gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onStatusChange?.(task._id, isDone ? 'todo' : 'done');
-                          }}
-                          className="p-0.5 text-zinc-400 hover:text-emerald-600 transition-colors shrink-0 cursor-pointer mt-0.5"
-                          title={isDone ? 'Mark as to do' : 'Mark as done'}
-                        >
-                          {isDone ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-100" />
-                          ) : (
-                            <Circle className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500" />
-                          )}
-                        </button>
+                        {(() => {
+                          const isCreator = Boolean(
+                            currentUser?._id &&
+                            task?.createdBy &&
+                            (String(task.createdBy._id || task.createdBy) === String(currentUser._id))
+                          );
+                          return (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isDone && !isCreator) {
+                                  toast.info(`Submitted for review. Only creator (${task?.createdBy?.name || 'task creator'}) can mark Done.`);
+                                  onStatusChange?.(task._id, 'review');
+                                  return;
+                                }
+                                onStatusChange?.(task._id, isDone ? 'todo' : 'done');
+                              }}
+                              className="p-0.5 text-zinc-400 hover:text-emerald-600 transition-colors shrink-0 cursor-pointer mt-0.5"
+                              title={isDone ? 'Mark as to do' : isCreator ? 'Mark as done' : 'Submit for review'}
+                            >
+                              {isDone ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-100" />
+                              ) : (
+                                <Circle className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500" />
+                              )}
+                            </button>
+                          );
+                        })()}
                         <p className={cn(
                           'font-semibold text-xs leading-snug line-clamp-2 flex-1',
                           isDone ? 'line-through text-zinc-400' : 'text-primary-900',

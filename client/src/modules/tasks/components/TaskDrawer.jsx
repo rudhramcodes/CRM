@@ -179,7 +179,17 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
     }
   };
 
+  const isCreator = Boolean(
+    currentUser?._id &&
+    task?.createdBy &&
+    (String(task.createdBy._id || task.createdBy) === String(currentUser._id))
+  );
+
   const handleStatusChange = async (newStatus) => {
+    if (newStatus === 'done' && !isCreator) {
+      toast.error(`Only the task creator (${task?.createdBy?.name || 'creator'}) can review and mark this task as completed.`);
+      return;
+    }
     try {
       await updateTask({ id: task._id, status: newStatus }).unwrap();
       toast.success(`Status updated to ${newStatus.replace('_', ' ')}`);
@@ -213,30 +223,42 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
     }
     try {
       await updateTask({ id: task._id, title: titleValue.trim() }).unwrap();
-      toast.success('Title updated');
+      if (task.status === 'done') {
+        toast.info('Task reopened to In Progress due to changes');
+      } else {
+        toast.success('Title updated');
+      }
       setIsEditingTitle(false);
     } catch (err) {
-      toast.error('Failed to update title');
+      toast.error(err?.data?.message || 'Failed to update title');
     }
   };
 
   const handleSaveDesc = async () => {
     try {
       await updateTask({ id: task._id, description: descValue }).unwrap();
-      toast.success('Description updated');
+      if (task.status === 'done') {
+        toast.info('Task reopened to In Progress due to changes');
+      } else {
+        toast.success('Description updated');
+      }
       setIsEditingDesc(false);
     } catch (err) {
-      toast.error('Failed to update description');
+      toast.error(err?.data?.message || 'Failed to update description');
     }
   };
 
   const handleUpdateDueDate = async (dateStr) => {
     try {
       await updateTask({ id: task._id, dueDate: dateStr || null }).unwrap();
-      toast.success(dateStr ? 'Due date updated' : 'Due date cleared');
+      if (task.status === 'done') {
+        toast.info('Task reopened to In Progress due to changes');
+      } else {
+        toast.success(dateStr ? 'Due date updated' : 'Due date cleared');
+      }
       setIsEditingDueDate(false);
     } catch (err) {
-      toast.error('Failed to update due date');
+      toast.error(err?.data?.message || 'Failed to update due date');
     }
   };
 
@@ -253,7 +275,11 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
       }).unwrap();
       setNewSubtaskTitle('');
       refetchSubtasks();
-      toast.success('Subtask created');
+      if (['done', 'review'].includes(task.status)) {
+        toast.info('Task returned to In Progress for new subtask work');
+      } else {
+        toast.success('Subtask created');
+      }
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to create subtask');
     }
@@ -313,6 +339,11 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
     try {
       await addChecklistItem({ id: task._id, text: newChecklistText.trim() }).unwrap();
       setNewChecklistText('');
+      if (['done', 'review'].includes(task.status)) {
+        toast.info('Task returned to In Progress due to checklist changes');
+      } else {
+        toast.success('Checklist item added');
+      }
     } catch (err) {
       toast.error('Failed to add checklist item');
     }
@@ -327,28 +358,52 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
         checked: willBeChecked,
       }).unwrap();
 
+      if (!willBeChecked && ['done', 'review'].includes(task.status)) {
+        toast.info('Item unchecked — task reopened to In Progress');
+      }
+
       const remainingUnchecked = task.checklists?.filter(
         (c) => c._id !== item._id && !c.checked
       ).length;
 
       if (willBeChecked && remainingUnchecked === 0 && task.status !== 'done') {
-        toast((t) => (
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-zinc-900">
-              All checklist items done! Complete task?
-            </span>
-            <button
-              onClick={async () => {
-                toast.dismiss(t.id);
-                await updateTask({ id: task._id, status: 'done' });
-                toast.success('Task marked as Done!');
-              }}
-              className="px-2.5 py-1 text-xs font-bold bg-primary-900 text-white rounded-lg cursor-pointer"
-            >
-              Mark Done
-            </button>
-          </div>
-        ), { duration: 6000 });
+        if (isCreator) {
+          toast((t) => (
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-zinc-900">
+                All checklist items done! Complete task?
+              </span>
+              <button
+                onClick={async () => {
+                  toast.dismiss(t.id);
+                  await updateTask({ id: task._id, status: 'done' });
+                  toast.success('Task marked as Done!');
+                }}
+                className="px-2.5 py-1 text-xs font-bold bg-primary-900 text-white rounded-lg cursor-pointer"
+              >
+                Mark Done
+              </button>
+            </div>
+          ), { duration: 6000 });
+        } else {
+          toast((t) => (
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-zinc-900">
+                All items done! Submit for creator review?
+              </span>
+              <button
+                onClick={async () => {
+                  toast.dismiss(t.id);
+                  await updateTask({ id: task._id, status: 'review' });
+                  toast.success(`Submitted for review to ${task.createdBy?.name || 'creator'}!`);
+                }}
+                className="px-2.5 py-1 text-xs font-bold bg-amber-600 text-white rounded-lg cursor-pointer"
+              >
+                Submit Review
+              </button>
+            </div>
+          ), { duration: 6000 });
+        }
       }
     } catch (err) {
       toast.error('Failed to update checklist');
@@ -538,11 +593,27 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
                   <TaskStatusBadge status={task.status} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                  {TASK_STATUS.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
+                  {TASK_STATUS.map((s) => {
+                    const isDoneOption = s.value === 'done';
+                    const isOptionDisabled = isDoneOption && !isCreator;
+                    return (
+                      <SelectItem
+                        key={s.value}
+                        value={s.value}
+                        disabled={isOptionDisabled}
+                        className={cn(isOptionDisabled && 'opacity-50 cursor-not-allowed')}
+                      >
+                        <div className="flex items-center justify-between w-full gap-2">
+                          <span>{s.label}</span>
+                          {isOptionDisabled && (
+                            <span className="text-[10px] text-amber-600 font-medium">
+                              (Creator only)
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
 
@@ -611,6 +682,70 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
               </button>
             </div>
           </div>
+
+          {/* Creator Review & Approval Gate Banner */}
+          {task.status === 'review' && (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold text-amber-950 block">
+                    {isCreator ? 'Task Ready for Your Review' : 'Under Creator Review'}
+                  </span>
+                  <span className="text-[11px] text-amber-800 block">
+                    {isCreator
+                      ? 'You created this task. Approve to mark completed, or request changes to put it back in progress.'
+                      : `Waiting for creator (${task.createdBy?.name || 'Task Creator'}) to review and approve.`}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange('in_progress')}
+                  className="px-3 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-50 text-amber-900 font-semibold transition-colors cursor-pointer text-xs"
+                >
+                  Request Changes
+                </button>
+                {isCreator && (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('done')}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors cursor-pointer text-xs shadow-2xs"
+                  >
+                    Approve & Complete
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {task.status === 'done' && (
+            <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold text-emerald-950 block">
+                    Task Completed & Approved
+                  </span>
+                  <span className="text-[11px] text-emerald-800 block">
+                    Approved by {task.createdBy?.name || 'Task Creator'}. Any modifications will put it back in progress.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStatusChange('in_progress')}
+                className="px-3 py-1.5 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-900 font-semibold transition-colors cursor-pointer text-xs shrink-0"
+              >
+                Put Back in Progress
+              </button>
+            </div>
+          )}
 
           {/* Parent Task Indicator Banner */}
           {task.parent && (

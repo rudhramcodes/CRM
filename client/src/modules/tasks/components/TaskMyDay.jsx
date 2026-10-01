@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 import {
   CheckCircle2,
   Circle,
@@ -26,6 +28,7 @@ export default function TaskMyDay({
   onReschedule,
   onOpenCreateModal,
 }) {
+  const currentUser = useSelector((state) => state.auth.user);
   const [quickTitle, setQuickTitle] = useState('');
   const today = startOfToday();
   const todayStr = format(today, 'yyyy-MM-dd');
@@ -79,21 +82,35 @@ export default function TaskMyDay({
       >
         <div className="flex items-center gap-3.5 min-w-0 flex-1">
           {/* Quick Toggle Checkbox */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onStatusChange?.(task._id, isDone ? 'todo' : 'done');
-            }}
-            className="p-1 text-zinc-400 hover:text-emerald-600 transition-transform active:scale-90 shrink-0 cursor-pointer"
-            title={isDone ? 'Mark as to do' : 'Mark as completed'}
-          >
-            {isDone ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
-            ) : (
-              <Circle className="w-5 h-5 text-zinc-300 group-hover:text-blue-500 transition-colors" />
-            )}
-          </button>
+          {(() => {
+            const isCreator = Boolean(
+              currentUser?._id &&
+              task?.createdBy &&
+              (String(task.createdBy._id || task.createdBy) === String(currentUser._id))
+            );
+            return (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isDone && !isCreator) {
+                    toast.info(`Submitted for review. Only creator (${task.createdBy?.name || 'task creator'}) can mark completed.`);
+                    onStatusChange?.(task._id, 'review');
+                    return;
+                  }
+                  onStatusChange?.(task._id, isDone ? 'todo' : 'done');
+                }}
+                className="p-1 text-zinc-400 hover:text-emerald-600 transition-transform active:scale-90 shrink-0 cursor-pointer"
+                title={isDone ? 'Mark as to do' : isCreator ? 'Mark as completed' : 'Submit for review'}
+              >
+                {isDone ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
+                ) : (
+                  <Circle className="w-5 h-5 text-zinc-300 group-hover:text-blue-500 transition-colors" />
+                )}
+              </button>
+            );
+          })()}
 
           <div className="min-w-0 flex-1">
             <p
