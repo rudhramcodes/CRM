@@ -52,13 +52,13 @@ export default function LeadFilters({ onFilterChange }) {
         )}
       </div>
 
-      <div className="flex items-center gap-2.5 flex-wrap">
+      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
         {/* Status Dropdown */}
         <Select
           value={filters.status || 'all'}
           onValueChange={(value) => setFilters((p) => ({ ...p, status: value === 'all' ? '' : value }))}
         >
-          <SelectTrigger className="w-full sm:w-40 rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
+          <SelectTrigger className="w-full sm:w-36 md:w-40 rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
@@ -76,7 +76,7 @@ export default function LeadFilters({ onFilterChange }) {
           value={filters.source || 'all'}
           onValueChange={(value) => setFilters((p) => ({ ...p, source: value === 'all' ? '' : value }))}
         >
-          <SelectTrigger className="w-full sm:w-40 rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
+          <SelectTrigger className="w-full sm:w-36 md:w-40 rounded-xl border-zinc-200/90 bg-white text-xs sm:text-sm h-9 shadow-2xs font-medium">
             <SelectValue placeholder="All Sources" />
           </SelectTrigger>
           <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
@@ -93,7 +93,7 @@ export default function LeadFilters({ onFilterChange }) {
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:text-primary-900 bg-white hover:bg-zinc-100 border border-zinc-200/80 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer"
+            className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:text-primary-900 bg-white hover:bg-zinc-100 border border-zinc-200/80 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
             Clear

@@ -33,14 +33,14 @@ export function TableSkeleton({ rows = 5 }) {
 export function DetailSkeleton() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <Skeleton className="h-6 w-40 rounded-xl" />
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-24 rounded-xl" />
-          <Skeleton className="h-10 w-24 rounded-xl" />
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Skeleton className="h-9 flex-1 sm:w-24 rounded-xl" />
+          <Skeleton className="h-9 flex-1 sm:w-24 rounded-xl" />
         </div>
       </div>
-      <Skeleton className="h-[450px] w-full rounded-2xl" />
+      <Skeleton className="h-[380px] sm:h-[450px] w-full rounded-2xl" />
     </div>
   );
 }

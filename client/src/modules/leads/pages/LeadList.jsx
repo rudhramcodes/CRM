@@ -215,8 +215,8 @@ export default function LeadList() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Header & Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+        <div className="min-w-0">
           <h2 className="text-xl sm:text-2xl font-bold text-primary-900 tracking-tight">
             Leads Pipeline
           </h2>
@@ -225,7 +225,7 @@ export default function LeadList() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* Refresh Action */}
           <button
             onClick={() => {
@@ -252,7 +252,7 @@ export default function LeadList() {
               title="Tabular list view"
             >
               <LayoutList className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Table</span>
+              <span>Table</span>
             </button>
             <button
               onClick={() => setView('board')}
@@ -265,7 +265,7 @@ export default function LeadList() {
               title="Kanban stage board"
             >
               <Columns3 className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Board</span>
+              <span>Board</span>
             </button>
           </div>
 
@@ -274,10 +274,11 @@ export default function LeadList() {
             <Button
               variant="outline"
               onClick={() => setImportOpen(true)}
-              className="rounded-xl border-zinc-200/80 text-xs shadow-2xs font-semibold"
+              className="rounded-xl border-zinc-200/80 text-xs shadow-2xs font-semibold px-2.5 sm:px-3"
             >
-              <Upload className="w-3.5 h-3.5 mr-1.5" />
-              Import CSV
+              <Upload className="w-3.5 h-3.5 sm:mr-1.5" />
+              <span className="hidden sm:inline">Import CSV</span>
+              <span className="sm:hidden">Import</span>
             </Button>
           )}
 
@@ -285,10 +286,10 @@ export default function LeadList() {
           {canCreate && (
             <Button
               onClick={() => navigate('/leads/new')}
-              className="rounded-xl text-xs font-semibold shadow-md shadow-primary-900/10"
+              className="rounded-xl text-xs font-semibold shadow-md shadow-primary-900/10 px-3 py-2"
             >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Add Lead
+              <Plus className="w-4 h-4 mr-1" />
+              <span>Add Lead</span>
             </Button>
           )}
         </div>
@@ -296,30 +297,34 @@ export default function LeadList() {
 
       {/* KPI Stats Ribbon */}
       {statsLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
           {Array.from({ length: 5 }).map((_, i) => (
             <StatCardSkeleton key={i} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
           {kpis.map((kpi, idx) => {
             const Icon = kpi.icon;
+            const isFeaturedWon = idx === 4;
             return (
               <div
                 key={idx}
-                className="bg-white rounded-2xl border border-zinc-200/80 p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-zinc-300/80 transition-all duration-200 flex flex-col justify-between"
+                className={cn(
+                  'bg-white rounded-2xl border border-zinc-200/80 p-3.5 sm:p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-zinc-300/80 transition-all duration-200 flex flex-col justify-between',
+                  isFeaturedWon && 'col-span-2 sm:col-span-1',
+                )}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                     {kpi.title}
                   </span>
                   <div className={cn('w-7 h-7 rounded-xl flex items-center justify-center shrink-0 shadow-2xs', kpi.iconColor)}>
                     <Icon className="w-3.5 h-3.5" strokeWidth={2} />
                   </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-primary-900 tracking-tight">
+                <div className={cn(isFeaturedWon ? 'flex sm:block items-baseline justify-between sm:justify-start gap-2' : '')}>
+                  <p className="text-xl sm:text-2xl font-bold text-primary-900 tracking-tight">
                     {kpi.value}
                   </p>
                   <p className="text-[11px] text-zinc-400 mt-0.5 truncate font-normal">
@@ -333,11 +338,11 @@ export default function LeadList() {
       )}
 
       {/* Venture Brand Switcher Tab Bar */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="-mx-2 px-2 sm:mx-0 sm:px-0 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none]">
         <button
           onClick={() => handleBrandChange('')}
           className={cn(
-            'flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
+            'flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
             !activeBrand
               ? 'bg-primary-900 text-white border-primary-900 shadow-sm'
               : 'bg-white text-zinc-600 hover:text-primary-900 hover:bg-zinc-50 border-zinc-200/80',
@@ -364,7 +369,7 @@ export default function LeadList() {
               key={b.value}
               onClick={() => handleBrandChange(b.value)}
               className={cn(
-                'flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
+                'flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
                 isSelected
                   ? 'bg-primary-900 text-white border-primary-900 shadow-sm'
                   : 'bg-white text-zinc-600 hover:text-primary-900 hover:bg-zinc-50 border-zinc-200/80',
@@ -413,46 +418,59 @@ export default function LeadList() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white/95 backdrop-blur-xl px-5 py-3 shadow-[0_12px_36px_-8px_rgba(0,0,0,0.15)] sticky top-20 z-20"
+            className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 rounded-2xl border border-zinc-200 bg-white/95 backdrop-blur-xl px-4 py-2.5 sm:px-5 sm:py-3 shadow-[0_12px_36px_-8px_rgba(0,0,0,0.15)] sticky top-16 sm:top-20 z-20"
           >
-            <div className="flex items-center gap-2.5">
-              <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-primary-900 text-white text-xs font-bold shadow-2xs">
-                {selectedIds.length}
-              </span>
-              <span className="text-xs sm:text-sm font-semibold text-primary-900">
-                {selectedIds.length === 1 ? '1 lead' : `${selectedIds.length} leads`} selected
-              </span>
+            <div className="flex items-center justify-between sm:justify-start gap-2.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-primary-900 text-white text-xs font-bold shadow-2xs">
+                  {selectedIds.length}
+                </span>
+                <span className="text-xs sm:text-sm font-semibold text-primary-900">
+                  {selectedIds.length === 1 ? '1 lead' : `${selectedIds.length} leads`} selected
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedIds([])}
+                className="sm:hidden p-1.5 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
+                title="Clear selection"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <Select onValueChange={(val) => handleBulkStatusChange(val)} disabled={isBulkUpdating}>
-                <SelectTrigger className="h-9 w-auto gap-1.5 text-xs font-medium rounded-xl border-zinc-200/90 shadow-2xs">
-                  <SelectValue placeholder="Update stage" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                  {BULK_STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 sm:flex-initial">
+                <Select onValueChange={(val) => handleBulkStatusChange(val)} disabled={isBulkUpdating}>
+                  <SelectTrigger className="h-8 sm:h-9 w-full sm:w-auto gap-1.5 text-xs font-medium rounded-xl border-zinc-200/90 shadow-2xs">
+                    <SelectValue placeholder="Update stage" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+                    {BULK_STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Select onValueChange={(val) => handleDownload(val)}>
-                <SelectTrigger className="h-9 w-auto gap-1.5 text-xs font-medium rounded-xl border-zinc-200/90 shadow-2xs">
-                  <Download className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                  <SelectValue placeholder="Export" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                  <SelectItem value="csv">Download CSV</SelectItem>
-                  <SelectItem value="excel">Download Excel</SelectItem>
-                  <SelectItem value="pdf">Download PDF</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex-1 sm:flex-initial">
+                <Select onValueChange={(val) => handleDownload(val)}>
+                  <SelectTrigger className="h-8 sm:h-9 w-full sm:w-auto gap-1.5 text-xs font-medium rounded-xl border-zinc-200/90 shadow-2xs">
+                    <Download className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    <SelectValue placeholder="Export" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+                    <SelectItem value="csv">Download CSV</SelectItem>
+                    <SelectItem value="excel">Download Excel</SelectItem>
+                    <SelectItem value="pdf">Download PDF</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <button
                 onClick={() => setSelectedIds([])}
-                className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors ml-1 cursor-pointer"
+                className="hidden sm:flex p-1.5 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors ml-1 cursor-pointer"
                 title="Clear selection"
               >
                 <X className="w-4 h-4" />

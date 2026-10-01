@@ -141,9 +141,9 @@ export default function LeadDetail() {
     .slice(0, 2) || 'LE';
 
   return (
-    <div className="space-y-6 max-w-5xl pb-16">
+    <div className="space-y-4 sm:space-y-6 max-w-5xl pb-16">
       {/* Top Breadcrumb & Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <button
           onClick={() => navigate('/leads')}
           className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-zinc-500 hover:text-primary-900 transition-colors w-fit group cursor-pointer"
@@ -152,32 +152,23 @@ export default function LeadDetail() {
           <span>Back to Leads Pipeline</span>
         </button>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
           {/* Quick Stage Selector Dropdown */}
           {canManage && (
-            <Select value={lead.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="h-9 w-auto gap-2 text-xs font-semibold rounded-xl bg-white border-zinc-200/90 shadow-2xs">
-                <LeadStatusBadge status={lead.status} />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                {LEAD_STATUS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          {canManage && lead.status !== 'won' && (
-            <Button
-              size="sm"
-              onClick={() => handleStatusChange('won')}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-              Convert to Client
-            </Button>
+            <div className="col-span-1 sm:w-auto">
+              <Select value={lead.status} onValueChange={handleStatusChange}>
+                <SelectTrigger className="h-9 w-full sm:w-auto gap-2 text-xs font-semibold rounded-xl bg-white border-zinc-200/90 shadow-2xs justify-between">
+                  <LeadStatusBadge status={lead.status} />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
+                  {LEAD_STATUS.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
 
           {canManage && (
@@ -185,31 +176,42 @@ export default function LeadDetail() {
               variant="outline"
               size="sm"
               onClick={() => setShowEditModal(true)}
-              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs"
+              className="col-span-1 sm:w-auto rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs h-9 justify-center"
             >
               <Edit2 className="w-3.5 h-3.5 mr-1 text-zinc-500" />
               Edit
+            </Button>
+          )}
+
+          {canManage && lead.status !== 'won' && (
+            <Button
+              size="sm"
+              onClick={() => handleStatusChange('won')}
+              className="col-span-2 sm:col-span-1 sm:w-auto rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs h-9 justify-center"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+              Convert to Client
             </Button>
           )}
         </div>
       </div>
 
       {/* Hero Lead Banner Card */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 sm:p-7 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-14 h-14 bg-primary-900 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+      <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-7 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-col sm:flex-row sm:items-start md:items-center justify-between gap-4 sm:gap-6">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-primary-900 text-white rounded-2xl flex items-center justify-center font-bold text-base sm:text-lg shadow-sm shrink-0">
               {initials}
             </div>
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold text-primary-900 tracking-tight">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg sm:text-2xl font-bold text-primary-900 tracking-tight truncate">
                   {lead.name}
                 </h1>
                 <LeadStatusBadge status={lead.status} />
                 {(lead.clientId || lead.convertedToClient?.clientId) && (
                   <span
-                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-100 font-mono text-xs font-semibold text-zinc-700 border border-zinc-200"
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 font-mono text-[11px] sm:text-xs font-semibold text-zinc-700 border border-zinc-200"
                     title={`Assigned Client ID: ${lead.clientId || lead.convertedToClient?.clientId}`}
                   >
                     <span
@@ -217,7 +219,7 @@ export default function LeadDetail() {
                         'w-1.5 h-1.5 rounded-full',
                         lead.convertedToClient?.status === 'active' || lead.status === 'won'
                           ? 'bg-emerald-500'
-                          : 'bg-zinc-400'
+                          : 'bg-zinc-400',
                       )}
                     />
                     ID: {lead.clientId || lead.convertedToClient?.clientId}
@@ -225,34 +227,34 @@ export default function LeadDetail() {
                 )}
               </div>
 
-              <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-500 flex-wrap">
+              <div className="flex items-center gap-2 sm:gap-3 mt-1.5 text-[11px] sm:text-xs text-zinc-500 flex-wrap">
                 {lead.company && (
-                  <span className="flex items-center gap-1 font-medium text-zinc-700">
-                    <Building2 className="w-3.5 h-3.5 text-zinc-400" />
-                    {lead.company}
+                  <span className="flex items-center gap-1 font-medium text-zinc-700 truncate max-w-[150px] sm:max-w-none">
+                    <Building2 className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    <span className="truncate">{lead.company}</span>
                   </span>
                 )}
-                <span>&bull;</span>
+                {lead.company && <span className="text-zinc-300">&bull;</span>}
                 <span className="capitalize">Source: {sourceLabel}</span>
-                <span>&bull;</span>
-                <span>Created {formatDate(lead.createdAt)}</span>
+                <span className="text-zinc-300">&bull;</span>
+                <span className="shrink-0">Created {formatDate(lead.createdAt)}</span>
               </div>
             </div>
           </div>
 
           {/* Venture Logo Badge */}
           {brandMeta ? (
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/70 shrink-0 self-start md:self-center">
+            <div className="flex items-center gap-2.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/70 shrink-0 self-start sm:self-auto">
               {brandMeta.logo ? (
                 <img
                   src={brandMeta.logo}
                   alt={brandMeta.name}
-                  className="w-7 h-7 rounded-lg object-contain p-0.5 bg-white border border-zinc-200/80 shadow-2xs"
+                  className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg object-contain p-0.5 bg-white border border-zinc-200/80 shadow-2xs"
                 />
               ) : (
                 <div
                   className={cn(
-                    'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shadow-2xs bg-gradient-to-br',
+                    'w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shadow-2xs bg-gradient-to-br',
                     brandMeta.gradient,
                   )}
                 >
@@ -260,12 +262,12 @@ export default function LeadDetail() {
                 </div>
               )}
               <div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Venture</p>
+                <p className="text-[9px] uppercase font-bold tracking-wider text-zinc-400">Venture</p>
                 <p className="text-xs font-semibold text-primary-900">{brandMeta.name}</p>
               </div>
             </div>
           ) : brandObj ? (
-            <div className="px-3.5 py-1.5 rounded-xl bg-zinc-100 text-zinc-700 text-xs font-semibold border border-zinc-200/70">
+            <div className="px-3 py-1.5 rounded-xl bg-zinc-100 text-zinc-700 text-xs font-semibold border border-zinc-200/70 self-start sm:self-auto">
               {brandObj.label}
             </div>
           ) : null}
@@ -273,7 +275,7 @@ export default function LeadDetail() {
 
         {/* Lost Reason Alert Box if status === 'lost' */}
         {lead.status === 'lost' && lead.lostReason && (
-          <div className="mt-6 p-4 rounded-xl bg-rose-50/80 border border-rose-200/80 flex items-start gap-3 text-rose-800">
+          <div className="mt-4 sm:mt-6 p-3.5 sm:p-4 rounded-xl bg-rose-50/80 border border-rose-200/80 flex items-start gap-3 text-rose-800">
             <XCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-600" />
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-rose-700">Lost Reason</p>
@@ -282,13 +284,13 @@ export default function LeadDetail() {
           </div>
         )}
 
-        {/* Contact Quick Access Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-zinc-100">
+        {/* Contact Quick Access Bar: 2x2 Grid on Mobile, 4-col on Desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-zinc-100">
           {/* Email */}
           <div className="p-3 rounded-xl bg-zinc-50/70 border border-zinc-100 space-y-1">
             <div className="flex items-center justify-between text-zinc-400">
-              <span className="text-[10px] font-semibold uppercase tracking-wider">Email Address</span>
-              <Mail className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider">Email</span>
+              <Mail className="w-3.5 h-3.5 shrink-0" />
             </div>
             <a
               href={`mailto:${lead.email}`}
@@ -302,14 +304,15 @@ export default function LeadDetail() {
           {/* Phone */}
           <div className="p-3 rounded-xl bg-zinc-50/70 border border-zinc-100 space-y-1">
             <div className="flex items-center justify-between text-zinc-400">
-              <span className="text-[10px] font-semibold uppercase tracking-wider">Phone Number</span>
-              <Phone className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider">Phone</span>
+              <Phone className="w-3.5 h-3.5 shrink-0" />
             </div>
             {lead.phone ? (
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-1.5">
                 <a
                   href={`tel:${lead.phone}`}
                   className="text-xs sm:text-sm font-semibold text-primary-900 hover:underline truncate"
+                  title={lead.phone}
                 >
                   {lead.phone}
                 </a>
@@ -318,10 +321,10 @@ export default function LeadDetail() {
                     href={waLink}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-emerald-600 hover:text-emerald-700 p-1 rounded-md hover:bg-emerald-50 transition-colors"
+                    className="text-emerald-600 hover:text-emerald-700 p-0.5 rounded-md hover:bg-emerald-50 transition-colors shrink-0"
                     title="Open WhatsApp Chat"
                   >
-                    <MessageCircle className="w-4 h-4" />
+                    <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </a>
                 )}
               </div>
@@ -334,7 +337,7 @@ export default function LeadDetail() {
           <div className="p-3 rounded-xl bg-zinc-50/70 border border-zinc-100 space-y-1">
             <div className="flex items-center justify-between text-zinc-400">
               <span className="text-[10px] font-semibold uppercase tracking-wider">Assigned Rep</span>
-              <User className="w-3.5 h-3.5" />
+              <User className="w-3.5 h-3.5 shrink-0" />
             </div>
             <p className="text-xs sm:text-sm font-semibold text-primary-900 truncate">
               {lead.assignedTo?.name || 'Unassigned'}
@@ -345,7 +348,7 @@ export default function LeadDetail() {
           <div className="p-3 rounded-xl bg-zinc-50/70 border border-zinc-100 space-y-1">
             <div className="flex items-center justify-between text-zinc-400">
               <span className="text-[10px] font-semibold uppercase tracking-wider">Follow-up</span>
-              <Calendar className="w-3.5 h-3.5" />
+              <Calendar className="w-3.5 h-3.5 shrink-0" />
             </div>
             <p className="text-xs sm:text-sm font-semibold text-primary-900 truncate">
               {lead.followUpDate ? formatDate(lead.followUpDate) : 'No date set'}
@@ -355,12 +358,12 @@ export default function LeadDetail() {
 
         {/* Linked Client Record Banner */}
         {(lead.convertedToClient || lead.clientId) && (
-          <div className="mt-5 p-4 rounded-xl bg-zinc-50/80 border border-zinc-200/80 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-primary-900 font-bold text-xs shadow-2xs">
+          <div className="mt-4 sm:mt-5 p-3.5 sm:p-4 rounded-xl bg-zinc-50/80 border border-zinc-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1 w-full">
+              <div className="w-9 h-9 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-primary-900 font-bold text-xs shadow-2xs shrink-0 mt-0.5 sm:mt-0">
                 CL
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-zinc-900 font-mono">
                     {lead.convertedToClient?.clientId || lead.clientId}
@@ -370,7 +373,7 @@ export default function LeadDetail() {
                       'px-2 py-0.5 text-[10px] font-semibold rounded-full border',
                       (lead.convertedToClient?.status === 'active' || lead.status === 'won')
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-zinc-100 text-zinc-600 border-zinc-200'
+                        : 'bg-zinc-100 text-zinc-600 border-zinc-200',
                     )}
                   >
                     {(lead.convertedToClient?.status === 'active' || lead.status === 'won')
@@ -378,18 +381,23 @@ export default function LeadDetail() {
                       : 'Initial Inactive Client'}
                   </span>
                 </div>
-                <p className="text-[11px] text-zinc-500 mt-0.5">
-                  Linked Account: {lead.convertedToClient?.companyName || lead.company || lead.name}
-                  {lead.convertedToClient?.status === 'inactive' && (
-                    <span className="text-zinc-400"> &bull; Will activate automatically when marked won</span>
-                  )}
+                <p className="text-[11px] text-zinc-600 font-medium mt-1 leading-snug break-words">
+                  Linked Account:{' '}
+                  <span className="text-zinc-800 font-semibold">
+                    {lead.convertedToClient?.companyName || lead.company || lead.name}
+                  </span>
                 </p>
+                {lead.convertedToClient?.status === 'inactive' && lead.status !== 'won' && (
+                  <p className="text-[10px] text-zinc-400 mt-0.5 leading-snug break-words">
+                    Will activate automatically when converted to won
+                  </p>
+                )}
               </div>
             </div>
             {lead.convertedToClient?._id && (
               <Link
                 to={`/clients/${lead.convertedToClient._id}`}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-primary-900 hover:underline"
+                className="inline-flex items-center justify-center gap-1.5 w-full sm:w-auto px-3.5 py-2 rounded-xl bg-white border border-zinc-200/90 text-xs font-semibold text-primary-900 hover:bg-zinc-50 shadow-2xs transition-colors shrink-0 active:scale-[0.98]"
               >
                 <span>View Client Details</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -401,40 +409,40 @@ export default function LeadDetail() {
 
       {/* Notes & Activity Timeline */}
       <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)] overflow-hidden">
-        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary-900 text-white flex items-center justify-center shadow-2xs">
+            <div className="w-8 h-8 rounded-xl bg-primary-900 text-white flex items-center justify-center shadow-2xs shrink-0">
               <MessageSquare className="w-4 h-4" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-primary-900 tracking-tight">Notes & Activity Feed</h3>
-              <p className="text-[11px] text-zinc-400">Internal discussion, client interactions, and progress updates</p>
+              <p className="text-[11px] text-zinc-400 hidden sm:block">Internal discussion, client interactions, and progress updates</p>
             </div>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200/80">
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200/80 shrink-0">
             {lead.notes?.length || 0} notes
           </span>
         </div>
 
         {/* New Note Form */}
         {canManage && (
-          <form onSubmit={handleAddNote} className="p-4 sm:p-6 border-b border-zinc-100 bg-white">
-            <div className="flex gap-2.5">
+          <form onSubmit={handleAddNote} className="p-3 sm:p-5 border-b border-zinc-100 bg-white">
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 placeholder="Log a client note, call summary, or next action..."
-                className="flex-1 px-4 py-2.5 bg-zinc-50 border border-zinc-200/90 rounded-xl text-xs sm:text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 transition-all shadow-2xs"
+                className="flex-1 px-3.5 py-2 sm:px-4 sm:py-2.5 bg-zinc-50 border border-zinc-200/90 rounded-xl text-xs sm:text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 transition-all shadow-2xs min-w-0"
               />
               <Button
                 type="submit"
                 disabled={!noteText.trim()}
                 loading={isAddingNote}
-                className="rounded-xl px-5 text-xs font-semibold shadow-2xs shrink-0"
+                className="rounded-xl px-3.5 sm:px-5 text-xs font-semibold shadow-2xs shrink-0"
               >
-                <Send className="w-3.5 h-3.5 mr-1" />
-                Post
+                <Send className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Post</span>
               </Button>
             </div>
           </form>
@@ -443,7 +451,7 @@ export default function LeadDetail() {
         {/* Notes Stream */}
         <div className="divide-y divide-zinc-100">
           {!lead.notes || lead.notes.length === 0 ? (
-            <div className="px-6 py-12 text-center">
+            <div className="px-4 py-10 sm:px-6 sm:py-12 text-center">
               <MessageSquare className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
               <p className="text-sm font-semibold text-zinc-600">No notes recorded yet</p>
               <p className="text-xs text-zinc-400 mt-0.5">
@@ -460,22 +468,22 @@ export default function LeadDetail() {
                 .slice(0, 2) || 'U';
 
               return (
-                <div key={note._id || idx} className="p-4 sm:p-5 hover:bg-zinc-50/50 transition-colors">
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-8 h-8 rounded-xl bg-zinc-100 border border-zinc-200/80 flex items-center justify-center text-xs font-bold text-primary-900 shrink-0 shadow-2xs">
+                <div key={note._id || idx} className="p-3.5 sm:p-5 hover:bg-zinc-50/50 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-zinc-100 border border-zinc-200/80 flex items-center justify-center text-[10px] sm:text-xs font-bold text-primary-900 shrink-0 shadow-2xs">
                       {authorInitials}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <p className="text-xs font-semibold text-primary-900">
+                        <p className="text-xs font-semibold text-primary-900 truncate">
                           {note.createdBy?.name || 'Team Member'}
                         </p>
-                        <span className="text-[11px] text-zinc-400 flex items-center gap-1 font-normal">
+                        <span className="text-[10px] sm:text-[11px] text-zinc-400 flex items-center gap-1 font-normal shrink-0">
                           <Clock className="w-3 h-3" />
                           {getTimeAgo(note.createdAt)}
                         </span>
                       </div>
-                      <p className="text-xs sm:text-sm text-zinc-700 leading-relaxed font-normal whitespace-pre-wrap">
+                      <p className="text-xs sm:text-sm text-zinc-700 leading-relaxed font-normal whitespace-pre-wrap break-words">
                         {note.text}
                       </p>
                     </div>

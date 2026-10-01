@@ -59,7 +59,7 @@ function KanbanColumn({ status, label, leads, onLeadClick }) {
     <div
       ref={setNodeRef}
       className={cn(
-        'flex flex-col bg-zinc-50/80 rounded-2xl border min-w-[285px] w-[285px] transition-all duration-200 shrink-0 shadow-2xs',
+        'flex flex-col bg-zinc-50/80 rounded-2xl border snap-center min-w-[84vw] sm:min-w-[285px] sm:w-[285px] transition-all duration-200 shrink-0 shadow-2xs',
         isOver
           ? 'border-primary-900/40 bg-zinc-100/90 shadow-md ring-2 ring-primary-900/10'
           : 'border-zinc-200/80',
@@ -206,7 +206,7 @@ export default function LeadKanbanBoard({ leads = [], loading, onLeadClick, onSt
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4 pt-1 min-h-[450px] scrollbar-thin">
+      <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 min-h-[450px] scrollbar-thin snap-x snap-mandatory -mx-2 px-2 sm:mx-0 sm:px-0">
         {LEAD_STATUS.map(({ value, label }) => (
           <KanbanColumn
             key={value}

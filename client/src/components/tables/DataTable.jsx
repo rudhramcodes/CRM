@@ -251,15 +251,15 @@ export default function DataTable({
       </div>
 
       {(effTotalPages > 1 || onPageSizeChange || serverPagination) && (
-        <div className="card-footer flex items-center justify-between px-4 py-3 border-t border-zinc-200">
-          <div className="flex items-center gap-3">
-            <p className="text-sm text-zinc-500">
+        <div className="card-footer flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-zinc-200">
+          <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-3">
+            <p className="text-xs sm:text-sm text-zinc-500">
               {effTotal === 0
                 ? 'No results'
                 : `Showing ${(effPage - 1) * effPageSize + 1} to ${Math.min(effPage * effPageSize, effTotal)} of ${effTotal}`}
             </p>
             {(serverPagination || onPageSizeChange) && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span className="text-xs text-zinc-400">per page:</span>
                 <Select
                   value={String(effPageSize)}
@@ -277,28 +277,28 @@ export default function DataTable({
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center gap-1.5 w-full sm:w-auto overflow-x-auto py-0.5">
             <button
               onClick={() => handlePageChange(effPage - 1)}
               disabled={serverPagination ? !hasPrevPage : effPage === 1}
-              className="px-3 py-1 text-sm border border-zinc-300 rounded-md hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
             >
               Previous
             </button>
             {Array.from({ length: effTotalPages }, (_, i) => i + 1)
               .filter((p) => p === 1 || p === effTotalPages || Math.abs(p - effPage) <= 1)
               .map((p, idx, arr) => (
-                <span key={p} className="flex items-center gap-1">
+                <span key={p} className="flex items-center gap-1 shrink-0">
                   {idx > 0 && arr[idx - 1] !== p - 1 && (
-                    <span className="px-1 text-zinc-400">...</span>
+                    <span className="px-1 text-zinc-400 text-xs">...</span>
                   )}
                   <button
                     onClick={() => handlePageChange(p)}
                     className={cn(
-                      'w-8 h-8 text-sm rounded-md',
+                      'w-7 h-7 sm:w-8 sm:h-8 text-xs sm:text-sm rounded-lg cursor-pointer transition-colors',
                       effPage === p
-                        ? 'bg-primary-900 text-white'
-                        : 'border border-zinc-300 hover:bg-zinc-50',
+                        ? 'bg-primary-900 text-white font-bold'
+                        : 'border border-zinc-300 hover:bg-zinc-50 text-zinc-700',
                     )}
                   >
                     {p}
@@ -308,7 +308,7 @@ export default function DataTable({
             <button
               onClick={() => handlePageChange(effPage + 1)}
               disabled={serverPagination ? !hasNextPage : effPage === effTotalPages}
-              className="px-3 py-1 text-sm border border-zinc-300 rounded-md hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
             >
               Next
             </button>
