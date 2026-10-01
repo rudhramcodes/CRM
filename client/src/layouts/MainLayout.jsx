@@ -31,7 +31,7 @@ export default function MainLayout() {
         <div className="print:hidden">
           <Header onMobileMenuOpen={() => setMobileMenuOpen(true)} />
         </div>
-        <main className="flex-1 p-5 sm:p-6 lg:p-8 overflow-auto print:p-0 print:overflow-visible">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 overflow-auto print:p-0 print:overflow-visible">
           <Outlet />
         </main>
       </div>

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { X } from 'lucide-react';
+import { X, Settings, LogOut } from 'lucide-react';
+import axios from 'axios';
 import { cn } from '../utils/cn';
-import { NAV_ITEMS } from '../constants';
+import { NAV_ITEMS, API_BASE_URL } from '../constants';
 import { useGetOrgSettingsQuery } from '../services/settingsApi';
 import { useGetUnreadCountQuery } from '../services/notificationApi';
 import { toggleSidebar } from '../app/store/uiSlice';
+import { logout } from '../app/store/authSlice';
 
 const SECTIONS = [
   { id: 'overview', label: 'Overview', paths: ['/dashboard'] },
@@ -18,6 +20,7 @@ const SECTIONS = [
 
 export default function Sidebar({ open, onClose }) {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
   const sidebarOpen = useSelector((state) => state.ui.sidebarOpen);
@@ -32,6 +35,17 @@ export default function Sidebar({ open, onClose }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${API_BASE_URL}/auth/logout`, {}, { withCredentials: true });
+    } catch {
+      // Proceed with local logout
+    }
+    dispatch(logout());
+    if (onClose) onClose();
+    navigate(user?.role === 'client' ? '/portal/login' : '/auth/login');
+  };
 
   // On mobile (< 1024px), sidebar is ALWAYS expanded as a full drawer.
   // On desktop (>= 1024px), sidebar follows sidebarOpen (w-64 vs w-20).
@@ -185,26 +199,48 @@ export default function Sidebar({ open, onClose }) {
         {user && (
           <div className="p-3 border-t border-zinc-200/80 bg-white">
             {isExpanded ? (
-              <NavLink
-                to="/settings"
-                className="flex items-center gap-3 p-2 rounded-2xl bg-zinc-50/90 border border-zinc-200/70 hover:bg-zinc-100/90 hover:border-zinc-300/80 transition-all group"
-                title="Account Settings"
-              >
-                <div className="relative">
-                  <div className="w-8 h-8 bg-primary-900 text-white rounded-xl flex items-center justify-center text-xs font-bold shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                    {user.name?.[0]?.toUpperCase() || 'U'}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-zinc-50/90 border border-zinc-200/70 hover:border-zinc-300/80 transition-all">
+                <NavLink
+                  to="/settings"
+                  onClick={onClose}
+                  className="flex items-center gap-2.5 min-w-0 flex-1 group"
+                  title="Account Settings"
+                >
+                  <div className="relative shrink-0">
+                    <div className="w-8 h-8 bg-primary-900 text-white rounded-xl flex items-center justify-center text-xs font-bold shadow-sm group-hover:scale-105 transition-transform">
+                      {user.name?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-primary-900 truncate group-hover:text-primary-800">
+                      {user.name}
+                    </p>
+                    <p className="text-[10px] text-zinc-500 capitalize truncate">
+                      {user.role?.replace('_', ' ')}
+                    </p>
+                  </div>
+                </NavLink>
+
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <NavLink
+                    to="/settings"
+                    onClick={onClose}
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-200/60 transition-colors"
+                    title="Settings"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </NavLink>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    title="Sign out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-primary-900 truncate group-hover:text-primary-800">
-                    {user.name}
-                  </p>
-                  <p className="text-[11px] text-zinc-500 capitalize truncate">
-                    {user.role?.replace('_', ' ')}
-                  </p>
-                </div>
-              </NavLink>
+              </div>
             ) : (
               <NavLink
                 to="/settings"

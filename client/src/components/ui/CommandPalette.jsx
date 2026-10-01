@@ -123,7 +123,7 @@ export default function CommandPalette({ isOpen, onClose }) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 sm:pt-24 px-3 sm:px-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -140,10 +140,10 @@ export default function CommandPalette({ isOpen, onClose }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -10 }}
             transition={{ type: 'spring', stiffness: 450, damping: 35 }}
-            className="relative w-full max-w-xl bg-white rounded-2xl sm:rounded-3xl border border-zinc-200/80 shadow-[0_24px_80px_-25px_rgba(0,0,0,0.35)] overflow-hidden z-10 flex flex-col max-h-[75vh]"
+            className="relative w-full max-w-xl bg-white rounded-2xl sm:rounded-3xl border border-zinc-200/80 shadow-[0_24px_80px_-25px_rgba(0,0,0,0.35)] overflow-hidden z-10 flex flex-col max-h-[82vh] sm:max-h-[75vh]"
           >
             {/* Search Input Bar */}
-            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-zinc-200/70 bg-zinc-50/50">
+            <div className="flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-3 sm:py-3.5 border-b border-zinc-200/70 bg-zinc-50/50">
               <Search className="w-5 h-5 text-zinc-400 shrink-0" strokeWidth={2} />
               <input
                 ref={inputRef}
@@ -157,7 +157,7 @@ export default function CommandPalette({ isOpen, onClose }) {
                 <button
                   type="button"
                   onClick={() => setQuery('')}
-                  className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg hover:bg-zinc-200/50"
+                  className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg hover:bg-zinc-200/50 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -187,10 +187,10 @@ export default function CommandPalette({ isOpen, onClose }) {
                       onClick={() => handleSelect(cmd)}
                       onMouseEnter={() => setSelectedIndex(idx)}
                       className={cn(
-                        'w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-100 group',
+                        'w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-100 group min-h-[44px]',
                         isSelected
                           ? 'bg-primary-900 text-white shadow-[0_2px_10px_-2px_rgba(11,11,11,0.25)]'
-                          : 'hover:bg-zinc-100/80 text-zinc-700'
+                          : 'hover:bg-zinc-100/80 active:bg-zinc-100 text-zinc-700'
                       )}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -241,16 +241,19 @@ export default function CommandPalette({ isOpen, onClose }) {
             </div>
 
             {/* Footer keyboard hints */}
-            <div className="px-4 py-2.5 bg-zinc-50/80 border-t border-zinc-200/70 flex items-center justify-between text-[11px] text-zinc-400">
+            <div className="px-3.5 sm:px-4 py-2.5 bg-zinc-50/80 border-t border-zinc-200/70 flex items-center justify-between text-[11px] text-zinc-400">
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1">
+                <span className="hidden sm:flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 font-mono text-[10px] bg-white border border-zinc-200/80 rounded">↑</kbd>
                   <kbd className="px-1.5 py-0.5 font-mono text-[10px] bg-white border border-zinc-200/80 rounded">↓</kbd>
                   Navigate
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="hidden sm:flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 font-mono text-[10px] bg-white border border-zinc-200/80 rounded">↵</kbd>
                   Select
+                </span>
+                <span className="sm:hidden text-zinc-400 text-xs">
+                  Tap any item to open
                 </span>
               </div>
               <span className="font-mono text-[10px] text-zinc-400">

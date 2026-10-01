@@ -43,26 +43,26 @@ function StatCard({ label, value, icon: Icon, prefix = '', suffix = '', decimals
     <button
       type="button"
       onClick={onClick}
-      className="bg-white rounded-2xl border border-zinc-200/80 p-4.5 sm:p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.08)] hover:border-zinc-300 hover:-translate-y-0.5 transition-all duration-200 text-left group w-full cursor-pointer relative overflow-hidden"
+      className="bg-white rounded-2xl border border-zinc-200/80 p-3.5 sm:p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.08)] hover:border-zinc-300 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-left group w-full cursor-pointer relative overflow-hidden"
     >
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">{label}</span>
-        <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 shrink-0 border', iconStyle)}>
-          <Icon className="w-4 h-4" strokeWidth={1.8} />
+      <div className="flex items-center justify-between mb-2.5 sm:mb-3">
+        <span className="text-[11px] sm:text-xs font-semibold text-zinc-500 uppercase tracking-wider truncate mr-1">{label}</span>
+        <div className={cn('w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 shrink-0 border', iconStyle)}>
+          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.8} />
         </div>
       </div>
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-primary-900">
+      <div className="flex items-baseline justify-between gap-1 sm:gap-2">
+        <p className="font-heading text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-primary-900 truncate">
           <AnimatedCounter value={value} prefix={prefix} suffix={suffix} decimals={decimals} />
         </p>
         {trend !== undefined && (
           <span
             className={cn(
-              'inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-md',
+              'inline-flex items-center gap-0.5 text-[10px] sm:text-xs font-semibold px-1.5 py-0.5 rounded-md shrink-0',
               trend >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700',
             )}
           >
-            {trend >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+            {trend >= 0 ? <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <ArrowDownRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
             {Math.abs(trend)}%
           </span>
         )}
@@ -95,8 +95,8 @@ function CustomTooltip({ active, payload, label, formatter }) {
 
 function ChartCard({ title, subtitle, action, children, className = '' }) {
   return (
-    <div className={cn('bg-white rounded-2xl border border-zinc-200/80 p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] flex flex-col', className)}>
-      <div className="flex items-start justify-between mb-4 shrink-0">
+    <div className={cn('bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] flex flex-col', className)}>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-4 shrink-0">
         <div>
           <h4 className="font-heading text-base font-bold text-primary-900 tracking-tight">{title}</h4>
           {subtitle && <p className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>}
@@ -158,26 +158,26 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-2xl border border-zinc-200/80 p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)]">
         <div>
-          <h2 className="font-heading text-xl sm:text-2xl font-bold text-primary-900 tracking-tight mb-1">
+          <h2 className="font-heading text-lg sm:text-2xl font-bold text-primary-900 tracking-tight mb-1">
             Welcome back, {user?.name?.split(' ')[0] || 'User'}
           </h2>
           <p className="text-zinc-500 text-xs sm:text-sm">
             {todayStr} • Here&apos;s what&apos;s happening across your pipeline and ventures.
           </p>
         </div>
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
           <button
             onClick={() => navigate('/leads/new')}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-primary-900 rounded-xl hover:bg-primary-800 transition-all shadow-[0_4px_12px_-2px_rgba(11,11,11,0.2)] cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 text-xs font-semibold text-white bg-primary-900 rounded-xl hover:bg-primary-800 active:scale-95 transition-all shadow-[0_4px_12px_-2px_rgba(11,11,11,0.2)] cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             New Lead
           </button>
           <button
             onClick={() => navigate('/reports')}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-zinc-700 bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/80 rounded-xl transition-colors cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 text-xs font-semibold text-zinc-700 bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/80 rounded-xl active:scale-95 transition-all cursor-pointer"
           >
             <BarChart3 className="w-4 h-4 text-zinc-500" />
             View Reports
@@ -186,7 +186,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-3.5">
         <StatCard
           label="Total Leads"
           value={kpis.totalLeads}
@@ -248,7 +248,7 @@ export default function Dashboard() {
           </div>
           <span className="text-xs text-zinc-400 hidden sm:inline">Select a brand to view dedicated metrics</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
           {BRANDS.map((brand) => {
             const brandClients = clients.byBrand?.find((b) => b.brand === brand.value)?.count || 0;
             const meta = BRAND_METAS[brand.value] || { label: brand.label, gradient: 'from-zinc-600 to-zinc-800', initial: brand.label?.[0] || 'V' };
@@ -257,7 +257,7 @@ export default function Dashboard() {
               <button
                 key={brand.value}
                 onClick={() => navigate(`/dashboard/venture/${brand.value}`)}
-                className="flex flex-col items-center gap-2 p-3 sm:p-3.5 rounded-2xl border border-zinc-100/90 hover:border-zinc-300 hover:bg-zinc-50/70 hover:shadow-xs transition-all duration-150 group cursor-pointer text-center"
+                className="flex flex-col items-center gap-2 p-3 sm:p-3.5 rounded-2xl border border-zinc-100/90 hover:border-zinc-300 hover:bg-zinc-50/70 hover:shadow-xs active:scale-95 transition-all duration-150 group cursor-pointer text-center"
               >
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-200 group-hover:scale-105 select-none p-1 border border-zinc-200/70 bg-white shadow-2xs group-hover:shadow-sm">
                   {meta.logo ? (
@@ -473,7 +473,7 @@ export default function Dashboard() {
 
       {/* Recent Activity Feed */}
       <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] overflow-hidden">
-        <div className="px-6 py-4.5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/40">
+        <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/40">
           <h3 className="font-heading text-base font-bold text-primary-900 flex items-center gap-2">
             <Activity className="w-4 h-4 text-zinc-500" />
             Workspace Activity Log
@@ -486,8 +486,8 @@ export default function Dashboard() {
               const Icon = ACTIVITY_ICONS[item.type] || Activity;
               const colorClass = ACTIVITY_COLORS[item.type] || 'bg-zinc-100 text-zinc-600 border-zinc-200/60';
               return (
-                <div key={i} className="flex items-start gap-3.5 px-6 py-3.5 hover:bg-zinc-50/70 transition-colors">
-                  <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs mt-0.5', colorClass)}>
+                <div key={i} className="flex items-start gap-3 sm:gap-3.5 px-4 sm:px-6 py-3.5 hover:bg-zinc-50/70 transition-colors">
+                  <div className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs mt-0.5', colorClass)}>
                     <Icon className="w-4 h-4" strokeWidth={1.8} />
                   </div>
                   <div className="flex-1 min-w-0">

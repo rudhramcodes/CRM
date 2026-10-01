@@ -158,7 +158,7 @@ export default function Header({ onMobileMenuOpen }) {
 
   return (
     <>
-    <header className="h-16 bg-white/85 backdrop-blur-xl border-b border-zinc-200/80 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+    <header className="h-16 bg-white border-b border-zinc-200/80 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
       {/* Left Area: Sidebar Toggle & Page Title */}
       <div className="flex items-center gap-3 sm:gap-4">
         <button
@@ -183,18 +183,18 @@ export default function Header({ onMobileMenuOpen }) {
           <Menu className="w-5 h-5" strokeWidth={1.8} />
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 hidden md:inline">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 hidden md:inline shrink-0">
             Workspace /
           </span>
-          <h1 className="text-base sm:text-lg font-bold text-primary-900 tracking-tight">
+          <h1 className="text-base sm:text-lg font-bold text-primary-900 tracking-tight truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none">
             {routeTitle}
           </h1>
         </div>
       </div>
 
       {/* Right Area: Search, Notifications & User */}
-      <div className="flex items-center gap-2.5 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Command Search Trigger */}
         <button
           type="button"
@@ -214,10 +214,11 @@ export default function Header({ onMobileMenuOpen }) {
         <button
           type="button"
           onClick={() => setIsCmdOpen(true)}
-          className="sm:hidden p-2 rounded-xl text-zinc-500 hover:text-primary-900 hover:bg-zinc-100 transition-colors"
+          className="sm:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-600 hover:text-primary-900 bg-zinc-100/80 hover:bg-zinc-100 transition-colors active:scale-95"
           aria-label="Open command search"
+          title="Search (⌘K)"
         >
-          <Search className="w-5 h-5" strokeWidth={1.8} />
+          <Search className="w-4 h-4" strokeWidth={2} />
         </button>
 
         {/* Notifications */}
@@ -245,6 +246,14 @@ export default function Header({ onMobileMenuOpen }) {
             )}
           </button>
 
+          {/* Mobile backdrop for notification dropdown - below navbar with NO blur */}
+          {showNotifDropdown && (
+            <div
+              className="fixed top-16 inset-x-0 bottom-0 bg-black/15 z-40 sm:hidden"
+              onClick={() => setShowNotifDropdown(false)}
+            />
+          )}
+
           <AnimatePresence>
             {showNotifDropdown && (
               <motion.div
@@ -252,7 +261,7 @@ export default function Header({ onMobileMenuOpen }) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.98 }}
                 transition={{ duration: 0.2 }}
-                className="absolute right-0 top-full mt-2 w-88 sm:w-96 bg-white border border-zinc-200/80 rounded-2xl shadow-[0_24px_50px_-20px_rgba(0,0,0,0.25)] z-50 overflow-hidden"
+                className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-96 max-w-[calc(100vw-24px)] bg-white border border-zinc-200/90 rounded-2xl shadow-[0_24px_50px_-15px_rgba(0,0,0,0.25)] z-50 overflow-hidden"
               >
                 <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-zinc-50/50">
                   <div>
@@ -365,6 +374,14 @@ export default function Header({ onMobileMenuOpen }) {
               <ChevronDown className={cn('w-3.5 h-3.5 text-zinc-400 transition-transform hidden sm:block', showDropdown && 'rotate-180')} />
             </button>
 
+            {/* Mobile backdrop for profile dropdown - below navbar with NO blur */}
+            {showDropdown && (
+              <div
+                className="fixed top-16 inset-x-0 bottom-0 bg-black/15 z-40 sm:hidden"
+                onClick={() => setShowDropdown(false)}
+              />
+            )}
+
             <AnimatePresence>
               {showDropdown && (
                 <motion.div
@@ -372,17 +389,27 @@ export default function Header({ onMobileMenuOpen }) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.98 }}
                   transition={{ duration: 0.18 }}
-                  className="absolute right-0 top-full mt-2 w-56 bg-white border border-zinc-200/80 rounded-2xl shadow-[0_20px_45px_-15px_rgba(0,0,0,0.2)] py-1.5 z-50 overflow-hidden"
+                  className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-64 max-w-[calc(100vw-24px)] bg-white border border-zinc-200/90 rounded-2xl shadow-[0_20px_45px_-15px_rgba(0,0,0,0.2)] py-1.5 z-50 overflow-hidden"
                 >
-                  <div className="px-3.5 py-2.5 border-b border-zinc-100 bg-zinc-50/50">
-                    <p className="text-sm font-semibold text-primary-900 tracking-tight truncate">{user.name}</p>
-                    <p className="text-xs text-zinc-500 truncate mt-0.5">{user.email}</p>
-                    <span className="inline-block mt-1.5 text-[10px] font-semibold bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-md border border-zinc-200/80 capitalize">
-                      {user.role?.replace('_', ' ')}
-                    </span>
+                  <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/60">
+                    <div className="flex items-center gap-3">
+                      <div className="relative shrink-0">
+                        <div className="w-10 h-10 bg-primary-900 text-white rounded-xl flex items-center justify-center font-bold text-sm shadow-sm">
+                          {user.name?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-primary-900 tracking-tight truncate">{user.name}</p>
+                        <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                        <span className="inline-block mt-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md border border-zinc-200/80 capitalize">
+                          {user.role?.replace('_', ' ')}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="p-1 space-y-0.5">
+                  <div className="p-1.5 space-y-0.5">
                     {user?.role !== 'client' && (
                       <button
                         onClick={() => {
@@ -396,11 +423,33 @@ export default function Header({ onMobileMenuOpen }) {
                       </button>
                     )}
 
+                    {user?.role !== 'client' && (
+                      <button
+                        onClick={() => {
+                          setShowDropdown(false);
+                          navigate('/notifications');
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-zinc-700 hover:text-primary-900 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Bell className="w-4 h-4 text-zinc-400" strokeWidth={1.8} />
+                          <span>Notifications</span>
+                        </div>
+                        {unreadCount > 0 && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
+                      </button>
+                    )}
+
+                    <div className="my-1 border-t border-zinc-100" />
+
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                     >
-                      <LogOut className="w-4 h-4" strokeWidth={1.8} />
+                      <LogOut className="w-4 h-4 text-rose-500" strokeWidth={1.8} />
                       <span>Sign out</span>
                     </button>
                   </div>

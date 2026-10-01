@@ -120,7 +120,7 @@ export default function PhoneInput({
           </button>
 
           {open && (
-            <div className="absolute top-full left-0 mt-1.5 w-72 bg-white border border-zinc-200 rounded-xl shadow-xl z-[70] overflow-hidden">
+            <div className="absolute top-full left-0 mt-1.5 w-72 max-w-[calc(100vw-3rem)] bg-white border border-zinc-200 rounded-xl shadow-xl z-[70] overflow-hidden">
               <div className="p-2 border-b border-zinc-100 bg-zinc-50/50">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
