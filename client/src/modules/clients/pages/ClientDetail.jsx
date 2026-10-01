@@ -141,7 +141,7 @@ export default function ClientDetail() {
   return (
     <div className="space-y-6 max-w-5xl pb-16">
       {/* Top Breadcrumb & Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <button
           onClick={() => navigate('/clients')}
           className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-zinc-500 hover:text-primary-900 transition-colors w-fit group cursor-pointer"
@@ -150,11 +150,11 @@ export default function ClientDetail() {
           <span>Back to Client Directory</span>
         </button>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Quick Status Selector */}
           {canManage && (
             <Select value={client.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="h-9 w-auto gap-2 text-xs font-semibold rounded-xl bg-white border-zinc-200/90 shadow-2xs">
+              <SelectTrigger className="h-8 sm:h-9 w-auto gap-1.5 text-xs font-semibold rounded-xl bg-white border-zinc-200/90 shadow-2xs">
                 <ClientStatusBadge status={client.status} />
               </SelectTrigger>
               <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
@@ -172,10 +172,11 @@ export default function ClientDetail() {
               variant="outline"
               size="sm"
               onClick={() => setShowMeetingModal(true)}
-              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs"
+              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs h-8 sm:h-9 px-2.5 sm:px-3"
             >
               <Calendar className="w-3.5 h-3.5 mr-1 text-zinc-500" />
-              Schedule Meeting
+              <span className="hidden sm:inline">Schedule Meeting</span>
+              <span className="sm:hidden">Meeting</span>
             </Button>
           )}
 
@@ -185,10 +186,11 @@ export default function ClientDetail() {
               size="sm"
               onClick={handleInvite}
               loading={isInviting}
-              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs text-primary-900"
+              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs text-primary-900 h-8 sm:h-9 px-2.5 sm:px-3"
             >
               <KeyRound className="w-3.5 h-3.5 mr-1 text-zinc-500" />
-              Send Portal Invite
+              <span className="hidden sm:inline">Send Portal Invite</span>
+              <span className="sm:hidden">Invite</span>
             </Button>
           )}
 
@@ -197,10 +199,10 @@ export default function ClientDetail() {
               variant="outline"
               size="sm"
               onClick={() => setShowEditModal(true)}
-              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs"
+              className="rounded-xl border-zinc-200/90 text-xs font-semibold shadow-2xs h-8 sm:h-9 px-2.5 sm:px-3"
             >
-              <Edit2 className="w-3.5 h-3.5 mr-1 text-zinc-500" />
-              Edit
+              <Edit2 className="w-3.5 h-3.5 sm:mr-1 text-zinc-500" />
+              <span>Edit</span>
             </Button>
           )}
 
@@ -210,73 +212,73 @@ export default function ClientDetail() {
               size="sm"
               onClick={handleDelete}
               loading={isDeleting}
-              className="rounded-xl text-xs font-semibold shadow-2xs"
+              className="rounded-xl text-xs font-semibold shadow-2xs h-8 sm:h-9 px-2.5 sm:px-3"
             >
-              <Trash2 className="w-3.5 h-3.5 mr-1" />
-              Delete
+              <Trash2 className="w-3.5 h-3.5 sm:mr-1" />
+              <span>Delete</span>
             </Button>
           )}
         </div>
       </div>
 
       {/* Hero Client Card */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 sm:p-7 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-14 h-14 bg-primary-900 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+      <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-7 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+          <div className="flex items-start sm:items-center gap-3.5 sm:gap-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-primary-900 text-white rounded-2xl flex items-center justify-center font-bold text-base sm:text-lg shadow-sm shrink-0">
               {initials}
             </div>
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold text-primary-900 tracking-tight">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                <h1 className="text-lg sm:text-2xl font-bold text-primary-900 tracking-tight break-words">
                   {client.companyName}
                 </h1>
                 <ClientStatusBadge status={client.status} />
                 {portalActive ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     Portal Active
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-500 border border-zinc-200/60">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-zinc-100 text-zinc-500 border border-zinc-200/60">
                     Portal Inactive
                   </span>
                 )}
                 {client.convertedFrom && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60">
                     Converted from Lead
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-500 flex-wrap">
-                <span className="font-mono text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-md font-semibold border border-zinc-200/60">
+              <div className="flex items-center gap-2 sm:gap-3 mt-1.5 text-xs text-zinc-500 flex-wrap">
+                <span className="font-mono text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-md font-semibold border border-zinc-200/60 text-[11px]">
                   {client.clientId || 'Client ID not assigned'}
                 </span>
-                <span>&bull;</span>
+                <span className="hidden sm:inline">&bull;</span>
                 <span className="flex items-center gap-1 text-zinc-700 font-medium">
                   <User className="w-3.5 h-3.5 text-zinc-400" />
                   {client.contactPerson}
                 </span>
-                <span>&bull;</span>
-                <span>Created {formatDate(client.createdAt)}</span>
+                <span className="hidden sm:inline">&bull;</span>
+                <span className="text-[11px] text-zinc-400">Created {formatDate(client.createdAt)}</span>
               </div>
             </div>
           </div>
 
           {/* Venture Logo Badge */}
           {brandMeta ? (
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/70 shrink-0 self-start md:self-center">
+            <div className="flex items-center gap-3 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/70 shrink-0 self-stretch sm:self-start md:self-center">
               {brandMeta.logo ? (
                 <img
                   src={brandMeta.logo}
                   alt={brandMeta.label}
-                  className="w-7 h-7 object-contain rounded-md bg-white p-0.5 border border-zinc-200/80 shadow-2xs"
+                  className="w-6 h-6 sm:w-7 sm:h-7 object-contain rounded-md bg-white p-0.5 border border-zinc-200/80 shadow-2xs"
                 />
               ) : (
                 <div
                   className={cn(
-                    'w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold text-white shadow-2xs bg-gradient-to-br',
+                    'w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center text-xs font-bold text-white shadow-2xs bg-gradient-to-br',
                     brandMeta.gradient
                   )}
                 >
@@ -291,18 +293,18 @@ export default function ClientDetail() {
               </div>
             </div>
           ) : client.brand ? (
-            <div className="px-3.5 py-2 rounded-xl bg-zinc-50 border border-zinc-200/80 text-xs font-semibold text-zinc-700">
+            <div className="px-3.5 py-2 rounded-xl bg-zinc-50 border border-zinc-200/80 text-xs font-semibold text-zinc-700 self-start">
               {brandLabel}
             </div>
           ) : null}
         </div>
 
         {/* Quick Contact & Action Strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 pt-6 border-t border-zinc-100">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-zinc-100">
           {/* Email Box */}
           <a
             href={`mailto:${client.email}`}
-            className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/70 transition-all group"
+            className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/70 transition-all group active:scale-[0.99]"
           >
             <div className="w-9 h-9 rounded-xl bg-white border border-zinc-200/80 flex items-center justify-center text-zinc-500 group-hover:text-primary-900 shadow-2xs shrink-0">
               <Mail className="w-4 h-4" />
@@ -319,7 +321,7 @@ export default function ClientDetail() {
 
           {/* Phone Box */}
           {client.phone ? (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 border border-zinc-200/70">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 border border-zinc-200/70 gap-2">
               <a
                 href={`tel:${cleanPhone}`}
                 className="flex items-center gap-3 min-w-0 hover:text-primary-900 group"
@@ -341,7 +343,7 @@ export default function ClientDetail() {
                   href={`https://wa.me/${waNumber}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0 shadow-2xs"
+                  className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0 shadow-2xs active:scale-95"
                   title="Chat on WhatsApp"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
@@ -381,25 +383,25 @@ export default function ClientDetail() {
       </div>
 
       {/* Two Column Content: Tax & Profile / Address & Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Left Column: Tax & Identification Card */}
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
-          <h3 className="text-sm font-bold text-primary-900 tracking-tight flex items-center gap-2 mb-4 pb-3 border-b border-zinc-100">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-primary-900 tracking-tight flex items-center gap-2 mb-3 sm:mb-4 pb-3 border-b border-zinc-100">
             <CreditCard className="w-4 h-4 text-zinc-500" />
             <span>Tax & Business Identifiers</span>
           </h3>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-1">
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 py-1">
               <span className="text-xs text-zinc-500 font-medium">GST Identification (GSTIN)</span>
-              <span className="text-xs font-mono font-semibold text-primary-900 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200/60">
+              <span className="text-xs font-mono font-semibold text-primary-900 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200/60 w-fit">
                 {client.gstNumber || 'Not Registered'}
               </span>
             </div>
 
-            <div className="flex items-center justify-between py-1 border-t border-zinc-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 py-1 border-t border-zinc-100">
               <span className="text-xs text-zinc-500 font-medium">PAN Number</span>
-              <span className="text-xs font-mono font-semibold text-primary-900 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200/60">
+              <span className="text-xs font-mono font-semibold text-primary-900 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200/60 w-fit">
                 {client.panNumber || 'Not Provided'}
               </span>
             </div>
@@ -419,8 +421,8 @@ export default function ClientDetail() {
         </div>
 
         {/* Right Column: Registered Office Address Card */}
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
-          <h3 className="text-sm font-bold text-primary-900 tracking-tight flex items-center gap-2 mb-4 pb-3 border-b border-zinc-100">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-primary-900 tracking-tight flex items-center gap-2 mb-3 sm:mb-4 pb-3 border-b border-zinc-100">
             <MapPin className="w-4 h-4 text-zinc-500" />
             <span>Registered Office & Location</span>
           </h3>
@@ -432,7 +434,7 @@ export default function ClientDetail() {
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                     Street Address
                   </p>
-                  <p className="text-xs font-medium text-zinc-800 mt-0.5">
+                  <p className="text-xs font-medium text-zinc-800 mt-0.5 break-words">
                     {address.street}
                   </p>
                 </div>
@@ -444,7 +446,7 @@ export default function ClientDetail() {
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                       City
                     </p>
-                    <p className="text-xs font-medium text-zinc-800 mt-0.5">
+                    <p className="text-xs font-medium text-zinc-800 mt-0.5 truncate">
                       {address.city}
                     </p>
                   </div>
@@ -454,7 +456,7 @@ export default function ClientDetail() {
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                       State / Province
                     </p>
-                    <p className="text-xs font-medium text-zinc-800 mt-0.5">
+                    <p className="text-xs font-medium text-zinc-800 mt-0.5 truncate">
                       {address.state}
                     </p>
                   </div>
@@ -476,7 +478,7 @@ export default function ClientDetail() {
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                     Country
                   </p>
-                  <p className="text-xs font-medium text-zinc-800 mt-0.5">
+                  <p className="text-xs font-medium text-zinc-800 mt-0.5 truncate">
                     {address.country || 'India'}
                   </p>
                 </div>
@@ -500,7 +502,7 @@ export default function ClientDetail() {
       </div>
 
       {/* Notes & Activity Stream Section */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
+      <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
         <h3 className="text-sm font-bold text-primary-900 tracking-tight flex items-center gap-2 mb-4 pb-3 border-b border-zinc-100">
           <MessageSquare className="w-4 h-4 text-zinc-500" />
           <span>Notes & Activity Feed</span>

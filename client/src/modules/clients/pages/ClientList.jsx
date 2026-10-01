@@ -150,7 +150,7 @@ export default function ClientList() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Header & Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-primary-900 tracking-tight">
             Client Directory
@@ -160,7 +160,7 @@ export default function ClientList() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* Refresh Action */}
           <button
             onClick={() => {
@@ -178,10 +178,10 @@ export default function ClientList() {
           {canCreate && (
             <Button
               onClick={() => navigate('/clients/new')}
-              className="rounded-xl text-xs font-semibold shadow-md shadow-primary-900/10"
+              className="rounded-xl text-xs font-semibold shadow-md shadow-primary-900/10 px-3 py-2"
             >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Add Client
+              <Plus className="w-4 h-4 mr-1" />
+              <span>Add Client</span>
             </Button>
           )}
         </div>
@@ -189,22 +189,26 @@ export default function ClientList() {
 
       {/* KPI Stats Ribbon */}
       {statsLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5">
           {Array.from({ length: 3 }).map((_, i) => (
             <StatCardSkeleton key={i} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5">
           {kpis.map((kpi, idx) => {
             const Icon = kpi.icon;
+            const isFeaturedLast = idx === 2;
             return (
               <div
                 key={idx}
-                className="bg-white rounded-2xl border border-zinc-200/80 p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-zinc-300/80 transition-all duration-200 flex flex-col justify-between"
+                className={cn(
+                  'bg-white rounded-2xl border border-zinc-200/80 p-3.5 sm:p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-md hover:border-zinc-300/80 transition-all duration-200 flex flex-col justify-between',
+                  isFeaturedLast && 'col-span-2 sm:col-span-1'
+                )}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                     {kpi.title}
                   </span>
                   <div
@@ -216,8 +220,8 @@ export default function ClientList() {
                     <Icon className="w-3.5 h-3.5" strokeWidth={2} />
                   </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-primary-900 tracking-tight">
+                <div className={cn(isFeaturedLast ? 'flex sm:block items-baseline justify-between sm:justify-start gap-2' : '')}>
+                  <p className="text-xl sm:text-2xl font-bold text-primary-900 tracking-tight">
                     {kpi.value}
                   </p>
                   <p className="text-[11px] text-zinc-400 mt-0.5 truncate font-normal">
@@ -231,11 +235,11 @@ export default function ClientList() {
       )}
 
       {/* Venture Brand Switcher Tab Bar */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="-mx-2 px-2 sm:mx-0 sm:px-0 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none]">
         <button
           onClick={() => handleBrandChange('')}
           className={cn(
-            'flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
+            'flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
             !activeBrand
               ? 'bg-primary-900 text-white border-primary-900 shadow-sm'
               : 'bg-white text-zinc-600 hover:text-primary-900 hover:bg-zinc-50 border-zinc-200/80'
@@ -262,7 +266,7 @@ export default function ClientList() {
               key={b.value}
               onClick={() => handleBrandChange(b.value)}
               className={cn(
-                'flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
+                'flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs border',
                 isSelected
                   ? 'bg-primary-900 text-white border-primary-900 shadow-sm'
                   : 'bg-white text-zinc-600 hover:text-primary-900 hover:bg-zinc-50 border-zinc-200/80'
@@ -303,11 +307,11 @@ export default function ClientList() {
 
       {/* Table Section */}
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-2xs">
           <TableSkeleton rows={5} />
         </div>
       ) : error ? (
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-12 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-12 text-center shadow-2xs">
           <EmptyState
             icon={UserCheck}
             title="Failed to load clients"
@@ -315,7 +319,7 @@ export default function ClientList() {
           />
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-zinc-200/80 overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 overflow-hidden shadow-[0_4px_24px_-6px_rgba(0,0,0,0.04)]">
           <ClientTable
             clients={clients}
             loading={false}
