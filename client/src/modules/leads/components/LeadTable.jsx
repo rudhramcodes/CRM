@@ -15,6 +15,7 @@ export default function LeadTable({
   canEdit,
   onEdit,
   onStatusChange,
+  onCallLead,
   serverPagination,
   page,
   pageSize,
@@ -134,7 +135,19 @@ export default function LeadTable({
           {row.phone && (
             <div className="flex items-center gap-1.5 text-zinc-400 text-[11px] truncate">
               <Phone className="w-3 h-3 text-zinc-400 shrink-0" />
-              <span>{row.phone}</span>
+              <a
+                href={`tel:${row.phone}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (row.status === 'new' && onCallLead) {
+                    e.preventDefault();
+                    onCallLead(row);
+                  }
+                }}
+                className="hover:underline hover:text-zinc-700 truncate"
+              >
+                {row.phone}
+              </a>
             </div>
           )}
         </div>
@@ -166,13 +179,19 @@ export default function LeadTable({
                 <LeadStatusBadge status={row.status} />
               </SelectTrigger>
               <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                {LEAD_STATUS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs">{s.label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
+                {LEAD_STATUS.map((s) => {
+                  const isLostDisabled = s.value === 'lost' && row.status === 'new';
+                  return (
+                    <SelectItem key={s.value} value={s.value} disabled={isLostDisabled}>
+                      <div className="flex items-center justify-between gap-2 w-full">
+                        <span className="text-xs">{s.label}</span>
+                        {isLostDisabled && (
+                          <span className="text-[10px] text-zinc-400 font-normal">(Contact first)</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -380,11 +399,19 @@ export default function LeadTable({
                             <LeadStatusBadge status={lead.status} />
                           </SelectTrigger>
                           <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                            {LEAD_STATUS.map((s) => (
-                              <SelectItem key={s.value} value={s.value}>
-                                <span className="text-xs">{s.label}</span>
-                              </SelectItem>
-                            ))}
+                            {LEAD_STATUS.map((s) => {
+                              const isLostDisabled = s.value === 'lost' && lead.status === 'new';
+                              return (
+                                <SelectItem key={s.value} value={s.value} disabled={isLostDisabled}>
+                                  <div className="flex items-center justify-between gap-2 w-full">
+                                    <span className="text-xs">{s.label}</span>
+                                    {isLostDisabled && (
+                                      <span className="text-[10px] text-zinc-400 font-normal">(Contact first)</span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                       ) : (
@@ -429,7 +456,15 @@ export default function LeadTable({
                       <div className="flex-1 flex items-center gap-1.5">
                         <a
                           href={`tel:${lead.phone}`}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (lead.status === 'new' && onCallLead) {
+                              e.preventDefault();
+                              onCallLead(lead);
+                            } else {
+                              e.stopPropagation();
+                            }
+                          }}
                           className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/70 text-xs font-semibold text-zinc-700 active:scale-95 transition-all cursor-pointer truncate shadow-2xs"
                         >
                           <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -440,7 +475,13 @@ export default function LeadTable({
                             href={waLink}
                             target="_blank"
                             rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (lead.status === 'new' && onCallLead) {
+                                e.preventDefault();
+                                onCallLead(lead, waLink);
+                              }
+                            }}
                             className="p-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/70 text-emerald-700 active:scale-95 transition-all cursor-pointer shrink-0 shadow-2xs"
                             title="WhatsApp Chat"
                           >

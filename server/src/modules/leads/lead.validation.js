@@ -42,7 +42,11 @@ export const createLeadSchema = z.object({
     .nullable()
     .or(z.literal('')),
   source: z.enum(LEAD_SOURCES, { errorMap: () => ({ message: 'Please select a valid source' }) }).optional().default('other'),
-  status: z.enum(LEAD_STATUS_LIST, { message: 'Invalid lead status' }).optional().default(LEAD_STATUS.NEW),
+  status: z
+    .enum(LEAD_STATUS_LIST, { message: 'Invalid lead status' })
+    .refine((val) => val !== 'lost', { message: 'New leads cannot be marked as lost directly. They must be contacted first.' })
+    .optional()
+    .default(LEAD_STATUS.NEW),
   assignedTo: z.string().optional().nullable(),
   lostReason: z.string().max(500).optional().nullable().or(z.literal('')),
   followUpDate: z.string().datetime({ offset: true }).optional().nullable().or(z.literal('')),

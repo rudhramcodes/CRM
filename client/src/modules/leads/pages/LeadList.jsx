@@ -24,6 +24,7 @@ import {
 import LeadTable from '../components/LeadTable';
 import LeadFilters from '../components/LeadFilters';
 import LeadImportModal from '../components/LeadImportModal';
+import LeadCommunityGroupModal from '../components/LeadCommunityGroupModal';
 import Button from '../../../components/ui/Button';
 import EmptyState from '../../../components/ui/EmptyState';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
@@ -48,6 +49,10 @@ export default function LeadList() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [importOpen, setImportOpen] = useState(false);
   const [activeBrand, setActiveBrand] = useState('');
+  const [communityModalTarget, setCommunityModalTarget] = useState(null);
+  const [communityModalStatus, setCommunityModalStatus] = useState('contacted');
+  const [communityIsCallAction, setCommunityIsCallAction] = useState(false);
+  const [communityPendingUrl, setCommunityPendingUrl] = useState(null);
 
   useEffect(() => {
     dispatch(setPageTitle('Leads'));
@@ -55,7 +60,7 @@ export default function LeadList() {
 
   const { data: leadsData, isLoading, error, refetch: refetchLeads, isFetching: isFetchingLeads } = useGetLeadsQuery(queryParams);
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetLeadStatsQuery();
-  const [updateLead] = useUpdateLeadMutation();
+  const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
   const [bulkUpdateLeads, { isLoading: isBulkUpdating }] = useBulkUpdateLeadsMutation();
 
   const leads = leadsData?.data || [];
@@ -93,22 +98,68 @@ export default function LeadList() {
     navigate(`/leads/${row._id}`);
   }, [navigate]);
 
-  const handleStatusChange = useCallback(async (leadId, newStatus) => {
-    if (newStatus === 'lost') {
-      setLostReasonTarget(leadId);
-      setLostReasonInput('');
-      return;
-    }
+  const executeStatusChange = useCallback(async (leadId, newStatus) => {
     try {
       await updateLead({ id: leadId, status: newStatus }).unwrap();
       if (newStatus === 'won') {
         toast.success('Lead converted to client successfully');
         navigate('/clients');
+      } else {
+        toast.success(`Stage updated to ${newStatus.replace('_', ' ')}`);
       }
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update lead status');
     }
   }, [updateLead, navigate]);
+
+  const handleStatusChange = useCallback(async (leadId, newStatus) => {
+    const targetLead = leads.find((l) => l._id === leadId);
+    if (newStatus === 'lost') {
+      if (targetLead?.status === 'new') {
+        toast.error('Lead must be contacted before it can be marked as lost.');
+        return;
+      }
+      setLostReasonTarget(leadId);
+      setLostReasonInput('');
+      return;
+    }
+    // Intercept if changing status from new or changing to contacted
+    if (targetLead && ((targetLead.status === 'new' && newStatus !== 'new') || newStatus === 'contacted')) {
+      setCommunityModalTarget(targetLead);
+      setCommunityModalStatus(newStatus);
+      setCommunityIsCallAction(false);
+      setCommunityPendingUrl(null);
+      return;
+    }
+    await executeStatusChange(leadId, newStatus);
+  }, [leads, executeStatusChange]);
+
+  const confirmCommunityGroupProceed = useCallback(async () => {
+    if (!communityModalTarget) return;
+    if (communityIsCallAction) {
+      if (communityPendingUrl) {
+        window.open(communityPendingUrl, '_blank');
+      } else if (communityModalTarget.phone) {
+        window.location.href = `tel:${communityModalTarget.phone}`;
+      }
+      setCommunityModalTarget(null);
+      setCommunityIsCallAction(false);
+      setCommunityPendingUrl(null);
+      return;
+    }
+    const leadId = communityModalTarget._id;
+    const nextStatus = communityModalStatus;
+    setCommunityModalTarget(null);
+    await executeStatusChange(leadId, nextStatus);
+  }, [communityModalTarget, communityIsCallAction, communityPendingUrl, communityModalStatus, executeStatusChange]);
+
+  const handleCallLeadAttempt = useCallback((lead, url = null) => {
+    if (lead?.status === 'new') {
+      setCommunityModalTarget(lead);
+      setCommunityIsCallAction(true);
+      setCommunityPendingUrl(url);
+    }
+  }, []);
 
   const confirmLostReason = useCallback(async () => {
     if (!lostReasonTarget) return;
@@ -136,6 +187,22 @@ export default function LeadList() {
   const selectedLeads = leads.filter((l) => selectedIds.includes(l._id));
 
   const handleBulkStatusChange = useCallback(async (status) => {
+    if (status === 'lost') {
+      const uncontacted = selectedLeads.filter((l) => l.status === 'new');
+      if (uncontacted.length > 0) {
+        toast.error(`Cannot mark ${uncontacted.length} lead(s) as lost without contacting them first.`);
+        return;
+      }
+    }
+    if (status === 'contacted') {
+      const newLead = selectedLeads.find((l) => l.status === 'new');
+      if (newLead) {
+        toast.error('Please create brand community groups before marking new leads as Contacted');
+        setCommunityModalTarget(newLead);
+        setCommunityModalStatus('contacted');
+        return;
+      }
+    }
     try {
       await bulkUpdateLeads({ ids: selectedIds, data: { status } }).unwrap();
       toast.success('Leads updated successfully');
@@ -143,7 +210,7 @@ export default function LeadList() {
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update leads');
     }
-  }, [bulkUpdateLeads, selectedIds]);
+  }, [bulkUpdateLeads, selectedIds, selectedLeads]);
 
   const handleDownload = useCallback((format) => {
     if (!selectedLeads.length) return;
@@ -459,6 +526,7 @@ export default function LeadList() {
             canEdit={canEdit}
             onEdit={handleEdit}
             onStatusChange={handleStatusChange}
+            onCallLead={handleCallLeadAttempt}
             serverPagination
             page={pagination?.page || 1}
             pageSize={pagination?.limit || 10}
@@ -511,6 +579,21 @@ export default function LeadList() {
 
       {/* Lead CSV Import Modal */}
       <LeadImportModal open={importOpen} onClose={() => setImportOpen(false)} />
+
+      {/* Lead Community Group SOP Modal */}
+      <LeadCommunityGroupModal
+        open={!!communityModalTarget}
+        onClose={() => {
+          setCommunityModalTarget(null);
+          setCommunityIsCallAction(false);
+          setCommunityPendingUrl(null);
+        }}
+        onConfirm={confirmCommunityGroupProceed}
+        lead={communityModalTarget}
+        targetStatus={communityModalStatus}
+        isCallAction={communityIsCallAction}
+        loading={isUpdating}
+      />
     </div>
   );
 }

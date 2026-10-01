@@ -101,6 +101,26 @@ export const LEAD_BRANDS = [
   { value: 'kalyannam', label: 'Kalyannam' },
 ];
 
+export const VENTURE_CODES = {
+  panigrahna: 'PG',
+  aghori: 'AG',
+  house_of_joggi: 'HG',
+  damrru: 'DM',
+  tandavs: 'TD',
+  kapaalik: 'KP',
+  kalyannam: 'KL',
+};
+
+export const BRAND_COMMUNITY_NAMES = {
+  panigrahna: 'Panigrahna by Rudhram Enterprises',
+  aghori: 'Aghori by Rudhram Enterprises',
+  house_of_joggi: 'House of Joggi by Rudhram Enterprises',
+  damrru: 'Damrru by Rudhram Enterprises',
+  tandavs: 'Tandavs by Rudhram Enterprises',
+  kapaalik: 'Kapaalik by Rudhram Enterprises',
+  kalyannam: 'Kalyannam by Rudhram Enterprises',
+};
+
 export const MEETING_STATUS = [
   { value: 'scheduled', label: 'Scheduled', color: 'bg-blue-100 text-blue-800' },
   { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800' },

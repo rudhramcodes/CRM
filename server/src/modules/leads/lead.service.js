@@ -230,6 +230,10 @@ export const updateLead = async (id, data, user) => {
   }
 
   if (data.status && data.status !== lead.status) {
+    if (data.status === 'lost' && lead.status === 'new') {
+      throw ApiError.badRequest('Cannot mark lead as lost without contacting them first. Please contact the lead before marking as lost.');
+    }
+
     // If status is changed to 'won', auto-activate client
     if (data.status === 'won') {
       let client = null;
@@ -445,6 +449,17 @@ export const bulkDelete = async (ids) => {
 };
 
 export const bulkUpdateStatus = async (ids, data, user) => {
+  if (data.status === 'lost') {
+    const uncontactedCount = await leadRepository.countAll({
+      _id: { $in: ids },
+      isDeleted: false,
+      status: 'new',
+    });
+    if (uncontactedCount > 0) {
+      throw ApiError.badRequest(`Cannot mark ${uncontactedCount} lead(s) as lost without contacting them first. Please contact new leads before marking as lost.`);
+    }
+  }
+
   return leadRepository.updateMany(ids, {
     status: data.status,
     statusChangedAt: new Date(),

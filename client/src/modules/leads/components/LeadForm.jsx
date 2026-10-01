@@ -105,6 +105,11 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
 
   const onSubmit = async (data) => {
     try {
+      if (data.status === 'lost' && (!lead || lead.status === 'new')) {
+        toast.error('Lead must be contacted before it can be marked as lost.');
+        return;
+      }
+
       const payload = {
         name: data.name,
         email: data.email,
@@ -225,7 +230,11 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
           name="status"
           control={control}
           label="Pipeline Stage"
-          options={LEAD_STATUS}
+          options={LEAD_STATUS.map((s) => ({
+            ...s,
+            disabled: s.value === 'lost' && (!lead || lead.status === 'new'),
+            label: s.value === 'lost' && (!lead || lead.status === 'new') ? `${s.label} (Contact first)` : s.label,
+          }))}
           error={errors.status?.message}
         />
 

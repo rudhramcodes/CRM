@@ -19,6 +19,8 @@ import {
   Clock,
   MessageCircle,
   ChevronDown,
+  ShieldAlert,
+  ArrowRight,
 } from 'lucide-react';
 import {
   useGetLeadByIdQuery,
@@ -27,6 +29,7 @@ import {
 } from '../../../services/leadApi';
 import LeadStatusBadge from '../components/LeadStatusBadge';
 import LeadForm from '../components/LeadForm';
+import LeadCommunityGroupModal from '../components/LeadCommunityGroupModal';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import EmptyState from '../../../components/ui/EmptyState';
@@ -34,7 +37,7 @@ import { DetailSkeleton } from '../../../components/ui/Skeleton';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import toast from 'react-hot-toast';
 import { formatDate, formatDateTime, getTimeAgo } from '../../../utils/formatters';
-import { LEAD_STATUS, LEAD_SOURCES, LEAD_BRANDS, BRAND_METAS } from '../../../constants';
+import { LEAD_STATUS, LEAD_SOURCES, LEAD_BRANDS, BRAND_METAS, BRAND_COMMUNITY_NAMES, VENTURE_CODES } from '../../../constants';
 import { cn } from '../../../utils/cn';
 
 export default function LeadDetail() {
@@ -46,6 +49,10 @@ export default function LeadDetail() {
   const [showLostModal, setShowLostModal] = useState(false);
   const [lostReasonInput, setLostReasonInput] = useState('');
   const [noteText, setNoteText] = useState('');
+  const [showCommunityModal, setShowCommunityModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(null);
+  const [isCallAction, setIsCallAction] = useState(false);
+  const [pendingActionUrl, setPendingActionUrl] = useState(null);
 
   const { data: leadData, isLoading, error, refetch } = useGetLeadByIdQuery(id);
   const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
@@ -59,11 +66,7 @@ export default function LeadDetail() {
     }
   }, [lead, dispatch]);
 
-  const handleStatusChange = async (newStatus) => {
-    if (newStatus === 'lost') {
-      setShowLostModal(true);
-      return;
-    }
+  const executeStatusChange = async (newStatus) => {
     try {
       await updateLead({ id, status: newStatus }).unwrap();
       if (newStatus === 'won') {
@@ -74,6 +77,53 @@ export default function LeadDetail() {
       }
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    if (newStatus === 'lost') {
+      if (lead?.status === 'new') {
+        toast.error('Lead must be contacted before it can be marked as lost.');
+        return;
+      }
+      setShowLostModal(true);
+      return;
+    }
+    // Intercept if changing status from new or changing to contacted
+    if ((lead?.status === 'new' && newStatus !== 'new') || newStatus === 'contacted') {
+      setPendingStatus(newStatus);
+      setIsCallAction(false);
+      setShowCommunityModal(true);
+      return;
+    }
+    await executeStatusChange(newStatus);
+  };
+
+  const confirmCommunityProceed = async () => {
+    setShowCommunityModal(false);
+    if (isCallAction) {
+      if (pendingActionUrl) {
+        window.open(pendingActionUrl, '_blank');
+      } else if (lead?.phone) {
+        window.location.href = `tel:${lead.phone}`;
+      }
+      setIsCallAction(false);
+      setPendingActionUrl(null);
+      return;
+    }
+    if (pendingStatus) {
+      const statusToSet = pendingStatus;
+      setPendingStatus(null);
+      await executeStatusChange(statusToSet);
+    }
+  };
+
+  const handleCallAttempt = (e, url = null) => {
+    if (lead?.status === 'new') {
+      e?.preventDefault();
+      setIsCallAction(true);
+      setPendingActionUrl(url);
+      setShowCommunityModal(true);
     }
   };
 
@@ -161,11 +211,23 @@ export default function LeadDetail() {
                   <LeadStatusBadge status={lead.status} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                  {LEAD_STATUS.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
+                  {LEAD_STATUS.map((s) => {
+                    const isLostDisabled = s.value === 'lost' && lead.status === 'new';
+                    return (
+                      <SelectItem
+                        key={s.value}
+                        value={s.value}
+                        disabled={isLostDisabled}
+                      >
+                        <span className="flex items-center justify-between gap-2 w-full">
+                          <span>{s.label}</span>
+                          {isLostDisabled && (
+                            <span className="text-[10px] text-zinc-400 font-normal">(Contact first)</span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -284,6 +346,40 @@ export default function LeadDetail() {
           </div>
         )}
 
+        {/* SOP Notice for New Leads: Community Group Creation Required */}
+        {lead.status === 'new' && (
+          <div className="mt-4 sm:mt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-amber-900 text-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+              <div className="leading-relaxed">
+                <span>
+                  Create WhatsApp group in{' '}
+                  <strong className="font-semibold text-primary-900">
+                    {lead.brand === 'panigrahna' ? 'Panigrahna by Rudhram Enterprises' : (BRAND_COMMUNITY_NAMES[lead.brand] || `${brandMeta?.name || 'Brand'} by Rudhram Enterprises`)}
+                  </strong>{' '}
+                  under Client ID{' '}
+                  <code className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-amber-200/90 text-primary-900 shadow-2xs">
+                    {lead.clientId || lead.convertedToClient?.clientId || `RE-${VENTURE_CODES[lead.brand] || 'PG'}-${new Date().getFullYear()}-001`}
+                  </code>{' '}
+                  before calling.
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsCallAction(false);
+                setShowCommunityModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-50 active:bg-zinc-100 border border-zinc-200/90 text-xs font-semibold text-zinc-700 shadow-2xs shrink-0 cursor-pointer self-start sm:self-auto transition"
+            >
+              <span>View Details</span>
+              <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
+            </button>
+          </div>
+        )}
+
         {/* Contact Quick Access Bar: 2x2 Grid on Mobile, 4-col on Desktop */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-zinc-100">
           {/* Email */}
@@ -311,6 +407,7 @@ export default function LeadDetail() {
               <div className="flex items-center justify-between gap-1.5">
                 <a
                   href={`tel:${lead.phone}`}
+                  onClick={(e) => handleCallAttempt(e)}
                   className="text-xs sm:text-sm font-semibold text-primary-900 hover:underline truncate"
                   title={lead.phone}
                 >
@@ -321,6 +418,7 @@ export default function LeadDetail() {
                     href={waLink}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={(e) => handleCallAttempt(e, waLink)}
                     className="text-emerald-600 hover:text-emerald-700 p-0.5 rounded-md hover:bg-emerald-50 transition-colors shrink-0"
                     title="Open WhatsApp Chat"
                   >
@@ -555,6 +653,22 @@ export default function LeadDetail() {
           </div>
         </div>
       </Modal>
+
+      {/* Lead Community Group SOP Modal */}
+      <LeadCommunityGroupModal
+        open={showCommunityModal}
+        onClose={() => {
+          setShowCommunityModal(false);
+          setPendingStatus(null);
+          setIsCallAction(false);
+          setPendingActionUrl(null);
+        }}
+        onConfirm={confirmCommunityProceed}
+        lead={lead}
+        targetStatus={pendingStatus || 'contacted'}
+        isCallAction={isCallAction}
+        loading={isUpdating}
+      />
     </div>
   );
 }
