@@ -12,7 +12,7 @@ export const create = async (data) => {
 export const findById = async (id) => {
   return Invoice.findById(id)
     .populate('client', 'clientId companyName contactPerson email phone gstNumber brand address')
-    .populate('project', 'title status')
+    .populate('project', 'projectCode title status')
     .populate('createdBy', 'name email');
 };
 
@@ -72,7 +72,7 @@ export const findAll = async (query = {}, options = {}) => {
 export const updateById = async (id, data) => {
   return Invoice.findByIdAndUpdate(id, data, { new: true, runValidators: true })
     .populate('client', 'clientId companyName contactPerson email phone gstNumber brand address')
-    .populate('project', 'title status')
+    .populate('project', 'projectCode title status')
     .populate('createdBy', 'name email');
 };
 

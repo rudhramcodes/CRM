@@ -556,7 +556,7 @@ export const generateInvoiceHtml = (invoice) => {
                 <div class="meta-list">
                   <div class="meta-item"><span class="meta-lbl">Invoice No.</span> <span>${esc(invoice.invoiceNumber || '-')}</span></div>
                   <div class="meta-item"><span class="meta-lbl">Client Id :</span> <span>${esc(client.clientId || '-')}</span></div>
-                  <div class="meta-item"><span class="meta-lbl">Project No :</span> <span>${esc(invoice.project?.projectNumber || invoice.project?.title || '-')}</span></div>
+                  <div class="meta-item"><span class="meta-lbl">Project Id :</span> <span>${esc(invoice.project?.projectCode || '-')}</span></div>
                   <div class="meta-item"><span class="meta-lbl">Date:</span> <span>${fmtDate(invoice.issueDate)}</span></div>
                 </div>
               </div>
