@@ -14,6 +14,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test e2e/advance-payment.spec.cjs --config=playwright.config.cjs",
     "payroll:backfill": "node scripts/backfillEmployeeProfiles.mjs",
+    "project:backfill-codes": "node scripts/backfillProjectCodes.mjs",
     "check:payroll": "node scripts/checkPayroll.mjs"
   },
   "dependencies": {

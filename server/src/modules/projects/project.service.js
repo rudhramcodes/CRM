@@ -1,4 +1,5 @@
 import ApiError from '../../utils/ApiError.js';
+import generateProjectCode from '../../utils/generateProjectCode.js';
 import * as projectRepository from './project.repository.js';
 import { uploadBuffer } from '../../services/cloudinaryService.js';
 import Task from '../tasks/task.model.js';
@@ -81,7 +82,7 @@ export const createProject = async (data, user) => {
       createdBy: user._id,
     })),
     tags: data.tags || [],
-    projectCode: data.projectCode,
+    projectCode: data.projectCode?.trim() || (await generateProjectCode(client.brand)),
     location: data.location,
     duration: data.duration,
     inwardData: data.inwardData,

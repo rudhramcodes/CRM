@@ -769,7 +769,8 @@ export const generatePaymentReceiptHtml = (payment, invoice) => {
         <tr><td>Payment method</td><td>${esc(methodLabels[payment.paymentMethod] || payment.paymentMethod || '-')}</td></tr>
         <tr><td>Reference</td><td>${esc(payment.referenceNo || '-')}</td></tr>
         <tr><td>Invoice</td><td>${esc(inv.invoiceNumber || '-')}</td></tr>
-        <tr><td>Client</td><td>${esc(client.companyName || client.contactPerson || 'N/A')}</td></tr>
+        <tr><td>Client ID</td><td>${esc(client.clientId || '-')}</td></tr>
+        <tr><td>Project ID</td><td>${esc(inv.project?.projectCode || '-')}</td></tr>
       </table>
       <h2 class="section-title">Settlement summary</h2>
       <div class="settlement">

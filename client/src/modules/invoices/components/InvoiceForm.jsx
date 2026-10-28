@@ -80,6 +80,7 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(invoiceFormSchema),
@@ -97,6 +98,20 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
   const watchedItems = watch('items');
   const taxRate = watch('taxRate');
   const discountPercent = watch('discountPercent');
+  const selectedClient = watch('client');
+  const selectedProject = watch('project');
+  const clientProjects = selectedClient
+    ? projects.filter((p) => String(p.client?._id || p.client) === String(selectedClient))
+    : [];
+
+  useEffect(() => {
+    if (!selectedClient || !selectedProject || projects.length === 0) return;
+    const belongsToClient = projects.some(
+      (p) => String(p._id) === String(selectedProject)
+        && String(p.client?._id || p.client) === String(selectedClient),
+    );
+    if (!belongsToClient) setValue('project', '');
+  }, [selectedClient, selectedProject, projects, setValue]);
 
   const subtotal = (watchedItems || []).reduce(
     (sum, item) => sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0),
@@ -159,8 +174,11 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
           name="project"
           control={control}
           label="Project"
-          options={projects.map((p) => ({ value: p._id, label: p.title || p.name || p._id }))}
-          placeholder="Select project (optional)"
+          options={clientProjects.map((p) => ({
+            value: p._id,
+            label: [p.projectCode, p.title || p.name || p._id].filter(Boolean).join(' — '),
+          }))}
+          placeholder={selectedClient ? 'Select project (optional)' : 'Select client first'}
         />
         <div />
       </div>

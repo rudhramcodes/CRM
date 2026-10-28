@@ -16,8 +16,12 @@ export const createMany = async (data) => {
 
 export const findById = async (id) => {
   return Payment.findById(id)
-    .populate('invoice', 'invoiceNumber total status paidAmount balanceDue')
-    .populate('client', 'companyName contactPerson email')
+    .populate({
+      path: 'invoice',
+      select: 'invoiceNumber total status paidAmount balanceDue project',
+      populate: { path: 'project', select: 'projectCode title' },
+    })
+    .populate('client', 'clientId companyName contactPerson email')
     .populate('createdBy', 'name email');
 };
 
