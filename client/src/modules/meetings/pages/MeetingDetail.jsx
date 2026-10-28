@@ -34,6 +34,7 @@ import {
   useConvertActionItemMutation,
 } from '../../../services/meetingApi';
 import { useGetProjectsQuery } from '../../../services/projectApi';
+import { useGetUsersQuery } from '../../../services/userApi';
 import MeetingStatusBadge from '../components/MeetingStatusBadge';
 import MeetingForm from '../components/MeetingForm';
 import Button from '../../../components/ui/Button';
@@ -62,7 +63,8 @@ export default function MeetingDetail() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState('');
   const [newItemText, setNewItemText] = useState('');
-  const [convertTargets, setConvertTargets] = useState({});
+  const [convertItem, setConvertItem] = useState(null);
+  const [convertForm, setConvertForm] = useState({ projectId: '', assignedTo: '', dueDate: '' });
   const [busyItem, setBusyItem] = useState(null);
 
   const { data: meetingData, isLoading, error } = useGetMeetingByIdQuery(id);
@@ -74,8 +76,11 @@ export default function MeetingDetail() {
   const [removeActionItem] = useRemoveActionItemMutation();
   const [convertActionItem] = useConvertActionItemMutation();
   const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
+  const { data: usersData } = useGetUsersQuery({ limit: 100 });
 
   const projects = projectsData?.data?.projects || projectsData?.data || [];
+  const users = (usersData?.data?.users || (Array.isArray(usersData?.data) ? usersData.data : []))
+    .filter((u) => u.role !== 'client' && u.isActive !== false);
   const meeting = meetingData?.data?.meeting;
 
   useEffect(() => {
@@ -155,16 +160,42 @@ export default function MeetingDetail() {
     }
   };
 
-  const handleConvert = async (item) => {
-    const projectId = convertTargets[item._id];
+  const openConvert = (item) => {
+    setConvertItem(item);
+    setConvertForm({
+      projectId: '',
+      assignedTo: item.assignee?._id || item.assignee || '',
+      dueDate: item.dueDate ? String(item.dueDate).slice(0, 10) : '',
+    });
+  };
+
+  const handleConvert = async (e) => {
+    e.preventDefault();
+    if (!convertItem) return;
+    const projectId = convertForm.projectId;
     if (!projectId) {
       toast.error('Select a project to convert to');
       return;
     }
-    setBusyItem(item._id);
+    if (!convertForm.assignedTo) {
+      toast.error('Select an assignee');
+      return;
+    }
+    if (!convertForm.dueDate) {
+      toast.error('Select a deadline');
+      return;
+    }
+    setBusyItem(convertItem._id);
     try {
-      await convertActionItem({ id, itemId: item._id, projectId }).unwrap();
+      await convertActionItem({
+        id,
+        itemId: convertItem._id,
+        projectId,
+        assignedTo: convertForm.assignedTo,
+        dueDate: convertForm.dueDate,
+      }).unwrap();
       toast.success('Action item converted to task');
+      setConvertItem(null);
     } catch (error) {
       toast.error(error?.data?.message || 'Failed to convert to task');
     } finally {
@@ -650,36 +681,16 @@ export default function MeetingDetail() {
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       {canManage && !item.convertedToTask && (
-                        <div className="flex items-center gap-1">
-                          <select
-                            value={convertTargets[item._id] || ''}
-                            onChange={(e) =>
-                              setConvertTargets((prev) => ({
-                                ...prev,
-                                [item._id]: e.target.value,
-                              }))
-                            }
-                            className="text-[11px] border border-zinc-200 rounded-lg px-2 py-1 bg-white text-zinc-700 focus:outline-none focus:ring-1 focus:ring-primary-900 shadow-2xs"
-                          >
-                            <option value="">To project…</option>
-                            {projects.map((p) => (
-                              <option key={p._id} value={p._id}>
-                                {p.title}
-                              </option>
-                            ))}
-                          </select>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleConvert(item)}
-                            loading={isBusy}
-                            disabled={!convertTargets[item._id]}
-                            className="text-xs px-2 h-7"
-                          >
-                            Convert
-                          </Button>
-                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openConvert(item)}
+                          disabled={isBusy}
+                          className="text-xs px-2 h-7"
+                        >
+                          Convert
+                        </Button>
                       )}
                       {canManage && (
                         <button
@@ -714,6 +725,62 @@ export default function MeetingDetail() {
           </div>
         </div>
       </div>
+
+      <Modal
+        open={!!convertItem}
+        onClose={() => setConvertItem(null)}
+        title="Convert action item to task"
+        description="Tasks require an assignee and a deadline."
+        size="md"
+      >
+        <form onSubmit={handleConvert} className="space-y-4">
+          <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+            {convertItem?.text}
+          </p>
+          <div className="space-y-1.5">
+            <label htmlFor="convert-project" className="block text-sm font-medium text-zinc-700">Project</label>
+            <select
+              id="convert-project"
+              value={convertForm.projectId}
+              onChange={(e) => setConvertForm((current) => ({ ...current, projectId: e.target.value }))}
+              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-900/10"
+            >
+              <option value="">Select project</option>
+              {projects.map((p) => <option key={p._id} value={p._id}>{p.title}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="convert-assignee" className="block text-sm font-medium text-zinc-700">Assignee</label>
+            <select
+              id="convert-assignee"
+              value={convertForm.assignedTo}
+              onChange={(e) => setConvertForm((current) => ({ ...current, assignedTo: e.target.value }))}
+              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-900/10"
+            >
+              <option value="">Select assignee</option>
+              {users.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="convert-deadline" className="block text-sm font-medium text-zinc-700">Deadline</label>
+            <input
+              id="convert-deadline"
+              type="date"
+              value={convertForm.dueDate}
+              onChange={(e) => setConvertForm((current) => ({ ...current, dueDate: e.target.value }))}
+              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-900/10"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="secondary" onClick={() => setConvertItem(null)} disabled={busyItem === convertItem?._id}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={busyItem === convertItem?._id}>
+              Convert to task
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal

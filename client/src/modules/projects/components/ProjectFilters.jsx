@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
-import { PROJECT_STATUS } from '../../../constants';
+import { PROJECT_STAGES } from '../../../constants';
 import {
   Select,
   SelectTrigger,
@@ -12,7 +12,7 @@ import {
 export default function ProjectFilters({ onFilterChange }) {
   const [filters, setFilters] = useState({
     search: '',
-    status: '',
+    stage: '',
     priority: '',
   });
 
@@ -20,7 +20,7 @@ export default function ProjectFilters({ onFilterChange }) {
     const timer = setTimeout(() => {
       const activeFilters = {};
       if (filters.search) activeFilters.search = filters.search;
-      if (filters.status) activeFilters.status = filters.status;
+      if (filters.stage) activeFilters.stage = filters.stage;
       if (filters.priority) activeFilters.priority = filters.priority;
       onFilterChange(activeFilters);
     }, 300);
@@ -28,10 +28,10 @@ export default function ProjectFilters({ onFilterChange }) {
   }, [filters, onFilterChange]);
 
   const clearFilters = () => {
-    setFilters({ search: '', status: '', priority: '' });
+    setFilters({ search: '', stage: '', priority: '' });
   };
 
-  const hasFilters = filters.search || filters.status || filters.priority;
+  const hasFilters = filters.search || filters.stage || filters.priority;
 
   return (
     <div className="flex flex-col sm:flex-row gap-3">
@@ -47,17 +47,17 @@ export default function ProjectFilters({ onFilterChange }) {
       </div>
 
       <Select
-        value={filters.status || 'all'}
+        value={filters.stage || 'all'}
         onValueChange={(value) =>
-          setFilters((p) => ({ ...p, status: value === 'all' ? '' : value }))
+          setFilters((p) => ({ ...p, stage: value === 'all' ? '' : value }))
         }
       >
         <SelectTrigger className="w-full sm:w-40">
-          <SelectValue placeholder="All Statuses" />
+          <SelectValue placeholder="All Stages" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Statuses</SelectItem>
-          {PROJECT_STATUS.map((s) => (
+          <SelectItem value="all">All Stages</SelectItem>
+          {PROJECT_STAGES.map((s) => (
             <SelectItem key={s.value} value={s.value}>
               {s.label}
             </SelectItem>

@@ -15,6 +15,7 @@ const activitySchema = new mongoose.Schema(
     field: String,
     oldValue: String,
     newValue: String,
+    reason: { type: String, trim: true },
     performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { _id: true, timestamps: true },
@@ -60,12 +61,16 @@ const taskSchema = new mongoose.Schema(
       enum: Object.values(TASK_PRIORITY),
       default: TASK_PRIORITY.MEDIUM,
     },
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    // Require new assignments without blocking unrelated edits to legacy tasks before A4.
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId, ref: 'User',
+      required() { return this.isNew || this.isModified?.('assignedTo'); },
+    },
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
     // ponytail: milestone lives embedded in Project.milestones; store its subdoc _id only
     milestone: { type: mongoose.Schema.Types.ObjectId },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    dueDate: Date,
+    dueDate: { type: Date, required() { return this.isNew || this.isModified?.('dueDate'); } },
     startDate: Date,
     completedAt: Date,
     estimatedHours: { type: Number, default: 0 },

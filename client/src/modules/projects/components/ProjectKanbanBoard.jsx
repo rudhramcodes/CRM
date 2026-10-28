@@ -1,15 +1,16 @@
 import { useState, useMemo, useCallback } from 'react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, closestCorners } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { PROJECT_STATUS } from '../../../constants';
+import { PROJECT_STAGES } from '../../../constants';
 import ProjectKanbanCard, { ProjectKanbanCardOverlay } from './ProjectKanbanCard';
 import { cn } from '../../../utils/cn';
 import Skeleton from '../../../components/ui/Skeleton';
 
 const COL_ID = 'kanban-col-';
+const LEGACY_STAGE = { planning: 'planning', active: 'execution', review: 'review', completed: 'delivered' };
 
-function KanbanColumn({ status, label, color, projects, onProjectClick }) {
-  const { setNodeRef, isOver } = useDroppable({ id: COL_ID + status });
+function KanbanColumn({ stage, label, color, projects, onProjectClick }) {
+  const { setNodeRef, isOver } = useDroppable({ id: COL_ID + stage });
   const ids = useMemo(() => projects.map((p) => p._id), [projects]);
 
   return (
@@ -28,7 +29,7 @@ function KanbanColumn({ status, label, color, projects, onProjectClick }) {
           {projects.length === 0
             ? <div className="flex items-center justify-center h-20 text-xs text-zinc-300 italic">Drop projects here</div>
             : projects.map((p) => (
-                <div key={p._id} onClick={() => onProjectClick?.(p)}><ProjectKanbanCard project={p} /></div>
+                <div key={p._id} onClick={() => onProjectClick?.(p)}><ProjectKanbanCard project={p} disabled={!p.stage} /></div>
               ))
           }
         </div>
@@ -37,14 +38,17 @@ function KanbanColumn({ status, label, color, projects, onProjectClick }) {
   );
 }
 
-export default function ProjectKanbanBoard({ projects = [], loading, onProjectClick, onStatusChange }) {
+export default function ProjectKanbanBoard({ projects = [], loading, onProjectClick, onStageChange }) {
   const [active, setActive] = useState(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const columns = useMemo(() => {
     const g = {};
-    PROJECT_STATUS.forEach((s) => { g[s.value] = []; });
-    projects.forEach((p) => { const s = p.status || 'planning'; if (g[s]) g[s].push(p); else g[s] = [p]; });
+    PROJECT_STAGES.forEach((s) => { g[s.value] = []; });
+    projects.forEach((p) => {
+      const stage = p.stage || LEGACY_STAGE[p.status] || 'brief';
+      (g[stage] || g.brief).push(p);
+    });
     return g;
   }, [projects]);
 
@@ -64,9 +68,9 @@ export default function ProjectKanbanBoard({ projects = [], loading, onProjectCl
     }
     if (target) {
       const p = active.data.current?.project;
-      if (p && p.status !== target) onStatusChange?.(p._id, target);
+      if (p?.stage && p.stage !== target) onStageChange?.(p, target);
     }
-  }, [columns, onStatusChange]);
+  }, [columns, onStageChange]);
 
   if (loading) return (
     <div className="flex gap-3 overflow-x-auto pb-4">
@@ -85,13 +89,13 @@ export default function ProjectKanbanBoard({ projects = [], loading, onProjectCl
   );
   if (!projects.length) return <div className="flex items-center justify-center h-64 text-sm text-zinc-400">No projects to display.</div>;
 
-  const colors = { planning: 'bg-purple-500', active: 'bg-green-500', review: 'bg-yellow-500', completed: 'bg-blue-500' };
+  const colors = { brief: 'bg-zinc-400', planning: 'bg-purple-500', execution: 'bg-green-500', review: 'bg-yellow-500', delivered: 'bg-blue-500' };
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-4 min-h-[400px]">
-        {PROJECT_STATUS.map(({ value, label }) => (
-          <KanbanColumn key={value} status={value} label={label} color={colors[value]}
+        {PROJECT_STAGES.map(({ value, label }) => (
+          <KanbanColumn key={value} stage={value} label={label} color={colors[value]}
             projects={columns[value] || []} onProjectClick={onProjectClick} />
         ))}
       </div>

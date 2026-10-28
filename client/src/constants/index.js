@@ -46,6 +46,19 @@ export const TASK_PRIORITY = [
   { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-700' },
 ];
 
+export const PROJECT_STAGES = [
+  { value: 'brief', label: 'Brief', progress: 0 },
+  { value: 'planning', label: 'Planning', progress: 20 },
+  { value: 'execution', label: 'Execution', progress: 50 },
+  { value: 'review', label: 'Review', progress: 80 },
+  { value: 'delivered', label: 'Delivered', progress: 100 },
+];
+
+export const STAGE_PROGRESS = PROJECT_STAGES.reduce(
+  (acc, stage) => ({ ...acc, [stage.value]: stage.progress }),
+  {},
+);
+
 export const PROJECT_STATUS = [
   { value: 'planning', label: 'Planning', color: 'bg-purple-100 text-purple-800' },
   { value: 'active', label: 'Active', color: 'bg-green-100 text-green-800' },

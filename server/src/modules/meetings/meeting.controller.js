@@ -119,7 +119,7 @@ export const convertActionItem = async (req, res, next) => {
     const result = await meetingService.convertActionItemToTask(
       req.params.id,
       req.params.itemId,
-      req.body.projectId,
+      req.body,
       req.user,
     );
     ApiResponse.success(res, 200, result, 'Action item converted to task');

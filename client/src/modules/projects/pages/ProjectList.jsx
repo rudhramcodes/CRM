@@ -8,7 +8,7 @@ import {
   useGetProjectsQuery,
   useGetProjectStatsQuery,
   useDeleteProjectMutation,
-  useUpdateProjectMutation,
+  useChangeProjectStageMutation,
 } from '../../../services/projectApi';
 import ProjectTable from '../components/ProjectTable';
 import ProjectKanbanBoard from '../components/ProjectKanbanBoard';
@@ -17,8 +17,9 @@ import ProjectForm from '../components/ProjectForm';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import ReasonModal from '../../../components/ui/ReasonModal';
 import { StatCardSkeleton } from '../../../components/ui/Skeleton';
-import { LEAD_BRANDS } from '../../../constants';
+import { LEAD_BRANDS, PROJECT_STAGES, STAGE_PROGRESS } from '../../../constants';
 
 const BRAND_LABELS = LEAD_BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
 import toast from 'react-hot-toast';
@@ -30,6 +31,7 @@ export default function ProjectList() {
   const [queryParams, setQueryParams] = useState({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [pendingStage, setPendingStage] = useState(null);
   const [viewMode, setViewMode] = useState('table');
   const [activeBrand, setActiveBrand] = useState('');
 
@@ -38,7 +40,7 @@ export default function ProjectList() {
   const { data, isLoading, error, refetch: refetchProjects, isFetching: isFetchingProjects } = useGetProjectsQuery(queryParams);
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetProjectStatsQuery();
   const [deleteProject] = useDeleteProjectMutation();
-  const [updateProject] = useUpdateProjectMutation();
+  const [changeStage] = useChangeProjectStageMutation();
 
   const projects = data?.data || [];
   const pagination = data?.pagination;
@@ -77,21 +79,46 @@ export default function ProjectList() {
     }
   }, [deleteTarget, deleteProject]);
 
-  const handleStatusChange = useCallback(async (projectId, status) => {
+  const applyStage = useCallback(async (projectId, stage, reason) => {
     try {
-      await updateProject({ id: projectId, status }).unwrap();
-      toast.success('Status updated');
+      await changeStage({ id: projectId, stage, ...(reason ? { reason } : {}) }).unwrap();
+      toast.success('Project stage updated');
+      setPendingStage(null);
     } catch (err) {
-      toast.error(err?.data?.message || 'Failed to update status');
+      toast.error(err?.data?.message || 'Failed to update project stage');
+      throw err;
     }
-  }, [updateProject]);
+  }, [changeStage]);
+
+  const handleStageChange = useCallback((project, stage) => {
+    if (!project.stage) {
+      toast.error('This legacy project needs SOP migration before changing stage');
+      return;
+    }
+    if (stage === 'delivered') {
+      const qcPassed = project.qcChecklist?.status === 'passed';
+      const note = project.closingNote;
+      const noteSaved = note?.deliveredWhat?.trim() && note?.deliveredWhen && note?.writtenBy && note?.writtenAt;
+      const pending = (project.deliverables || []).filter((item) => item.status !== 'delivered');
+      if (!qcPassed || !noteSaved || pending.length > 0) {
+        toast.error('Admin QC, Closing Note and all deliverables are required before delivery');
+        return;
+      }
+    }
+    if (STAGE_PROGRESS[stage] < STAGE_PROGRESS[project.stage]) {
+      setPendingStage({ projectId: project._id, stage });
+      return;
+    }
+    applyStage(project._id, stage).catch(() => {});
+  }, [applyStage]);
 
   const statsConfig = [
     { key: 'total', label: 'Total', color: 'text-zinc-600' },
+    { key: 'brief', label: 'Brief', color: 'text-zinc-600' },
     { key: 'planning', label: 'Planning', color: 'text-purple-600' },
-    { key: 'active', label: 'Active', color: 'text-green-700' },
+    { key: 'execution', label: 'Execution', color: 'text-green-700' },
     { key: 'review', label: 'Review', color: 'text-yellow-600' },
-    { key: 'completed', label: 'Completed', color: 'text-blue-600' },
+    { key: 'delivered', label: 'Delivered', color: 'text-blue-600' },
   ];
 
   return (
@@ -133,12 +160,12 @@ export default function ProjectList() {
       </div>
 
       {statsLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)}
         </div>
       ) : stats.total > 0 && (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {statsConfig.map(({ key, label, color }) => (
               <div key={key} className="bg-white rounded-xl border border-zinc-200 px-4 py-3">
                 <p className="text-2xl font-bold text-primary-900">{stats[key] || 0}</p>
@@ -196,7 +223,7 @@ export default function ProjectList() {
           projects={projects}
           loading={isLoading}
           onProjectClick={handleRowClick}
-          onStatusChange={handleStatusChange}
+          onStageChange={handleStageChange}
         />
       ) : (
         <>
@@ -204,7 +231,6 @@ export default function ProjectList() {
             projects={projects} loading={isLoading} error={error}
             onRowClick={handleRowClick} canEdit={canEdit} canDelete={canDelete}
             onEdit={handleEdit} onDelete={handleDelete}
-            onStatusChange={handleStatusChange}
           />
           {pagination && pagination.pages > 1 && (
             <div className="flex items-center justify-center gap-2">
@@ -223,6 +249,15 @@ export default function ProjectList() {
       <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title="New Project">
         <ProjectForm onSuccess={() => setShowCreateModal(false)} onCancel={() => setShowCreateModal(false)} />
       </Modal>
+
+      <ReasonModal
+        open={!!pendingStage}
+        onClose={() => setPendingStage(null)}
+        title={`Reason for moving back to ${PROJECT_STAGES.find((stage) => stage.value === pendingStage?.stage)?.label || ''}`}
+        description="Moving a project backward clears QC and the Closing Note. The reason is saved in history."
+        confirmLabel="Move Back"
+        onConfirm={(reason) => applyStage(pendingStage.projectId, pendingStage.stage, reason)}
+      />
 
       <ConfirmDialog
         open={!!deleteTarget}

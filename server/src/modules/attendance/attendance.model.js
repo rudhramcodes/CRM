@@ -237,7 +237,7 @@ const leaveRequestSchema = new mongoose.Schema(
     },
     leaveType: {
       type: String,
-      enum: ['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'comp_off', 'other'],
+      enum: ['sick', 'casual', 'maternity', 'paternity'],
       required: [true, 'Leave type is required'],
     },
     startDate: {
@@ -341,9 +341,6 @@ const leaveBalanceSchema = new mongoose.Schema(
     },
     sick: { type: balanceSubSchema, default: () => ({}) },
     casual: { type: balanceSubSchema, default: () => ({}) },
-    earned: { type: balanceSubSchema, default: () => ({}) },
-    unpaid: { type: balanceSubSchema, default: () => ({}) },
-    comp_off: { type: balanceSubSchema, default: () => ({}) },
   },
   {
     timestamps: true,

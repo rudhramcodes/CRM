@@ -32,6 +32,7 @@ import {
   Repeat,
 } from 'lucide-react';
 import Drawer from '../../../components/ui/Drawer';
+import ReasonModal from '../../../components/ui/ReasonModal';
 import TaskStatusBadge from './TaskStatusBadge';
 import TaskPriorityBadge from './TaskPriorityBadge';
 import {
@@ -129,6 +130,8 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
   const [descValue, setDescValue] = useState('');
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [isEditingDueDate, setIsEditingDueDate] = useState(false);
+  const [pendingDueDate, setPendingDueDate] = useState(null);
+  const [dueDateReasonOpen, setDueDateReasonOpen] = useState(false);
 
   // Manual Time Entry form
   const [manualHours, setManualHours] = useState('');
@@ -209,7 +212,7 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
 
   const handleAssigneeChange = async (userId) => {
     try {
-      await updateTask({ id: task._id, assignedTo: userId === 'none' ? null : userId }).unwrap();
+      await updateTask({ id: task._id, assignedTo: userId }).unwrap();
       toast.success('Assignee updated');
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to reassign task');
@@ -248,9 +251,13 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
     }
   };
 
-  const handleUpdateDueDate = async (dateStr) => {
+  const applyDueDate = async (dateStr, reason) => {
     try {
-      await updateTask({ id: task._id, dueDate: dateStr || null }).unwrap();
+      await updateTask({
+        id: task._id,
+        dueDate: dateStr || null,
+        ...(reason ? { reason } : {}),
+      }).unwrap();
       if (task.status === 'done') {
         toast.info('Task reopened to In Progress due to changes');
       } else {
@@ -259,17 +266,43 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
       setIsEditingDueDate(false);
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update due date');
+      throw err;
     }
+  };
+
+  const handleUpdateDueDate = (dateStr) => {
+    if (!dateStr) {
+      toast.error('Task deadline is required');
+      return;
+    }
+    const current = task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : '';
+    const next = dateStr;
+    if (current === next) {
+      setIsEditingDueDate(false);
+      return;
+    }
+    if (current) {
+      setPendingDueDate(next);
+      setDueDateReasonOpen(true);
+      return;
+    }
+    applyDueDate(next).catch(() => {});
   };
 
   // Subtasks logic
   const handleAddSubtask = async (e) => {
     e.preventDefault();
     if (!newSubtaskTitle.trim()) return;
+    if (!task.assignedTo || !task.dueDate) {
+      toast.error('Set the parent task assignee and deadline before adding a subtask');
+      return;
+    }
     try {
       await createTask({
         title: newSubtaskTitle.trim(),
         parent: task._id,
+        assignedTo: task.assignedTo?._id || task.assignedTo,
+        dueDate: task.dueDate,
         project: task.project?._id || task.project,
         status: 'todo',
       }).unwrap();
@@ -882,7 +915,7 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
                     Assignee
                   </p>
                   <Select
-                    value={task.assignedTo?._id || 'none'}
+                    value={task.assignedTo?._id || ''}
                     onValueChange={handleAssigneeChange}
                   >
                     <SelectTrigger className="h-7 w-full border-0 bg-transparent p-0 shadow-none text-xs font-semibold text-zinc-800">
@@ -892,7 +925,6 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
                       </div>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl shadow-lg border-zinc-200/80">
-                      <SelectItem value="none">Unassigned</SelectItem>
                       {users.map((u) => (
                         <SelectItem key={u._id} value={u._id}>
                           {u.name}
@@ -929,13 +961,6 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
                           className="px-1.5 py-0.5 text-[10px] bg-white border border-zinc-200 rounded"
                         >
                           Tmrw
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateDueDate('')}
-                          className="px-1.5 py-0.5 text-[10px] text-rose-600 bg-white border border-zinc-200 rounded"
-                        >
-                          Clear
                         </button>
                       </div>
                     </div>
@@ -1109,12 +1134,15 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
                   />
                   <button
                     type="submit"
-                    disabled={!newSubtaskTitle.trim()}
+                    disabled={!newSubtaskTitle.trim() || !task.assignedTo || !task.dueDate}
                     className="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold disabled:opacity-40 cursor-pointer shadow-2xs"
                   >
                     Add Subtask
                   </button>
                 </form>
+                <p className="text-xs text-zinc-500">
+                  Subtasks use this task's assignee and deadline. Set both above before adding one.
+                </p>
               </div>
 
               {/* Dependencies & Blocking Section */}
@@ -1582,6 +1610,22 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
           )}
         </div>
       )}
+
+      <ReasonModal
+        open={dueDateReasonOpen}
+        onClose={() => {
+          setDueDateReasonOpen(false);
+          setPendingDueDate(null);
+        }}
+        onConfirm={async (reason) => {
+          await applyDueDate(pendingDueDate, reason);
+          setDueDateReasonOpen(false);
+          setPendingDueDate(null);
+        }}
+        title="Reason for deadline change"
+        description="The reason will be saved in the task history."
+        confirmLabel="Update Deadline"
+      />
     </Drawer>
   );
 }

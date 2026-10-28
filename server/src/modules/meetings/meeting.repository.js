@@ -137,10 +137,13 @@ export const removeActionItem = async (id, itemId) => {
   ).populate('actionItems.assignee', 'name email avatar');
 };
 
-export const markActionItemConverted = async (id, itemId, taskId) => {
+export const markActionItemConverted = async (id, itemId, taskId, updates = {}) => {
+  const set = { 'actionItems.$.convertedToTask': taskId };
+  if (updates.assignee) set['actionItems.$.assignee'] = updates.assignee;
+  if (updates.dueDate) set['actionItems.$.dueDate'] = updates.dueDate;
   return Meeting.findOneAndUpdate(
     { _id: id, 'actionItems._id': itemId },
-    { $set: { 'actionItems.$.convertedToTask': taskId } },
+    { $set: set },
     { new: true },
   ).populate('actionItems.assignee', 'name email avatar');
 };

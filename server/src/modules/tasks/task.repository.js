@@ -1,4 +1,5 @@
 import Task from './task.model.js';
+import ApiError from '../../utils/ApiError.js';
 
 const POPULATE_FIELDS = [
   { path: 'assignedTo', select: 'name email avatar' },
@@ -62,8 +63,15 @@ export const findAll = async (query, options = {}) => {
   };
 };
 
-export const updateById = (id, data) =>
-  Task.findByIdAndUpdate(id, data, { new: true, runValidators: true }).populate(POPULATE_FIELDS);
+export const updateById = async (id, data, activities = [], expectedDueDate) => {
+  const filter = { _id: id };
+  if (expectedDueDate !== undefined) filter.dueDate = expectedDueDate;
+  const update = { ...data };
+  if (activities.length) update.$push = { activities: { $each: activities } };
+  const task = await Task.findOneAndUpdate(filter, update, { new: true, runValidators: true }).populate(POPULATE_FIELDS);
+  if (!task && expectedDueDate !== undefined) throw ApiError.conflict('Task deadline changed. Refresh and try again.');
+  return task;
+};
 
 export const deleteById = (id) => Task.findByIdAndDelete(id);
 

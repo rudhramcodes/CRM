@@ -33,8 +33,8 @@ import {
 import { useGetUsersQuery } from '../../../services/userApi';
 import useSocketEntity from '../../../hooks/useSocketEntity';
 import TaskForm from '../components/TaskForm';
-import ProjectStatusBadge from '../components/ProjectStatusBadge';
 import ProjectPriorityBadge from '../components/ProjectPriorityBadge';
+import ProjectStageBar from '../components/ProjectStageBar';
 import ProjectForm from '../components/ProjectForm';
 import ProjectMilestones from '../components/ProjectMilestones';
 import ProjectTasks from '../components/ProjectTasks';
@@ -106,9 +106,20 @@ export default function ProjectDetail() {
     }
   }, [project, dispatch]);
 
-  const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
+  const isProjectMember = Boolean(user) && (
+    ['super_admin', 'admin'].includes(user.role)
+    || String(project?.ownerId?._id || project?.ownerId) === String(user._id)
+    || (project?.teamMembers || []).some((member) => String(member.user?._id || member.user) === String(user._id))
+  );
+  const canManage = user && (
+    ['super_admin', 'admin'].includes(user.role)
+    || (user.role === 'manager' && isProjectMember)
+  );
+  const canQC = user && ['super_admin', 'admin'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
-  const canEditTasks = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
+  const canEditTasks = user
+    && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role)
+    && isProjectMember;
 
   const handleDelete = () => setShowDeleteConfirm(true);
 
@@ -123,12 +134,13 @@ export default function ProjectDetail() {
   }, [id, deleteProject, navigate]);
 
   const handleMilestonesUpdate = useCallback(
-    async (milestones) => {
+    async (milestones, reason) => {
       try {
-        await updateProjectMilestones({ id, milestones }).unwrap();
+        await updateProjectMilestones({ id, milestones, reason }).unwrap();
         toast.success('Milestones updated');
       } catch (err) {
         toast.error(err?.data?.message || 'Failed to update milestones');
+        throw err;
       }
     },
     [id, updateProjectMilestones],
@@ -160,8 +172,10 @@ export default function ProjectDetail() {
   const handleUpdateTask = useCallback(async (taskId, data) => {
     try {
       await updateTask({ id: taskId, ...data }).unwrap();
+      return true;
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update task');
+      return false;
     }
   }, [updateTask]);
 
@@ -230,7 +244,6 @@ export default function ProjectDetail() {
           <div>
             <h1 className="text-xl font-bold text-primary-900">{project.title}</h1>
             <div className="flex items-center gap-3 mt-2">
-              <ProjectStatusBadge status={project.status} />
               <ProjectPriorityBadge priority={project.priority} />
             </div>
           </div>
@@ -256,6 +269,8 @@ export default function ProjectDetail() {
           </div>
         )}
       </div>
+
+      <ProjectStageBar project={project} canManage={canManage} canQC={canQC} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {project.client && (

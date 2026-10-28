@@ -10,8 +10,10 @@ const errorHandler = (err, req, res, _next) => {
         ? 400
         : error.name === 'CastError'
           ? 400
-          : error.code === 11000
+          : error.name === 'VersionError'
             ? 409
+            : error.code === 11000
+              ? 409
             : error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError'
               ? 401
               : 500;
@@ -23,8 +25,10 @@ const errorHandler = (err, req, res, _next) => {
             .join(', ')
         : error.name === 'CastError'
           ? 'Invalid ID provided. This record may have been deleted.'
-          : error.code === 11000
-            ? (() => {
+          : error.name === 'VersionError'
+            ? 'Project changed while you were editing. Refresh and try again.'
+            : error.code === 11000
+              ? (() => {
                 const fields = Object.keys(error.keyValue || {});
                 return `Duplicate value for field: ${fields.join(', ')}. A record with this ${fields.join(' and ')} already exists`;
               })()

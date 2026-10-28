@@ -31,8 +31,42 @@ export const projectApi = api.injectEndpoints({
       providesTags: (result, error, id) => [{ type: 'ProjectActivities', id }],
     }),
     updateProjectMilestones: builder.mutation({
-      query: ({ id, milestones }) => ({ url: `/projects/${id}/milestones`, method: 'PATCH', body: { milestones } }),
+      query: ({ id, milestones, reason }) => ({
+        url: `/projects/${id}/milestones`,
+        method: 'PATCH',
+        body: { milestones, ...(reason ? { reason } : {}) },
+      }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, 'Project', 'ProjectStats'],
+    }),
+    changeProjectStage: builder.mutation({
+      query: ({ id, stage, reason }) => ({
+        url: `/projects/${id}/stage`,
+        method: 'PATCH',
+        body: { stage, ...(reason ? { reason } : {}) },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Project', id }, 'Project', 'ProjectStats', { type: 'ProjectActivities', id },
+      ],
+    }),
+    saveProjectQualityCheck: builder.mutation({
+      query: ({ id, ...checks }) => ({
+        url: `/projects/${id}/quality-check`,
+        method: 'PATCH',
+        body: checks,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Project', id }, 'Project', { type: 'ProjectActivities', id },
+      ],
+    }),
+    saveProjectClosingNote: builder.mutation({
+      query: ({ id, ...note }) => ({
+        url: `/projects/${id}/closing-note`,
+        method: 'PATCH',
+        body: note,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Project', id }, 'Project', { type: 'ProjectActivities', id },
+      ],
     }),
     addProjectTask: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/projects/${id}/tasks`, method: 'POST', body }),
@@ -80,6 +114,9 @@ export const {
   useUpdateProjectTaskMutation,
   useDeleteProjectTaskMutation,
   useUpdateProjectMilestonesMutation,
+  useChangeProjectStageMutation,
+  useSaveProjectQualityCheckMutation,
+  useSaveProjectClosingNoteMutation,
   useAddProjectMessageMutation,
   useGetProjectMessagesQuery,
   useDeleteProjectMessageMutation,

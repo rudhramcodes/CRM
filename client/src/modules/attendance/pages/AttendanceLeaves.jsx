@@ -25,7 +25,6 @@ import {
   X,
   Calendar,
   AlertCircle,
-  Info,
   CalendarDays,
   Search,
   CheckCircle2,
@@ -41,12 +40,8 @@ import toast from 'react-hot-toast';
 const LEAVE_TYPE_OPTIONS = [
   { value: 'casual', label: 'Casual Leave' },
   { value: 'sick', label: 'Sick Leave' },
-  { value: 'earned', label: 'Earned Leave' },
-  { value: 'comp_off', label: 'Comp Off' },
   { value: 'maternity', label: 'Maternity Leave' },
   { value: 'paternity', label: 'Paternity Leave' },
-  { value: 'unpaid', label: 'Unpaid Leave' },
-  { value: 'other', label: 'Other Leave' },
 ];
 
 const STATUS_BADGE = {
@@ -55,7 +50,7 @@ const STATUS_BADGE = {
   rejected: 'danger',
 };
 
-const BALANCE_KEYS = ['casual', 'sick', 'earned', 'comp_off'];
+const BALANCE_KEYS = ['casual', 'sick'];
 
 export default function AttendanceLeaves() {
   const dispatch = useDispatch();
@@ -193,6 +188,11 @@ export default function AttendanceLeaves() {
   }, [form.startDate, form.endDate]);
 
   const currentTypeBalance = balance[form.leaveType]?.balance;
+  const hasTrackedBalance = ['casual', 'sick'].includes(form.leaveType);
+  const availableBalance = hasTrackedBalance ? Math.max(0, currentTypeBalance ?? 0) : null;
+  const noBalance = hasTrackedBalance && availableBalance <= 0;
+  const exceedsBalance = hasTrackedBalance && leaveDuration > availableBalance;
+  const isBalanceBlocked = noBalance || exceedsBalance;
 
   const handleFieldChange = (field, value) => {
     setForm((prev) => {
@@ -246,6 +246,10 @@ export default function AttendanceLeaves() {
       toast.error('Please fix the errors in the form');
       return;
     }
+    if (isBalanceBlocked) {
+      toast.error('Requested days exceed your available leave balance');
+      return;
+    }
     try {
       await applyLeave(form).unwrap();
       toast.success('Leave application submitted successfully');
@@ -261,7 +265,9 @@ export default function AttendanceLeaves() {
   };
 
   const handleOpenForm = () => {
-    setForm({ leaveType: 'casual', startDate: '', endDate: '', reason: '' });
+    const defaultLeaveType =
+      ['casual', 'sick'].find((type) => (balance[type]?.balance ?? 0) > 0) || 'casual';
+    setForm({ leaveType: defaultLeaveType, startDate: '', endDate: '', reason: '' });
     setFormErrors({});
     setServerError('');
     setShowForm(true);
@@ -319,8 +325,8 @@ export default function AttendanceLeaves() {
           </div>
           <p className="text-sm text-zinc-500 mt-1">
             {isAdmin
-              ? 'Review employee leave applications, approve requests, and monitor leave balances'
-              : 'Apply for leave and track your requests and remaining balances'}
+              ? 'Review leave applications, approve requests, and monitor balances (casual: 1 day/month up to 12/year; sick: 5/year)'
+              : 'Apply for leave and track your requests (casual: 1 day/month up to 12/year; sick: 5/year)'}
           </p>
         </div>
         <Button onClick={handleOpenForm}>
@@ -341,7 +347,7 @@ export default function AttendanceLeaves() {
 
       {/* Balance Cards */}
       {BALANCE_KEYS.some((k) => balance[k]) && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {BALANCE_KEYS.map((key) => {
             const b = balance[key];
             if (!b) return null;
@@ -372,6 +378,9 @@ export default function AttendanceLeaves() {
                     }}
                   />
                 </div>
+                <p className="text-[10px] text-zinc-400 mt-1.5">
+                  {key === 'casual' ? 'Accrues 1 day/month; expires 31 Dec' : 'Fixed 5 days/year'}
+                </p>
               </div>
             );
           })}
@@ -803,7 +812,7 @@ export default function AttendanceLeaves() {
                 {LEAVE_TYPE_OPTIONS.map((opt) => {
                   const b = balance[opt.value];
                   return (
-                    <SelectItem key={opt.value} value={opt.value}>
+                    <SelectItem key={opt.value} value={opt.value} disabled={Boolean(b && b.balance <= 0)}>
                       <span className="flex items-center justify-between w-full gap-4">
                         <span>{opt.label}</span>
                         {b && <span className="text-xs text-zinc-400">({b.balance ?? 0} left)</span>}
@@ -879,11 +888,13 @@ export default function AttendanceLeaves() {
             </div>
           )}
 
-          {currentTypeBalance !== undefined && leaveDuration > currentTypeBalance && (
-            <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs flex items-start gap-2">
-              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          {isBalanceBlocked && (
+            <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
               <span>
-                Requested {leaveDuration} days exceed your {form.leaveType.replace('_', ' ')} balance ({currentTypeBalance} days). Excess days may be marked as unpaid leave.
+                {noBalance
+                  ? `You have no ${form.leaveType} leave available. You cannot apply for leave.`
+                  : `Requested ${leaveDuration} day(s) exceed your ${form.leaveType} balance (${availableBalance} available). You cannot apply for more than your available balance.`}
               </span>
             </div>
           )}
@@ -917,7 +928,7 @@ export default function AttendanceLeaves() {
             <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
               Cancel
             </Button>
-            <Button type="submit" loading={applying}>
+            <Button type="submit" loading={applying} disabled={isBalanceBlocked}>
               Submit Application
             </Button>
           </div>

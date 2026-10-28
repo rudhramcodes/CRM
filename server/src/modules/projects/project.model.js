@@ -1,5 +1,11 @@
 import mongoose from 'mongoose';
-import { PROJECT_STATUS } from '../../constants/index.js';
+import { PROJECT_STATUS, PROJECT_STAGES, STAGE_PROGRESS, BRANDS } from '../../constants/index.js';
+
+const qualityCheckItemSchema = new mongoose.Schema({
+  checked: { type: Boolean, default: false },
+  checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  checkedAt: Date,
+}, { _id: false });
 
 const taskSchema = new mongoose.Schema(
   {
@@ -26,8 +32,10 @@ const taskSchema = new mongoose.Schema(
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      // Existing incomplete tasks remain editable until the A4 backfill.
+      required() { return this.isNew || this.isModified?.('assignedTo'); },
     },
-    dueDate: Date,
+    dueDate: { type: Date, required() { return this.isNew || this.isModified?.('dueDate'); } },
     completedAt: Date,
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -43,6 +51,7 @@ const activitySchema = new mongoose.Schema(
     field: String,
     oldValue: String,
     newValue: String,
+    reason: { type: String, trim: true },
     performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { _id: true, timestamps: true },
@@ -190,6 +199,46 @@ const teamDeploymentSchema = new mongoose.Schema(
 
 const projectSchema = new mongoose.Schema(
   {
+    ownerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+      required() { return this.isNew || this.isModified?.('ownerId'); },
+    },
+    brand: {
+      type: String,
+      enum: BRANDS,
+      index: true,
+      required() { return this.isNew || this.isModified?.('brand'); },
+    },
+    stage: {
+      type: String,
+      enum: Object.values(PROJECT_STAGES),
+      index: true,
+      // Do not silently classify historical projects before the approved migration.
+      default() { return this.isNew ? PROJECT_STAGES.BRIEF : undefined; },
+    },
+    stageHistory: [{
+      fromStage: { type: String, enum: Object.values(PROJECT_STAGES) },
+      toStage: { type: String, enum: Object.values(PROJECT_STAGES) },
+      changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      reason: { type: String, trim: true, default: '' },
+      changedAt: { type: Date, default: Date.now },
+    }],
+    qcChecklist: {
+      scopeComplete: { type: qualityCheckItemSchema, default: () => ({}) },
+      filesCorrect: { type: qualityCheckItemSchema, default: () => ({}) },
+      clientCommitmentsMet: { type: qualityCheckItemSchema, default: () => ({}) },
+      noOpenBlockers: { type: qualityCheckItemSchema, default: () => ({}) },
+      status: { type: String, enum: ['pending', 'passed'], default: 'pending' },
+    },
+    closingNote: {
+      deliveredWhat: { type: String, trim: true },
+      deliveredWhen: Date,
+      pendingItems: { type: String, trim: true, default: '' },
+      writtenBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      writtenAt: Date,
+    },
     title: {
       type: String,
       required: [true, 'Project title is required'],
@@ -267,14 +316,21 @@ const projectSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    optimisticConcurrency: true,
     toJSON: {
+      virtuals: true,
       transform(_doc, ret) {
         delete ret.__v;
         return ret;
       },
     },
+    toObject: { virtuals: true },
   },
 );
+
+projectSchema.virtual('progress').get(function () {
+  return STAGE_PROGRESS[this.stage];
+});
 
 projectSchema.index({ status: 1 });
 projectSchema.index({ priority: 1 });

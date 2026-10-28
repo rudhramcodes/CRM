@@ -10,17 +10,18 @@ import FormTextarea from '../../../components/forms/FormTextarea';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ClientForm from '../../clients/components/ClientForm';
-import { PROJECT_STATUS } from '../../../constants';
 import { useGetClientsQuery } from '../../../services/clientApi';
+import { useGetUsersQuery } from '../../../services/userApi';
 import { useCreateProjectMutation, useUpdateProjectMutation } from '../../../services/projectApi';
 
 const projectFormSchema = z
   .object({
     title: z.string().min(2, 'Title must be at least 2 characters').max(200),
     client: z.string().min(1, 'Please select a client'),
+    ownerId: z.string().optional(),
     description: z.string().max(2000).optional().or(z.literal('')),
-    status: z.string().optional(),
     priority: z.string().optional(),
+    reason: z.string().max(2000).optional().or(z.literal('')),
     budget: z.coerce.number().min(0).optional().or(z.literal('')),
     startDate: z.string().optional().or(z.literal('')),
     deadline: z.string().optional().or(z.literal('')),
@@ -47,6 +48,10 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
     { limit: 100 },
   );
   const clients = clientsData?.data || [];
+  const { data: usersData, isLoading: usersLoading, isError: usersError } = useGetUsersQuery({ limit: 100 });
+  const users = usersData?.data?.users || (Array.isArray(usersData?.data) ? usersData.data : []);
+  const ownerOptions = users.filter((u) => u.role !== 'client' && u.isActive !== false)
+    .map((u) => ({ value: u._id, label: u.name }));
 
   const clientOptions = useMemo(() => {
     const fromQuery = clients.map((c) => ({
@@ -62,9 +67,10 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
   const formValues = useMemo(() => project ? ({
     title: project.title || '',
     client: project.client?._id || '',
+    ownerId: project.ownerId?._id || project.ownerId || '',
     description: project.description || '',
-    status: project.status || 'planning',
     priority: project.priority || 'medium',
+    reason: '',
     budget: project.budget || '',
     startDate: project.startDate ? project.startDate.split('T')[0] : '',
     deadline: project.deadline ? project.deadline.split('T')[0] : '',
@@ -72,9 +78,10 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
   }) : {
     title: '',
     client: '',
+    ownerId: '',
     description: '',
-    status: 'planning',
     priority: 'medium',
+    reason: '',
     budget: '',
     startDate: '',
     deadline: '',
@@ -87,6 +94,8 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
     setValue,
     getValues,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(projectFormSchema),
@@ -109,16 +118,29 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
   };
 
   const onSubmit = async (data) => {
+    if (!isEditing && !data.ownerId) {
+      setError('ownerId', { type: 'manual', message: 'Please select a project owner' });
+      return;
+    }
+    const originalDeadline = project?.deadline ? project.deadline.slice(0, 10) : '';
+    const deadlineChanged = isEditing && !!originalDeadline && originalDeadline !== (data.deadline || '');
+    if (deadlineChanged && !data.reason?.trim()) {
+      setError('reason', { type: 'manual', message: 'Please give a reason for changing the deadline.' });
+      return;
+    }
+    clearErrors('reason');
+
     try {
       const payload = {
         title: data.title,
         client: data.client,
+        ownerId: data.ownerId || undefined,
         description: data.description || undefined,
-        status: data.status || 'planning',
         priority: data.priority || 'medium',
         budget: data.budget || undefined,
         startDate: data.startDate || undefined,
-        deadline: data.deadline || undefined,
+        deadline: isEditing ? (data.deadline || '') : (data.deadline || undefined),
+        reason: deadlineChanged ? data.reason.trim() : undefined,
         tags: data.tags
           ? data.tags.split(',').map((t) => t.trim()).filter(Boolean)
           : undefined,
@@ -183,11 +205,12 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
         </div>
 
         <FormSelect
-          name="status"
+          name="ownerId"
           control={control}
-          label="Status"
-          options={PROJECT_STATUS}
-          error={errors.status?.message}
+          label={`Project Owner${isEditing ? '' : ' *'}`}
+          options={ownerOptions}
+          placeholder={usersLoading ? 'Loading staff...' : 'Select owner'}
+          error={errors.ownerId?.message || (usersError ? 'Unable to load staff. Please try again.' : undefined)}
         />
 
         <FormSelect
@@ -224,6 +247,20 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
           error={errors.deadline?.message}
           {...register('deadline')}
         />
+
+        {isEditing && (
+          <div className="sm:col-span-2">
+            <FormInput
+              label="Deadline Change Reason"
+              placeholder="Required when the project deadline changes"
+              error={errors.reason?.message}
+              {...register('reason')}
+            />
+            <p className="mt-1.5 text-xs text-zinc-500">
+              Only needed if you change the deadline. Saved in the activity log.
+            </p>
+          </div>
+        )}
 
         <div className="sm:col-span-2">
           <FormInput

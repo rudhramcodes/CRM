@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { Plus, Trash2, CheckSquare, Circle, Flag, ChevronDown, Send, AtSign, Mail, MessageSquare, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../../../components/ui/Button';
+import ReasonModal from '../../../components/ui/ReasonModal';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
 import { TASK_STATUS, TASK_PRIORITY } from '../../../constants';
@@ -24,6 +25,8 @@ export default function ProjectTasks({ tasks = [], milestones = [], users = [], 
   const commentInputRef = useRef(null);
   const mentionListRef = useRef(null);
   const selectedMentionsRef = useRef({});
+  const [pendingDueDate, setPendingDueDate] = useState(null);
+  const [dueReasonOpen, setDueReasonOpen] = useState(false);
   const [addComment, { isLoading: isAddingComment }] = useAddTaskCommentMutation();
   const [deleteComment, { isLoading: isDeletingComment }] = useDeleteTaskCommentMutation();
 
@@ -63,6 +66,22 @@ export default function ProjectTasks({ tasks = [], milestones = [], users = [], 
   const handleSaveEdit = () => {
     if (!editTitle.trim() || !expandedId) return;
     onUpdate?.(expandedId, { title: editTitle.trim(), description: editDesc.trim() || undefined });
+  };
+
+  const handleDueDateChange = (task, value) => {
+    if (!value) {
+      toast.error('Task deadline is required');
+      return;
+    }
+    const current = task.dueDate ? String(task.dueDate).slice(0, 10) : '';
+    const next = value;
+    if (current === next) return;
+    if (current) {
+      setPendingDueDate({ taskId: task._id, dueDate: next });
+      setDueReasonOpen(true);
+      return;
+    }
+    onUpdate?.(task._id, { dueDate: next || undefined });
   };
 
   const milestoneTitle = (task) => {
@@ -284,10 +303,9 @@ export default function ProjectTasks({ tasks = [], milestones = [], users = [], 
                           </div>
                           <div>
                             <label className="text-xs text-zinc-400 uppercase tracking-wide">Assignee</label>
-                            <Select value={task.assignedTo?._id || task.assignedTo || ''} onValueChange={(v) => onUpdate?.(task._id, { assignedTo: v || undefined })}>
-                              <SelectTrigger className="mt-1 h-8 px-2 py-1 text-sm"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                            <Select value={task.assignedTo?._id || task.assignedTo || ''} onValueChange={(v) => onUpdate?.(task._id, { assignedTo: v })}>
+                              <SelectTrigger className="mt-1 h-8 px-2 py-1 text-sm"><SelectValue placeholder="Select assignee" /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Unassigned</SelectItem>
                                 {users.map((u) => <SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>)}
                               </SelectContent>
                             </Select>
@@ -305,7 +323,7 @@ export default function ProjectTasks({ tasks = [], milestones = [], users = [], 
                           <div>
                             <label className="text-xs text-zinc-400 uppercase tracking-wide">Due Date</label>
                             <input type="date" value={task.dueDate ? task.dueDate.slice(0, 10) : ''}
-                              onChange={(e) => onUpdate?.(task._id, { dueDate: e.target.value || undefined })}
+                              onChange={(e) => handleDueDateChange(task, e.target.value)}
                               className="mt-1 w-full px-2 py-1 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-900" />
                           </div>
                         </div>
@@ -371,6 +389,26 @@ export default function ProjectTasks({ tasks = [], milestones = [], users = [], 
             ))
         }
       </div>
+
+      <ReasonModal
+        open={dueReasonOpen}
+        onClose={() => {
+          setDueReasonOpen(false);
+          setPendingDueDate(null);
+        }}
+        onConfirm={async (reason) => {
+          const saved = await onUpdate?.(pendingDueDate.taskId, {
+            dueDate: pendingDueDate.dueDate || undefined,
+            reason,
+          });
+          if (saved === false) return;
+          setDueReasonOpen(false);
+          setPendingDueDate(null);
+        }}
+        title="Reason for deadline change"
+        description="The reason will be saved in the task history."
+        confirmLabel="Update Deadline"
+      />
     </div>
   );
 }

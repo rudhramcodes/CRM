@@ -27,8 +27,8 @@ const schema = z.object({
   project: z.string().optional().or(z.literal('none')),
   status: z.string().default('todo'),
   priority: z.string().default('medium'),
-  assignedTo: z.string().optional().or(z.literal('none')),
-  dueDate: z.string().optional().or(z.literal('')),
+  assignedTo: z.string().regex(/^[a-f\d]{24}$/i, 'Please select an assignee'),
+  dueDate: z.string().min(1, 'Please select a deadline'),
   estimatedHours: z.coerce.number().min(0).optional().or(z.literal('')),
 });
 
@@ -38,6 +38,7 @@ export default function TaskQuickAddModal({
   defaultStatus = 'todo',
   defaultDueDate = '',
   defaultProject = 'none',
+  defaultTitle = '',
   onSuccess,
 }) {
   const { data: projectsData } = useGetProjectsQuery({ limit: 100 }, { skip: !open });
@@ -59,7 +60,7 @@ export default function TaskQuickAddModal({
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      title: '',
+      title: defaultTitle,
       description: '',
       project: defaultProject || 'none',
       status: defaultStatus || 'todo',
@@ -75,7 +76,7 @@ export default function TaskQuickAddModal({
     if (open) {
       setIsRecurring(false);
       reset({
-        title: '',
+        title: defaultTitle,
         description: '',
         project: defaultProject || 'none',
         status: defaultStatus || 'todo',
@@ -85,7 +86,7 @@ export default function TaskQuickAddModal({
         estimatedHours: '',
       });
     }
-  }, [open, defaultStatus, defaultDueDate, defaultProject, reset]);
+  }, [open, defaultStatus, defaultDueDate, defaultProject, defaultTitle, reset]);
 
   const onSubmit = async (values) => {
     try {
@@ -143,9 +144,9 @@ export default function TaskQuickAddModal({
           <FormSelect
             name="assignedTo"
             control={control}
-            label="Assigned Member"
+            label="Assigned Member *"
             options={[
-              { value: 'none', label: 'Unassigned' },
+              { value: 'none', label: 'Select assignee' },
               ...users.map((u) => ({ value: u._id, label: u.name })),
             ]}
             error={errors.assignedTo?.message}
@@ -175,7 +176,7 @@ export default function TaskQuickAddModal({
             control={control}
             render={({ field }) => (
               <DatePicker
-                label="Due Date"
+                label="Due Date *"
                 value={field.value}
                 onChange={field.onChange}
                 error={errors.dueDate?.message}

@@ -5,6 +5,7 @@ import {
   Holiday,
   LeaveBalance,
 } from './attendance.model.js';
+import { normalizeLeaveBalance } from './leavePolicy.js';
 
 // ===================== ATTENDANCE =====================
 
@@ -286,8 +287,10 @@ export const updateLeaveBalance = async (employeeId, year, leaveType, days) => {
   const balance = await LeaveBalance.findOne({ employee: employeeId, year });
   if (!balance) return null;
 
+  normalizeLeaveBalance(balance, year);
+  if (!balance[leaveType]) return null;
   balance[leaveType].used += days;
-  balance[leaveType].balance = balance[leaveType].total - balance[leaveType].used;
+  normalizeLeaveBalance(balance, year);
   return balance.save();
 };
 

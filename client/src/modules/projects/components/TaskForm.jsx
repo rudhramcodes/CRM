@@ -14,10 +14,10 @@ const taskFormSchema = z.object({
   description: z.string().optional().or(z.literal('')),
   status: z.string().optional(),
   priority: z.string().optional(),
-  assignedTo: z.string().optional().or(z.literal('')),
+  assignedTo: z.string().min(1, 'Please select an assignee'),
   project: z.string().min(1, 'Project is required'),
   milestone: z.string().optional().or(z.literal('none')),
-  dueDate: z.string().optional().or(z.literal('')),
+  dueDate: z.string().min(1, 'Please select a deadline'),
   estimatedHours: z.coerce.number().min(0).optional().or(z.literal('')),
   tags: z.string().optional(),
 });
@@ -69,14 +69,15 @@ export default function TaskForm({ initialData, projects = [], users = [], defau
         <FormSelect label="Status" control={control} name="status" options={TASK_STATUS.map((s) => ({ value: s.value, label: s.label }))} />
         <FormSelect label="Priority" control={control} name="priority" options={TASK_PRIORITY.map((p) => ({ value: p.value, label: p.label }))} />
       </div>
-      <FormSelect label="Assignee" control={control} name="assignedTo"
-        options={[{ value: '', label: 'Unassigned' }, ...users.map((u) => ({ value: u._id, label: u.name }))]} />
+      <FormSelect label="Assignee *" control={control} name="assignedTo"
+        error={errors.assignedTo?.message}
+        options={users.map((u) => ({ value: u._id, label: u.name }))} />
       <FormSelect label="Project" control={control} name="project"
         options={projects.map((p) => ({ value: p._id, label: p.title }))} error={errors.project?.message} />
       <FormSelect label="Milestone" control={control} name="milestone"
         options={[{ value: 'none', label: 'No Milestone' }, ...milestoneOptions]} />
       <div className="grid grid-cols-2 gap-4">
-        <FormInput label="Due Date" type="date" {...register('dueDate')} />
+        <FormInput label="Due Date *" type="date" {...register('dueDate')} error={errors.dueDate?.message} />
         <FormInput label="Est. Hours" type="number" step="0.5" {...register('estimatedHours')} error={errors.estimatedHours?.message} />
       </div>
       <FormInput label="Tags (comma-separated)" {...register('tags')} placeholder="e.g. frontend, bug, urgent" />

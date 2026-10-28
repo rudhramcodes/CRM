@@ -4,6 +4,7 @@ import * as taskRepo from './task.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
 import { emitEntityUpdate } from '../../sockets/index.js';
 import ApiError from '../../utils/ApiError.js';
+import { deadlineChange } from '../../utils/deadlineChange.js';
 
 const assertClientTaskAccess = async (taskId, clientProfile) => {
   if (!clientProfile) return null;
@@ -88,6 +89,10 @@ export const updateTask = async (id, data, user) => {
   const task = await taskRepo.findById(id);
   if (!task) throw { status: 404, message: 'Task not found' };
 
+  const deadlineActivity = data.dueDate !== undefined
+    ? deadlineChange(task.dueDate, data.dueDate, data.reason, user) : null;
+  delete data.reason;
+
   // Creator gate: Only task creator can mark task as 'done' (completed)
   if (data.status === 'done' && task.status !== 'done') {
     const creatorId = task.createdBy?._id?.toString() || task.createdBy?.toString();
@@ -146,7 +151,8 @@ export const updateTask = async (id, data, user) => {
     }
   }
 
-  const updated = await taskRepo.updateById(id, data);
+  const updated = await taskRepo.updateById(id, data,
+    deadlineActivity ? [deadlineActivity] : [], deadlineActivity ? (task.dueDate || null) : undefined);
 
   if (changedFields.length > 0 && user) {
     for (const activity of changedFields) {

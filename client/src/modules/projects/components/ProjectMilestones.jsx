@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, CheckCircle2, PlayCircle, Loader2, Calendar, Edit2 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import DatePicker from '../../../components/forms/DatePicker';
+import StageReasonModal from './StageReasonModal';
 
 function Diamond({ status, spinning }) {
   const colors = {
@@ -37,13 +38,14 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
   const [editingIndex, setEditingIndex] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
+  const [reasonAction, setReasonAction] = useState(null);
 
   const handleAdd = () => {
     if (!newTitle.trim()) return;
     onUpdate([
       ...milestones,
       { title: newTitle.trim(), description: '', dueDate: newDueDate || undefined, status: 'pending' },
-    ]);
+    ]).catch(() => {});
     setNewTitle('');
     setNewDueDate('');
   };
@@ -57,12 +59,19 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
       await onUpdate(milestones.map((x, i) =>
         i !== index ? x : { ...x, status: next, completedAt: next === 'completed' ? new Date().toISOString() : null }
       ));
-    } finally {
+    } catch {} finally {
       setUpdatingIndex(null);
     }
   };
 
-  const handleRemove = (index) => onUpdate(milestones.filter((_, i) => i !== index));
+  const handleRemove = (index) => {
+    const next = milestones.filter((_, i) => i !== index);
+    if (milestones[index]?.dueDate) {
+      setReasonAction({ type: 'remove', list: next });
+      return;
+    }
+    onUpdate(next).catch(() => {});
+  };
 
   const handleStartEdit = (index) => {
     const m = milestones[index];
@@ -77,12 +86,27 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
     setEditDueDate('');
   };
 
-  const handleSaveEdit = (index) => {
+  const handleSaveEdit = async (index) => {
     if (!editTitle.trim()) return;
-    onUpdate(milestones.map((x, i) =>
+    const next = milestones.map((x, i) =>
       i !== index ? x : { ...x, title: editTitle.trim(), dueDate: editDueDate || undefined }
-    ));
-    handleCancelEdit();
+    );
+    const originalDueDate = milestones[index]?.dueDate ? String(milestones[index].dueDate).slice(0, 10) : '';
+    if (originalDueDate && originalDueDate !== (editDueDate || '')) {
+      setReasonAction({ type: 'edit', list: next });
+      return;
+    }
+    try {
+      await onUpdate(next);
+      handleCancelEdit();
+    } catch {}
+  };
+
+  const confirmDeadlineChange = async (reason) => {
+    await onUpdate(reasonAction.list, reason);
+    const action = reasonAction.type;
+    setReasonAction(null);
+    if (action === 'edit') handleCancelEdit();
   };
 
   const completed = milestones.filter((m) => m.status === 'completed').length;
@@ -215,6 +239,15 @@ export default function ProjectMilestones({ milestones = [], onUpdate, canManage
           </div>
         </div>
       )}
+
+      <StageReasonModal
+        open={!!reasonAction}
+        onClose={() => setReasonAction(null)}
+        onConfirm={confirmDeadlineChange}
+        title={reasonAction?.type === 'remove' ? 'Reason for removing milestone' : 'Reason for deadline change'}
+        description="Milestone deadlines are part of the project timeline. This reason is saved in history."
+        confirmLabel={reasonAction?.type === 'remove' ? 'Remove Milestone' : 'Save Milestone'}
+      />
     </div>
   );
 }

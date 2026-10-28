@@ -10,6 +10,11 @@ import {
   sendLeaveRejectedEmail,
 } from '../../services/emailService.js';
 import { resolveLocationDetails } from '../../utils/geo.js';
+import {
+  calculateLeaveDays,
+  isBalanceTrackedLeave,
+  normalizeLeaveBalance,
+} from './leavePolicy.js';
 
 // ===================== HELPERS =====================
 
@@ -825,6 +830,18 @@ export const deleteShift = async (id) => {
 export const applyLeave = async (employeeId, data) => {
   const start = new Date(data.startDate);
   const end = new Date(data.endDate);
+  const days = calculateLeaveDays(start, end);
+  const year = start.getFullYear();
+
+  if (isBalanceTrackedLeave(data.leaveType)) {
+    const balance = await getLeaveBalance(employeeId, year);
+    const available = balance[data.leaveType]?.balance ?? 0;
+    if (days > available) {
+      throw ApiError.badRequest(
+        `Insufficient ${data.leaveType} leave balance. Available: ${available} day(s). You cannot apply for ${days} day(s).`
+      );
+    }
+  }
 
   const overlapping = await attendanceRepo.findAllLeaves(
     {
@@ -856,8 +873,7 @@ export const applyLeave = async (employeeId, data) => {
       role: { $in: ['super_admin', 'admin', 'manager'] },
     }).select('_id email name');
 
-    const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    const durationStr = `${durationDays} ${durationDays === 1 ? 'day' : 'days'}`;
+    const durationStr = `${days} ${days === 1 ? 'day' : 'days'}`;
     const datesStr = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} – ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 
     console.log(`[Leave Apply] Notifying ${adminsAndManagers.length} admins/managers for leave by ${applicant?.name}`);
@@ -985,10 +1001,24 @@ export const approveLeave = async (id, adminId, comment) => {
   if (!leave) throw ApiError.notFound('Leave request not found');
   if (leave.status !== 'pending') throw ApiError.badRequest('Leave already processed');
 
-  const updated = await attendanceRepo.updateLeaveStatus(id, 'approved', adminId, comment);
-
   const start = new Date(leave.startDate);
   const end = new Date(leave.endDate);
+  const days = calculateLeaveDays(start, end);
+  const year = start.getFullYear();
+  const employeeId = leave.employee?._id || leave.employee;
+
+  if (isBalanceTrackedLeave(leave.leaveType)) {
+    const balance = await getLeaveBalance(employeeId, year);
+    const available = balance[leave.leaveType]?.balance ?? 0;
+    if (days > available) {
+      throw ApiError.badRequest(
+        `Insufficient ${leave.leaveType} leave balance. Available: ${available} day(s). Cannot approve ${days} day(s).`
+      );
+    }
+  }
+
+  const updated = await attendanceRepo.updateLeaveStatus(id, 'approved', adminId, comment);
+
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const date = new Date(d);
     date.setHours(0, 0, 0, 0);
@@ -998,8 +1028,7 @@ export const approveLeave = async (id, adminId, comment) => {
     const holiday = await attendanceRepo.findHolidayByDate(date);
     if (holiday) continue;
 
-    const empId = leave.employee?._id || leave.employee;
-    const existing = await attendanceRepo.findAttendanceByEmployeeAndDate(empId, date);
+    const existing = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, date);
     if (existing) {
       await attendanceRepo.updateAttendance(existing._id, {
         status: 'leave',
@@ -1017,7 +1046,7 @@ export const approveLeave = async (id, adminId, comment) => {
     } else {
       const shift = await attendanceRepo.findDefaultShift();
       await attendanceRepo.createAttendance({
-        employee: empId,
+        employee: employeeId,
         date,
         shift: shift?._id,
         status: 'leave',
@@ -1027,9 +1056,7 @@ export const approveLeave = async (id, adminId, comment) => {
     }
   }
 
-  const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-  const year = start.getFullYear();
-  await attendanceRepo.updateLeaveBalance(leave.employee, year, leave.leaveType, days);
+  await attendanceRepo.updateLeaveBalance(employeeId, year, leave.leaveType, days);
 
   // Notify applicant employee via In-App, Socket, and Email
   try {
@@ -1065,8 +1092,7 @@ export const approveLeave = async (id, adminId, comment) => {
 
     // 2. Direct styled HTML Email
     if (emp?.email) {
-      const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-      const durationStr = `${durationDays} ${durationDays === 1 ? 'day' : 'days'}`;
+      const durationStr = `${days} ${days === 1 ? 'day' : 'days'}`;
       try {
         await sendLeaveApprovedEmail({
           to: emp.email,
@@ -1122,8 +1148,7 @@ export const rejectLeave = async (id, adminId, comment) => {
 
     // 2. Direct HTML Email
     if (emp?.email) {
-      const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-      const durationStr = `${durationDays} ${durationDays === 1 ? 'day' : 'days'}`;
+      const durationStr = `${days} ${days === 1 ? 'day' : 'days'}`;
       try {
         await sendLeaveRejectedEmail({
           to: emp.email,
@@ -1144,20 +1169,18 @@ export const rejectLeave = async (id, adminId, comment) => {
   return updated;
 };
 
-export const getLeaveBalance = async (employeeId) => {
-  const year = new Date().getFullYear();
+export const getLeaveBalance = async (employeeId, year = new Date().getFullYear()) => {
   let balance = await attendanceRepo.findLeaveBalance(employeeId, year);
 
   if (!balance) {
     balance = await attendanceRepo.createLeaveBalance({
       employee: employeeId,
       year,
-      sick: { total: 12, used: 0, balance: 12 },
-      casual: { total: 10, used: 0, balance: 10 },
-      earned: { total: 15, used: 0, balance: 15 },
-      unpaid: { total: 0, used: 0, balance: 0 },
-      comp_off: { total: 0, used: 0, balance: 0 },
+      ...normalizeLeaveBalance({}, year),
     });
+  } else {
+    normalizeLeaveBalance(balance, year);
+    if (balance.isModified()) await balance.save();
   }
 
   return balance;

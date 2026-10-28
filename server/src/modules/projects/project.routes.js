@@ -13,6 +13,10 @@ import {
   projectsQuerySchema,
   addTaskSchema,
   updateTaskSchema,
+  changeStageSchema,
+  qualityCheckSchema,
+  closingNoteSchema,
+  updateMilestonesSchema,
 } from './project.validation.js';
 
 const router = Router();
@@ -55,6 +59,13 @@ router.patch(
   projectController.update,
 );
 
+router.patch('/:id/stage', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  validate(changeStageSchema), projectController.changeStage);
+router.patch('/:id/quality-check', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  validate(qualityCheckSchema), projectController.qualityCheck);
+router.patch('/:id/closing-note', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  validate(closingNoteSchema), projectController.closingNote);
+
 router.delete(
   '/:id',
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
@@ -94,8 +105,8 @@ router.get(
 router.patch(
   '/:id/milestones',
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE),
-  validate(updateProjectSchema),
-  projectController.update,
+  validate(updateMilestonesSchema),
+  projectController.updateMilestones,
 );
 
 // Tasks - employees can create/edit, only admin deletes

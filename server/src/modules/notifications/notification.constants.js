@@ -7,6 +7,7 @@ export const NOTIFICATION_TYPES = {
   MENTION: 'mention',
   PROJECT_ASSIGNED: 'project_assigned',
   PROJECT_STATUS_CHANGE: 'project_status_change',
+  PROJECT_STAGE_REVERTED: 'project_stage_reverted',
   PROJECT_CHAT: 'project_chat',
   LEAD_CREATED: 'lead_created',
   LEAD_ASSIGNED: 'lead_assigned',
@@ -90,6 +91,12 @@ export const NOTIFICATION_TEMPLATES = {
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: false, cliq: true },
     cliqChannel: 'projects',
+  },
+  project_stage_reverted: {
+    title: 'Project Moved Back',
+    message: (d) => `${d.actorName} moved "${d.projectName}" from ${d.fromStage} to ${d.toStage}. Reason: ${d.reason}`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: true, cliq: false },
   },
   project_chat: {
     title: 'New message',

@@ -3,16 +3,18 @@ import { TASK_STATUS, TASK_PRIORITY } from '../../constants/index.js';
 
 const statusValues = Object.values(TASK_STATUS);
 const priorityValues = Object.values(TASK_PRIORITY);
+const assigneeSchema = z.string().regex(/^[a-f\d]{24}$/i, 'Please select an assignee');
+const dueDateSchema = z.union([z.string().min(1, 'Task deadline is required'), z.date()]).pipe(z.coerce.date());
 
 export const createTaskSchema = z.object({
   title: z.string().min(2).max(200),
   description: z.string().optional().default(''),
   status: z.enum(statusValues).optional().default(TASK_STATUS.TODO),
   priority: z.enum(priorityValues).optional().default(TASK_PRIORITY.MEDIUM),
-  assignedTo: z.string().optional(),
+  assignedTo: assigneeSchema,
   project: z.string().optional(),
   milestone: z.string().optional(),
-  dueDate: z.coerce.date().optional(),
+  dueDate: dueDateSchema,
   startDate: z.coerce.date().optional(),
   estimatedHours: z.number().min(0).optional().default(0),
   tags: z.array(z.string()).optional().default([]),
@@ -26,14 +28,15 @@ export const createTaskSchema = z.object({
 });
 
 export const updateTaskSchema = z.object({
+  reason: z.string().trim().max(2000).optional(),
   title: z.string().min(2).max(200).optional(),
   description: z.string().optional(),
   status: z.enum(statusValues).optional(),
   priority: z.enum(priorityValues).optional(),
-  assignedTo: z.string().nullable().optional(),
+  assignedTo: assigneeSchema.optional(),
   project: z.string().nullable().optional(),
   milestone: z.string().nullable().optional(),
-  dueDate: z.coerce.date().nullable().optional(),
+  dueDate: dueDateSchema.optional(),
   startDate: z.coerce.date().nullable().optional(),
   estimatedHours: z.number().min(0).optional(),
   actualHours: z.number().min(0).optional(),
@@ -96,7 +99,7 @@ export const bulkUpdateSchema = z.object({
   data: z.object({
     status: z.enum(statusValues).optional(),
     priority: z.enum(priorityValues).optional(),
-    assignedTo: z.string().nullable().optional(),
+    assignedTo: assigneeSchema.optional(),
     tags: z.array(z.string()).optional(),
   }),
 });

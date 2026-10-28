@@ -117,6 +117,8 @@ export const updateActionItemSchema = z.object({
 
 export const convertActionItemSchema = z.object({
   projectId: objectId,
+  assignedTo: objectId.optional(),
+  dueDate: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid due date').optional(),
 });
 
 export const meetingsQuerySchema = z.object({

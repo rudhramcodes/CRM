@@ -29,8 +29,8 @@ const CURRENCIES = [
 
 const LANGUAGES = [
   { value: 'en', label: 'English' },
-  { value: 'hi', label: 'हिन्दी' },
-  { value: 'mr', label: 'मराठी' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'mr', label: 'Marathi' },
   { value: 'gu', label: 'ગુજરાતી' },
 ];
 

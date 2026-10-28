@@ -416,7 +416,7 @@ export const removeActionItem = async (id, itemId) => {
   return meetingRepository.removeActionItem(id, itemId);
 };
 
-export const convertActionItemToTask = async (id, itemId, projectId, user) => {
+export const convertActionItemToTask = async (id, itemId, data, user) => {
   const meeting = await meetingRepository.findById(id);
   if (!meeting) {
     throw ApiError.notFound('Meeting not found');
@@ -431,18 +431,23 @@ export const convertActionItemToTask = async (id, itemId, projectId, user) => {
     throw ApiError.conflict('This action item has already been converted to a task');
   }
 
+  const assignedTo = item.assignee?._id || item.assignee || data.assignedTo;
+  const dueDate = item.dueDate || data.dueDate;
+  if (!assignedTo) throw ApiError.badRequest('Select an assignee before converting this action item');
+  if (!dueDate) throw ApiError.badRequest('Select a deadline before converting this action item');
+
   const taskService = await import('../tasks/task.service.js');
   const task = await taskService.createTask(
     {
       title: item.text,
-      project: projectId,
-      assignedTo: item.assignee?._id || item.assignee || undefined,
-      dueDate: item.dueDate || undefined,
+      project: data.projectId,
+      assignedTo,
+      dueDate,
       tags: ['meeting-action'],
     },
     user,
   );
 
-  const updated = await meetingRepository.markActionItemConverted(id, itemId, task._id);
+  const updated = await meetingRepository.markActionItemConverted(id, itemId, task._id, { assignee: assignedTo, dueDate });
   return { task, meeting: updated };
 };

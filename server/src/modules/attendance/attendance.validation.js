@@ -115,7 +115,7 @@ export const updateShiftSchema = z.object({
 
 export const createLeaveSchema = z
   .object({
-    leaveType: z.enum(['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'comp_off', 'other']),
+    leaveType: z.enum(['sick', 'casual', 'maternity', 'paternity']),
     startDate: z.string().min(1, 'Start date is required'),
     endDate: z.string().min(1, 'End date is required'),
     reason: z.string().min(10, 'Reason must be at least 10 characters').max(1000),
@@ -135,7 +135,7 @@ export const leaveQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional().default(10),
   employee: z.string().optional(),
   status: z.enum(['pending', 'approved', 'rejected']).optional(),
-  leaveType: z.enum(['sick', 'casual', 'earned', 'unpaid', 'maternity', 'paternity', 'comp_off', 'other']).optional(),
+  leaveType: z.enum(['sick', 'casual', 'maternity', 'paternity']).optional(),
   search: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),

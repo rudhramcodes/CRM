@@ -1,15 +1,20 @@
 import { z } from 'zod';
-import { PROJECT_STATUS } from '../../constants/index.js';
+import { PROJECT_STATUS, PROJECT_STAGES } from '../../constants/index.js';
+import { QC_ITEMS } from './projectStage.js';
 
 const PROJECT_STATUS_LIST = Object.values(PROJECT_STATUS);
+const ownerIdSchema = z.string().regex(/^[a-f\d]{24}$/i, 'Please select an owner');
+const deadlineSchema = z.string().min(1, 'Task deadline is required')
+  .refine((value) => !Number.isNaN(Date.parse(value)), 'Invalid deadline');
 
 const taskSchema = z.object({
+  _id: ownerIdSchema.optional(),
   title: z.string().min(2, 'Task title must be at least 2 characters'),
   description: z.string().optional().or(z.literal('')),
   status: z.enum(['todo', 'in_progress', 'review', 'done']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  assignedTo: z.string().optional(),
-  dueDate: z.string().optional(),
+  assignedTo: ownerIdSchema,
+  dueDate: deadlineSchema,
 });
 
 const customFieldSchema = z.object({
@@ -67,6 +72,7 @@ export const createProjectSchema = z
   .object({
     title: z.string().min(2).max(200),
     client: z.string().min(1, 'Please select a client'),
+    ownerId: ownerIdSchema,
     projectCode: z.string().optional().or(z.literal('')),
     location: z.string().optional().or(z.literal('')),
     duration: z.string().optional().or(z.literal('')),
@@ -108,8 +114,11 @@ export const createProjectSchema = z
 
 export const updateProjectSchema = z
   .object({
+    stage: z.enum(Object.values(PROJECT_STAGES)).optional(),
+    reason: z.string().trim().max(2000).optional(),
     title: z.string().min(2).max(200).optional(),
     client: z.string().min(1, 'Please select a client').optional(),
+    ownerId: ownerIdSchema.optional(),
     description: z.string().max(2000).optional().or(z.literal('')),
     status: z.enum(PROJECT_STATUS_LIST).optional(),
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
@@ -153,6 +162,7 @@ export const updateProjectSchema = z
 export const projectsQuerySchema = z.object({
   search: z.string().optional(),
   status: z.enum(PROJECT_STATUS_LIST).optional(),
+  stage: z.enum(Object.values(PROJECT_STAGES)).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   tag: z.string().optional(),
   brand: z.string().optional(),
@@ -168,15 +178,35 @@ export const addTaskSchema = z.object({
   description: z.string().optional().or(z.literal('')),
   status: z.enum(['todo', 'in_progress', 'review', 'done']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  assignedTo: z.string().optional(),
-  dueDate: z.string().optional(),
+  assignedTo: ownerIdSchema,
+  dueDate: deadlineSchema,
 });
 
 export const updateTaskSchema = z.object({
+  reason: z.string().trim().max(2000).optional(),
   title: z.string().min(2).optional(),
   description: z.string().optional().or(z.literal('')),
   status: z.enum(['todo', 'in_progress', 'review', 'done']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  assignedTo: z.string().optional().nullable(),
-  dueDate: z.string().optional().nullable(),
+  assignedTo: ownerIdSchema.optional(),
+  dueDate: deadlineSchema.optional(),
 });
+
+export const changeStageSchema = z.object({
+  stage: z.enum(Object.values(PROJECT_STAGES)),
+  reason: z.string().trim().max(2000).optional(),
+}).strict();
+
+export const qualityCheckSchema = z.object(Object.fromEntries(QC_ITEMS.map((key) => [key, z.boolean()]))).strict();
+
+export const closingNoteSchema = z.object({
+  deliveredWhat: z.string().trim().min(1, 'Delivery summary is required').max(4000),
+  deliveredWhen: z.string().datetime({ offset: true }),
+  pendingItems: z.string().trim().max(4000).default(''),
+}).strict();
+
+// This employee-accessible route must not accept status, owner, money or QC fields.
+export const updateMilestonesSchema = z.object({
+  milestones: updateProjectSchema.innerType().shape.milestones.unwrap(),
+  reason: z.string().trim().max(2000).optional(),
+}).strict();

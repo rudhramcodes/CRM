@@ -24,6 +24,22 @@ export const PROJECT_STATUS = {
   COMPLETED: 'completed',
 };
 
+export const PROJECT_STAGES = Object.freeze({
+  BRIEF: 'brief',
+  PLANNING: 'planning',
+  EXECUTION: 'execution',
+  REVIEW: 'review',
+  DELIVERED: 'delivered',
+});
+
+export const STAGE_PROGRESS = Object.freeze({
+  [PROJECT_STAGES.BRIEF]: 0,
+  [PROJECT_STAGES.PLANNING]: 20,
+  [PROJECT_STAGES.EXECUTION]: 50,
+  [PROJECT_STAGES.REVIEW]: 80,
+  [PROJECT_STAGES.DELIVERED]: 100,
+});
+
 export const TASK_STATUS = {
   TODO: 'todo',
   IN_PROGRESS: 'in_progress',

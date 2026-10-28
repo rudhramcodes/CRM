@@ -1,10 +1,7 @@
 import { FolderKanban, Building2, Edit2, Trash2 } from 'lucide-react';
-import ProjectStatusBadge from './ProjectStatusBadge';
 import ProjectPriorityBadge from './ProjectPriorityBadge';
-import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { formatDate } from '../../../utils/formatters';
-import { cn } from '../../../utils/cn';
-import { PROJECT_STATUS, BRANDS } from '../../../constants';
+import { PROJECT_STAGES, BRANDS } from '../../../constants';
 import { TableSkeleton } from '../../../components/ui/Skeleton';
 
 const BRAND_LABELS = BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
@@ -27,7 +24,6 @@ export default function ProjectTable({
   canDelete,
   onEdit,
   onDelete,
-  onStatusChange,
 }) {
   if (loading) {
     return (
@@ -75,7 +71,7 @@ export default function ProjectTable({
                 Venture
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                Status
+                Stage
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                 Priority
@@ -136,28 +132,18 @@ export default function ProjectTable({
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div onClick={(e) => e.stopPropagation()}>
-                    {canEdit && onStatusChange ? (
-                      <Select value={project.status} onValueChange={(val) => onStatusChange(project._id, val)}>
-                        <SelectTrigger
-                          className={cn(
-                            'w-auto gap-1 border-0 bg-transparent p-0 shadow-none',
-                            'hover:bg-transparent focus:ring-0',
-                            '[&>svg]:text-zinc-400 [&>svg]:w-3 [&>svg]:h-3',
-                          )}
-                        >
-                          <ProjectStatusBadge status={project.status} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PROJECT_STATUS.map((s) => (
-                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {(() => {
+                    const stage = PROJECT_STAGES.find((item) => item.value === project.stage);
+                    return stage ? (
+                      <span className="inline-flex items-center rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-900">
+                        {stage.label}
+                      </span>
                     ) : (
-                      <ProjectStatusBadge status={project.status} />
-                    )}
-                  </div>
+                      <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        Not migrated
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td className="px-4 py-3">
                   <ProjectPriorityBadge priority={project.priority} />

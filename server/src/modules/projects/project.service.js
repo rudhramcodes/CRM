@@ -6,12 +6,41 @@ import Client from '../clients/client.model.js';
 import * as notificationService from '../notifications/notification.service.js';
 import { emitEntityUpdate } from '../../sockets/index.js';
 import logger from '../../utils/logger.js';
+import User from '../auth/auth.model.js';
+import { QC_ITEMS, LEGACY_STAGE, STAGE_STATUS, assertProjectEditor, getStageChange } from './projectStage.js';
+import { deadlineChange } from '../../utils/deadlineChange.js';
+
+const resetQC = () => Object.fromEntries([
+  ...QC_ITEMS.map((key) => [key, { checked: false }]), ['status', 'pending'],
+]);
+
+const notifyStageReversal = async (project, user, change) => {
+  try {
+    const admins = await User.find({ role: { $in: ['admin', 'super_admin'] }, isActive: true }).select('_id');
+    const notification = notificationService.buildNotification('project_stage_reverted', {
+      projectName: project.title, actorName: user.name,
+      fromStage: change.fromStage, toStage: change.toStage, reason: change.reason,
+    });
+    await notificationService.createAndSendBulk(admins.map((admin) => admin._id), {
+      ...notification, priority: 'high', referenceId: project._id, referenceModel: 'Project',
+      actionBy: user._id, link: `/projects/${project._id}`, metadata: { ...change },
+    });
+  } catch (error) {
+    logger.error(`Stage reversal notification failed: ${error.message}`);
+  }
+};
 
 const assertClientExists = async (clientId) => {
-  const client = await Client.findById(clientId).select('_id');
+  const client = await Client.findById(clientId).select('_id brand');
   if (!client) {
     throw ApiError.badRequest('Selected client does not exist');
   }
+  return client;
+};
+
+const assertOwnerExists = async (ownerId) => {
+  const owner = await User.exists({ _id: ownerId, role: { $ne: 'client' }, isActive: true });
+  if (!owner) throw ApiError.badRequest('Select an active staff member as project owner');
 };
 
 const assertClientProjectAccess = async (project, clientProfile) => {
@@ -23,11 +52,17 @@ const assertClientProjectAccess = async (project, clientProfile) => {
 };
 
 export const createProject = async (data, user) => {
-  await assertClientExists(data.client);
+  if (data.status && data.status !== 'planning') {
+    throw ApiError.badRequest('New projects start at Brief. Change stage after creation.');
+  }
+  const client = await assertClientExists(data.client);
+  await assertOwnerExists(data.ownerId);
 
   const payload = {
     title: data.title,
     client: data.client,
+    ownerId: data.ownerId,
+    brand: client.brand,
     description: data.description || '',
     status: data.status || 'planning',
     priority: data.priority || 'medium',
@@ -46,13 +81,15 @@ export const createProject = async (data, user) => {
       createdBy: user._id,
     })),
     tags: data.tags || [],
+    projectCode: data.projectCode,
+    location: data.location,
+    duration: data.duration,
+    inwardData: data.inwardData,
+    deliverables: data.deliverables || [],
+    teamDeployment: data.teamDeployment,
     createdBy: user._id,
     activities: [{ action: 'project_created', performedBy: user._id }],
   };
-
-  if (data.status === 'completed') {
-    payload.completedAt = new Date();
-  }
 
   const project = await projectRepository.create(payload);
 
@@ -89,18 +126,44 @@ export const getProjectById = async (id, user, clientProfile) => {
   return project;
 };
 
-export const updateProject = async (id, data, user) => {
+export const updateProject = async (id, data, user, { milestonesOnly = false } = {}) => {
   const project = await projectRepository.findById(id);
   if (!project) {
     throw ApiError.notFound('Project not found');
   }
 
-  if (data.client) {
-    await assertClientExists(data.client);
+  if (milestonesOnly && user.role === 'employee') {
+    const assigned = (project.teamMembers || []).some((member) => String(member.user?._id || member.user) === String(user._id));
+    if (!assigned) throw ApiError.forbidden('Only assigned staff can edit project milestones');
+  } else {
+    assertProjectEditor(project, user);
   }
 
   const updateData = { ...data };
+  delete updateData.reason;
+  delete updateData.stage;
+  delete updateData.status;
+  // Sign-off metadata is written only by the dedicated authenticated endpoints.
+  for (const key of ['qcChecklist', 'closingNote', 'stageHistory', 'progress', 'completedAt']) delete updateData[key];
+  if (data.client) {
+    const client = await assertClientExists(data.client);
+    updateData.brand = client.brand;
+  }
+  if (data.ownerId) await assertOwnerExists(data.ownerId);
   const activities = [];
+  if (data.deadline !== undefined) {
+    const activity = deadlineChange(project.deadline, data.deadline, data.reason, user, 'deadline');
+    if (activity) activities.push(activity);
+    updateData.deadline = data.deadline ? new Date(data.deadline) : null;
+  }
+  for (const field of ['milestones', 'tasks']) {
+    if (!data[field]) continue;
+    for (const oldItem of project[field] || []) {
+      const newItem = data[field].find((item) => String(item._id) === String(oldItem._id));
+      const activity = deadlineChange(oldItem.dueDate, newItem?.dueDate, data.reason, user, `${field}.${oldItem._id}.dueDate`);
+      if (activity) activities.push(activity);
+    }
+  }
 
   if (data.startDate) updateData.startDate = new Date(data.startDate);
   if (data.deadline) updateData.deadline = new Date(data.deadline);
@@ -120,31 +183,50 @@ export const updateProject = async (id, data, user) => {
     activities.push({ action: 'tasks_updated', performedBy: user._id });
   }
 
-  if (data.status && data.status !== project.status) {
-    activities.push({
-      action: 'status_changed',
-      field: 'status',
-      oldValue: project.status,
-      newValue: data.status,
-      performedBy: user._id,
-    });
+  const scopeFields = ['title', 'description', 'budget', 'deliverables', 'milestones'];
+  const scopeChanged = (data.client !== undefined && String(project.client?._id || project.client) !== data.client)
+    || scopeFields.some((key) => data[key] !== undefined
+      && JSON.stringify(project.toObject()[key]) !== JSON.stringify(data[key]));
+  if (scopeChanged) {
+    if (project.stage === 'delivered') throw ApiError.badRequest('Reopen the project with a reason before changing reviewed scope');
+    updateData.qcChecklist = resetQC();
+    activities.push({ action: 'qc_invalidated', field: 'qcChecklist', oldValue: JSON.stringify(project.qcChecklist),
+      newValue: JSON.stringify(updateData.qcChecklist), performedBy: user._id });
   }
 
-  if (data.status === 'completed' && project.status !== 'completed') {
-    updateData.completedAt = new Date();
+  const legacyTarget = data.status && data.status !== project.status ? LEGACY_STAGE[data.status] : undefined;
+  if (data.stage && data.status && STAGE_STATUS[data.stage] !== data.status) {
+    throw ApiError.badRequest('Stage and status disagree');
+  }
+  const target = data.stage || legacyTarget;
+  const candidate = { ...project.toObject(), ...updateData };
+  const change = target ? getStageChange(candidate, target, user, data.reason) : null;
+  if (change) {
+    const { backwards, ...history } = change;
+    updateData.stage = target;
+    updateData.status = STAGE_STATUS[target];
+    updateData.stageHistory = [...project.stageHistory.map((item) => item.toObject()), history];
+    updateData.completedAt = target === 'delivered' ? history.changedAt : null;
+    if (backwards) {
+      updateData.qcChecklist = resetQC();
+      updateData.closingNote = {};
+      activities.push({ action: 'sign_off_reset', field: 'signOff',
+        oldValue: JSON.stringify({ qcChecklist: project.qcChecklist, closingNote: project.closingNote }),
+        newValue: JSON.stringify({ qcChecklist: updateData.qcChecklist, closingNote: {} }),
+        reason: history.reason, performedBy: user._id });
+    }
+    activities.push({ action: 'stage_changed', field: 'stage', oldValue: history.fromStage,
+      newValue: history.toStage, reason: history.reason, performedBy: user._id });
   }
 
-  if (data.status && data.status !== 'completed' && project.status === 'completed') {
-    updateData.completedAt = null;
-  }
-
-  const updated = await projectRepository.updateById(id, updateData, activities);
+  const updated = await projectRepository.updateById(id, updateData, activities, project.__v ?? null);
 
   emitEntityUpdate('project', id, 'project_updated');
 
-  if (data.status && data.status !== project.status) {
+  if (change?.backwards) await notifyStageReversal(updated, user, change);
+  if (change && !change.backwards) {
     const notif = notificationService.buildNotification('project_status_change', {
-      projectName: project.title, actorName: user.name, newStatus: data.status,
+      projectName: project.title, actorName: user.name, newStatus: change.toStage,
     });
     const memberIds = (project.teamMembers || [])
       .map((m) => (m.user?._id || m.user))
@@ -160,6 +242,44 @@ export const updateProject = async (id, data, user) => {
   return updated;
 };
 
+export const changeProjectStage = (projectId, targetStage, user, reason) =>
+  updateProject(projectId, { stage: targetStage, reason }, user);
+
+export const saveQualityCheck = async (id, checks, user) => {
+  if (!['admin', 'super_admin'].includes(user.role)) throw ApiError.forbidden('Only Admin can complete quality checks');
+  const project = await projectRepository.findById(id);
+  if (!project) throw ApiError.notFound('Project not found');
+  if (!project.stage) throw ApiError.conflict('Migrate this legacy project before recording SOP sign-off');
+  if (project.stage === 'delivered') throw ApiError.badRequest('Reopen the project before changing quality checks');
+  const now = new Date();
+  const qcChecklist = Object.fromEntries(QC_ITEMS.map((key) => [key, {
+    checked: checks[key], checkedBy: user._id, checkedAt: now,
+  }]));
+  qcChecklist.status = QC_ITEMS.every((key) => checks[key] === true) ? 'passed' : 'pending';
+  const updated = await projectRepository.updateById(id, { qcChecklist }, [{
+    action: 'quality_check', field: 'qcChecklist', oldValue: JSON.stringify(project.qcChecklist),
+    newValue: JSON.stringify(qcChecklist), performedBy: user._id,
+  }], project.__v ?? null);
+  emitEntityUpdate('project', id, 'project_updated');
+  return updated;
+};
+
+export const saveClosingNote = async (id, data, user) => {
+  const project = await projectRepository.findById(id);
+  if (!project) throw ApiError.notFound('Project not found');
+  assertProjectEditor(project, user);
+  if (!project.stage) throw ApiError.conflict('Migrate this legacy project before recording SOP sign-off');
+  if (project.stage === 'delivered') throw ApiError.badRequest('Reopen the project before changing its Closing Note');
+  const closingNote = { deliveredWhat: data.deliveredWhat, deliveredWhen: new Date(data.deliveredWhen),
+    pendingItems: data.pendingItems || '', writtenBy: user._id, writtenAt: new Date() };
+  const updated = await projectRepository.updateById(id, { closingNote }, [{
+    action: 'closing_note_saved', field: 'closingNote', oldValue: JSON.stringify(project.closingNote),
+    newValue: JSON.stringify(closingNote), performedBy: user._id,
+  }], project.__v ?? null);
+  emitEntityUpdate('project', id, 'project_updated');
+  return updated;
+};
+
 export const deleteProject = async (id) => {
   const project = await projectRepository.findById(id);
   if (!project) {
@@ -169,15 +289,15 @@ export const deleteProject = async (id) => {
 };
 
 export const getProjectStats = async () => {
-  const [statusCounts, brandCounts] = await Promise.all([
-    projectRepository.countByStatus(),
+  const [stageCounts, brandCounts] = await Promise.all([
+    projectRepository.countByStage(),
     projectRepository.countByBrand(),
   ]);
 
-  const stats = { total: 0, planning: 0, active: 0, review: 0, completed: 0 };
+  const stats = { total: 0, brief: 0, planning: 0, execution: 0, review: 0, delivered: 0 };
 
-  for (const item of statusCounts) {
-    stats[item._id] = item.count;
+  for (const item of stageCounts) {
+    if (stats[item._id] !== undefined) stats[item._id] = item.count;
     stats.total += item.count;
   }
 
@@ -229,7 +349,10 @@ export const updateTask = async (projectId, taskId, data, user) => {
   const task = project.tasks.id(taskId);
   if (!task) throw ApiError.notFound('Task not found');
 
-  Object.assign(task, data);
+  const activity = data.dueDate !== undefined ? deadlineChange(task.dueDate, data.dueDate, data.reason, user, `tasks.${taskId}.dueDate`) : null;
+  const { reason, ...taskData } = data;
+  Object.assign(task, taskData);
+  if (activity) project.activities.push(activity);
   if (data.dueDate) task.dueDate = new Date(data.dueDate);
   if (data.status === 'done' && task.status !== 'done') task.completedAt = new Date();
   if (data.status && data.status !== 'done') task.completedAt = null;
@@ -311,6 +434,9 @@ export const addMessage = async (projectId, data, user, clientProfile, files = [
       if (assignedUser) taskData.assignedTo = assignedUser._id;
     }
 
+    if (!taskData.assignedTo || !taskData.dueDate || Number.isNaN(taskData.dueDate.getTime())) {
+      throw ApiError.badRequest('Chat tasks require a matching assignee and a valid deadline. Use the task form to select both.');
+    }
     const standaloneTask = await Task.create(taskData);
     messageData.taskId = standaloneTask._id;
     messageData.taskTitle = taskCmd.title;

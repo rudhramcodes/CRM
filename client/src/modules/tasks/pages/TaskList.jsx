@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import Button from '../../../components/ui/Button';
+import ReasonModal from '../../../components/ui/ReasonModal';
 import TaskFilters from '../components/TaskFilters';
 import TaskKanban from '../components/TaskKanban';
 import TaskTable from '../components/TaskTable';
@@ -36,7 +37,6 @@ import {
   useGetTasksQuery,
   useUpdateTaskMutation,
   useDeleteTaskMutation,
-  useCreateTaskMutation,
   useBulkUpdateTasksMutation,
 } from '../../../services/taskApi';
 import toast from 'react-hot-toast';
@@ -60,6 +60,7 @@ export default function TaskList() {
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [pendingReschedule, setPendingReschedule] = useState(null);
 
   useEffect(() => {
     dispatch(setPageTitle('Tasks Hub'));
@@ -98,7 +99,6 @@ export default function TaskList() {
 
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
-  const [createTask] = useCreateTaskMutation();
   const [bulkUpdateTasks] = useBulkUpdateTasksMutation();
 
   const tasks = useMemo(() => {
@@ -154,19 +154,11 @@ export default function TaskList() {
   );
 
   const handleQuickAdd = useCallback(
-    async ({ title, status = 'todo', dueDate }) => {
-      try {
-        await createTask({
-          title,
-          status,
-          dueDate: dueDate || undefined,
-        }).unwrap();
-        toast.success('Task created');
-      } catch (err) {
-        toast.error(err?.data?.message || 'Failed to create task');
-      }
+    ({ title, status = 'todo', dueDate }) => {
+      setCreateModalConfig({ defaultTitle: title, defaultStatus: status, defaultDueDate: dueDate || '', defaultProject: 'none' });
+      setShowCreateModal(true);
     },
-    [createTask],
+    [],
   );
 
   const handleDeleteTask = useCallback(
@@ -199,15 +191,36 @@ export default function TaskList() {
   }, []);
 
   const handleReschedule = useCallback(
-    async (taskId, newDueDate) => {
+    async (taskId, newDueDate, reason) => {
       try {
-        await updateTask({ id: taskId, dueDate: newDueDate }).unwrap();
+        await updateTask({
+          id: taskId,
+          dueDate: newDueDate,
+          ...(reason ? { reason } : {}),
+        }).unwrap();
         toast.success('Task rescheduled');
       } catch (err) {
         toast.error(err?.data?.message || 'Failed to reschedule task');
+        throw err;
       }
     },
     [updateTask],
+  );
+
+  const requestReschedule = useCallback(
+    (taskId, newDueDate) => {
+      const task = tasks.find((item) => item._id === taskId);
+      if (!task) return;
+      const current = task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : '';
+      const next = newDueDate ? format(new Date(newDueDate), 'yyyy-MM-dd') : '';
+      if (current === next) return;
+      if (current) {
+        setPendingReschedule({ taskId, newDueDate });
+        return;
+      }
+      handleReschedule(taskId, newDueDate).catch(() => {});
+    },
+    [tasks, handleReschedule],
   );
 
   // Bulk actions
@@ -353,6 +366,7 @@ export default function TaskList() {
 
       if (e.key === 'c' || e.key === 'C' || e.key === 'n' || e.key === 'N') {
         e.preventDefault();
+        setCreateModalConfig({ defaultStatus: 'todo', defaultDueDate: '', defaultProject: 'none' });
         setShowCreateModal(true);
       } else if (e.key === '1') {
         e.preventDefault();
@@ -489,7 +503,10 @@ export default function TaskList() {
 
           {/* New Task CTA */}
           <Button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              setCreateModalConfig({ defaultStatus: 'todo', defaultDueDate: '', defaultProject: 'none' });
+              setShowCreateModal(true);
+            }}
             className="rounded-xl text-xs font-semibold shadow-md shadow-primary-900/10 shrink-0"
           >
             <Plus className="w-4 h-4 sm:mr-1.5" />
@@ -650,7 +667,7 @@ export default function TaskList() {
           onTaskClick={(t) => setSelectedTaskId(t._id)}
           onStatusChange={handleStatusChange}
           onQuickAdd={handleQuickAdd}
-          onReschedule={handleReschedule}
+          onReschedule={requestReschedule}
           onOpenCreateModal={handleOpenCreateModal}
         />
       )}
@@ -682,6 +699,7 @@ export default function TaskList() {
         defaultStatus={createModalConfig.defaultStatus}
         defaultDueDate={createModalConfig.defaultDueDate}
         defaultProject={createModalConfig.defaultProject}
+        defaultTitle={createModalConfig.defaultTitle || ''}
         onSuccess={() => refetch()}
       />
 
@@ -696,6 +714,18 @@ export default function TaskList() {
       <TaskShortcutsModal
         open={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
+      />
+
+      <ReasonModal
+        open={!!pendingReschedule}
+        onClose={() => setPendingReschedule(null)}
+        onConfirm={async (reason) => {
+          await handleReschedule(pendingReschedule.taskId, pendingReschedule.newDueDate, reason);
+          setPendingReschedule(null);
+        }}
+        title="Reason for deadline change"
+        description="The reason will be saved in the task history."
+        confirmLabel="Reschedule Task"
       />
     </div>
   );

@@ -37,6 +37,34 @@ export const update = async (req, res, next) => {
   }
 };
 
+export const changeStage = async (req, res, next) => {
+  try {
+    const project = await projectService.changeProjectStage(req.params.id, req.body.stage, req.user, req.body.reason);
+    ApiResponse.success(res, 200, { project }, 'Project stage updated');
+  } catch (error) { next(error); }
+};
+
+export const qualityCheck = async (req, res, next) => {
+  try {
+    const project = await projectService.saveQualityCheck(req.params.id, req.body, req.user);
+    ApiResponse.success(res, 200, { project }, 'Quality check saved');
+  } catch (error) { next(error); }
+};
+
+export const closingNote = async (req, res, next) => {
+  try {
+    const project = await projectService.saveClosingNote(req.params.id, req.body, req.user);
+    ApiResponse.success(res, 200, { project }, 'Closing Note saved');
+  } catch (error) { next(error); }
+};
+
+export const updateMilestones = async (req, res, next) => {
+  try {
+    const project = await projectService.updateProject(req.params.id, req.body, req.user, { milestonesOnly: true });
+    ApiResponse.success(res, 200, { project }, 'Milestones updated');
+  } catch (error) { next(error); }
+};
+
 export const remove = async (req, res, next) => {
   try {
     await projectService.deleteProject(req.params.id);

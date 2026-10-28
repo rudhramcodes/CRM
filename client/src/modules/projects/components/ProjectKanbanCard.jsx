@@ -24,17 +24,18 @@ export function ProjectKanbanCardOverlay({ project }) {
   );
 }
 
-export default function ProjectKanbanCard({ project }) {
+export default function ProjectKanbanCard({ project, disabled = false }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project._id,
     data: { project },
+    disabled,
   });
 
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}
-      className="bg-white rounded-lg border border-zinc-200 p-3 shadow-sm hover:shadow-md hover:border-zinc-300 cursor-grab active:cursor-grabbing transition-all space-y-2">
+      className={`bg-white rounded-lg border border-zinc-200 p-3 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all space-y-2 ${disabled ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}>
       <div className="flex items-center gap-2 min-w-0">
         <div className="w-7 h-7 bg-primary-50 rounded-lg flex items-center justify-center shrink-0">
           <span className="text-primary-900 font-medium text-[11px]">{project.title?.charAt(0)?.toUpperCase()}</span>

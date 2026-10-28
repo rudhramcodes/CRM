@@ -1,5 +1,6 @@
 import Project from './project.model.js';
 import Client from '../clients/client.model.js';
+import ApiError from '../../utils/ApiError.js';
 import paginate, { getPaginationMeta, escapeRegex } from '../../utils/pagination.js';
 
 export const create = async (data) => {
@@ -9,10 +10,17 @@ export const create = async (data) => {
 export const findById = async (id) => {
   return Project.findById(id)
     .populate('client', 'companyName contactPerson email brand status')
+    .populate('ownerId', 'name email avatar')
     .populate('teamMembers.user', 'name email avatar')
     .populate('tasks.assignedTo', 'name email avatar')
     .populate('tasks.createdBy', 'name email avatar')
     .populate('activities.performedBy', 'name email avatar role')
+    .populate('stageHistory.changedBy', 'name')
+    .populate('qcChecklist.scopeComplete.checkedBy', 'name')
+    .populate('qcChecklist.filesCorrect.checkedBy', 'name')
+    .populate('qcChecklist.clientCommitmentsMet.checkedBy', 'name')
+    .populate('qcChecklist.noOpenBlockers.checkedBy', 'name')
+    .populate('closingNote.writtenBy', 'name')
     .populate('createdBy', 'name email');
 };
 
@@ -26,6 +34,7 @@ export const findAll = async (query = {}, options = {}) => {
   }
 
   if (query.status) filter.status = query.status;
+  if (query.stage) filter.stage = query.stage;
   if (query.priority) filter.priority = query.priority;
   if (query.tag) filter.tags = { $in: [query.tag] };
   if (query.employeeFilter) filter['teamMembers.user'] = query.employeeFilter;
@@ -50,19 +59,31 @@ export const findAll = async (query = {}, options = {}) => {
   return { projects, pagination: getPaginationMeta(total, page, limit) };
 };
 
-export const updateById = async (id, data, activities = []) => {
+export const updateById = async (id, data, activities = [], expectedVersion) => {
   const update = { ...data };
   if (activities.length > 0) {
     update.$push = { activities: { $each: activities } };
     delete update.activities;
   }
-  return Project.findByIdAndUpdate(id, update, { new: true, runValidators: true })
+  update.$inc = { __v: 1 };
+  const filter = { _id: id };
+  if (expectedVersion !== undefined) filter.__v = expectedVersion;
+  const project = await Project.findOneAndUpdate(filter, update, { new: true, runValidators: true })
     .populate('client', 'companyName contactPerson email brand status')
+    .populate('ownerId', 'name email avatar')
     .populate('teamMembers.user', 'name email avatar')
     .populate('tasks.assignedTo', 'name email avatar')
     .populate('tasks.createdBy', 'name email avatar')
     .populate('activities.performedBy', 'name email avatar role')
+    .populate('stageHistory.changedBy', 'name')
+    .populate('qcChecklist.scopeComplete.checkedBy', 'name')
+    .populate('qcChecklist.filesCorrect.checkedBy', 'name')
+    .populate('qcChecklist.clientCommitmentsMet.checkedBy', 'name')
+    .populate('qcChecklist.noOpenBlockers.checkedBy', 'name')
+    .populate('closingNote.writtenBy', 'name')
     .populate('createdBy', 'name email');
+  if (!project) throw ApiError.conflict('Project changed while you were editing. Refresh and try again.');
+  return project;
 };
 
 export const deleteById = async (id) => {
@@ -71,6 +92,31 @@ export const deleteById = async (id) => {
 
 export const countByStatus = async () => {
   return Project.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
+};
+
+export const countByStage = async () => {
+  return Project.aggregate([
+    {
+      $group: {
+        _id: {
+          $ifNull: [
+            '$stage',
+            {
+              $switch: {
+                branches: [
+                  { case: { $eq: ['$status', 'active'] }, then: 'execution' },
+                  { case: { $eq: ['$status', 'review'] }, then: 'review' },
+                  { case: { $eq: ['$status', 'completed'] }, then: 'delivered' },
+                ],
+                default: 'planning',
+              },
+            },
+          ],
+        },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
 };
 
 export const countByBrand = async () => {
