@@ -28,6 +28,15 @@ export const create = async (req, res, next) => {
   }
 };
 
+export const createSplit = async (req, res, next) => {
+  try {
+    const result = await paymentService.createSplitPayments(req.body, req.user);
+    ApiResponse.created(res, result, 'Split payment recorded successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const update = async (req, res, next) => {
   try {
     const payment = await paymentService.updatePayment(req.params.id, req.body);

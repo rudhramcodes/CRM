@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { CreditCard, IndianRupee, Clock, TrendingUp, Briefcase } from 'lucide-react';
+import { IndianRupee, Clock, Banknote, Landmark, Briefcase } from 'lucide-react';
 import RefreshCwIcon from '../../../components/ui/RefreshCwIcon';
 import toast from 'react-hot-toast';
 import PaymentTable from '../components/PaymentTable';
@@ -11,11 +11,7 @@ import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton';
 import { LEAD_BRANDS } from '../../../constants';
 
-const statCards = [
-  { key: 'totalCollected', label: 'Total Collected', icon: IndianRupee, color: 'text-green-600 bg-green-50', format: (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
-  { key: 'pendingAmount', label: 'Total Outstanding', icon: Clock, color: 'text-orange-600 bg-orange-50', format: (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
-  { key: 'methodCount', label: 'Payment Methods', icon: TrendingUp, color: 'text-blue-600 bg-blue-50', format: (v) => v },
-];
+const money = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 export default function PaymentList() {
   const user = useSelector((state) => state.auth.user);
@@ -29,6 +25,16 @@ export default function PaymentList() {
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useGetPaymentStatsQuery();
   const stats = statsData?.data || {};
   const [deletePayment] = useDeletePaymentMutation();
+
+  const byMethod = stats?.byMethod || [];
+  const cashCollected = byMethod.find((item) => item._id === 'cash')?.total || 0;
+  const bankCollected = stats.totalCollected || 0;
+  const statCards = [
+    { key: 'totalCollected', label: 'Total Collected (excl. cash)', icon: IndianRupee, color: 'text-green-600 bg-green-50', format: money },
+    { key: 'cash', label: 'Cash Collected', icon: Banknote, color: 'text-emerald-600 bg-emerald-50', format: money, value: cashCollected },
+    { key: 'bank', label: 'Bank / Online', icon: Landmark, color: 'text-blue-600 bg-blue-50', format: money, value: bankCollected },
+    { key: 'pendingAmount', label: 'Total Outstanding', icon: Clock, color: 'text-orange-600 bg-orange-50', format: money },
+  ];
 
   const payments = paymentsData?.data || [];
   const pagination = paymentsData?.pagination;
@@ -84,9 +90,9 @@ export default function PaymentList() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {statsLoading
-          ? Array.from({ length: 3 }).map((_, i) => <StatCardSkeleton key={i} />)
+          ? Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
           : statCards.map((card) => (
           <div key={card.key} className="bg-white rounded-lg border border-zinc-200 p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -96,7 +102,7 @@ export default function PaymentList() {
               <span className="text-xs text-zinc-500">{card.label}</span>
             </div>
             <p className="text-xl font-bold text-zinc-900">
-              {statsLoading ? '-' : card.format(card.key === 'methodCount' ? (stats?.byMethod?.length || 0) : stats?.[card.key])}
+              {statsLoading ? '-' : card.format(card.value ?? stats?.[card.key])}
             </p>
           </div>
         ))}
@@ -132,7 +138,7 @@ export default function PaymentList() {
         <div>
           <h3 className="text-sm font-medium text-zinc-700 mb-2 flex items-center gap-2">
             <Briefcase className="w-4 h-4" />
-            Venture-wise Collection
+            Venture-wise Collection (excl. cash)
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {stats.byBrand.map((item) => (

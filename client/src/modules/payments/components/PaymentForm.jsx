@@ -37,10 +37,14 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [splitMode, setSplitMode] = useState(false);
+  const [cashAmount, setCashAmount] = useState('');
 
   const amountNum = Number(form.amount) || 0;
+  const cashNum = splitMode ? Number(cashAmount) || 0 : 0;
+  const bankNum = splitMode ? Number((amountNum - cashNum).toFixed(2)) : amountNum;
+  const splitInvalid = splitMode && (cashNum <= 0 || bankNum <= 0);
   const amountOverLimit = balanceDue > 0 && amountNum > balanceDue;
-  const newPaid = Math.min((total || 0) > 0 ? (amountNum + ((initial?.amount ? 0 : 0))) : amountNum, total || 0);
   const newPaidTotal = initial
     ? (total || 0) - (balanceDue || 0) + amountNum
     : (total || 0) - (balanceDue || 0) + amountNum;
@@ -65,18 +69,43 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
       return;
     }
 
+    if (splitInvalid) {
+      setError('Split payment needs both a bank/UPI amount and a cash amount');
+      return;
+    }
+
     setLoading(true);
     try {
-      await onSubmit({
-        invoice: form.invoice,
-        amount: amountNum,
-        paymentType: form.paymentType,
-        paymentMethod: form.paymentMethod,
-        referenceNo: form.referenceNo,
-        notes: form.notes,
-        paymentDate: form.paymentDate,
-        status: form.status,
-      });
+      const payload = splitMode
+        ? {
+            invoice: form.invoice,
+            payments: [
+              {
+                amount: bankNum,
+                paymentMethod: 'bank_transfer',
+                referenceNo: form.referenceNo,
+              },
+              {
+                amount: cashNum,
+                paymentMethod: 'cash',
+                notes: form.notes,
+              },
+            ],
+            paymentType: form.paymentType,
+            paymentDate: form.paymentDate,
+            status: form.status,
+          }
+        : {
+            invoice: form.invoice,
+            amount: amountNum,
+            paymentType: form.paymentType,
+            paymentMethod: form.paymentMethod,
+            referenceNo: form.referenceNo,
+            notes: form.notes,
+            paymentDate: form.paymentDate,
+            status: form.status,
+          };
+      await onSubmit(payload);
       onClose();
     } catch (err) {
       setError(err?.data?.message || err?.message || 'Failed to save payment');
@@ -95,7 +124,7 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
           <div className="flex items-center gap-2">
             <Wallet className="w-5 h-5 text-indigo-600" />
             <h2 className="text-lg font-semibold text-zinc-900">
-              {initial ? 'Edit Payment' : form.paymentType === 'advance' ? 'Record Advance Payment' : 'Record Payment'}
+              {initial ? 'Edit Payment' : splitMode ? 'Record Split Payment' : form.paymentType === 'advance' ? 'Record Advance Payment' : 'Record Payment'}
             </h2>
           </div>
           <button onClick={onClose} className="p-1 text-zinc-400 hover:text-zinc-600 rounded">
@@ -111,6 +140,27 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
                 {invoiceNumber}
               </p>
             </div>
+          )}
+
+          {!initial && (
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 p-3">
+              <input
+                type="checkbox"
+                checked={splitMode}
+                onChange={(e) => {
+                  setSplitMode(e.target.checked);
+                  setCashAmount('');
+                  setError('');
+                }}
+                className="mt-0.5 h-4 w-4 accent-indigo-600"
+              />
+              <span>
+                <span className="block text-sm font-medium text-zinc-700">Split payment (bank + cash)</span>
+                <span className="block text-xs text-zinc-500">
+                  Creates two payment entries against this same invoice.
+                </span>
+              </span>
+            </label>
           )}
 
           <div>
@@ -148,7 +198,7 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
 
           <div>
             <label htmlFor="payment-amount" className="block text-sm font-medium text-zinc-700 mb-1">
-              Amount <span className="text-red-500">*</span>
+              {splitMode ? 'Total Amount Received' : 'Amount'} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-medium text-sm">₹</span>
@@ -183,27 +233,72 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">Payment Method</label>
-              <Select value={form.paymentMethod} onValueChange={(v) => handleChange('paymentMethod', v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_METHODS.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
-                          {methodIcons[m.value]}
-                        </span>
-                        {m.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {splitMode && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Bank / UPI Portion</label>
+                <p className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-900">
+                  {fmt(bankNum)}
+                </p>
+              </div>
+              <div>
+                <label htmlFor="payment-cash-amount" className="block text-sm font-medium text-zinc-700 mb-1">
+                  Cash Portion <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-medium text-sm">₹</span>
+                  <input
+                    id="payment-cash-amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={amountNum}
+                    placeholder="0.00"
+                    value={cashAmount}
+                    onChange={(e) => setCashAmount(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-200 py-2 pl-7 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">Bank portion is total minus cash.</p>
+              </div>
             </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            {splitMode ? (
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Payment Methods</label>
+                <div className="flex h-[38px] items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs font-medium text-zinc-700">
+                  <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600">BANK</span>
+                  Bank / UPI
+                  <span className="text-zinc-300">+</span>
+                  <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600">CASH</span>
+                  Cash
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Payment Method</label>
+                <Select value={form.paymentMethod} onValueChange={(v) => handleChange('paymentMethod', v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                            {methodIcons[m.value]}
+                          </span>
+                          {m.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-1">Status</label>
@@ -230,11 +325,13 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
           </div>
 
           <div>
-            <label htmlFor="payment-reference" className="block text-sm font-medium text-zinc-700 mb-1">Reference No.</label>
+            <label htmlFor="payment-reference" className="block text-sm font-medium text-zinc-700 mb-1">
+              {splitMode ? 'Bank Reference / UTR' : 'Reference No.'}
+            </label>
             <input
               id="payment-reference"
               type="text"
-              placeholder="UTR / Cheque no. / Transaction ID"
+              placeholder={splitMode ? 'UTR / transaction ID for the bank portion' : 'UTR / Cheque no. / Transaction ID'}
               value={form.referenceNo}
               onChange={(e) => handleChange('referenceNo', e.target.value)}
               className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
@@ -297,9 +394,9 @@ export default function PaymentForm({ invoiceId, invoiceNumber, balanceDue, tota
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || amountOverLimit || amountNum <= 0}>
+            <Button type="submit" disabled={loading || amountOverLimit || amountNum <= 0 || splitInvalid}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {initial ? 'Update Payment' : amountNum === balanceDue ? 'Pay Full Amount' : 'Record Payment'}
+              {initial ? 'Update Payment' : splitMode ? 'Record Split Payment' : amountNum === balanceDue ? 'Pay Full Amount' : 'Record Payment'}
             </Button>
           </div>
         </form>

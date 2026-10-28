@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -23,6 +23,7 @@ import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import FormInput from '../../../components/forms/FormInput';
 import FormTextarea from '../../../components/forms/FormTextarea';
+import { useGetFreelancersQuery } from '../../../services/freelancerApi';
 
 export default function ProjectDeliverablesTracker({ project, onUpdate, canManage }) {
   const [activeTab, setActiveTab] = useState('deliverables'); // 'deliverables' | 'inward' | 'team'
@@ -61,13 +62,14 @@ export default function ProjectDeliverablesTracker({ project, onUpdate, canManag
     others: project.teamDeployment?.counts?.others || 0,
   });
   const [crewMembers, setCrewMembers] = useState(project.teamDeployment?.crewMembers || []);
-  const [newCrewMember, setNewCrewMember] = useState({
-    name: '',
-    role: '',
-    contact: '',
-    isFreelancer: false,
-  });
-  const [showAddCrewModal, setShowAddCrewModal] = useState(false);
+  const [freelancerPage, setFreelancerPage] = useState(1);
+  const { currentData: freelancersData, isFetching: freelancersLoading, isError: freelancersError, refetch: refetchFreelancers } = useGetFreelancersQuery(
+    { page: freelancerPage, limit: 100, status: 'active' },
+    { skip: !canManage || activeTab !== 'team' },
+  );
+  const availableFreelancers = (freelancersData?.data || []).filter(
+    (freelancer) => !crewMembers.some((member) => member.isFreelancer && member.contact === freelancer.phone),
+  );
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -169,15 +171,17 @@ export default function ProjectDeliverablesTracker({ project, onUpdate, canManag
     }
   };
 
-  const handleAddCrewMember = (e) => {
-    e.preventDefault();
-    if (!newCrewMember.name.trim()) {
-      toast.error('Crew member name is required');
-      return;
-    }
-    setCrewMembers([...crewMembers, newCrewMember]);
-    setNewCrewMember({ name: '', role: '', contact: '', isFreelancer: false });
-    setShowAddCrewModal(false);
+  const handleAddCrewMember = (freelancerId) => {
+    const freelancer = availableFreelancers.find((item) => item._id === freelancerId);
+    if (!freelancer) return;
+    const profiles = (freelancer.ventureProfiles || []).filter((profile) => profile.active !== false);
+    const profile = profiles.find((item) => item.venture === project.brand) || profiles[0];
+    setCrewMembers((members) => [...members, {
+      name: freelancer.displayName || freelancer.fullName,
+      role: profile?.serviceCategories?.join(', ') || profile?.internalTitle || '',
+      contact: freelancer.phone,
+      isFreelancer: true,
+    }]);
   };
 
   const handleDeleteCrewMember = (index) => {
@@ -635,7 +639,7 @@ export default function ProjectDeliverablesTracker({ project, onUpdate, canManag
       {/* TAB 3: TEAM DEPLOYMENT */}
       {activeTab === 'team' && (
         <div className="p-5 space-y-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-zinc-900">On-Ground Crew Deployed</h3>
               <p className="text-xs text-zinc-500">
@@ -644,16 +648,36 @@ export default function ProjectDeliverablesTracker({ project, onUpdate, canManag
               </p>
             </div>
             {canManage && (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowAddCrewModal(true)}
-                  className="gap-1.5"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add Member
-                </Button>
-                <Button size="sm" onClick={handleSaveTeam} loading={isSaving} className="gap-1.5">
+              <div className="flex flex-wrap items-start gap-2">
+                <div className="w-full sm:w-64">
+                  <select
+                    aria-label="Add freelancer to crew"
+                    value=""
+                    onChange={(event) => handleAddCrewMember(event.target.value)}
+                    disabled={freelancersLoading || freelancersError || availableFreelancers.length === 0 || isSaving}
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-primary-900/20 disabled:opacity-50"
+                  >
+                    <option value="" disabled>
+                      {freelancersLoading ? 'Loading freelancers...' : freelancersError ? 'Unable to load freelancers' : availableFreelancers.length === 0 ? 'No available freelancers' : 'Select freelancer to add'}
+                    </option>
+                    {availableFreelancers.map((freelancer) => (
+                      <option key={freelancer._id} value={freelancer._id}>
+                        {freelancer.displayName || freelancer.fullName}{freelancer.freelancerCode ? ` · ${freelancer.freelancerCode}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {freelancersError && (
+                    <button type="button" onClick={refetchFreelancers} className="mt-1 text-xs text-primary-600 underline">Retry loading freelancers</button>
+                  )}
+                  {(freelancerPage > 1 || freelancersData?.pagination?.hasNextPage) && (
+                    <div className="mt-1 flex items-center justify-between text-xs text-zinc-500">
+                      <button type="button" disabled={freelancerPage === 1 || freelancersLoading} onClick={() => setFreelancerPage((page) => page - 1)} className="disabled:opacity-50">Previous</button>
+                      <span>Page {freelancerPage}</span>
+                      <button type="button" disabled={!freelancersData?.pagination?.hasNextPage || freelancersLoading} onClick={() => setFreelancerPage((page) => page + 1)} className="disabled:opacity-50">Next</button>
+                    </div>
+                  )}
+                </div>
+                <Button size="sm" onClick={handleSaveTeam} loading={isSaving} className="gap-1.5 shrink-0">
                   <Save className="w-3.5 h-3.5" /> Save Team
                 </Button>
               </div>
@@ -710,7 +734,7 @@ export default function ProjectDeliverablesTracker({ project, onUpdate, canManag
 
             {crewMembers.length === 0 ? (
               <div className="p-6 text-center text-xs text-zinc-400">
-                No specific crew member profiles linked. You can record names and roles here.
+                No crew members assigned yet.{canManage ? ' Select a freelancer above, then save the team.' : ''}
               </div>
             ) : (
               <div className="divide-y divide-zinc-100">
@@ -820,52 +844,6 @@ export default function ProjectDeliverablesTracker({ project, onUpdate, canManag
         </form>
       </Modal>
 
-      {/* Modal: Add Crew Member */}
-      <Modal
-        open={showAddCrewModal}
-        onClose={() => setShowAddCrewModal(false)}
-        title="Add Crew Member / Freelancer"
-      >
-        <form onSubmit={handleAddCrewMember} className="space-y-4">
-          <FormInput
-            label="Full Name"
-            required
-            placeholder="e.g. Mayur, Preet, Rahul"
-            value={newCrewMember.name}
-            onChange={(e) => setNewCrewMember({ ...newCrewMember, name: e.target.value })}
-          />
-          <FormInput
-            label="Role / Designation"
-            placeholder="e.g. Candid Photographer, Drone Pilot, Lead Cinematographer"
-            value={newCrewMember.role}
-            onChange={(e) => setNewCrewMember({ ...newCrewMember, role: e.target.value })}
-          />
-          <FormInput
-            label="Phone / Contact (Optional)"
-            placeholder="+91 9876543210"
-            value={newCrewMember.contact}
-            onChange={(e) => setNewCrewMember({ ...newCrewMember, contact: e.target.value })}
-          />
-          <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer pt-1">
-            <input
-              type="checkbox"
-              checked={newCrewMember.isFreelancer}
-              onChange={(e) =>
-                setNewCrewMember({ ...newCrewMember, isFreelancer: e.target.checked })
-              }
-              className="rounded text-primary-600 focus:ring-primary-500 w-4 h-4"
-            />
-            <span>External Freelancer / Contractor</span>
-          </label>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100">
-            <Button type="button" variant="outline" onClick={() => setShowAddCrewModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Add Member</Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

@@ -37,6 +37,25 @@ export const paymentApi = api.injectEndpoints({
         'PaymentStats',
         'Invoice',
         'InvoiceStats',
+        'Dashboard',
+        'Report',
+        { type: 'Payment', id: `invoice-${body.invoice}` },
+        { type: 'Invoice', id: body.invoice },
+      ],
+    }),
+
+    createSplitPayment: builder.mutation({
+      query: (body) => ({
+        url: '/payments/split',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (result, error, body) => [
+        'PaymentStats',
+        'Invoice',
+        'InvoiceStats',
+        'Dashboard',
+        'Report',
         { type: 'Payment', id: `invoice-${body.invoice}` },
         { type: 'Invoice', id: body.invoice },
       ],
@@ -54,6 +73,8 @@ export const paymentApi = api.injectEndpoints({
         'PaymentStats',
         'Invoice',
         'InvoiceStats',
+        'Dashboard',
+        'Report',
       ],
     }),
 
@@ -74,6 +95,8 @@ export const paymentApi = api.injectEndpoints({
         'PaymentStats',
         'Invoice',
         'InvoiceStats',
+        'Dashboard',
+        'Report',
         // full re-fetch since we don't have the invoice id at delete time
         { type: 'Invoice', id: 'LIST' },
       ],
@@ -87,6 +110,7 @@ export const {
   useGetPaymentStatsQuery,
   useGetInvoicePaymentsQuery,
   useCreatePaymentMutation,
+  useCreateSplitPaymentMutation,
   useUpdatePaymentMutation,
   useDeletePaymentMutation,
   useLazyGetPaymentReceiptQuery,

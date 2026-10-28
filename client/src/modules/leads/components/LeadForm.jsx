@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,6 +14,8 @@ import { LEAD_STATUS, LEAD_SOURCES, LEAD_BRANDS, BRAND_METAS } from '../../../co
 import { useCreateLeadMutation, useUpdateLeadMutation } from '../../../services/leadApi';
 import { useGetUsersQuery } from '../../../services/userApi';
 import { cn } from '../../../utils/cn';
+
+const LEAD_ASSIGNEE_EMAIL = 'palakgupta@rudhramenterprises.com';
 
 const leadFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(200),
@@ -31,7 +33,7 @@ const leadFormSchema = z.object({
   company: z.string().max(200).optional().or(z.literal('')),
   source: z.string().optional(),
   status: z.string().optional(),
-  assignedTo: z.string().optional(),
+  assignedTo: z.string().min(1, 'Please select Palak Gupta'),
   lostReason: z.string().max(500).optional().or(z.literal('')),
   notes: z.string().optional(),
 });
@@ -40,17 +42,15 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
   const navigate = useNavigate();
   const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
   const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
-  const { data: usersData } = useGetUsersQuery({ limit: 100 });
-
-  const allUsers = (usersData?.data?.users || []).filter((u) => u.role !== 'client');
-  const nameCounts = {};
-  allUsers.forEach((u) => {
-    nameCounts[u.name] = (nameCounts[u.name] || 0) + 1;
+  const { data: usersData, isLoading: usersLoading, isError: usersError } = useGetUsersQuery({
+    limit: 100,
+    search: LEAD_ASSIGNEE_EMAIL,
   });
-  const userOptions = allUsers.map((u) => ({
-    value: u._id,
-    label: nameCounts[u.name] > 1 ? `${u.name} <${u.email}>` : u.name,
-  }));
+
+  const userOptions = (usersData?.data?.users || [])
+    .filter((u) => u.role !== 'client' && u.isActive !== false && u.email?.toLowerCase() === LEAD_ASSIGNEE_EMAIL)
+    .map((u) => ({ value: u._id, label: u.name }));
+  const assigneeId = userOptions[0]?.value || '';
   const isEditing = !!lead;
 
   const formValues = useMemo(
@@ -64,7 +64,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
           company: lead.company || '',
           source: lead.source || 'other',
           status: lead.status || 'new',
-          assignedTo: lead.assignedTo?._id || lead.assignedTo || '',
+          assignedTo: '',
           lostReason: lead.lostReason || '',
           notes: '',
         }
@@ -88,11 +88,16 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(leadFormSchema),
     values: formValues,
   });
+
+  useEffect(() => {
+    setValue('assignedTo', assigneeId);
+  }, [assigneeId, lead, setValue]);
 
   const watchedStatus = watch('status');
 
@@ -104,6 +109,10 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
   };
 
   const onSubmit = async (data) => {
+    if (!assigneeId || data.assignedTo !== assigneeId) {
+      toast.error('Please select Palak Gupta as the assigned representative.');
+      return;
+    }
     try {
       if (data.status === 'lost' && (!lead || lead.status === 'new')) {
         toast.error('Lead must be contacted before it can be marked as lost.');
@@ -118,7 +127,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         company: data.company || undefined,
         source: data.source || 'other',
         status: data.status || 'new',
-        assignedTo: data.assignedTo || undefined,
+        assignedTo: data.assignedTo,
         lostReason: data.lostReason || undefined,
       };
 
@@ -242,12 +251,9 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
           name="assignedTo"
           control={control}
           label="Assigned Representative"
-          placeholder="Myself (Default)"
-          options={[
-            { value: '', label: 'Myself (Default)' },
-            ...userOptions,
-          ]}
-          error={errors.assignedTo?.message}
+          placeholder={usersLoading ? 'Loading representative...' : 'Select Palak Gupta'}
+          options={userOptions}
+          error={usersError ? 'Unable to load Palak Gupta. Please try again.' : !usersLoading && !assigneeId ? 'Palak Gupta’s active account was not found.' : errors.assignedTo?.message}
         />
       </div>
 
@@ -285,6 +291,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         <Button
           type="submit"
           loading={isCreating || isUpdating}
+          disabled={usersLoading || usersError || !assigneeId}
           className="w-full sm:w-auto rounded-xl text-xs font-semibold px-6 py-2.5 sm:py-2 shadow-md shadow-primary-900/10 cursor-pointer"
         >
           {isEditing ? 'Update Lead' : 'Create Lead Opportunity'}

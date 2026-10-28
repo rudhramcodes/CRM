@@ -56,10 +56,10 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
   const clientOptions = useMemo(() => {
     const fromQuery = clients.map((c) => ({
       value: c._id,
-      label: c.companyName,
+      label: c.clientId || c._id,
     }));
     if (newClient && !fromQuery.some((o) => o.value === newClient._id)) {
-      return [{ value: newClient._id, label: newClient.companyName }, ...fromQuery];
+      return [{ value: newClient._id, label: newClient.clientId || newClient._id }, ...fromQuery];
     }
     return fromQuery;
   }, [clients, newClient]);

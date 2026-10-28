@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import ApiError from '../../utils/ApiError.js';
 import * as paymentRepository from './payment.repository.js';
+import { roundMoney, splitTotal } from './payment.split.js';
 import Invoice from '../invoices/invoice.model.js';
 import { INVOICE_STATUS } from '../../constants/index.js';
 import { sendEmail, renderPaymentEmail } from '../../services/emailService.js';
@@ -45,7 +47,8 @@ const recalculateInvoicePayment = async (invoiceId) => {
   return invoice;
 };
 
-const nextReceiptNumber = () => `RCT-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
+const nextReceiptNumber = () =>
+  `RCT-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}${randomUUID().slice(0, 8).toUpperCase()}`;
 
 const sendPaymentConfirmation = async (payment, invoice, outstanding) => {
   const clientEmail = invoice.client?.email;
@@ -65,6 +68,35 @@ const sendPaymentConfirmation = async (payment, invoice, outstanding) => {
     logger.info(`Payment confirmation email sent for ${invoice.invoiceNumber}`);
   } catch (err) {
     logger.error(`Payment confirmation email failed: ${err.message}`, { invoice: invoice.invoiceNumber });
+  }
+};
+
+const notifyCompletedPayment = (payment, invoice) => {
+  const outstanding = Math.max(0, invoice.balanceDue);
+  sendPaymentConfirmation(payment, invoice, outstanding).catch((err) =>
+    logger.error(`Payment email send failed: ${err.message}`),
+  );
+
+  const notif = notificationService.buildNotification('payment_received', {
+    amount: payment.amount, invoiceNumber: invoice.invoiceNumber,
+  });
+  if (invoice.createdBy) {
+    notificationService.createAndSend({
+      recipient: invoice.createdBy, referenceId: invoice._id, referenceModel: 'Invoice',
+      link: `/invoices/${invoice._id}`,
+      ...notif,
+    }).catch(() => {});
+  }
+
+  if (invoice.status === 'paid' && invoice.createdBy) {
+    const paidNotif = notificationService.buildNotification('invoice_paid', {
+      invoiceNumber: invoice.invoiceNumber,
+    });
+    notificationService.createAndSend({
+      recipient: invoice.createdBy, referenceId: invoice._id, referenceModel: 'Invoice',
+      link: `/invoices/${invoice._id}`,
+      ...paidNotif,
+    }).catch(() => {});
   }
 };
 
@@ -103,37 +135,61 @@ export const createPayment = async (data, user) => {
   const updatedInvoice = await recalculateInvoicePayment(data.invoice);
 
   if (payment.status === 'completed') {
-    const outstanding = Math.max(0, updatedInvoice.balanceDue);
-    sendPaymentConfirmation(payment, updatedInvoice, outstanding).catch((err) =>
-      logger.error(`Payment email send failed: ${err.message}`),
-    );
-
-    // 🔔 Notify invoice creator that payment was received
-    const notif = notificationService.buildNotification('payment_received', {
-      amount: payment.amount, invoiceNumber: updatedInvoice.invoiceNumber,
-    });
-    if (updatedInvoice.createdBy) {
-      notificationService.createAndSend({
-        recipient: updatedInvoice.createdBy, referenceId: updatedInvoice._id, referenceModel: 'Invoice',
-        link: `/invoices/${updatedInvoice._id}`,
-        ...notif,
-      }).catch(() => {});
-    }
-
-    // 🔔 If invoice is fully paid, send invoice_paid notification
-    if (updatedInvoice.status === 'paid' && updatedInvoice.createdBy) {
-      const paidNotif = notificationService.buildNotification('invoice_paid', {
-        invoiceNumber: updatedInvoice.invoiceNumber,
-      });
-      notificationService.createAndSend({
-        recipient: updatedInvoice.createdBy, referenceId: updatedInvoice._id, referenceModel: 'Invoice',
-        link: `/invoices/${updatedInvoice._id}`,
-        ...paidNotif,
-      }).catch(() => {});
-    }
+    notifyCompletedPayment(payment, updatedInvoice);
   }
 
   return paymentRepository.findById(payment._id);
+};
+
+export const createSplitPayments = async (data, user) => {
+  const invoice = await Invoice.findById(data.invoice);
+  if (!invoice) throw ApiError.notFound('Invoice not found');
+
+  if (invoice.status === INVOICE_STATUS.CANCELLED) {
+    throw ApiError.badRequest('Cannot add payment to a cancelled invoice');
+  }
+
+  if (invoice.status === INVOICE_STATUS.PAID) {
+    throw ApiError.badRequest('Invoice is already fully paid');
+  }
+
+  const totalAmount = splitTotal(data.payments);
+  const balanceDue = roundMoney(invoice.balanceDue);
+  if (totalAmount > balanceDue) {
+    throw ApiError.badRequest(
+      `Payment amount (${totalAmount}) exceeds balance due (${balanceDue})`,
+    );
+  }
+
+  const paymentDate = data.paymentDate ? new Date(data.paymentDate) : new Date();
+  const status = data.status || 'completed';
+  const paymentType =
+    data.paymentType ||
+    (totalAmount >= balanceDue ? 'final' : invoice.paidAmount > 0 ? 'partial' : 'advance');
+
+  const created = await paymentRepository.createMany(
+    data.payments.map((part) => ({
+      invoice: data.invoice,
+      client: invoice.client,
+      amount: roundMoney(part.amount),
+      paymentType,
+      receiptNumber: nextReceiptNumber(),
+      paymentMethod: part.paymentMethod,
+      referenceNo: part.referenceNo || '',
+      notes: part.notes || '',
+      paymentDate,
+      status,
+      createdBy: user._id,
+    })),
+  );
+
+  const updatedInvoice = await recalculateInvoicePayment(data.invoice);
+
+  if (status === 'completed') {
+    notifyCompletedPayment({ amount: totalAmount, paymentDate }, updatedInvoice);
+  }
+
+  return { payments: created, invoice: updatedInvoice };
 };
 
 export const getPayments = async (query) => {

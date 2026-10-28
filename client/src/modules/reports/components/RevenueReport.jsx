@@ -31,10 +31,10 @@ export default function RevenueReport({ data }) {
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <ReportSummaryCard label="Total Revenue" value={fmt(summary?.totalRevenue)} color="text-green-600" icon={IndianRupee} subtitle={`${summary?.collectionRate || 0}% collection rate`} />
+        <ReportSummaryCard label="Revenue (excl. cash)" value={fmt(summary?.totalRevenue)} color="text-green-600" icon={IndianRupee} subtitle={`${summary?.collectionRate || 0}% collection rate`} />
         <ReportSummaryCard label="Outstanding" value={fmt(summary?.totalOutstanding)} color="text-orange-600" icon={Wallet} subtitle="Pending payments" />
         <ReportSummaryCard label="Total Invoiced" value={fmt(summary?.totalInvoiced)} color="text-blue-600" icon={TrendingUp} subtitle="Gross invoice value" />
-        <ReportSummaryCard label="Collection Rate" value={`${summary?.collectionRate || 0}%`} color="text-indigo-600" icon={PiggyBank} subtitle="Paid / Total invoiced" />
+        <ReportSummaryCard label="Collection Rate" value={`${summary?.collectionRate || 0}%`} color="text-indigo-600" icon={PiggyBank} subtitle="Non-cash collected / Total invoiced" />
       </div>
 
       {/* Charts Row */}
@@ -42,7 +42,7 @@ export default function RevenueReport({ data }) {
         {/* Monthly Revenue Bar Chart */}
         <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-semibold text-zinc-700">Monthly Revenue</h4>
+            <h4 className="text-sm font-semibold text-zinc-700">Monthly Revenue (excl. cash)</h4>
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--chart-1)' }} />
@@ -90,7 +90,7 @@ export default function RevenueReport({ data }) {
 
         {/* Payment Method Pie Chart */}
         <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-sm">
-          <h4 className="text-sm font-semibold text-zinc-700 mb-4">By Payment Method</h4>
+          <h4 className="text-sm font-semibold text-zinc-700 mb-4">Payment Methods (excl. cash)</h4>
           {byMethod.length > 0 ? (
             <div className="flex flex-col items-center">
               <ChartContainer config={{}} className="w-full h-[250px]">

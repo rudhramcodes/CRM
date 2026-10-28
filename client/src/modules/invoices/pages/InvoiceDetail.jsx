@@ -19,7 +19,7 @@ import {
 } from '../../../services/invoiceApi';
 import { useGetClientsQuery } from '../../../services/clientApi';
 import { API_BASE_URL } from '../../../constants';
-import { useGetInvoicePaymentsQuery, useCreatePaymentMutation } from '../../../services/paymentApi';
+import { useGetInvoicePaymentsQuery, useCreatePaymentMutation, useCreateSplitPaymentMutation } from '../../../services/paymentApi';
 import PaymentForm from '../../payments/components/PaymentForm';
 import PaymentStatusBadge from '../../payments/components/PaymentStatusBadge';
 import { PAYMENT_METHODS } from '../../../constants';
@@ -48,6 +48,7 @@ export default function InvoiceDetail() {
 
   const { data: paymentsData, refetch: refetchPayments } = useGetInvoicePaymentsQuery(id, { skip: !id });
   const [createPayment, { isLoading: isCreatingPayment }] = useCreatePaymentMutation();
+  const [createSplitPayment] = useCreateSplitPaymentMutation();
   const invoicePayments = paymentsData?.data?.payments || [];
 
   const [resendEmail, { isLoading: isResending }] = useResendInvoiceEmailMutation();
@@ -130,8 +131,13 @@ export default function InvoiceDetail() {
 
   const handleRecordPayment = async (formData) => {
     try {
-      await createPayment(formData).unwrap();
-      toast.success('Payment recorded successfully');
+      if (formData.payments) {
+        await createSplitPayment(formData).unwrap();
+        toast.success('Split payment recorded successfully');
+      } else {
+        await createPayment(formData).unwrap();
+        toast.success('Payment recorded successfully');
+      }
       setShowPaymentForm(false);
       refetch();
       refetchPayments();

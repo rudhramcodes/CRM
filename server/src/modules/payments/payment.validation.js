@@ -21,6 +21,40 @@ export const createPaymentSchema = z.object({
   status: z.enum(PAYMENT_STATUS_LIST).optional(),
 });
 
+const splitPartSchema = z.object({
+  amount: z.coerce
+    .number({ required_error: 'Amount is required' })
+    .positive('Amount must be greater than 0'),
+  paymentMethod: z.enum(PAYMENT_METHODS_LIST, { required_error: 'Payment method is required' }),
+  referenceNo: z.string().max(100).optional().or(z.literal('')),
+  notes: z.string().max(500).optional().or(z.literal('')),
+});
+
+export const createSplitPaymentSchema = z
+  .object({
+    invoice: z.string({ required_error: 'Invoice is required' }),
+    payments: z
+      .array(splitPartSchema)
+      .min(2, 'At least two payment parts are required')
+      .max(4, 'A split payment can have at most four parts'),
+    paymentType: z.enum(PAYMENT_TYPES_LIST).optional(),
+    paymentDate: z
+      .string()
+      .refine((val) => !isNaN(Date.parse(val)), 'Invalid payment date')
+      .optional(),
+    status: z.enum(PAYMENT_STATUS_LIST).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const methods = data.payments.map((part) => part.paymentMethod);
+    if (new Set(methods).size !== methods.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['payments'],
+        message: 'Each split part must use a different payment method',
+      });
+    }
+  });
+
 export const updatePaymentSchema = z.object({
   amount: z.coerce.number().positive('Amount must be greater than 0').optional(),
   paymentMethod: z.enum(PAYMENT_METHODS_LIST).optional(),

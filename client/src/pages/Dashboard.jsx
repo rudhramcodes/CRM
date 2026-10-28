@@ -202,7 +202,7 @@ export default function Dashboard() {
           onClick={() => navigate('/clients')}
         />
         <StatCard
-          label="Revenue"
+          label="Revenue (excl. cash)"
           value={kpis.totalRevenue}
           icon={IndianRupee}
           prefix="₹"
@@ -294,7 +294,7 @@ export default function Dashboard() {
         {/* Revenue Trend — 2 cols */}
         <ChartCard
           title="Revenue Trend"
-          subtitle="Monthly cash collection vs outstanding balances"
+          subtitle="Monthly collection excluding cash vs outstanding balances"
           className="lg:col-span-2"
           action={
             <div className="flex items-center gap-3 text-xs">
@@ -336,7 +336,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-center h-[280px] text-zinc-400 text-sm">No revenue data available</div>
           )}
           <div className="flex items-center justify-between pt-3 border-t border-zinc-100 text-xs text-zinc-500 font-mono mt-2">
-            <span>Total Collected: <strong className="text-zinc-900">{fmt(kpis.totalRevenue)}</strong></span>
+            <span>Collected (excl. cash): <strong className="text-zinc-900">{fmt(kpis.totalRevenue)}</strong></span>
             <span>Total Outstanding: <strong className="text-zinc-900">{fmt(revenue.summary?.totalOutstanding)}</strong></span>
           </div>
         </ChartCard>

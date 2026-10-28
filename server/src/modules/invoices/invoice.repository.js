@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Invoice from './invoice.model.js';
+import { invoiceCollectionStages } from '../payments/payment.collections.js';
 import paginate, { getPaginationMeta, escapeRegex } from '../../utils/pagination.js';
 
 const Client = mongoose.model('Client');
@@ -113,11 +114,12 @@ export const getRevenueByBrand = async () => {
       },
     },
     { $unwind: { path: '$clientDoc', preserveNullAndEmptyArrays: true } },
+    ...invoiceCollectionStages(),
     {
       $group: {
         _id: '$clientDoc.brand',
         totalRevenue: { $sum: '$total' },
-        totalPaid: { $sum: '$paidAmount' },
+        totalPaid: { $sum: '$nonCashCollected' },
         totalPending: { $sum: '$balanceDue' },
         count: { $sum: 1 },
       },
@@ -133,11 +135,12 @@ export const countAll = async (filter = {}) => {
 export const getRevenueStats = async () => {
   const result = await Invoice.aggregate([
     { $match: { status: { $in: ['paid', 'sent', 'overdue', 'partially_paid'] } } },
+    ...invoiceCollectionStages(),
     {
       $group: {
         _id: null,
         totalRevenue: { $sum: '$total' },
-        totalPaid: { $sum: '$paidAmount' },
+        totalPaid: { $sum: '$nonCashCollected' },
         totalPending: { $sum: '$balanceDue' },
         count: { $sum: 1 },
       },

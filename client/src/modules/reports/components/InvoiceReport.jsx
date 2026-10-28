@@ -154,7 +154,7 @@ export default function InvoiceReport({ data }) {
                   <th className="text-left py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Month</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Issued</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Total Value</th>
-                  <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Collected</th>
+                  <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Collected (excl. cash)</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Collection %</th>
                 </tr>
               </thead>

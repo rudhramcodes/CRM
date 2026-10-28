@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Lead from '../leads/lead.model.js';
 import Client from '../clients/client.model.js';
 import Invoice from '../invoices/invoice.model.js';
+import { completedNonCashPayments, invoiceCollectionStages } from '../payments/payment.collections.js';
 import Payment from '../payments/payment.model.js';
 import Task from '../tasks/task.model.js';
 import Meeting from '../meetings/meeting.model.js';
@@ -51,7 +52,8 @@ export async function getOverview() {
     Project.countDocuments({ status: 'active' }),
     Invoice.aggregate([
       { $match: { status: { $ne: 'draft' }, issueDate: dateFilter } },
-      { $group: { _id: null, totalRevenue: { $sum: '$paidAmount' }, totalOutstanding: { $sum: '$balanceDue' }, totalInvoiced: { $sum: '$total' } } },
+      ...invoiceCollectionStages(),
+      { $group: { _id: null, totalRevenue: { $sum: '$nonCashCollected' }, totalOutstanding: { $sum: '$balanceDue' }, totalInvoiced: { $sum: '$total' } } },
     ]),
     Payment.countDocuments({ status: 'pending' }),
     Invoice.countDocuments({ status: 'overdue' }),
@@ -66,12 +68,13 @@ export async function getOverview() {
   const [monthlyRevenue, byMethod, byStatus, bySource, byBrand, clientMonthly, invoiceAging, taskByStatus, taskTotal, taskDone] = await Promise.all([
     Invoice.aggregate([
       { $match: { status: { $ne: 'draft' }, issueDate: dateFilter } },
-      { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } }, invoiced: { $sum: '$total' }, collected: { $sum: '$paidAmount' }, outstanding: { $sum: '$balanceDue' }, count: { $sum: 1 } } },
+      ...invoiceCollectionStages(),
+      { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } }, invoiced: { $sum: '$total' }, collected: { $sum: '$nonCashCollected' }, outstanding: { $sum: '$balanceDue' }, count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
       { $project: { _id: 0, month: '$_id', invoiced: { $round: ['$invoiced', 2] }, collected: { $round: ['$collected', 2] }, outstanding: { $round: ['$outstanding', 2] }, count: 1 } },
     ]),
     Payment.aggregate([
-      { $match: { status: 'completed', createdAt: dateFilter } },
+      { $match: { ...completedNonCashPayments, paymentDate: dateFilter } },
       { $group: { _id: '$paymentMethod', amount: { $sum: '$amount' }, count: { $sum: 1 } } },
       { $sort: { amount: -1 } },
       { $project: { _id: 0, method: '$_id', amount: { $round: ['$amount', 2] }, count: 1 } },
@@ -298,7 +301,8 @@ export async function getVentureDashboard(brand) {
     brandClientIds.length > 0
       ? Invoice.aggregate([
           { $match: { client: { $in: brandClientIds }, status: { $ne: 'draft' }, issueDate: dateFilter } },
-          { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } }, invoiced: { $sum: '$total' }, collected: { $sum: '$paidAmount' }, outstanding: { $sum: '$balanceDue' }, count: { $sum: 1 } } },
+          ...invoiceCollectionStages(),
+          { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } }, invoiced: { $sum: '$total' }, collected: { $sum: '$nonCashCollected' }, outstanding: { $sum: '$balanceDue' }, count: { $sum: 1 } } },
           { $sort: { _id: 1 } },
           { $project: { _id: 0, month: '$_id', invoiced: { $round: ['$invoiced', 2] }, collected: { $round: ['$collected', 2] }, outstanding: { $round: ['$outstanding', 2] }, count: 1 } },
         ])
@@ -359,7 +363,8 @@ export async function getVentureDashboard(brand) {
   if (brandClientIds.length > 0) {
     const revAgg = await Invoice.aggregate([
       { $match: { client: { $in: brandClientIds }, status: { $ne: 'draft' } } },
-      { $group: { _id: null, totalRevenue: { $sum: '$paidAmount' }, totalOutstanding: { $sum: '$balanceDue' } } },
+      ...invoiceCollectionStages(),
+      { $group: { _id: null, totalRevenue: { $sum: '$nonCashCollected' }, totalOutstanding: { $sum: '$balanceDue' } } },
     ]);
     totalRevenue = revAgg[0]?.totalRevenue || 0;
     totalOutstanding = revAgg[0]?.totalOutstanding || 0;

@@ -185,7 +185,7 @@ export default function PaymentDetail() {
                     <span className="text-zinc-500">
                       Other Payment
                       <span className="text-zinc-400 ml-1 font-normal">
-                        · {fmtDate(p.paymentDate)}
+                        · {methodMap[p.paymentMethod] || p.paymentMethod} · {fmtDate(p.paymentDate)}
                       </span>
                     </span>
                     <span className={`font-medium ${p.status === 'refunded' ? 'text-red-600' : 'text-zinc-700'}`}>{fmtAmt(p.amount, p.status)}</span>

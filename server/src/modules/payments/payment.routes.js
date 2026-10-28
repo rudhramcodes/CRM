@@ -5,6 +5,7 @@ import { verifyToken, authorize } from '../../middleware/auth.js';
 import { ROLES } from '../../constants/index.js';
 import {
   createPaymentSchema,
+  createSplitPaymentSchema,
   updatePaymentSchema,
   paymentsQuerySchema,
 } from './payment.validation.js';
@@ -42,6 +43,13 @@ router.get(
   '/invoice/:invoiceId',
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   paymentController.invoicePayments,
+);
+
+router.post(
+  '/split',
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  validate(createSplitPaymentSchema),
+  paymentController.createSplit,
 );
 
 router.post(

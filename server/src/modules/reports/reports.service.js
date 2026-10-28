@@ -1,6 +1,7 @@
 import Lead from '../leads/lead.model.js';
 import Client from '../clients/client.model.js';
 import Invoice from '../invoices/invoice.model.js';
+import { completedNonCashPayments, invoiceCollectionStages } from '../payments/payment.collections.js';
 import Payment from '../payments/payment.model.js';
 import Task from '../tasks/task.model.js';
 
@@ -23,11 +24,12 @@ export const getRevenueReport = async (from, to) => {
   // Monthly revenue breakdown
   const monthlyRevenue = await Invoice.aggregate([
     { $match: { ...matchStage, status: { $ne: 'draft' } } },
+    ...invoiceCollectionStages(),
     {
       $group: {
         _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } },
         invoiced: { $sum: '$total' },
-        collected: { $sum: '$paidAmount' },
+        collected: { $sum: '$nonCashCollected' },
         outstanding: { $sum: '$balanceDue' },
         count: { $sum: 1 },
       },
@@ -47,7 +49,7 @@ export const getRevenueReport = async (from, to) => {
 
   // Revenue by payment method
   const byMethod = await Payment.aggregate([
-    { $match: { ...matchStage, status: 'completed' } },
+    { $match: { ...completedNonCashPayments, ...(dateFilter ? { paymentDate: dateFilter } : {}) } },
     {
       $group: {
         _id: '$paymentMethod',
@@ -62,10 +64,11 @@ export const getRevenueReport = async (from, to) => {
   // Summary (with date filter applied)
   const summary = await Invoice.aggregate([
     { $match: { ...matchStage, status: { $in: ['paid', 'sent', 'overdue', 'partially_paid'] } } },
+    ...invoiceCollectionStages(),
     {
       $group: {
         _id: null,
-        totalRevenue: { $sum: '$paidAmount' },
+        totalRevenue: { $sum: '$nonCashCollected' },
         totalOutstanding: { $sum: '$balanceDue' },
         totalInvoiced: { $sum: '$total' },
       },
@@ -219,11 +222,12 @@ export const getInvoiceReport = async (from, to) => {
   // Monthly invoice trends
   const monthly = await Invoice.aggregate([
     { $match: matchStage },
+    ...invoiceCollectionStages(),
     {
       $group: {
         _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } },
         total: { $sum: '$total' },
-        paid: { $sum: '$paidAmount' },
+        paid: { $sum: '$nonCashCollected' },
         count: { $sum: 1 },
       },
     },

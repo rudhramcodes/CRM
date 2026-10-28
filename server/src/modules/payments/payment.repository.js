@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Payment from './payment.model.js';
+import { completedNonCashPayments } from './payment.collections.js';
 import paginate, { getPaginationMeta, escapeRegex } from '../../utils/pagination.js';
 
 const Invoice = mongoose.model('Invoice');
@@ -7,6 +8,10 @@ const Client = mongoose.model('Client');
 
 export const create = async (data) => {
   return Payment.create(data);
+};
+
+export const createMany = async (data) => {
+  return Payment.insertMany(data);
 };
 
 export const findById = async (id) => {
@@ -114,13 +119,9 @@ export const getLatestPayment = async (invoiceId) => {
 };
 
 export const getStats = async () => {
-  const [totalCollected, pendingPaymentsSum, byMethod, outstandingResult, byBrand] = await Promise.all([
+  const [totalCollected, byMethod, outstandingResult, byBrand] = await Promise.all([
     Payment.aggregate([
-      { $match: { status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]),
-    Payment.aggregate([
-      { $match: { status: 'pending' } },
+      { $match: completedNonCashPayments },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
     Payment.aggregate([
@@ -134,7 +135,7 @@ export const getStats = async () => {
       { $group: { _id: null, total: { $sum: '$balanceDue' } } },
     ]),
     Payment.aggregate([
-      { $match: { status: 'completed' } },
+      { $match: completedNonCashPayments },
       {
         $lookup: {
           from: 'clients',

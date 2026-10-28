@@ -214,7 +214,7 @@ export default function VentureDashboard() {
           onClick={() => navigate('/clients')}
         />
         <StatCard
-          label="Revenue"
+          label="Revenue (excl. cash)"
           value={kpis.totalRevenue}
           prefix="₹"
           icon={IndianRupee}
@@ -249,7 +249,7 @@ export default function VentureDashboard() {
       {/* Charts Row 1: Revenue + Pipeline */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
-          title="Revenue Trend"
+          title="Revenue Trend (excl. cash)"
           subtitle={`Historical collection for ${meta.label}`}
         >
           {revenue.monthly?.some((m) => m.collected > 0 || m.invoiced > 0) ? (
