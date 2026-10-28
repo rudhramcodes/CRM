@@ -27,8 +27,10 @@ export default function Header({ onMobileMenuOpen }) {
   // Compute readable route title
   const routeTitle = location.pathname.startsWith('/invoices')
     ? (location.pathname === '/invoices' ? 'Invoices' : 'Invoice Detail')
-    : location.pathname.startsWith('/payments')
-      ? (location.pathname === '/payments' ? 'Payments' : 'Payment Detail')
+    : location.pathname.startsWith('/quotations')
+      ? (location.pathname === '/quotations' ? 'Quotations' : location.pathname === '/quotations/new' ? 'New Quotation' : 'Quotation Detail')
+      : location.pathname.startsWith('/payments')
+        ? (location.pathname === '/payments' ? 'Payments' : 'Payment Detail')
       : location.pathname === '/dashboard'
         ? 'Dashboard'
         : location.pathname.startsWith('/leads')

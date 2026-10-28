@@ -11,6 +11,7 @@ import {
   Calendar,
   FolderKanban,
   Receipt,
+  FileSignature,
   CreditCard,
   BarChart3,
   ClipboardCheck,
@@ -38,6 +39,7 @@ const ALL_COMMANDS = [
   { id: 'freelancers', title: 'Freelancers Directory', category: 'Operations', path: '/freelancers', icon: BriefcaseBusiness, roles: ['super_admin', 'admin', 'manager'] },
   // Navigation - Financials
   { id: 'invoices', title: 'Invoices & Billing', category: 'Financials', path: '/invoices', icon: Receipt, roles: ['super_admin', 'admin'] },
+  { id: 'quotations', title: 'Quotations & Proposals', category: 'Financials', path: '/quotations', icon: FileSignature, roles: ['super_admin', 'admin'] },
   { id: 'payments', title: 'Payments & Receipts', category: 'Financials', path: '/payments', icon: CreditCard, roles: ['super_admin', 'admin'] },
   { id: 'reports', title: 'Reports & Analytics', category: 'Financials', path: '/reports', icon: BarChart3, roles: ['super_admin', 'admin'] },
   { id: 'payroll', title: 'Payroll', category: 'Financials', path: '/payroll', icon: Wallet, roles: ['super_admin', 'admin', 'manager', 'employee'], payrollOnly: true },
@@ -50,6 +52,7 @@ const ALL_COMMANDS = [
   { id: 'action-lead', title: 'Create New Lead', category: 'Quick Actions', path: '/leads/new', icon: PlusCircle, roles: ['super_admin', 'admin', 'manager', 'employee'], badge: 'Action' },
   { id: 'action-client', title: 'Add New Client', category: 'Quick Actions', path: '/clients/new', icon: PlusCircle, roles: ['super_admin', 'admin', 'manager'], badge: 'Action' },
   { id: 'action-invoice', title: 'Generate New Invoice', category: 'Quick Actions', path: '/invoices/new', icon: PlusCircle, roles: ['super_admin', 'admin'], badge: 'Action' },
+  { id: 'action-quotation', title: 'Create New Quotation', category: 'Quick Actions', path: '/quotations/new', icon: PlusCircle, roles: ['super_admin', 'admin'], badge: 'Action' },
   { id: 'action-freelancer', title: 'Add New Freelancer', category: 'Quick Actions', path: '/freelancers/new', icon: PlusCircle, roles: ['super_admin', 'admin', 'manager'], badge: 'Action' },
 ];
 

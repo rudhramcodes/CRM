@@ -45,6 +45,8 @@ export const api = createApi({
     'Task',
     'Invoice',
     'InvoiceStats',
+    'Quotation',
+    'QuotationStats',
     'Payment',
     'PaymentStats',
     'Dashboard',

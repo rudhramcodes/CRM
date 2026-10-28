@@ -255,6 +255,19 @@ export const renderInvoiceEmail = ({ clientName, invoiceNumber, total, dueDate }
     footerNote: 'Rudhram &middot; Thank you for your business.',
   });
 
+export const renderQuotationEmail = ({ clientName, quotationNumber, total, validUntil }) =>
+  renderEmail({
+    preheader: `Quotation ${quotationNumber} for ${fmtINR(total)} from Rudhram Enterprises.`,
+    heading: `Quotation ${quotationNumber}`,
+    subtext: `Dear ${clientName},`,
+    bodyHtml: `
+      <p style="margin:0;font-family:${FONT};font-size:15px;color:${BODY};line-height:1.7;">Please find attached our quotation <strong style="color:${INK};">${quotationNumber}</strong> for <strong style="color:${INK};">${fmtINR(total)}</strong>.</p>
+      ${validUntil ? `<p style="margin:16px 0 0;font-family:${FONT};font-size:15px;color:${BODY};line-height:1.7;">This quotation is valid until <strong style="color:${INK};">${new Date(validUntil).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>.</p>` : ''}
+      <p style="margin:16px 0 0;font-family:${FONT};font-size:15px;color:${BODY};line-height:1.7;">The PDF copy is attached for your review. If you have any questions or would like to discuss the scope, feel free to reach out.</p>
+    `,
+    footerNote: 'Rudhram &middot; Thank you for considering our proposal.',
+  });
+
 export const renderPaymentEmail = ({ clientName, invoiceNumber, amount, date, outstanding }) =>
   renderEmail({
     preheader: `Payment of ${fmtINR(amount)} received for invoice ${invoiceNumber}.`,

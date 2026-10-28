@@ -15,7 +15,7 @@ const SECTIONS = [
   { id: 'overview', label: 'Overview', paths: ['/dashboard'] },
   { id: 'crm', label: 'CRM & Pipeline', paths: ['/leads', '/clients', '/meetings'] },
   { id: 'operations', label: 'Operations', paths: ['/projects', '/tasks', '/attendance', '/freelancers'] },
-  { id: 'financials', label: 'Financials', paths: ['/invoices', '/payments', '/reports', '/payroll', '/my-payslips'] },
+  { id: 'financials', label: 'Financials', paths: ['/invoices', '/quotations', '/payments', '/reports', '/payroll', '/my-payslips'] },
   { id: 'system', label: 'Administration', paths: ['/notifications', '/users', '/settings'] },
 ];
 

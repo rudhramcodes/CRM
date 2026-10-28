@@ -8,6 +8,7 @@ const API_BASE = API_BASE_URL;
 export function CloudinaryImageUpload({
   value,
   onChange,
+  onUploadingChange,
   label = 'Profile Photo',
   helperText = 'Upload a professional photo (max 5MB)',
   className,
@@ -25,6 +26,7 @@ export function CloudinaryImageUpload({
   }, [value]);
 
   const uploadToServer = useCallback(async (file) => {
+    if (uploading) return;
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file');
       return;
@@ -36,6 +38,7 @@ export function CloudinaryImageUpload({
     }
 
     setUploading(true);
+    onUploadingChange?.(true);
     setError('');
     setProgress(0);
 
@@ -57,11 +60,15 @@ export function CloudinaryImageUpload({
       const response = await new Promise((resolve, reject) => {
         xhr.open('POST', `${API_BASE}/freelancers/upload/upload`);
         xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.responseText));
-          } else {
-            const err = JSON.parse(xhr.responseText);
-            reject(new Error(err.message || 'Upload failed'));
+          try {
+            const result = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300 && result.data?.url) {
+              resolve(result);
+            } else {
+              reject(new Error(result.message || 'Upload failed'));
+            }
+          } catch {
+            reject(new Error('Upload failed. Please try again.'));
           }
         };
         xhr.onerror = () => reject(new Error('Network error'));
@@ -75,13 +82,14 @@ export function CloudinaryImageUpload({
       setProgress(100);
     } catch (err) {
       URL.revokeObjectURL(localPreview);
-      setPreview('');
+      setPreview(value || '');
       setError(err.message || 'Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
+      onUploadingChange?.(false);
       setTimeout(() => setProgress(0), 1000);
     }
-  }, [onChange]);
+  }, [onChange, onUploadingChange, uploading, value]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -136,7 +144,7 @@ export function CloudinaryImageUpload({
           type="file"
           accept="image/*"
           onChange={handleFileSelect}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute inset-0 z-10 w-full h-full opacity-0 cursor-pointer"
           disabled={uploading}
           aria-label="Upload profile photo"
         />
@@ -166,7 +174,7 @@ export function CloudinaryImageUpload({
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); removeImage(); }}
-                className="absolute top-2 right-2 p-1.5 bg-red-500/90 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                className="absolute top-2 right-2 z-20 p-1.5 bg-red-500/90 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
                 aria-label="Remove image"
               >
                 <X className="h-4 w-4" />
@@ -192,12 +200,8 @@ export function CloudinaryImageUpload({
           </div>
         )}
 
-        {error && (
-          <div className="absolute bottom-full left-0 right-0 mb-2 px-3 py-1.5 bg-red-500 text-white text-xs rounded-lg text-center">
-            {error}
-          </div>
-        )}
       </div>
+      {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
 
       {helperText && !error && (
         <p className="text-xs text-zinc-500">{helperText}</p>

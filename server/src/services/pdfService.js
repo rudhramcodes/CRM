@@ -703,6 +703,565 @@ export const generateInvoicePdf = async (invoice) => {
 };
 
 /* ============================================================
+   QUOTATION TEMPLATE (3 pages: letter / scope / summary)
+   ============================================================ */
+const QUOTATION_CONTACT = {
+  addressLine1: 'Floor No 7th, Building S-11, Unit 1171,1172',
+  addressLine2: 'Solitaire Corporate Park, Andheri Ghalkopar',
+  addressLine3: 'Link Road Mumbai, Maharashtra, 400093.',
+  phone: '+91 7285833101',
+  email: 'hello@rudhramenterprises.com',
+  website: 'www.rudhramenterprises.com',
+};
+
+const quotationIcon = (name) => {
+  const icons = {
+    location: '<path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/>',
+    phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 2.1 2.4z"/>',
+    mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+    globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
+  };
+  return `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#B3712D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icons[name] || ''}</svg>`;
+};
+
+const quotationAddressLines = (client) => {
+  const address = client?.address || {};
+  if (typeof address === 'string') return [address].filter(Boolean);
+  const cityLine = [address.city, address.state].filter(Boolean).join(', ');
+  return [
+    address.street,
+    cityLine,
+    [address.pincode ? `- ${address.pincode}` : '', address.country || ''].filter(Boolean).join(' '),
+  ].filter(Boolean);
+};
+
+const quotationParagraphs = (value) =>
+  String(value || '')
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p>${esc(paragraph).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+
+const quotationMeta = (quotation) => {
+  const client = quotation.client || {};
+  const project = quotation.project || {};
+  return {
+    client,
+    project,
+    brand: client.brand || project.brand,
+    quotationNumber: quotation.quotationNumber || '-',
+    clientId: client.clientId || '-',
+    projectCode: project.projectCode || '-',
+    quoteDate: fmtDate(quotation.issueDate),
+    validUntil: quotation.validUntil ? fmtDate(quotation.validUntil) : '',
+    price: Number(quotation.price || 0),
+    taxRate: Number(quotation.taxRate ?? 18),
+    taxAmount: Number(quotation.taxAmount || 0),
+    total: Number(quotation.total || 0),
+    budget: Number(quotation.budget || 0),
+    scopeTitle: quotation.scopeTitle || project.title || 'Brand Kit',
+    scopeIntro: quotation.scopeIntro || '',
+    scopeItems: Array.isArray(quotation.scopeOfWork) ? quotation.scopeOfWork.filter(Boolean) : [],
+    deliverables: quotation.deliverables || 'As per the letterhead',
+    salutation: quotation.salutation || `Dear ${client.companyName || 'Client'},`,
+    subject: quotation.subject || `Submission of Quotation for Professional ${quotation.scopeTitle || project.title || 'Brand Kit'}.`,
+    letterBody: quotation.letterBody || '',
+    letterSignoff: quotation.letterSignoff || 'Warm regards,\nRudhram Enterprises',
+    note: quotation.note || '',
+  };
+};
+
+const quotationHeader = (brand, variant = 'split') => {
+  const ventureLogoHtml = getVentureLogoHtml(brand);
+  if (variant === 'summary') {
+    return `
+      <header class="q-header q-header-summary">
+        <div class="summary-rudhram">
+          <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" alt="Rudhram" />
+        </div>
+        <div class="summary-brand">${ventureLogoHtml}</div>
+      </header>`;
+  }
+
+  return `
+    <header class="q-header">
+      <div class="q-brand">${ventureLogoHtml}</div>
+      <div class="q-rudhram">
+        <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" alt="Rudhram" />
+      </div>
+    </header>`;
+};
+
+const quotationContactFooter = () => `
+  <footer class="q-footer">
+    <div class="footer-rail"></div>
+    <div class="contact-block">
+      <div class="contact-row"><span class="contact-icon">${quotationIcon('location')}</span><div><strong>RUDHRAM ENTERPRISES PVT. LTD</strong><br>${QUOTATION_CONTACT.addressLine1}<br>${QUOTATION_CONTACT.addressLine2}<br>${QUOTATION_CONTACT.addressLine3}</div></div>
+      <div class="contact-row"><span class="contact-icon">${quotationIcon('phone')}</span><span>${QUOTATION_CONTACT.phone}</span></div>
+      <div class="contact-row"><span class="contact-icon">${quotationIcon('mail')}</span><span>${QUOTATION_CONTACT.email}</span></div>
+      <div class="contact-row"><span class="contact-icon">${quotationIcon('globe')}</span><span>${QUOTATION_CONTACT.website}</span></div>
+    </div>
+    <div class="bottom-mark"></div>
+  </footer>`;
+
+const quotationSignature = () => `
+  <div class="signature">
+    <div class="sig-label">AUTHORIZED SIGNATURE</div>
+    <div class="sig-for">For, <strong>RUDHRAM ENTERTAINMENT</strong></div>
+    <div class="sig-space"></div>
+    <div class="sig-role">PROPRIETOR</div>
+    <div class="sig-company">Rudhram Entertainment</div>
+  </div>`;
+
+export const generateQuotationHtml = (quotation) => {
+  const meta = quotationMeta(quotation);
+  const { client } = meta;
+  const addressLines = quotationAddressLines(client);
+  const scopeItems = meta.scopeItems.length > 0
+    ? meta.scopeItems
+    : ['As per the scope discussed with the client.'];
+  const watermark = RUDHRAM_LOGO_BASE64
+    ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}`
+    : RUDHRAM_LOGO_URL;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Quotation - ${esc(meta.quotationNumber)}</title>
+  <style>
+    @font-face {
+      font-family: 'Goldenbook';
+      src: url(data:font/opentype;base64,${GOLDENBOOK_BOLD_FONT}) format('opentype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Goldenbook';
+      src: url(data:font/opentype;base64,${GOLDENBOOK_REGULAR_FONT}) format('opentype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Californian FB';
+      src: url(data:font/truetype;base64,${CALIFORNIAN_FB_BOLD_FONT}) format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Californian FB';
+      src: url(data:font/truetype;base64,${CALIFORNIAN_FB_BOLD_FONT}) format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+
+    @page { size: A4 portrait; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #FAF6F0;
+      color: #2b1d14;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      font-family: 'Californian FB', Georgia, serif;
+    }
+
+    .grain-overlay {
+      position: fixed;
+      inset: 0;
+      background-image: url('data:image/jpeg;base64,${PAPER_GRAIN_TILE_BASE64}');
+      background-size: cover;
+      background-position: center;
+      opacity: 0.32;
+      mix-blend-mode: multiply;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .page {
+      position: relative;
+      z-index: 3;
+      width: 794px;
+      min-height: 1123px;
+      margin: 0 auto 24px;
+      padding: 34px 48px 30px;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+    }
+    .page:last-child { page-break-after: auto; break-after: auto; }
+
+    @media print {
+      .page {
+        width: 210mm;
+        height: 297mm;
+        min-height: 297mm;
+        margin: 0;
+        padding: 12mm 15mm 11mm;
+      }
+      .q-header::before,
+      .footer-rail { left: -15mm; }
+    }
+
+    .page-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 520px;
+      transform: translate(-50%, -50%);
+      opacity: 0.055;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .page-watermark img { width: 100%; height: auto; display: block; }
+    .page-summary .page-watermark { width: 460px; opacity: 0.075; }
+
+    .q-header {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      min-height: 102px;
+      padding-bottom: 17px;
+      border-bottom: 2px solid #B3712D;
+      margin-bottom: 28px;
+      z-index: 2;
+    }
+    .q-header::before {
+      content: '';
+      position: absolute;
+      left: -48px;
+      bottom: -2px;
+      width: 132px;
+      height: 10px;
+      background: #B3712D;
+      transform: skewX(-34deg);
+      transform-origin: left bottom;
+    }
+    .q-brand img { height: 74px; max-width: 205px; object-fit: contain; }
+    .q-rudhram img { height: 80px; max-width: 205px; object-fit: contain; }
+    .q-header-summary {
+      justify-content: center;
+      align-items: center;
+      min-height: 118px;
+      margin-bottom: 18px;
+      border-bottom: 0;
+    }
+    .q-header-summary::before { display: none; }
+    .summary-rudhram img { height: 94px; max-width: 210px; object-fit: contain; }
+    .summary-brand {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .summary-brand img { height: 73px; max-width: 165px; object-fit: contain; }
+
+    .page-body { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; }
+
+    /* ---------- Page 1: letter ---------- */
+    .letter-body {
+      padding: 16px 10px 0;
+      font-size: 14.1px;
+      line-height: 1.55;
+    }
+    .letter-body p { margin: 0 0 15px; }
+    .letter-body .salutation { margin-bottom: 20px; }
+    .letter-body .signoff { margin-top: 18px; }
+
+    .q-footer {
+      position: relative;
+      z-index: 2;
+      margin-top: auto;
+      padding: 17px 0 8px 30px;
+      border-top: 1px solid rgba(179, 113, 45, 0.18);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 11.8px;
+      line-height: 1.48;
+    }
+    .footer-rail {
+      position: absolute;
+      left: -48px;
+      bottom: 38px;
+      width: 22px;
+      height: 95px;
+      background: #B3712D;
+    }
+    .contact-row { display: flex; gap: 8px; margin-top: 5px; }
+    .contact-row:first-child { margin-top: 0; }
+    .contact-icon { width: 13px; flex: 0 0 13px; padding-top: 2px; }
+    .contact-row strong { font-family: 'Goldenbook', serif; font-size: 12.4px; letter-spacing: 0.04em; }
+    .bottom-mark {
+      position: absolute;
+      left: 30px;
+      right: 0;
+      bottom: 0;
+      height: 2px;
+      background: #B3712D;
+    }
+    .bottom-mark::after {
+      content: '';
+      position: absolute;
+      right: -8px;
+      bottom: 0;
+      width: 52px;
+      height: 12px;
+      background: #B3712D;
+      transform: skewX(-35deg);
+      transform-origin: right bottom;
+    }
+
+    /* ---------- Page 2: scope ---------- */
+    .to-block { font-size: 14.3px; line-height: 1.45; margin-bottom: 24px; }
+    .to-block .to-label { font-size: 15px; margin-bottom: 2px; }
+    .to-block .to-name { font-family: 'Goldenbook', serif; font-size: 18px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 5px; }
+    .subject-line { font-size: 15.5px; margin-bottom: 22px; }
+    .section-rule { border-top: 2px solid #B3712D; border-bottom: 1px solid #B3712D; padding: 8px 0 9px; margin-bottom: 18px; }
+    .section-title { font-family: 'Goldenbook', serif; font-size: 15.5px; font-weight: 700; letter-spacing: 0.06em; }
+    .scope-intro { font-size: 14.2px; line-height: 1.48; margin: 0 0 8px; }
+    .scope-list { margin: 0; padding: 0; list-style: none; font-size: 12.75px; line-height: 1.42; }
+    .scope-list li { position: relative; padding-left: 15px; margin-bottom: 4px; }
+    .scope-list li::before { content: ''; position: absolute; left: 1px; top: 6px; width: 5px; height: 5px; border-radius: 50%; background: #2b1d14; }
+    .scope-footer { margin-top: auto; padding-top: 10px; display: flex; justify-content: flex-end; }
+    .signature { text-align: right; font-size: 12.6px; line-height: 1.45; min-width: 245px; }
+    .sig-label { font-family: 'Goldenbook', serif; font-size: 11.5px; letter-spacing: 0.08em; }
+    .sig-for { font-size: 12px; letter-spacing: 0.05em; margin-top: 1px; }
+    .sig-for strong { font-family: 'Goldenbook', serif; color: #5b3a8e; letter-spacing: 0.09em; }
+    .sig-space { height: 36px; }
+    .sig-role { font-family: 'Goldenbook', serif; font-size: 12.5px; color: #5b3a8e; letter-spacing: 0.04em; }
+    .sig-company { font-size: 11.5px; margin-top: 1px; }
+
+    /* ---------- Page 3: summary ---------- */
+    .summary-title {
+      font-family: 'Goldenbook', serif;
+      font-size: 31px;
+      font-weight: 700;
+      letter-spacing: 0.035em;
+      margin: 0 0 16px;
+      line-height: 1;
+    }
+    .summary-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 34px;
+      font-size: 13.2px;
+      line-height: 1.46;
+    }
+    .summary-meta-list { margin-bottom: 18px; }
+    .summary-meta-list div { margin-bottom: 5px; }
+    .company-name, .billed-name {
+      font-family: 'Goldenbook', serif;
+      font-size: 17.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.015em;
+      margin-bottom: 3px;
+    }
+    .billed-label { font-family: 'Goldenbook', serif; font-size: 12.5px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .summary-rule {
+      border-top: 2px solid #B3712D;
+      border-bottom: 1px solid #B3712D;
+      margin: 18px 0 0;
+      padding: 9px 0 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      font-family: 'Goldenbook', serif;
+      font-size: 14.3px;
+      font-weight: 700;
+      letter-spacing: 0.055em;
+    }
+    .summary-rule div:last-child { text-align: right; }
+    .summary-scope {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 34px;
+      padding: 12px 0 18px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .summary-scope div:last-child { text-align: right; }
+    .summary-main { flex: 1; display: flex; flex-direction: column; }
+    .summary-bottom { margin-top: auto; }
+    .summary-lower {
+      display: grid;
+      grid-template-columns: 1fr 310px;
+      gap: 35px;
+      align-items: start;
+      border-top: 2px solid #B3712D;
+      padding-top: 12px;
+    }
+    .note-label { font-family: 'Goldenbook', serif; font-size: 15px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .note-text { font-size: 13px; line-height: 1.45; min-height: 18px; }
+    .totals { font-size: 13.8px; }
+    .total-row { display: flex; justify-content: space-between; padding: 4px 12px; }
+    .total-row .label { font-family: 'Goldenbook', serif; font-weight: 700; letter-spacing: 0.05em; }
+    .total-row .value { font-variant-numeric: tabular-nums; }
+    .total-row.grand {
+      background: #C6AD8D;
+      padding: 10px 12px;
+      margin-top: 4px;
+      font-family: 'Goldenbook', serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.06em;
+    }
+    .summary-bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 36px;
+      align-items: end;
+      margin-top: 28px;
+    }
+    .bank-details { font-size: 13px; line-height: 1.48; }
+    .bank-title { font-family: 'Goldenbook', serif; font-size: 15.5px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .summary-signature { text-align: right; }
+    .summary-signature .sig-space { height: 31px; }
+
+    .page-summary .q-footer { border-top: 0; padding-bottom: 0; }
+  </style>
+</head>
+<body>
+  <div class="grain-overlay"></div>
+
+  <!-- PAGE 1: COVER LETTER -->
+  <section class="page page-letter">
+    <div class="page-watermark"><img src="${watermark}" alt=""></div>
+    ${quotationHeader(meta.brand)}
+    <div class="page-body">
+      <div class="letter-body">
+        <p class="salutation">${esc(meta.salutation)}</p>
+        ${quotationParagraphs(meta.letterBody)}
+        <div class="signoff">${quotationParagraphs(meta.letterSignoff)}</div>
+      </div>
+    </div>
+    ${quotationContactFooter()}
+  </section>
+
+  <!-- PAGE 2: SCOPE OF WORK -->
+  <section class="page page-scope">
+    <div class="page-watermark"><img src="${watermark}" alt=""></div>
+    ${quotationHeader(meta.brand)}
+    <div class="page-body">
+      <div class="to-block">
+        <div class="to-label">To</div>
+        <div class="to-name">${esc(client.companyName || '-')}</div>
+        ${addressLines.map((line) => `<div>${esc(line)}</div>`).join('')}
+        ${client.email ? `<div>Email: ${esc(client.email)}</div>` : ''}
+        ${client.phone ? `<div>Mobile: ${esc(client.phone)}</div>` : ''}
+      </div>
+
+      <div class="subject-line"><strong>Subject:</strong> ${esc(meta.subject)}</div>
+
+      <div class="section-rule"><div class="section-title">SCOPE OF WORK</div></div>
+      ${meta.scopeIntro ? `<p class="scope-intro">${esc(meta.scopeIntro)}</p>` : ''}
+      <ul class="scope-list">
+        ${scopeItems.map((item) => `<li>${esc(item)}</li>`).join('')}
+      </ul>
+
+      <div class="scope-footer">${quotationSignature()}</div>
+    </div>
+    ${quotationContactFooter()}
+  </section>
+
+  <!-- PAGE 3: QUOTATION SUMMARY -->
+  <section class="page page-summary">
+    <div class="page-watermark"><img src="${watermark}" alt=""></div>
+    ${quotationHeader(meta.brand, 'summary')}
+    <div class="page-body summary-main">
+      <h1 class="summary-title">QUOTATION</h1>
+
+      <div class="summary-meta-grid">
+        <div>
+          <div class="summary-meta-list">
+            <div>Client Id : ${esc(meta.clientId)}</div>
+            <div>Project No : ${esc(meta.projectCode)}</div>
+            <div>Date: ${esc(meta.quoteDate)}</div>
+          </div>
+          <div class="company-name">${COMPANY.legalName}</div>
+          <div>${COMPANY.addressLine1}</div>
+          <div>${COMPANY.addressLine2}</div>
+          <div>${COMPANY.addressLine3}</div>
+          <div>info@rudhramenterprises.com</div>
+          <div>Mobile: ${COMPANY.contact}</div>
+          <div>GST NO: ${COMPANY.gstin}</div>
+        </div>
+        <div>
+          <div class="summary-meta-list" style="margin-bottom:18px;">&nbsp;</div>
+          <div class="billed-label">BILLED TO:</div>
+          <div class="billed-name">${esc(client.companyName || '-')}</div>
+          ${addressLines.map((line) => `<div>${esc(line)}</div>`).join('')}
+          <div>Email: ${esc(client.email || '')}</div>
+          <div>Mobile: ${esc(client.phone || '')}</div>
+          <div>GST NO: ${esc(client.gstNumber || '')}</div>
+        </div>
+      </div>
+
+      <div class="summary-rule"><div>SCOPE OF WORK</div><div>DELIVERABLES</div></div>
+      <div class="summary-scope"><div>${esc(meta.scopeTitle)}</div><div>${esc(meta.deliverables)}</div></div>
+
+      <div class="summary-bottom">
+        <div class="summary-lower">
+          <div>
+            <div class="note-label">NOTE:</div>
+            <div class="note-text">${esc(meta.note)}</div>
+          </div>
+          <div class="totals">
+            <div class="total-row"><span class="label">SUBTOTAL</span><span class="value">${fmtPlain(meta.price)}</span></div>
+            ${meta.taxAmount > 0 || meta.taxRate > 0 ? `<div class="total-row"><span class="label">GST (${meta.taxRate}%)</span><span class="value">${fmtPlain(meta.taxAmount)}</span></div>` : ''}
+            <div class="total-row grand"><span class="label">TOTAL</span><span class="value">${fmtPlain(meta.total)}</span></div>
+          </div>
+        </div>
+
+        <div class="summary-bottom-grid">
+          <div class="bank-details">
+            <div class="bank-title">BANK DETAILS</div>
+            <div>Bank Name: ${BANK.bankName}</div>
+            <div>Account Name: ${BANK.accountHolder}</div>
+            <div>Account No: ${BANK.accountNumber}</div>
+            <div>IFSC Code: ${BANK.ifscCode}</div>
+            <div>GST: ${COMPANY.gstin}</div>
+            <div>UPI ID: ${BANK.upiId}</div>
+          </div>
+          <div class="summary-signature">${quotationSignature()}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>`;
+};
+
+export const generateQuotationPdf = async (quotation) => {
+  const html = generateQuotationHtml(quotation);
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const raw = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      preferCSSPageSize: true,
+    });
+    return Buffer.from(raw);
+  } finally {
+    await browser.close();
+  }
+};
+
+/* ============================================================
    PAYMENT RECEIPT
    ============================================================ */
 export const generatePaymentReceiptHtml = (payment, invoice) => {

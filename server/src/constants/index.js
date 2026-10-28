@@ -63,6 +63,14 @@ export const INVOICE_STATUS = {
   CANCELLED: 'cancelled',
 };
 
+export const QUOTATION_STATUS = {
+  DRAFT: 'draft',
+  SENT: 'sent',
+  ACCEPTED: 'accepted',
+  REJECTED: 'rejected',
+  EXPIRED: 'expired',
+};
+
 export const PAYMENT_STATUS = {
   PENDING: 'pending',
   COMPLETED: 'completed',

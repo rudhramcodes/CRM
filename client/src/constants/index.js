@@ -4,6 +4,7 @@ import {
   UserCheck,
   Calendar,
   FileText,
+  FileSignature,
   FolderKanban,
   Receipt,
   CreditCard,
@@ -74,6 +75,14 @@ export const INVOICE_STATUS = [
   { value: 'paid', label: 'Paid', color: 'bg-green-100 text-green-800' },
   { value: 'overdue', label: 'Overdue', color: 'bg-red-100 text-red-800' },
   { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-100 text-gray-800' },
+];
+
+export const QUOTATION_STATUS = [
+  { value: 'draft', label: 'Draft', color: 'bg-gray-100 text-gray-800' },
+  { value: 'sent', label: 'Sent', color: 'bg-blue-100 text-blue-800' },
+  { value: 'accepted', label: 'Accepted', color: 'bg-green-100 text-green-800' },
+  { value: 'rejected', label: 'Rejected', color: 'bg-red-100 text-red-800' },
+  { value: 'expired', label: 'Expired', color: 'bg-amber-100 text-amber-800' },
 ];
 
 export const BRANDS = [
@@ -189,6 +198,7 @@ export const NAV_ITEMS = [
   { label: 'Projects', path: '/projects', icon: FolderKanban, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Tasks', path: '/tasks', icon: ListTodo, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Invoices', path: '/invoices', icon: Receipt, roles: ['super_admin', 'admin'] },
+  { label: 'Quotations', path: '/quotations', icon: FileSignature, roles: ['super_admin', 'admin'] },
   { label: 'Payments', path: '/payments', icon: CreditCard, roles: ['super_admin', 'admin'] },
   { label: 'Reports', path: '/reports', icon: BarChart3, roles: ['super_admin', 'admin'] },
   { label: 'Payroll', path: '/payroll', icon: Wallet, roles: ['super_admin', 'admin', 'manager', 'employee'], payrollOnly: true },
