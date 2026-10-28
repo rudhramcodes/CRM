@@ -4,8 +4,43 @@ import * as authRepository from '../auth/auth.repository.js';
 import { issueVerificationOtp } from '../auth/auth.service.js';
 import { ROLE_PERMISSIONS } from '../../constants/index.js';
 import { sendWelcomeEmail } from '../../services/emailService.js';
+import { isPayrollAdmin } from '../../utils/payrollAccess.js';
+import * as employeeService from '../employees/employee.service.js';
+import * as payrollRepository from '../payroll/payroll.repository.js';
 
-export const listUsers = async (query, options) => {
+const EMPLOYMENT_FIELDS = ['designation', 'dateOfJoining', 'dateOfLeaving'];
+
+const splitEmploymentData = (data = {}) => {
+  const userData = { ...data };
+  const employmentData = {};
+  for (const field of EMPLOYMENT_FIELDS) {
+    if (userData[field] !== undefined) {
+      employmentData[field] = userData[field];
+      delete userData[field];
+    }
+  }
+  const compensationData = {};
+  for (const field of ['monthlyGrossSalary', 'salaryEffectiveFrom', 'bankName', 'bankAccountNumber', 'ifscCode']) {
+    if (userData[field] !== undefined) {
+      compensationData[field] = userData[field];
+      delete userData[field];
+    }
+  }
+  return { userData, employmentData, compensationData };
+};
+
+const withEmployment = async (result, requester) => {
+  const users = result.users || [];
+  const userIds = users.map((user) => user._id);
+  const [profileMap, compensationMap] = await Promise.all([
+    employeeService.getProfileMap(userIds),
+    isPayrollAdmin(requester) ? employeeService.getCompensationMap(userIds) : Promise.resolve(null),
+  ]);
+  const serialized = users.map((user) => employeeService.serializeUserEmployment(user, profileMap, compensationMap));
+  return { ...result, users: serialized };
+};
+
+export const listUsers = async (query, options, requester) => {
   const filter = {};
 
   if (query.search) {
@@ -21,15 +56,17 @@ export const listUsers = async (query, options) => {
     filter.isActive = query.isActive;
   }
 
-  return authRepository.findAllUsers(filter, options);
+  const result = await authRepository.findAllUsers(filter, options);
+  return withEmployment(result, requester);
 };
 
-export const getUserById = async (id) => {
+export const getUserById = async (id, requester) => {
   const user = await authRepository.findById(id);
   if (!user) {
     throw ApiError.notFound('User not found');
   }
-  return user;
+  const result = await withEmployment({ users: [user] }, requester);
+  return result.users[0];
 };
 
 export const createUser = async (userData, createdBy) => {
@@ -42,22 +79,37 @@ export const createUser = async (userData, createdBy) => {
     throw ApiError.conflict('Email already registered');
   }
 
-  const role = userData.role || 'employee';
+  const { userData: baseUserData, employmentData, compensationData } = splitEmploymentData(userData);
+  const hasCompensation = employeeService.hasCompensationPayload(compensationData);
+  if (hasCompensation) employeeService.assertCanManageCompensation(createdBy);
 
-  // Assign default permissions for the role
+  const role = baseUserData.role || 'employee';
   const permissions = ROLE_PERMISSIONS[role] || [];
 
   const user = await authRepository.createUser({
-    ...userData,
+    ...baseUserData,
     role,
     permissions,
     createdBy: createdBy?._id,
   });
 
-  sendWelcomeEmail(userData.email, userData.name);
+  try {
+    const profile = await employeeService.createProfileForUser(user, employmentData);
+    if (hasCompensation) {
+      if (!profile) throw ApiError.badRequest('Compensation can only be assigned to staff accounts');
+      await employeeService.upsertCompensationForUser(user._id, compensationData, createdBy);
+    }
+  } catch (error) {
+    await employeeService.deleteEmploymentForUser(user._id);
+    await authRepository.deleteUserById(user._id);
+    throw error;
+  }
+
+  sendWelcomeEmail(baseUserData.email, baseUserData.name);
   issueVerificationOtp(user).catch(() => {});
 
-  return user;
+  const result = await withEmployment({ users: [user] }, createdBy);
+  return result.users[0];
 };
 
 export const updateUser = async (id, updateData, updatedBy) => {
@@ -73,14 +125,35 @@ export const updateUser = async (id, updateData, updatedBy) => {
     throw ApiError.forbidden('The existing Super Admin role cannot be changed.');
   }
 
-  // If role is changing, update permissions
-  if (updateData.role && updateData.role !== user.role) {
-    updateData.permissions = ROLE_PERMISSIONS[updateData.role] || [];
-    updateData.updatedBy = updatedBy?._id;
+  const { userData, employmentData, compensationData } = splitEmploymentData(updateData);
+  const hasCompensation = employeeService.hasCompensationPayload(compensationData);
+  if (hasCompensation) employeeService.assertCanManageCompensation(updatedBy);
+
+  const targetRole = userData.role || user.role;
+  if (!employeeService.isEmployeeRole(targetRole) && (Object.keys(employmentData).length || hasCompensation)) {
+    throw ApiError.badRequest('Employment and compensation fields only apply to staff accounts');
   }
 
-  const updated = await authRepository.updateUser(id, updateData);
-  return updated;
+  if (userData.role && userData.role !== user.role) {
+    userData.permissions = ROLE_PERMISSIONS[userData.role] || [];
+  }
+  userData.updatedBy = updatedBy?._id;
+
+  const updated = await authRepository.updateUser(id, userData);
+
+  if (employeeService.isEmployeeRole(updated.role)) {
+    const profile = await employeeService.ensureProfileForUser(updated);
+    if (Object.keys(employmentData).length) {
+      await employeeService.updateProfileForUser(updated._id, employmentData);
+    }
+    if (hasCompensation) {
+      if (!profile) throw ApiError.badRequest('Compensation can only be assigned to staff accounts');
+      await employeeService.upsertCompensationForUser(updated._id, compensationData, updatedBy);
+    }
+  }
+
+  const result = await withEmployment({ users: [updated] }, updatedBy);
+  return result.users[0];
 };
 
 export const deleteUser = async (id) => {
@@ -93,6 +166,11 @@ export const deleteUser = async (id) => {
     throw ApiError.badRequest('Cannot delete super admin');
   }
 
+  if (await payrollRepository.existsSlipForEmployee(id)) {
+    throw ApiError.conflict('This user has payroll history. Deactivate the account instead of deleting it.');
+  }
+
+  await employeeService.deleteEmploymentForUser(id);
   await authRepository.deleteUserById(id);
 };
 
@@ -107,7 +185,11 @@ export const updateUserRole = async (id, role) => {
   }
 
   const permissions = ROLE_PERMISSIONS[role] || [];
-  return authRepository.updateUser(id, { role, permissions });
+  const updated = await authRepository.updateUser(id, { role, permissions });
+  if (updated && employeeService.isEmployeeRole(updated.role)) {
+    await employeeService.ensureProfileForUser(updated);
+  }
+  return updated;
 };
 
 export const getUserStats = async () => {

@@ -16,6 +16,14 @@ export const createUserSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
   role: z.enum(ROLES_LIST).optional(),
   phone: z.string().optional(),
+  designation: z.string().max(100).nullable().optional(),
+  dateOfJoining: z.string().nullable().optional(),
+  dateOfLeaving: z.string().nullable().optional(),
+  monthlyGrossSalary: z.coerce.number().min(0).optional(),
+  salaryEffectiveFrom: z.string().nullable().optional(),
+  bankName: z.string().max(100).nullable().optional(),
+  bankAccountNumber: z.string().max(40).nullable().optional(),
+  ifscCode: z.string().max(20).nullable().optional(),
 });
 
 export const updateUserSchema = z.object({
@@ -28,6 +36,14 @@ export const updateUserSchema = z.object({
   role: z.enum(ROLES_LIST).optional(),
   phone: z.string().optional(),
   isActive: z.boolean().optional(),
+  designation: z.string().max(100).nullable().optional(),
+  dateOfJoining: z.string().nullable().optional(),
+  dateOfLeaving: z.string().nullable().optional(),
+  monthlyGrossSalary: z.coerce.number().min(0).optional(),
+  salaryEffectiveFrom: z.string().nullable().optional(),
+  bankName: z.string().max(100).nullable().optional(),
+  bankAccountNumber: z.string().max(40).nullable().optional(),
+  ifscCode: z.string().max(20).nullable().optional(),
 });
 
 export const updateUserRoleSchema = z.object({

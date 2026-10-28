@@ -20,8 +20,10 @@ import {
   PlusCircle,
   ArrowRight,
   Sparkles,
+  Wallet,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { canAccessPayroll } from '../../utils/access';
 
 const ALL_COMMANDS = [
   // Navigation - Overview
@@ -38,6 +40,8 @@ const ALL_COMMANDS = [
   { id: 'invoices', title: 'Invoices & Billing', category: 'Financials', path: '/invoices', icon: Receipt, roles: ['super_admin', 'admin'] },
   { id: 'payments', title: 'Payments & Receipts', category: 'Financials', path: '/payments', icon: CreditCard, roles: ['super_admin', 'admin'] },
   { id: 'reports', title: 'Reports & Analytics', category: 'Financials', path: '/reports', icon: BarChart3, roles: ['super_admin', 'admin'] },
+  { id: 'payroll', title: 'Payroll', category: 'Financials', path: '/payroll', icon: Wallet, roles: ['super_admin', 'admin', 'manager', 'employee'], payrollOnly: true },
+  { id: 'my-payslips', title: 'My Payslips', category: 'Financials', path: '/my-payslips', icon: Wallet, roles: ['admin', 'manager', 'employee'] },
   // Navigation - Administration
   { id: 'notifications', title: 'Notifications Center', category: 'Administration', path: '/notifications', icon: Bell, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { id: 'users', title: 'Team & User Management', category: 'Administration', path: '/users', icon: Users, roles: ['super_admin', 'admin'] },
@@ -59,7 +63,9 @@ export default function CommandPalette({ isOpen, onClose }) {
   // Filter commands by user role
   const allowedCommands = useMemo(() => {
     if (!user) return [];
-    return ALL_COMMANDS.filter((cmd) => cmd.roles.includes(user.role));
+    return ALL_COMMANDS.filter(
+      (cmd) => cmd.roles.includes(user.role) && (!cmd.payrollOnly || canAccessPayroll(user)),
+    );
   }, [user]);
 
   // Filter by search query

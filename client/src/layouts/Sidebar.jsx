@@ -9,12 +9,13 @@ import { useGetOrgSettingsQuery } from '../services/settingsApi';
 import { useGetUnreadCountQuery } from '../services/notificationApi';
 import { toggleSidebar } from '../app/store/uiSlice';
 import { logout } from '../app/store/authSlice';
+import { canAccessPayroll } from '../utils/access';
 
 const SECTIONS = [
   { id: 'overview', label: 'Overview', paths: ['/dashboard'] },
   { id: 'crm', label: 'CRM & Pipeline', paths: ['/leads', '/clients', '/meetings'] },
   { id: 'operations', label: 'Operations', paths: ['/projects', '/tasks', '/attendance', '/freelancers'] },
-  { id: 'financials', label: 'Financials', paths: ['/invoices', '/payments', '/reports'] },
+  { id: 'financials', label: 'Financials', paths: ['/invoices', '/payments', '/reports', '/payroll', '/my-payslips'] },
   { id: 'system', label: 'Administration', paths: ['/notifications', '/users', '/settings'] },
 ];
 
@@ -52,7 +53,7 @@ export default function Sidebar({ open, onClose }) {
   const isExpanded = isDesktop ? sidebarOpen : true;
 
   const visibleNavItems = NAV_ITEMS.filter(
-    (item) => user && item.roles.includes(user.role),
+    (item) => user && item.roles.includes(user.role) && (!item.payrollOnly || canAccessPayroll(user)),
   );
 
   return (

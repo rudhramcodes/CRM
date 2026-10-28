@@ -31,10 +31,12 @@ import notificationRoutes from './modules/notifications/notification.routes.js';
 import settingsRoutes from './modules/settings/settings.routes.js';
 import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
+import payrollRoutes from './modules/payroll/payroll.routes.js';
 import freelancerRoutes from './modules/freelancers/freelancer.routes.js';
 import freelancerPublicRoutes from './modules/freelancers/freelancer.public.routes.js';
 import freelancerUploadRoutes from './modules/freelancers/freelancer.upload.routes.js';
 import { startAttendanceCrons } from './modules/attendance/attendance.cron.js';
+import { startPayrollCrons } from './modules/payroll/payroll.cron.js';
 
 const app = express();
 
@@ -121,11 +123,13 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/payroll', payrollRoutes);
 app.use('/api/freelancers/public', freelancerPublicRoutes);
 app.use('/api/freelancers/upload', freelancerUploadRoutes);
 app.use('/api/freelancers', freelancerRoutes);
 
 startAttendanceCrons();
+startPayrollCrons();
 
 // Serve frontend build in production
 if (config.nodeEnv === 'production') {

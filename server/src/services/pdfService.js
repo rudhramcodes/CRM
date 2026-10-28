@@ -803,3 +803,166 @@ export const generatePaymentReceiptPdf = async (payment, invoice) => {
     await browser.close();
   }
 };
+
+const maskAccountNumber = (value) => {
+  const digits = String(value || '').replace(/\s+/g, '');
+  if (!digits) return '-';
+  if (digits.length <= 4) return digits;
+  return `${'X'.repeat(Math.min(8, digits.length - 4))}${digits.slice(-4)}`;
+};
+
+export const generateSalarySlipHtml = (slip) => {
+  const periodStart = slip.periodStart ? new Date(slip.periodStart) : null;
+  const monthLabel = periodStart && !Number.isNaN(periodStart.getTime())
+    ? periodStart.toLocaleString('en-IN', { month: 'long', year: 'numeric' })
+    : '-';
+  const year = periodStart && !Number.isNaN(periodStart.getTime()) ? periodStart.getFullYear() : '';
+  const month = periodStart && !Number.isNaN(periodStart.getTime()) ? String(periodStart.getMonth() + 1).padStart(2, '0') : '';
+  const slipNumber = `SAL-${year}${month}-${slip.employeeId || String(slip._id || '').slice(-6).toUpperCase() || 'N/A'}`;
+  const days = (value) => (Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 1 });
+  const amountInWords = numberToIndianWords(slip.netPay);
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Salary Slip - ${esc(slip.employeeName)} - ${esc(monthLabel)}</title>
+  <style>
+    @page { size: A4; margin: 14mm; }
+    :root { --copper: #B3712D; --cream: #F6F0DF; --espresso: #3A2415; --sand: #DCC19D; }
+    ${APEX_REGULAR_FONT ? `@font-face { font-family: 'Apex New Trial'; src: url(data:font/opentype;base64,${APEX_REGULAR_FONT}) format('opentype'); font-weight: 400; }` : ''}
+    ${APEX_MEDIUM_FONT ? `@font-face { font-family: 'Apex New Trial'; src: url(data:font/opentype;base64,${APEX_MEDIUM_FONT}) format('opentype'); font-weight: 500; }` : ''}
+    ${GOLDENBOOK_REGULAR_FONT ? `@font-face { font-family: 'Golden Book'; src: url(data:font/opentype;base64,${GOLDENBOOK_REGULAR_FONT}) format('opentype'); font-weight: 400; }` : ''}
+    ${GOLDENBOOK_BOLD_FONT ? `@font-face { font-family: 'Golden Book'; src: url(data:font/opentype;base64,${GOLDENBOOK_BOLD_FONT}) format('opentype'); font-weight: 700; }` : ''}
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--espresso); font-family: 'Apex New Trial', Arial, sans-serif; font-size: 10pt; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .container { border: 1px solid var(--sand); border-radius: 16px; overflow: hidden; }
+    .header { position: relative; display: flex; justify-content: space-between; gap: 20px; background: var(--cream); border-bottom: 1px solid var(--sand); padding: 24px 28px 20px; }
+    .header::before { content: ''; position: absolute; inset: 0 0 auto; height: 6px; background: var(--copper); }
+    .header img { height: 46px; max-width: 210px; object-fit: contain; display: block; margin-bottom: 10px; }
+    .header h1 { margin: 0; font-family: 'Golden Book', Georgia, serif; font-size: 24pt; font-weight: 500; letter-spacing: .03em; }
+    .header p { margin: 2px 0; opacity: .72; }
+    .header .right { text-align: right; min-width: 180px; }
+    .header .right .label { color: var(--copper); font-size: 8pt; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .header .right .value { font-size: 12pt; font-weight: 500; }
+    .content { padding: 22px 28px 26px; }
+    .section-title { color: var(--copper); font-family: 'Golden Book', Georgia, serif; font-size: 13pt; font-weight: 500; margin: 18px 0 8px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+    .row { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: 1px solid var(--sand); }
+    .row .label { opacity: .62; }
+    .row .value { font-weight: 500; text-align: right; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--espresso); color: var(--cream); text-align: left; padding: 9px 12px; font-size: 8.5pt; letter-spacing: .08em; text-transform: uppercase; }
+    th:last-child, td:last-child { text-align: right; }
+    td { padding: 9px 12px; border-bottom: 1px solid var(--sand); }
+    .total td { background: var(--cream); font-weight: 700; }
+    .net { display: flex; justify-content: space-between; align-items: center; gap: 18px; background: var(--espresso); color: var(--cream); border-radius: 12px; padding: 16px 18px; margin-top: 16px; }
+    .net .label { color: var(--sand); font-size: 8pt; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .net .amount { font-family: 'Golden Book', Georgia, serif; font-size: 23pt; }
+    .words { margin-top: 8px; font-size: 9pt; opacity: .78; }
+    .footer { border-top: 1px solid var(--sand); padding: 14px 28px 18px; font-size: 8pt; opacity: .65; text-align: center; }
+    .footer p { margin: 3px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" alt="Rudhram" />
+        <h1>Salary Slip</h1>
+        <p>${esc(COMPANY.legalName)}</p>
+        <p>${esc(monthLabel)}</p>
+      </div>
+      <div class="right">
+        <div class="label">Slip Number</div>
+        <div class="value">${esc(slipNumber)}</div>
+        <div class="label" style="margin-top:10px;">Status</div>
+        <div class="value">${esc(slip.status || 'draft')}</div>
+        <div class="label" style="margin-top:10px;">Employee ID</div>
+        <div class="value">${esc(slip.employeeId || '-')}</div>
+      </div>
+    </div>
+    <div class="content">
+      <h2 class="section-title">Employee details</h2>
+      <div class="grid">
+        <div>
+          <div class="row"><span class="label">Name</span><span class="value">${esc(slip.employeeName)}</span></div>
+          <div class="row"><span class="label">Designation</span><span class="value">${esc(slip.designation || '-')}</span></div>
+          <div class="row"><span class="label">Date of joining</span><span class="value">${fmtDate(slip.dateOfJoining)}</span></div>
+        </div>
+        <div>
+          <div class="row"><span class="label">Email</span><span class="value">${esc(slip.employeeEmail || '-')}</span></div>
+          <div class="row"><span class="label">Pay period</span><span class="value">${fmtDate(slip.periodStart)} - ${fmtDate(slip.periodEnd)}</span></div>
+          <div class="row"><span class="label">Payroll days</span><span class="value">${days(slip.payrollDays)}</span></div>
+        </div>
+      </div>
+
+      <h2 class="section-title">Attendance summary</h2>
+      <div class="grid">
+        <div>
+          <div class="row"><span class="label">Present</span><span class="value">${days(slip.presentDays)}</span></div>
+          <div class="row"><span class="label">Work from home</span><span class="value">${days(slip.wfhDays)}</span></div>
+          <div class="row"><span class="label">Paid leave</span><span class="value">${days(slip.paidLeaveDays)}</span></div>
+          <div class="row"><span class="label">Half days</span><span class="value">${days(slip.halfDays)}</span></div>
+        </div>
+        <div>
+          <div class="row"><span class="label">Absent</span><span class="value">${days(slip.absentDays)}</span></div>
+          <div class="row"><span class="label">LOP days</span><span class="value">${days(slip.lopDays)}</span></div>
+          <div class="row"><span class="label">Paid days</span><span class="value">${days(slip.paidDays)}</span></div>
+          <div class="row"><span class="label">Missing attendance</span><span class="value">${days(slip.missingDays)}</span></div>
+        </div>
+      </div>
+
+      <h2 class="section-title">Earnings and deductions</h2>
+      <table>
+        <thead><tr><th>Earnings</th><th>Amount</th><th>Deductions</th><th>Amount</th></tr></thead>
+        <tbody>
+          <tr><td>Monthly gross salary</td><td>${fmt(slip.grossEarnings)}</td><td>Loss of pay</td><td>${fmt(slip.lopDeduction)}</td></tr>
+          <tr><td>Per day rate</td><td>${fmt(slip.perDayRate)}</td><td>Pre-joining days</td><td>${fmt(slip.preJoiningDeduction)}</td></tr>
+          <tr><td></td><td></td><td>Leaving days</td><td>${fmt(slip.leavingDeduction)}</td></tr>
+          <tr><td></td><td></td><td>Other deductions</td><td>${fmt(slip.otherDeductions)}</td></tr>
+          <tr class="total"><td>Gross earnings</td><td>${fmt(slip.grossEarnings)}</td><td>Total deductions</td><td>${fmt(slip.totalDeductions)}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="net">
+        <div>
+          <div class="label">Net pay</div>
+          <div class="amount">${fmt(slip.netPay)}</div>
+        </div>
+        <div class="label">${esc(slip.paidDays)} paid day(s)</div>
+      </div>
+      <div class="words">Amount in words: ${esc(amountInWords)}</div>
+
+      <h2 class="section-title">Bank details</h2>
+      <div class="grid">
+        <div class="row"><span class="label">Bank</span><span class="value">${esc(slip.bankName || '-')}</span></div>
+        <div class="row"><span class="label">Account</span><span class="value">${esc(maskAccountNumber(slip.bankAccountNumber))}</span></div>
+        <div class="row"><span class="label">IFSC</span><span class="value">${esc(slip.ifscCode || '-')}</span></div>
+      </div>
+      ${slip.issues?.length ? `<div class="words">Open issues: ${esc(slip.issues.join('; '))}</div>` : ''}
+    </div>
+    <div class="footer">
+      <p>This is a computer-generated salary slip.</p>
+      <p>${esc(COMPANY.legalName)} | ${esc(COMPANY.email)} | ${esc(COMPANY.contact)}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+};
+
+export const generateSalarySlipPdf = async (slip) => {
+  const html = generateSalarySlipHtml(slip);
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const raw = await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true });
+    return Buffer.from(raw);
+  } finally {
+    await browser.close();
+  }
+};

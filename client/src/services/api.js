@@ -62,6 +62,8 @@ export const api = createApi({
     'Shift',
     'Holiday',
     'Freelancer',
+    'PayrollRun',
+    'SalarySlip',
   ],
   endpoints: () => ({}),
 });

@@ -54,6 +54,9 @@ import AttendanceHolidays from '../modules/attendance/pages/AttendanceHolidays';
 import AttendanceReports from '../modules/attendance/pages/AttendanceReports';
 import SettingsPage from '../modules/settings/pages/SettingsPage';
 import UserManagement from '../modules/users/pages/UserManagement';
+import PayrollRuns from '../modules/payroll/pages/PayrollRuns';
+import PayrollRunDetail from '../modules/payroll/pages/PayrollRunDetail';
+import MyPayslips from '../modules/payroll/pages/MyPayslips';
 import FreelancerList from '../modules/freelancers/pages/FreelancerList';
 import FreelancerForm from '../modules/freelancers/pages/FreelancerForm';
 import FreelancerDetail from '../modules/freelancers/pages/FreelancerDetail';
@@ -159,6 +162,9 @@ const router = createBrowserRouter([
       },
       { path: 'notifications', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']}><NotificationList /></ProtectedRoute> },
       { path: 'users', element: <ProtectedRoute requiredRoles={['super_admin', 'admin']}><UserManagement /></ProtectedRoute> },
+      { path: 'payroll', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']} requiredPayroll><PayrollRuns /></ProtectedRoute> },
+      { path: 'payroll/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager', 'employee']} requiredPayroll><PayrollRunDetail /></ProtectedRoute> },
+      { path: 'my-payslips', element: <ProtectedRoute requiredRoles={['admin', 'manager', 'employee']}><MyPayslips /></ProtectedRoute> },
 
       { path: 'freelancers', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><FreelancerList /></ProtectedRoute> },
 

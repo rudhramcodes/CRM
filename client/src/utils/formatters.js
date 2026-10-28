@@ -6,6 +6,15 @@ export function formatCurrency(amount) {
   }).format(amount || 0);
 }
 
+export function formatCurrencyExact(amount) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount || 0);
+}
+
 export function formatDate(date) {
   if (!date) return 'N/A';
   return new Intl.DateTimeFormat('en-IN', {

@@ -7,6 +7,12 @@ import * as authRepository from './auth.repository.js';
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from '../../services/emailService.js';
 import { validatePasswordAgainstPolicy } from '../settings/settings.service.js';
 import { ROLES } from '../../constants/index.js';
+import { isPayrollAdmin } from '../../utils/payrollAccess.js';
+
+const toAuthUser = (user) => {
+  const userObj = user?.toJSON ? user.toJSON() : { ...user };
+  return { ...userObj, canAccessPayroll: isPayrollAdmin(userObj) };
+};
 
 const generateTokens = async (user) => {
   const accessToken = user.generateAccessToken();
@@ -63,8 +69,7 @@ export const registerUser = async (userData) => {
   sendWelcomeEmail(userData.email, userData.name);
   issueVerificationOtp(user).catch(() => {});
 
-  const userObj = user.toJSON();
-  return { user: userObj, ...tokens };
+  return { user: toAuthUser(user), ...tokens };
 };
 
 export const loginUser = async (email, password) => {
@@ -83,8 +88,7 @@ export const loginUser = async (email, password) => {
   }
 
   const tokens = await generateTokens(user);
-  const userObj = user.toJSON();
-  return { user: userObj, mustChangePassword: user.mustChangePassword || false, ...tokens };
+  return { user: toAuthUser(user), mustChangePassword: user.mustChangePassword || false, ...tokens };
 };
 
 export const logoutUser = async (userId) => {
@@ -311,10 +315,9 @@ export const completeOnboarding = async (userId) => {
 
 export const getMeWithClient = async (user) => {
   if (user.role !== ROLES.CLIENT) {
-    return user;
+    return toAuthUser(user);
   }
   const clientRepository = await import('../clients/client.repository.js');
   const client = await clientRepository.findOneByUser(user._id);
-  const userObj = user.toJSON ? user.toJSON() : user;
-  return { ...userObj, clientId: client?._id ?? null };
+  return { ...toAuthUser(user), clientId: client?._id ?? null };
 };

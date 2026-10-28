@@ -7,6 +7,7 @@ export const list = async (req, res, next) => {
     const result = await usersService.listUsers(
       { search, role, isActive },
       { page: parseInt(page), limit: parseInt(limit), sort },
+      req.user,
     );
     ApiResponse.success(res, 200, result);
   } catch (error) {
@@ -16,7 +17,7 @@ export const list = async (req, res, next) => {
 
 export const getById = async (req, res, next) => {
   try {
-    const user = await usersService.getUserById(req.params.id);
+    const user = await usersService.getUserById(req.params.id, req.user);
     ApiResponse.success(res, 200, { user });
   } catch (error) {
     next(error);

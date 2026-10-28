@@ -1,9 +1,10 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { canAccessPayroll } from '../utils/access';
 
 const roleHome = (role) => (role === 'client' ? '/portal' : '/dashboard');
 
-export default function ProtectedRoute({ children, requiredRoles }) {
+export default function ProtectedRoute({ children, requiredRoles, requiredPayroll }) {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const location = useLocation();
 
@@ -14,6 +15,10 @@ export default function ProtectedRoute({ children, requiredRoles }) {
   }
 
   if (requiredRoles && user && !requiredRoles.includes(user.role)) {
+    return <Navigate to={roleHome(user.role)} replace />;
+  }
+
+  if (requiredPayroll && !canAccessPayroll(user)) {
     return <Navigate to={roleHome(user.role)} replace />;
   }
 

@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test e2e/advance-payment.spec.cjs --config=playwright.config.cjs"
+    "test:e2e": "playwright test e2e/advance-payment.spec.cjs --config=playwright.config.cjs",
+    "payroll:backfill": "node scripts/backfillEmployeeProfiles.mjs",
+    "check:payroll": "node scripts/checkPayroll.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
