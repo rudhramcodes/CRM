@@ -21,6 +21,13 @@ import { ROLES, ROLE_PERMISSIONS } from './constants/index.js';
 const fixStaleIndexes = async () => {
   try {
     const indexes = await Client.collection.indexes();
+    // Contact details may be shared by separate companies.
+    const emailIdx = indexes.find((idx) => idx.unique && idx.key?.email === 1 && Object.keys(idx.key).length === 1);
+    if (emailIdx) {
+      await Client.collection.dropIndex(emailIdx.name);
+      await Client.collection.createIndex({ email: 1 });
+      logger.info('[index-fix] Client email now allows multiple companies');
+    }
     const userIdx = indexes.find((idx) => idx.key && idx.key.user === 1);
     if (userIdx && !userIdx.sparse) {
       logger.info('[index-fix] Dropping stale user_1 index (missing sparse:true)');

@@ -60,11 +60,6 @@ export const sendPortalInvite = async (clientId) => {
 };
 
 export const create = async (data, user) => {
-  const existing = await clientRepository.findByEmail(data.email);
-  if (existing) {
-    throw ApiError.conflict('A client with this email already exists');
-  }
-
   if (data.gstNumber) {
     const existingGst = await clientRepository.findByGst(data.gstNumber);
     if (existingGst) {
@@ -116,12 +111,6 @@ export const create = async (data, user) => {
     } catch (err) {
       logger.error(`[create-client] Failed to create portal user: ${err.message}`);
     }
-  } else {
-    if (!client.user) {
-      client.user = existingUser._id;
-      await client.save();
-    }
-    portalUserCreated = true;
   }
 
   if (portalUserCreated) {
@@ -157,11 +146,6 @@ export const convertFromLead = async (leadId, user) => {
 
   if (lead.convertedToClient) {
     throw ApiError.conflict('This lead has already been converted to a client');
-  }
-
-  const existing = await clientRepository.findByEmail(lead.email);
-  if (existing) {
-    throw ApiError.conflict('A client with this email already exists');
   }
 
   const brand = lead.brand || 'panigrahna';
@@ -226,12 +210,6 @@ export const convertFromLead = async (leadId, user) => {
     } catch (err) {
       logger.error(`[convert-lead] Failed to create portal user: ${err.message}`);
     }
-  } else {
-    if (!client.user) {
-      client.user = existingUser._id;
-      await client.save();
-    }
-    portalUserCreated = true;
   }
 
   if (portalUserCreated) {
@@ -266,13 +244,6 @@ export const update = async (id, data) => {
   const client = await clientRepository.findById(id);
   if (!client) {
     throw ApiError.notFound('Client not found');
-  }
-
-  if (data.email && data.email !== client.email) {
-    const existing = await clientRepository.findByEmail(data.email);
-    if (existing) {
-      throw ApiError.conflict('A client with this email already exists');
-    }
   }
 
   if (data.gstNumber && data.gstNumber !== client.gstNumber) {
