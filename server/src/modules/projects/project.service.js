@@ -82,7 +82,7 @@ export const createProject = async (data, user) => {
       createdBy: user._id,
     })),
     tags: data.tags || [],
-    projectCode: data.projectCode?.trim() || (await generateProjectCode(client.brand)),
+    projectCode: data.projectCode?.trim() || (await generateProjectCode()),
     location: data.location,
     duration: data.duration,
     inwardData: data.inwardData,

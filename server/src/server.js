@@ -10,6 +10,7 @@ import { startTaskDueCron } from './jobs/taskDueSoon.job.js';
 import { startCleanupCron } from './jobs/cleanupNotifications.job.js';
 import User from './modules/auth/auth.model.js';
 import Client from './modules/clients/client.model.js';
+import { migrateProjectCodes } from './utils/generateProjectCode.js';
 import { ROLES, ROLE_PERMISSIONS } from './constants/index.js';
 
 /**
@@ -87,6 +88,7 @@ const startServer = async () => {
     await connectDB();
     await fixStaleIndexes();
     await removeLegacyNullPortalUsers();
+    await migrateProjectCodes();
     await autoSeed();
 
     const httpServer = createServer(app);
