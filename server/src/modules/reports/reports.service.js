@@ -1,7 +1,7 @@
 import Lead from '../leads/lead.model.js';
 import Client from '../clients/client.model.js';
 import Invoice from '../invoices/invoice.model.js';
-import { completedNonCashPayments, invoiceCollectionStages } from '../payments/payment.collections.js';
+import { invoiceCollectionStages } from '../payments/payment.collections.js';
 import Payment from '../payments/payment.model.js';
 import Task from '../tasks/task.model.js';
 
@@ -30,6 +30,7 @@ export const getRevenueReport = async (from, to) => {
         _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } },
         invoiced: { $sum: '$total' },
         collected: { $sum: '$nonCashCollected' },
+        cashCollected: { $sum: '$cashCollected' },
         outstanding: { $sum: '$balanceDue' },
         count: { $sum: 1 },
       },
@@ -41,6 +42,7 @@ export const getRevenueReport = async (from, to) => {
         month: '$_id',
         invoiced: { $round: ['$invoiced', 2] },
         collected: { $round: ['$collected', 2] },
+        cashCollected: { $round: ['$cashCollected', 2] },
         outstanding: { $round: ['$outstanding', 2] },
         count: 1,
       },
@@ -49,7 +51,7 @@ export const getRevenueReport = async (from, to) => {
 
   // Revenue by payment method
   const byMethod = await Payment.aggregate([
-    { $match: { ...completedNonCashPayments, ...(dateFilter ? { paymentDate: dateFilter } : {}) } },
+    { $match: { status: 'completed', ...(dateFilter ? { paymentDate: dateFilter } : {}) } },
     {
       $group: {
         _id: '$paymentMethod',
@@ -69,6 +71,7 @@ export const getRevenueReport = async (from, to) => {
       $group: {
         _id: null,
         totalRevenue: { $sum: '$nonCashCollected' },
+        cashCollected: { $sum: '$cashCollected' },
         totalOutstanding: { $sum: '$balanceDue' },
         totalInvoiced: { $sum: '$total' },
       },
@@ -82,7 +85,7 @@ export const getRevenueReport = async (from, to) => {
 
   return {
     summary: { ...s, collectionRate },
-    charts: { monthlyRevenue, byMethod },
+    charts: { monthlyRevenue, byMethod: byMethod.filter((item) => item.method !== 'cash'), cashByMethod: byMethod.filter((item) => item.method === 'cash') },
   };
 };
 
@@ -228,11 +231,12 @@ export const getInvoiceReport = async (from, to) => {
         _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } },
         total: { $sum: '$total' },
         paid: { $sum: '$nonCashCollected' },
+        cashCollected: { $sum: '$cashCollected' },
         count: { $sum: 1 },
       },
     },
     { $sort: { _id: 1 } },
-    { $project: { _id: 0, month: '$_id', total: { $round: ['$total', 2] }, paid: { $round: ['$paid', 2] }, count: 1 } },
+    { $project: { _id: 0, month: '$_id', total: { $round: ['$total', 2] }, paid: { $round: ['$paid', 2] }, cashCollected: { $round: ['$cashCollected', 2] }, count: 1 } },
   ]);
 
   const totalInvoices = await Invoice.countDocuments(matchStage);

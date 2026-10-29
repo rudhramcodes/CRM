@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { IndianRupee, TrendingUp, Wallet, PiggyBank } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '../../../components/ui/chart';
@@ -25,16 +26,28 @@ function TooltipRow({ label, value, color }) {
 
 export default function RevenueReport({ data }) {
   const { summary, charts } = data || {};
-  const { monthlyRevenue = [], byMethod = [] } = charts || {};
+  const [includeCash, setIncludeCash] = useState(false);
+  const monthlyRevenue = (charts?.monthlyRevenue || []).map((row) => ({ ...row, collected: row.collected + (includeCash ? row.cashCollected || 0 : 0) }));
+  const byMethod = [...(charts?.byMethod || []), ...(includeCash ? charts?.cashByMethod || [] : [])];
+  const revenue = (summary?.totalRevenue || 0) + (includeCash ? summary?.cashCollected || 0 : 0);
+  const collectionRate = summary?.totalInvoiced ? Math.round(revenue / summary.totalInvoiced * 100) : 0;
 
   return (
     <div className="space-y-6">
+      <label className="flex items-center gap-3 text-sm font-medium text-zinc-700">
+        Report collection
+        <select className="rounded-lg border border-zinc-200 bg-white px-3 py-2" value={includeCash ? 'with' : 'without'} onChange={(event) => setIncludeCash(event.target.value === 'with')}>
+          <option value="without">Without Cash</option>
+          <option value="with">With Cash</option>
+        </select>
+      </label>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <ReportSummaryCard label="Revenue (excl. cash)" value={fmt(summary?.totalRevenue)} color="text-green-600" icon={IndianRupee} subtitle={`${summary?.collectionRate || 0}% collection rate`} />
+        <ReportSummaryCard label={includeCash ? 'Collection (with cash)' : 'Revenue (excl. cash)'} value={fmt(revenue)} color="text-green-600" icon={IndianRupee} subtitle={`${collectionRate}% collection rate`} />
+        <ReportSummaryCard label="Cash Collected (separate)" value={fmt(summary?.cashCollected)} color="text-emerald-600" icon={Wallet} subtitle="Excluded from normal revenue" />
         <ReportSummaryCard label="Outstanding" value={fmt(summary?.totalOutstanding)} color="text-orange-600" icon={Wallet} subtitle="Pending payments" />
         <ReportSummaryCard label="Total Invoiced" value={fmt(summary?.totalInvoiced)} color="text-blue-600" icon={TrendingUp} subtitle="Gross invoice value" />
-        <ReportSummaryCard label="Collection Rate" value={`${summary?.collectionRate || 0}%`} color="text-indigo-600" icon={PiggyBank} subtitle="Non-cash collected / Total invoiced" />
+        <ReportSummaryCard label="Collection Rate" value={`${collectionRate}%`} color="text-indigo-600" icon={PiggyBank} subtitle={includeCash ? 'All collected / Total invoiced' : 'Non-cash collected / Total invoiced'} />
       </div>
 
       {/* Charts Row */}
@@ -42,7 +55,7 @@ export default function RevenueReport({ data }) {
         {/* Monthly Revenue Bar Chart */}
         <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-semibold text-zinc-700">Monthly Revenue (excl. cash)</h4>
+            <h4 className="text-sm font-semibold text-zinc-700">{includeCash ? 'Monthly Collection (with cash)' : 'Monthly Revenue (excl. cash)'}</h4>
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--chart-1)' }} />
@@ -90,7 +103,7 @@ export default function RevenueReport({ data }) {
 
         {/* Payment Method Pie Chart */}
         <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-sm">
-          <h4 className="text-sm font-semibold text-zinc-700 mb-4">Payment Methods (excl. cash)</h4>
+          <h4 className="text-sm font-semibold text-zinc-700 mb-4">Payment Methods ({includeCash ? 'with cash' : 'excl. cash'})</h4>
           {byMethod.length > 0 ? (
             <div className="flex flex-col items-center">
               <ChartContainer config={{}} className="w-full h-[250px]">
@@ -154,6 +167,7 @@ export default function RevenueReport({ data }) {
                   <th className="text-left py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Month</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Invoiced</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Collected</th>
+                  <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Cash (separate)</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Outstanding</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Invoices</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Collection %</th>
@@ -167,6 +181,7 @@ export default function RevenueReport({ data }) {
                       <td className="py-2.5 px-5 font-medium text-zinc-800">{r.month}</td>
                       <td className="py-2.5 px-5 text-right text-blue-600 font-medium">{fmt(r.invoiced)}</td>
                       <td className="py-2.5 px-5 text-right text-green-600 font-medium">{fmt(r.collected)}</td>
+                      <td className="py-2.5 px-5 text-right text-emerald-600 font-medium">{fmt(r.cashCollected)}</td>
                       <td className="py-2.5 px-5 text-right text-orange-600 font-medium">{fmt(r.outstanding)}</td>
                       <td className="py-2.5 px-5 text-right text-zinc-600">{r.count}</td>
                       <td className="py-2.5 px-5 text-right">

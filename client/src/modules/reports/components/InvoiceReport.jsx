@@ -155,6 +155,7 @@ export default function InvoiceReport({ data }) {
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Issued</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Total Value</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Collected (excl. cash)</th>
+                  <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Cash (separate)</th>
                   <th className="text-right py-2.5 px-5 text-xs text-zinc-500 font-medium uppercase tracking-wider">Collection %</th>
                 </tr>
               </thead>
@@ -167,6 +168,7 @@ export default function InvoiceReport({ data }) {
                       <td className="py-2.5 px-5 text-right font-medium text-zinc-700">{r.count}</td>
                       <td className="py-2.5 px-5 text-right text-blue-600 font-medium">{fmt(r.total)}</td>
                       <td className="py-2.5 px-5 text-right text-green-600 font-medium">{fmt(r.paid)}</td>
+                      <td className="py-2.5 px-5 text-right text-emerald-600 font-medium">{fmt(r.cashCollected)}</td>
                       <td className="py-2.5 px-5 text-right">
                         <span className={`font-medium ${collectionPct >= 80 ? 'text-green-600' : collectionPct >= 50 ? 'text-orange-600' : 'text-red-600'}`}>
                           {collectionPct}%

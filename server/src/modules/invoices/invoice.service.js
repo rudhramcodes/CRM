@@ -276,6 +276,8 @@ export const getStats = async () => {
     revenueByBrandMap[key] = {
       count: item.count,
       totalRevenue: item.totalRevenue,
+      totalInvoiced: item.totalInvoiced,
+      cashCollected: item.cashCollected,
       totalPaid: item.totalPaid,
       totalPending: item.totalPending,
     };

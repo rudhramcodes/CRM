@@ -53,7 +53,7 @@ export async function getOverview() {
     Invoice.aggregate([
       { $match: { status: { $ne: 'draft' }, issueDate: dateFilter } },
       ...invoiceCollectionStages(),
-      { $group: { _id: null, totalRevenue: { $sum: '$nonCashCollected' }, totalOutstanding: { $sum: '$balanceDue' }, totalInvoiced: { $sum: '$total' } } },
+      { $group: { _id: null, cashCollected: { $sum: '$cashCollected' }, totalRevenue: { $sum: '$nonCashCollected' }, totalOutstanding: { $sum: '$balanceDue' }, totalInvoiced: { $sum: '$total' } } },
     ]),
     Payment.countDocuments({ status: 'pending' }),
     Invoice.countDocuments({ status: 'overdue' }),
@@ -152,6 +152,7 @@ export async function getOverview() {
       totalLeads,
       activeClients,
       totalRevenue: s.totalRevenue,
+      cashCollected: s.cashCollected || 0,
       pendingPayments,
       overdueInvoices,
       conversionRate,
@@ -359,14 +360,16 @@ export async function getVentureDashboard(brand) {
 
   // Revenue summary for this brand
   let totalRevenue = 0;
+  let cashCollected = 0;
   let totalOutstanding = 0;
   if (brandClientIds.length > 0) {
     const revAgg = await Invoice.aggregate([
       { $match: { client: { $in: brandClientIds }, status: { $ne: 'draft' } } },
       ...invoiceCollectionStages(),
-      { $group: { _id: null, totalRevenue: { $sum: '$nonCashCollected' }, totalOutstanding: { $sum: '$balanceDue' } } },
+      { $group: { _id: null, cashCollected: { $sum: '$cashCollected' }, totalRevenue: { $sum: '$nonCashCollected' }, totalOutstanding: { $sum: '$balanceDue' } } },
     ]);
     totalRevenue = revAgg[0]?.totalRevenue || 0;
+    cashCollected = revAgg[0]?.cashCollected || 0;
     totalOutstanding = revAgg[0]?.totalOutstanding || 0;
   }
 
@@ -384,6 +387,7 @@ export async function getVentureDashboard(brand) {
       wonLeads,
       conversionRate,
       totalRevenue,
+      cashCollected,
       totalOutstanding,
     },
     pipeline: { byStatus, bySource },

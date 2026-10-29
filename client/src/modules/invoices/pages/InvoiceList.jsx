@@ -137,7 +137,7 @@ export default function InvoiceList() {
         <div className="flex flex-wrap items-center gap-6">
           <IndianRupee className="w-5 h-5 text-green-600 shrink-0" />
           <div>
-            <p className="text-xs text-zinc-500">Collected (excl. cash)</p>
+            <p className="text-xs text-zinc-500">Revenue (excl. cash)</p>
             <p className="text-lg font-bold text-green-600">
               {statsLoading ? '-' : formatCurrency(stats?.revenue?.totalPaid)}
             </p>
@@ -153,7 +153,7 @@ export default function InvoiceList() {
           <div>
             <p className="text-xs text-zinc-500">Total Invoiced</p>
             <p className="text-lg font-bold text-zinc-900">
-              {statsLoading ? '-' : formatCurrency(stats?.revenue?.totalRevenue)}
+              {statsLoading ? '-' : formatCurrency(stats?.revenue?.totalInvoiced)}
             </p>
           </div>
           <div className="h-8 w-px bg-zinc-200" />
@@ -162,8 +162,8 @@ export default function InvoiceList() {
             <p className="text-lg font-bold text-zinc-900">
               {statsLoading
                 ? '-'
-                : stats?.revenue?.totalRevenue
-                  ? `${Math.round((stats.revenue.totalPaid / stats.revenue.totalRevenue) * 100)}%`
+                : stats?.revenue?.totalInvoiced
+                  ? `${Math.round((stats.revenue.totalPaid / stats.revenue.totalInvoiced) * 100)}%`
                   : '0%'}
             </p>
           </div>
@@ -175,14 +175,19 @@ export default function InvoiceList() {
             </p>
           </div>
         </div>
-        {!statsLoading && stats?.revenue?.totalRevenue > 0 && (
+        {!statsLoading && stats?.revenue?.totalInvoiced > 0 && (
           <div className="mt-3 w-full bg-zinc-100 rounded-full h-1.5">
             <div
               className="bg-green-500 h-1.5 rounded-full transition-all"
-              style={{ width: `${Math.min((stats.revenue.totalPaid / stats.revenue.totalRevenue) * 100, 100)}%` }}
+              style={{ width: `${Math.min((stats.revenue.totalPaid / stats.revenue.totalInvoiced) * 100, 100)}%` }}
             />
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-lg border border-zinc-200 p-4">
+        <p className="text-xs text-zinc-500">Cash Collected (separate from revenue)</p>
+        <p className="text-lg font-bold text-emerald-600">{statsLoading ? '-' : formatCurrency(stats?.revenue?.cashCollected)}</p>
       </div>
 
       {!statsLoading && stats?.byBrand && Object.keys(stats.byBrand).length > 0 && (
@@ -209,6 +214,7 @@ export default function InvoiceList() {
                 <div className="flex items-center gap-3 text-xs">
                   <span className="text-zinc-500">{data.count} invoices</span>
                   <span className="text-green-600 font-semibold">{formatCurrency(data.totalPaid)} collected</span>
+                  <span className="text-emerald-600">{formatCurrency(data.cashCollected)} cash (separate)</span>
                   {data.totalPending > 0 && (
                     <span className="text-orange-600">{formatCurrency(data.totalPending)} pending</span>
                   )}

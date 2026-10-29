@@ -214,6 +214,13 @@ export default function VentureDashboard() {
           onClick={() => navigate('/clients')}
         />
         <StatCard
+          label="Cash Collected (separate)"
+          value={kpis.cashCollected || 0}
+          icon={IndianRupee}
+          prefix="₹"
+          iconStyle="bg-emerald-50 text-emerald-600 border-emerald-200/60"
+        />
+        <StatCard
           label="Revenue (excl. cash)"
           value={kpis.totalRevenue}
           prefix="₹"

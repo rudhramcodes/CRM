@@ -118,7 +118,9 @@ export const getRevenueByBrand = async () => {
     {
       $group: {
         _id: '$clientDoc.brand',
-        totalRevenue: { $sum: '$total' },
+        totalInvoiced: { $sum: '$total' },
+        totalRevenue: { $sum: '$nonCashCollected' },
+        cashCollected: { $sum: '$cashCollected' },
         totalPaid: { $sum: '$nonCashCollected' },
         totalPending: { $sum: '$balanceDue' },
         count: { $sum: 1 },
@@ -139,14 +141,16 @@ export const getRevenueStats = async () => {
     {
       $group: {
         _id: null,
-        totalRevenue: { $sum: '$total' },
+        totalInvoiced: { $sum: '$total' },
+        totalRevenue: { $sum: '$nonCashCollected' },
+        cashCollected: { $sum: '$cashCollected' },
         totalPaid: { $sum: '$nonCashCollected' },
         totalPending: { $sum: '$balanceDue' },
         count: { $sum: 1 },
       },
     },
   ]);
-  return result[0] || { totalRevenue: 0, totalPaid: 0, totalPending: 0, count: 0 };
+  return result[0] || { totalInvoiced: 0, totalRevenue: 0, cashCollected: 0, totalPaid: 0, totalPending: 0, count: 0 };
 };
 
 export const countOverdue = async () => {

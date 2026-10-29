@@ -210,6 +210,14 @@ export default function Dashboard() {
           onClick={() => navigate('/payments')}
         />
         <StatCard
+          label="Cash Collected (separate)"
+          value={kpis.cashCollected || 0}
+          icon={IndianRupee}
+          prefix="₹"
+          iconStyle="bg-emerald-50 text-emerald-600 border-emerald-200/60"
+          onClick={() => navigate('/payments')}
+        />
+        <StatCard
           label="Pending Payments"
           value={kpis.pendingPayments}
           icon={Clock}

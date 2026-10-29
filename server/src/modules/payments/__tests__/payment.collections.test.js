@@ -60,7 +60,7 @@ describe.skipIf(!mongoUri)('collection totals excluding cash', () => {
 
   it('excludes cash from invoice revenue statistics without reducing gross invoiced value', async () => {
     const stats = await getRevenueStats();
-    expect(stats).toMatchObject({ totalPaid: 10000, totalRevenue: 804760, totalPending: 757000 });
+    expect(stats).toMatchObject({ totalPaid: 10000, totalRevenue: 10000, totalInvoiced: 804760, cashCollected: 37760, totalPending: 757000 });
     expect(await getRevenueByBrand()).toEqual([expect.objectContaining({ _id: 'aghori', totalPaid: 10000, totalPending: 757000 })]);
   });
 
@@ -80,13 +80,14 @@ describe.skipIf(!mongoUri)('collection totals excluding cash', () => {
   it('excludes cash from overview KPIs, monthly charts and payment method totals', async () => {
     const overview = await getOverview();
     expect(overview.kpis.totalRevenue).toBe(10000);
+    expect(overview.kpis.cashCollected).toBe(37760);
     expect(overview.revenue.monthly.find((item) => item.month === month).collected).toBe(10000);
     expect(overview.revenue.byMethod).toEqual([{ method: 'upi', amount: 10000, count: 1 }]);
   });
 
   it('excludes cash from venture dashboard KPIs and monthly charts', async () => {
     const dashboard = await getVentureDashboard('aghori');
-    expect(dashboard.kpis).toMatchObject({ totalRevenue: 10000, totalOutstanding: 757000 });
+    expect(dashboard.kpis).toMatchObject({ totalRevenue: 10000, cashCollected: 37760, totalOutstanding: 757000 });
     expect(dashboard.revenue.monthly.find((item) => item.month === month).collected).toBe(10000);
     expect((await getVentureDashboard('panigrahna')).kpis.totalRevenue).toBe(0);
   });
@@ -97,6 +98,17 @@ describe.skipIf(!mongoUri)('collection totals excluding cash', () => {
     expect((await getRevenueStats()).totalPaid).toBe(17760);
     expect((await getStats()).totalCollected).toBe(17760);
     expect(await getTotalByInvoice(cashInvoice)).toBe(37760);
+  });
+
+  it('does not turn stale invoice paid amounts into revenue', async () => {
+    await Invoice.updateOne({ _id: bankInvoice }, { $set: { paidAmount: 280000 } });
+    expect((await getOverview()).kpis.totalRevenue).toBe(10000);
+    expect((await getVentureDashboard('aghori')).kpis.totalRevenue).toBe(10000);
+    expect((await getRevenueStats()).totalRevenue).toBe(10000);
+    const report = await getRevenueReport();
+    expect(report.summary).toMatchObject({ totalRevenue: 10000, cashCollected: 37760 });
+    expect(report.charts.cashByMethod).toEqual([{ method: 'cash', amount: 37760, count: 1 }]);
+    expect(report.charts.monthlyRevenue[0].cashCollected).toBe(37760);
   });
 
   it('updates reporting totals when a payment method changes without changing settlement', async () => {

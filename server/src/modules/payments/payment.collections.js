@@ -11,24 +11,19 @@ export const invoiceCollectionStages = () => [
       localField: '_id',
       foreignField: 'invoice',
       pipeline: [
-        { $match: { status: 'completed', paymentMethod: 'cash' } },
-        { $group: { _id: null, amount: { $sum: '$amount' } } },
+        { $match: { status: 'completed' } },
+        { $group: { _id: null,
+          cash: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'cash'] }, '$amount', 0] } },
+          nonCash: { $sum: { $cond: [{ $ne: ['$paymentMethod', 'cash'] }, '$amount', 0] } },
+        } },
       ],
       as: 'cashCollections',
     },
   },
   {
     $set: {
-      nonCashCollected: {
-        $round: [{
-          $max: [0, {
-            $subtract: [
-              { $ifNull: ['$paidAmount', 0] },
-              { $ifNull: [{ $arrayElemAt: ['$cashCollections.amount', 0] }, 0] },
-            ],
-          }],
-        }, 2],
-      },
+      nonCashCollected: { $round: [{ $ifNull: [{ $arrayElemAt: ['$cashCollections.nonCash', 0] }, 0] }, 2] },
+      cashCollected: { $round: [{ $ifNull: [{ $arrayElemAt: ['$cashCollections.cash', 0] }, 0] }, 2] },
     },
   },
   { $unset: 'cashCollections' },
