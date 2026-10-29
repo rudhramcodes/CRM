@@ -65,6 +65,15 @@ const BANK = {
   upiId: '7285833101@hdfcbank',
 };
 
+const INVOICE_COMPANY = {
+  ...COMPANY,
+  legalName: 'RUDHRAM ENTERTAINMENT',
+  contact: '8655695623',
+  addressLine1: 'HD-563, 2ND FLOOR, 264-265, Vaswani Chamber,',
+  addressLine2: 'Worli Road, Near WeWork, Worli,',
+  addressLine3: 'Mumbai, Maharastra, 400018',
+};
+
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const fmt = (val) => `₹${(Number(val) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtPlain = (val) => (Number(val) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -576,13 +585,13 @@ export const generateInvoiceHtml = (invoice) => {
             <!-- Parties -->
             <div class="parties-grid">
               <div>
-                <div class="company-title">${COMPANY.legalName}</div>
-                <div>${COMPANY.addressLine1}</div>
-                <div>${COMPANY.addressLine2}</div>
-                <div>${COMPANY.addressLine3}</div>
-                <div>${COMPANY.email}</div>
-                <div>Mobile: ${COMPANY.contact}</div>
-                <div>GST NO: ${COMPANY.gstin}</div>
+                <div class="company-title">${INVOICE_COMPANY.legalName}</div>
+                <div>${INVOICE_COMPANY.addressLine1}</div>
+                <div>${INVOICE_COMPANY.addressLine2}</div>
+                <div>${INVOICE_COMPANY.addressLine3}</div>
+                <div>${INVOICE_COMPANY.email}</div>
+                <div>Mobile: ${INVOICE_COMPANY.contact}</div>
+                <div>GST NO: ${INVOICE_COMPANY.gstin}</div>
               </div>
 
               <div>
