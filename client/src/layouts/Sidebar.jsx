@@ -52,9 +52,32 @@ export default function Sidebar({ open, onClose }) {
   // On desktop (>= 1024px), sidebar follows sidebarOpen (w-64 vs w-20).
   const isExpanded = isDesktop ? sidebarOpen : true;
 
-  const visibleNavItems = NAV_ITEMS.filter(
-    (item) => user && item.roles.includes(user.role) && (!item.payrollOnly || canAccessPayroll(user)),
-  );
+  const isEmployee = user?.role === 'employee';
+  const isSalesPerson =
+    user?.role === 'super_admin' ||
+    user?.role === 'admin' ||
+    user?.role === 'manager' ||
+    user?.department?.toLowerCase() === 'sales' ||
+    user?.profile?.department?.toLowerCase() === 'sales';
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (!user || !item.roles.includes(user.role)) return false;
+    if (item.payrollOnly && !canAccessPayroll(user)) return false;
+    if ((item.path === '/leads' || item.path === '/clients') && isEmployee && !isSalesPerson) {
+      return false;
+    }
+    return true;
+  });
+
+  const activeSections = isEmployee
+    ? [
+        { id: 'overview', label: 'Overview', paths: ['/dashboard'] },
+        { id: 'my_work', label: 'My Work', paths: ['/tasks', '/projects', '/meetings'] },
+        { id: 'my_hr', label: 'Self-Service & HR', paths: ['/attendance', '/my-payslips'] },
+        ...(isSalesPerson ? [{ id: 'crm', label: 'Sales & CRM', paths: ['/leads', '/clients'] }] : []),
+        { id: 'system', label: 'Workspace', paths: ['/notifications', '/settings'] },
+      ]
+    : SECTIONS;
 
   return (
     <>
@@ -114,7 +137,7 @@ export default function Sidebar({ open, onClose }) {
 
         {/* Navigation Sections */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4 scrollbar-hide">
-          {SECTIONS.map((section) => {
+          {activeSections.map((section) => {
             const sectionItems = visibleNavItems.filter((item) =>
               section.paths.includes(item.path),
             );

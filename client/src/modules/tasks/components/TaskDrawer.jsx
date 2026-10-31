@@ -716,6 +716,56 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
             </div>
           </div>
 
+          {/* Todo -> Start Working Banner */}
+          {task.status === 'todo' && (
+            <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-zinc-200/80 text-zinc-700 flex items-center justify-center shrink-0">
+                  <Play className="w-4 h-4 fill-zinc-700" />
+                </div>
+                <div>
+                  <span className="font-bold text-zinc-900 block">Ready to Work</span>
+                  <span className="text-[11px] text-zinc-500 block">
+                    Click Start Working when you begin this task to update your progress.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStatusChange('in_progress')}
+                className="px-3.5 py-1.5 rounded-xl bg-primary-900 hover:bg-primary-800 text-white font-semibold transition-all cursor-pointer text-xs shadow-xs flex items-center gap-1.5 shrink-0"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                Start Working
+              </button>
+            </div>
+          )}
+
+          {/* In Progress -> Submit for Review Banner */}
+          {task.status === 'in_progress' && (
+            <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold text-blue-950 block">Work In Progress</span>
+                  <span className="text-[11px] text-blue-800 block">
+                    Finished your work? Submit this task for creator review and approval.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStatusChange('review')}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold transition-all cursor-pointer text-xs shadow-xs flex items-center gap-1.5 shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Submit for Review
+              </button>
+            </div>
+          )}
+
           {/* Creator Review & Approval Gate Banner */}
           {task.status === 'review' && (
             <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
@@ -735,20 +785,31 @@ export default function TaskDrawer({ taskId, open, onClose, onSelectTask }) {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange('in_progress')}
-                  className="px-3 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-50 text-amber-900 font-semibold transition-colors cursor-pointer text-xs"
-                >
-                  Request Changes
-                </button>
-                {isCreator && (
+                {isCreator ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange('in_progress')}
+                      className="px-3 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-50 text-amber-900 font-semibold transition-colors cursor-pointer text-xs"
+                    >
+                      Request Changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange('done')}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors cursor-pointer text-xs shadow-2xs"
+                    >
+                      Approve & Complete
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => handleStatusChange('done')}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors cursor-pointer text-xs shadow-2xs"
+                    onClick={() => handleStatusChange('in_progress')}
+                    className="px-3 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-50 text-amber-900 font-semibold transition-colors cursor-pointer text-xs"
+                    title="Withdraw this review submission back to In Progress to make edits"
                   >
-                    Approve & Complete
+                    Withdraw to In Progress
                   </button>
                 )}
               </div>

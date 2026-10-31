@@ -47,7 +47,6 @@ export default function DayDetailPanel({ date, employeeId }) {
 
   const handleRegularize = async (e) => {
     e.preventDefault();
-    if (!record) return;
     const reason = regularizeReason.trim();
     if (reason.length < 10) {
       setRegularizeError('Reason must be at least 10 characters');
@@ -55,7 +54,7 @@ export default function DayDetailPanel({ date, employeeId }) {
     }
     try {
       await requestRegularization({
-        attendanceId: record._id,
+        ...(record?._id ? { attendanceId: record._id } : { date: dateStr }),
         reason,
         clockInTime: regularizeClockIn,
         clockOutTime: regularizeClockOut,
@@ -84,11 +83,72 @@ export default function DayDetailPanel({ date, employeeId }) {
     );
   }
 
+  const openRegularization = () => {
+    const clockIn = record?.clockIn?.time || sessions[0]?.clockIn?.time;
+    const clockOut = record?.clockOut?.time || sessions[0]?.clockOut?.time;
+    setRegularizeClockIn(clockIn ? format(new Date(clockIn), 'HH:mm') : '09:30');
+    setRegularizeClockOut(clockOut ? format(new Date(clockOut), 'HH:mm') : '18:30');
+    setRegularizeBreakMinutes(String(record?.totalBreakMinutes || 60));
+    setRegularizeReason('');
+    setRegularizeError('');
+    setRegularizeOpen(true);
+  };
+
   if (!record) {
+    const isPastOrToday = new Date(date).setHours(0, 0, 0, 0) <= new Date().setHours(0, 0, 0, 0);
     return (
-      <div className="bg-white rounded-xl border border-zinc-200 p-4">
-        <h3 className="font-semibold text-zinc-900 mb-2">{format(date, 'EEEE, dd MMM yyyy')}</h3>
-        <p className="text-sm text-zinc-400">No attendance record for this day.</p>
+      <div className="bg-white rounded-xl border border-zinc-200/80 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-zinc-900">{format(date, 'EEEE, dd MMM yyyy')}</h3>
+          <Badge variant="default">No Punch</Badge>
+        </div>
+        <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-100 text-xs text-zinc-600 space-y-1.5">
+          <p className="font-semibold text-zinc-800">No attendance record for this day.</p>
+          <p className="text-zinc-500 leading-relaxed">
+            Forgot to punch in or faced an issue? You can submit an attendance regularization request for your manager to review.
+          </p>
+        </div>
+        {isPastOrToday && (
+          <Button
+            variant="outline"
+            className="w-full justify-center"
+            onClick={openRegularization}
+          >
+            Request Regularization
+          </Button>
+        )}
+
+        <Modal open={regularizeOpen} onClose={() => setRegularizeOpen(false)} title="Request Regularization">
+          <form onSubmit={handleRegularize} className="space-y-4">
+            <p className="text-sm text-zinc-500">
+              Add the actual attendance details for {format(date, 'dd MMM yyyy')}. After manager approval, this day will be regularized.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm text-zinc-700">Clock in<input type="time" value={regularizeClockIn} onChange={(e) => setRegularizeClockIn(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2" /></label>
+              <label className="text-sm text-zinc-700">Clock out<input type="time" value={regularizeClockOut} onChange={(e) => setRegularizeClockOut(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2" /></label>
+            </div>
+            <label className="block text-sm text-zinc-700">Total break (minutes)<input type="number" min="0" max="1440" value={regularizeBreakMinutes} onChange={(e) => setRegularizeBreakMinutes(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2" /></label>
+            <Textarea
+              label="Reason"
+              value={regularizeReason}
+              onChange={(e) => {
+                setRegularizeReason(e.target.value);
+                setRegularizeError('');
+              }}
+              error={regularizeError}
+              rows={4}
+              placeholder="Explain why this day should be regularized (min 10 characters)"
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setRegularizeOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={submittingRegularize}>
+                Submit
+              </Button>
+            </div>
+          </form>
+        </Modal>
       </div>
     );
   }
@@ -97,16 +157,6 @@ export default function DayDetailPanel({ date, employeeId }) {
   const hasSessions = sessions.length > 0;
   const regularizationStatus = record.regularization?.approval?.status;
   const approvedBy = record.regularization?.approval?.approvedBy;
-  const openRegularization = () => {
-    const clockIn = record.clockIn?.time || sessions[0]?.clockIn?.time;
-    const clockOut = record.clockOut?.time || sessions[0]?.clockOut?.time;
-    setRegularizeClockIn(clockIn ? format(new Date(clockIn), 'HH:mm') : '');
-    setRegularizeClockOut(clockOut ? format(new Date(clockOut), 'HH:mm') : '');
-    setRegularizeBreakMinutes(String(record.totalBreakMinutes || 0));
-    setRegularizeReason('');
-    setRegularizeError('');
-    setRegularizeOpen(true);
-  };
   return (
     <div className="bg-white rounded-xl border border-zinc-200 p-4 space-y-4">
       <div className="flex items-center justify-between">

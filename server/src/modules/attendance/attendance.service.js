@@ -653,9 +653,25 @@ export const manualEntry = async (data, adminId) => {
 // ===================== REGULARIZATION =====================
 
 export const requestRegularization = async (employeeId, data) => {
-  const record = await attendanceRepo.findAttendanceById(data.attendanceId);
+  let record;
+  if (data.attendanceId) {
+    record = await attendanceRepo.findAttendanceById(data.attendanceId);
+  } else if (data.date) {
+    const targetDate = new Date(data.date);
+    record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, targetDate);
+    if (!record) {
+      const startOfDay = new Date(targetDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      record = await attendanceRepo.createAttendance({
+        employee: employeeId,
+        date: startOfDay,
+        status: 'absent',
+      });
+    }
+  }
   if (!record) throw ApiError.notFound('Attendance record not found');
-  if (String(record.employee._id) !== String(employeeId)) {
+  const recordEmpId = record.employee?._id ? String(record.employee._id) : String(record.employee);
+  if (recordEmpId !== String(employeeId)) {
     throw ApiError.forbidden('You can only regularize your own attendance');
   }
   const updatedRecord = await attendanceRepo.updateAttendance(record._id, {

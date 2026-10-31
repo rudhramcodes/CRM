@@ -15,6 +15,7 @@ import { API_BASE_URL } from '../constants';
 import { cn } from '../utils/cn';
 import { isNotificationSoundEnabled, playNotificationSound, primeNotificationSound, setNotificationSoundEnabled } from '../utils/notificationSound';
 import CommandPalette from '../components/ui/CommandPalette';
+import HeaderAttendancePill from './HeaderAttendancePill';
 
 export default function Header({ onMobileMenuOpen }) {
   const dispatch = useDispatch();
@@ -222,6 +223,9 @@ export default function Header({ onMobileMenuOpen }) {
         >
           <Search className="w-4 h-4" strokeWidth={2} />
         </button>
+
+        {/* Quick Attendance Pill */}
+        <HeaderAttendancePill />
 
         {/* Notifications */}
         <div className="relative" ref={notifRef}>

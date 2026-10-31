@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import { Search, X, FolderKanban, Flag, User, Sparkles } from 'lucide-react';
 import { TASK_PRIORITY } from '../../../constants';
 import {
@@ -13,12 +14,16 @@ import { useGetUsersQuery } from '../../../services/userApi';
 import { cn } from '../../../utils/cn';
 
 export default function TaskFilters({ onFilterChange, currentUserId, initialProject = '' }) {
+  const currentUser = useSelector((state) => state.auth.user);
+  const isEmployee = currentUser?.role === 'employee';
+  const effectiveUserId = currentUserId || currentUser?._id;
+
   const [filters, setFilters] = useState({
     search: '',
     project: initialProject || '',
     priority: '',
     assignedTo: '',
-    quickTab: 'all', // 'all' | 'my' | 'overdue' | 'completed'
+    quickTab: isEmployee ? 'my' : 'all', // 'all' | 'my' | 'overdue' | 'completed'
   });
 
   const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
@@ -40,7 +45,7 @@ export default function TaskFilters({ onFilterChange, currentUserId, initialProj
       if (filters.project && filters.project !== 'all') active.project = filters.project;
       if (filters.priority && filters.priority !== 'all') active.priority = filters.priority;
       if (filters.assignedTo && filters.assignedTo !== 'all') active.assignedTo = filters.assignedTo;
-      if (filters.quickTab === 'my' && currentUserId) active.assignedTo = currentUserId;
+      if (filters.quickTab === 'my' && effectiveUserId) active.assignedTo = effectiveUserId;
       if (filters.quickTab === 'overdue') {
         active.dueDateTo = new Date().toISOString();
       }
@@ -49,7 +54,7 @@ export default function TaskFilters({ onFilterChange, currentUserId, initialProj
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [filters, onFilterChange, currentUserId]);
+  }, [filters, onFilterChange, effectiveUserId]);
 
   const handleChange = useCallback((key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -61,9 +66,9 @@ export default function TaskFilters({ onFilterChange, currentUserId, initialProj
       project: '',
       priority: '',
       assignedTo: '',
-      quickTab: 'all',
+      quickTab: isEmployee ? 'my' : 'all',
     });
-  }, []);
+  }, [isEmployee]);
 
   const hasFilters =
     filters.search ||

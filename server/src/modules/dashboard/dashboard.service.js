@@ -211,8 +211,8 @@ export async function getEmployeeDashboard(userId) {
       .lean(),
     Task.find({ assignedTo: ObjectId(userId) })
       .sort({ updatedAt: -1 })
-      .limit(5)
-      .select('title status priority project dueDate updatedAt')
+      .limit(8)
+      .select('_id title status priority project dueDate updatedAt')
       .populate('project', 'name')
       .lean(),
     Lead.find({ assignedTo: ObjectId(userId), isDeleted: false })
@@ -224,8 +224,13 @@ export async function getEmployeeDashboard(userId) {
 
   const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
+  // Active tasks for immediate workstation execution
+  const activeTasksList = recentTasks.filter((t) => t.status !== 'done');
+  const displayTasks = activeTasksList.length > 0 ? activeTasksList.slice(0, 5) : recentTasks.slice(0, 5);
+
   const activity = [
     ...recentTasks.map((t) => ({
+      _id: t._id,
       type: 'task',
       title: t.title,
       description: `${t.status.replace(/_/g, ' ')} — ${t.project?.name || 'No project'}`,
@@ -249,6 +254,7 @@ export async function getEmployeeDashboard(userId) {
       total: totalTasks,
       done: doneTasks,
       completionRate,
+      items: displayTasks,
     },
     meetings: upcomingMeetings,
     activity,
