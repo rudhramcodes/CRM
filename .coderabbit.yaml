@@ -1,0 +1,32 @@
+
+language: "en-US"
+
+reviews:
+  profile: "assertive"
+
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_instructions:
+    - path: "**/*.{js,jsx,ts,tsx}"
+      instructions: |
+        Check for:
+        - Bugs and logical errors
+        - TypeScript type safety
+        - Async/await error handling
+        - React performance issues
+        - Unnecessary re-renders
+        - Security vulnerabilities
+        - Missing input validation
+
+    - path: "server/**"
+      instructions: |
+        Focus on:
+        - API security
+        - Authentication and authorization
+        - Database query efficiency
+        - Error handling
+        - JWT verification
+        - Input sanitization
+        - Race conditions

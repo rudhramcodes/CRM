@@ -2,6 +2,14 @@ import { api } from './api';
 
 export const quotationApi = api.injectEndpoints({
   endpoints: (builder) => ({
+    getQuotationDefaults: builder.query({
+      query: ({ clientId, projectId } = {}) => ({
+        url: '/quotations/defaults',
+        params: { clientId, projectId },
+      }),
+      keepUnusedDataFor: 0,
+    }),
+
     getQuotations: builder.query({
       query: (params) => ({ url: '/quotations', params }),
       providesTags: ['Quotation'],
@@ -74,6 +82,7 @@ export const quotationApi = api.injectEndpoints({
 });
 
 export const {
+  useGetQuotationDefaultsQuery,
   useGetQuotationsQuery,
   useGetQuotationByIdQuery,
   useGetQuotationStatsQuery,

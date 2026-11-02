@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import { readFileSync } from 'fs';
+import { DEFAULT_SIGNOFF, DEFAULT_DELIVERABLES } from '../modules/quotations/quotation.defaults.js';
 
 const loadAssetBase64 = (relativePath) => {
   try {
@@ -736,12 +737,13 @@ const quotationIcon = (name) => {
 const quotationAddressLines = (client) => {
   const address = client?.address || {};
   if (typeof address === 'string') return [address].filter(Boolean);
-  const cityLine = [address.city, address.state].filter(Boolean).join(', ');
-  return [
-    address.street,
-    cityLine,
-    [address.pincode ? `- ${address.pincode}` : '', address.country || ''].filter(Boolean).join(' '),
-  ].filter(Boolean);
+  const localityParts = [];
+  const cityState = [address.city, address.state].filter(Boolean).join(', ');
+  if (cityState) localityParts.push(cityState);
+  if (address.pincode) localityParts.push(address.pincode);
+  const locality = localityParts.join(' - ');
+  const lastLine = [locality, address.country].filter(Boolean).join(', ');
+  return [address.street, lastLine].filter(Boolean);
 };
 
 const quotationParagraphs = (value) =>
@@ -772,11 +774,11 @@ const quotationMeta = (quotation) => {
     scopeTitle: quotation.scopeTitle || project.title || 'Brand Kit',
     scopeIntro: quotation.scopeIntro || '',
     scopeItems: Array.isArray(quotation.scopeOfWork) ? quotation.scopeOfWork.filter(Boolean) : [],
-    deliverables: quotation.deliverables || 'As per the letterhead',
+    deliverables: quotation.deliverables || DEFAULT_DELIVERABLES,
     salutation: quotation.salutation || `Dear ${client.companyName || 'Client'},`,
-    subject: quotation.subject || `Submission of Quotation for Professional ${quotation.scopeTitle || project.title || 'Brand Kit'}.`,
+    subject: quotation.subject || `Submission of Quotation for Professional ${String(quotation.scopeTitle || project.title || 'Brand Kit').replace(/\s+/g, ' ').trim()}.`,
     letterBody: quotation.letterBody || '',
-    letterSignoff: quotation.letterSignoff || 'Warm regards,\nRudhram Enterprises',
+    letterSignoff: quotation.letterSignoff || DEFAULT_SIGNOFF,
     note: quotation.note || '',
   };
 };
@@ -1033,6 +1035,9 @@ export const generateQuotationHtml = (quotation) => {
     .to-block { font-size: 14.3px; line-height: 1.45; margin-bottom: 24px; }
     .to-block .to-label { font-size: 15px; margin-bottom: 2px; }
     .to-block .to-name { font-family: 'Goldenbook', serif; font-size: 18px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 5px; }
+    .letter-to { padding: 0 10px; margin-bottom: 6px; }
+    .letter-to .to-label { font-family: 'Goldenbook', serif; font-size: 12.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+    .letter-to .to-name { font-size: 17.5px; margin-bottom: 4px; }
     .subject-line { font-size: 15.5px; margin-bottom: 22px; }
     .section-rule { border-top: 2px solid #B3712D; border-bottom: 1px solid #B3712D; padding: 8px 0 9px; margin-bottom: 18px; }
     .section-title { font-family: 'Goldenbook', serif; font-size: 15.5px; font-weight: 700; letter-spacing: 0.06em; }
@@ -1061,12 +1066,15 @@ export const generateQuotationHtml = (quotation) => {
     .summary-meta-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 34px;
+      column-gap: 34px;
+      row-gap: 0;
+      align-items: start;
       font-size: 13.2px;
       line-height: 1.46;
     }
-    .summary-meta-list { margin-bottom: 18px; }
+    .summary-meta-list { margin-bottom: 10px; }
     .summary-meta-list div { margin-bottom: 5px; }
+    .summary-meta-list div:last-child { margin-bottom: 0; }
     .company-name, .billed-name {
       font-family: 'Goldenbook', serif;
       font-size: 17.5px;
@@ -1075,7 +1083,7 @@ export const generateQuotationHtml = (quotation) => {
       letter-spacing: 0.015em;
       margin-bottom: 3px;
     }
-    .billed-label { font-family: 'Goldenbook', serif; font-size: 12.5px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .billed-label { font-family: 'Goldenbook', serif; font-size: 12.5px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; align-self: end; }
     .summary-rule {
       border-top: 2px solid #B3712D;
       border-bottom: 1px solid #B3712D;
@@ -1146,6 +1154,11 @@ export const generateQuotationHtml = (quotation) => {
     <div class="page-watermark"><img src="${watermark}" alt=""></div>
     ${quotationHeader(meta.brand)}
     <div class="page-body">
+      <div class="to-block letter-to">
+        <div class="to-label">To</div>
+        <div class="to-name">${esc(client.companyName || '-')}</div>
+        ${addressLines.map((line) => `<div>${esc(line)}</div>`).join('')}
+      </div>
       <div class="letter-body">
         <p class="salutation">${esc(meta.salutation)}</p>
         ${quotationParagraphs(meta.letterBody)}
@@ -1171,9 +1184,9 @@ export const generateQuotationHtml = (quotation) => {
       <div class="subject-line"><strong>Subject:</strong> ${esc(meta.subject)}</div>
 
       <div class="section-rule"><div class="section-title">SCOPE OF WORK</div></div>
-      ${meta.scopeIntro ? `<p class="scope-intro">${esc(meta.scopeIntro)}</p>` : ''}
+      ${meta.scopeIntro ? `<p class="scope-intro">${esc(meta.scopeIntro).replace(/\n/g, '<br>')}</p>` : ''}
       <ul class="scope-list">
-        ${scopeItems.map((item) => `<li>${esc(item)}</li>`).join('')}
+        ${scopeItems.map((item) => `<li>${esc(item).replace(/\n/g, '<br>')}</li>`).join('')}
       </ul>
 
       <div class="scope-footer">${quotationSignature()}</div>
@@ -1189,13 +1202,17 @@ export const generateQuotationHtml = (quotation) => {
       <h1 class="summary-title">QUOTATION</h1>
 
       <div class="summary-meta-grid">
-        <div>
-          <div class="summary-meta-list">
-            <div>Client Id : ${esc(meta.clientId)}</div>
-            <div>Project No : ${esc(meta.projectCode)}</div>
-            <div>Date: ${esc(meta.quoteDate)}</div>
-          </div>
-          <div class="company-name">${COMPANY.legalName}</div>
+        <div class="summary-meta-list">
+          <div>Client Id : ${esc(meta.clientId)}</div>
+          <div>Project No : ${esc(meta.projectCode)}</div>
+          <div>Date: ${esc(meta.quoteDate)}</div>
+        </div>
+        <div class="billed-label">BILLED TO:</div>
+
+        <div class="company-name">${COMPANY.legalName}</div>
+        <div class="billed-name">${esc(client.companyName || '-')}</div>
+
+        <div class="summary-company-details">
           <div>${COMPANY.addressLine1}</div>
           <div>${COMPANY.addressLine2}</div>
           <div>${COMPANY.addressLine3}</div>
@@ -1203,10 +1220,7 @@ export const generateQuotationHtml = (quotation) => {
           <div>Mobile: ${COMPANY.contact}</div>
           <div>GST NO: ${COMPANY.gstin}</div>
         </div>
-        <div>
-          <div class="summary-meta-list" style="margin-bottom:18px;">&nbsp;</div>
-          <div class="billed-label">BILLED TO:</div>
-          <div class="billed-name">${esc(client.companyName || '-')}</div>
+        <div class="summary-client-details">
           ${addressLines.map((line) => `<div>${esc(line)}</div>`).join('')}
           <div>Email: ${esc(client.email || '')}</div>
           <div>Mobile: ${esc(client.phone || '')}</div>
@@ -1215,7 +1229,7 @@ export const generateQuotationHtml = (quotation) => {
       </div>
 
       <div class="summary-rule"><div>SCOPE OF WORK</div><div>DELIVERABLES</div></div>
-      <div class="summary-scope"><div>${esc(meta.scopeTitle)}</div><div>${esc(meta.deliverables)}</div></div>
+      <div class="summary-scope"><div>${esc(meta.scopeTitle).replace(/\n/g, '<br>')}</div><div>${esc(meta.deliverables).replace(/\n/g, '<br>')}</div></div>
 
       <div class="summary-bottom">
         <div class="summary-lower">

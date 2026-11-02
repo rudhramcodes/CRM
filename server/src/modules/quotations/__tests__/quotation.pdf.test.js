@@ -8,7 +8,7 @@ const quotation = {
   salutation: 'Dear Yashvi Group,',
   subject: 'Submission of Quotation for Professional Brand Kit.',
   letterBody: 'Hello from Rudhram.\n\nThank you for your trust.',
-  letterSignoff: 'Warm regards,\nRudhram Enterprises',
+  letterSignoff: 'Warm Regards,\nRudhram Enterprises',
   scopeTitle: 'Brand Kit',
   scopeIntro: 'The assignment includes:',
   scopeOfWork: ['Logo Identity', 'Brand Guidelines'],
@@ -40,6 +40,20 @@ const quotation = {
 };
 
 describe('quotation PDF template', () => {
+  it('preserves line breaks in the letter sign-off', () => {
+    const html = generateQuotationHtml(quotation);
+    expect(html).toContain('Warm Regards,<br>Rudhram Enterprises');
+  });
+
+  it('preserves line breaks in summary deliverables', () => {
+    const html = generateQuotationHtml({
+      ...quotation,
+      deliverables: 'Brand Identity Design\nLogo & Visual Assets',
+    });
+    const summaryHtml = html.split('<section class="page page-summary">')[1];
+    expect(summaryHtml).toContain('Brand Identity Design<br>Logo &amp; Visual Assets');
+  });
+
   it('renders the three required pages', () => {
     const html = generateQuotationHtml(quotation);
     expect(html.match(/class="page /g)).toHaveLength(3);
@@ -63,5 +77,22 @@ describe('quotation PDF template', () => {
     expect(html).toContain('3,00,000');
     expect(html).toContain('54,000');
     expect(html).toContain('3,54,000');
+  });
+
+  it('preserves line breaks in the scope summary', () => {
+    const html = generateQuotationHtml({
+      ...quotation,
+      scopeTitle: 'Brand Kit\nBrand Identity System',
+    });
+    const summaryHtml = html.split('<section class="page page-summary">')[1];
+    expect(summaryHtml).toContain('Brand Kit<br>Brand Identity System');
+  });
+
+  it('preserves line breaks inside scope bullets', () => {
+    const html = generateQuotationHtml({
+      ...quotation,
+      scopeOfWork: ['Logo Identity\nPrimary and secondary marks', 'Brand Guidelines'],
+    });
+    expect(html).toContain('Logo Identity<br>Primary and secondary marks');
   });
 });

@@ -6,6 +6,15 @@ import logger from '../../utils/logger.js';
 import Client from '../clients/client.model.js';
 import Project from '../projects/project.model.js';
 import { VENTURE_CODES, QUOTATION_STATUS } from '../../constants/index.js';
+import {
+  DEFAULT_SCOPE_INTRO,
+  DEFAULT_SCOPE,
+  DEFAULT_LETTER_BODY,
+  DEFAULT_SIGNOFF,
+  DEFAULT_DELIVERABLES,
+  DEFAULT_NOTE,
+  buildQuotationDefaults,
+} from './quotation.defaults.js';
 
 const VALID_TRANSITIONS = {
   draft: ['sent', 'accepted', 'rejected', 'expired'],
@@ -14,31 +23,6 @@ const VALID_TRANSITIONS = {
   rejected: [],
   expired: [],
 };
-
-const DEFAULT_SCOPE_INTRO =
-  'The assignment covers the development of a comprehensive and cohesive Brand Identity System, including:';
-
-const DEFAULT_SCOPE = [
-  'Logo Identity – Creation of a distinctive and versatile professional logo.',
-  'Colour Palette – Defining primary and secondary brand colours with usage specifications.',
-  'Typography – Selection of appropriate fonts and typographic hierarchy.',
-  'Visual Language – Development of supporting graphic elements, imagery style, patterns, and overall visual direction.',
-  'Brand Applications – Application of the identity across selected print and digital brand touchpoints.',
-  'Brand Guidelines – Preparation of guidelines covering logo usage, colours, typography, visual elements, and brand applications to ensure consistency across all communications.',
-  'Brand Positioning – Defining the brand’s market positioning and differentiation.',
-  'Target Audience – Identifying key audience segments and their needs.',
-  'Brand Personality & Tone of Voice – Establishing the brand character and communication style.',
-  'Brand Messaging – Developing clear and consistent core brand messaging.',
-  'USP & Communication Pillars – Defining key differentiators and strategic communication themes.',
-  'Tagline Development – Creating relevant and distinctive tagline options.',
-  'Domain Purchase & Registration – Assistance with domain selection, purchase, and registration.',
-  'Mascot Design – Creation of a distinctive and engaging brand mascot aligned with the brand’s personality, identity, and communication style.',
-];
-
-const DEFAULT_LETTER_BODY =
-  'Hello…\n\nThank you for giving us the opportunity to present our proposal. We have carefully understood your brief and the direction you want to take.\n\nThe enclosed quotation covers the complete scope outlined on the following pages, with a clear focus on quality, consistency, and execution.\n\nOur approach is simple — understand the brand deeply, translate that understanding into a distinctive visual and verbal language, and deliver a system that stays consistent across every touchpoint.\n\nWe are excited about the possibility of building this together and would be glad to walk you through the scope in detail.\n\nThank you for your trust.';
-
-const DEFAULT_SIGNOFF = 'Warm regards,\nRudhram Enterprises';
 
 export const generateQuotationNumber = async (brand) => {
   const ventureCode = VENTURE_CODES[brand] || 'PG';
@@ -62,6 +46,12 @@ const getClientAndProject = async (clientId, projectId) => {
   }
 
   return { client, project };
+};
+
+export const getQuotationDefaults = async ({ clientId, projectId } = {}) => {
+  if (!clientId) return buildQuotationDefaults();
+  const { client, project } = await getClientAndProject(clientId, projectId || null);
+  return buildQuotationDefaults({ client, project });
 };
 
 const normalizeDate = (value) => (value ? new Date(value) : null);
@@ -90,7 +80,7 @@ export const createQuotation = async (data, user) => {
     salutation: data.salutation || `Dear ${client.companyName},`,
     subject:
       data.subject ||
-      `Submission of Quotation for Professional ${scopeTitle}.`,
+      `Submission of Quotation for Professional ${String(scopeTitle).replace(/\s+/g, ' ').trim()}.`,
     letterBody: data.letterBody || DEFAULT_LETTER_BODY,
     letterSignoff: data.letterSignoff || DEFAULT_SIGNOFF,
     scopeTitle,
@@ -99,8 +89,8 @@ export const createQuotation = async (data, user) => {
       Array.isArray(data.scopeOfWork) && data.scopeOfWork.length > 0
         ? data.scopeOfWork
         : DEFAULT_SCOPE,
-    deliverables: data.deliverables || 'As per the letterhead',
-    note: data.note || '',
+    deliverables: data.deliverables || DEFAULT_DELIVERABLES,
+    note: data.note || DEFAULT_NOTE,
     budget: data.budget ?? project?.budget ?? 0,
     price: data.price ?? 0,
     taxRate: data.taxRate ?? 18,

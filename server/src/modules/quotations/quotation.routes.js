@@ -16,6 +16,7 @@ router.use(verifyToken);
 router.use(authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN));
 
 router.get('/stats', quotationController.stats);
+router.get('/defaults', quotationController.defaults);
 router.get('/', validateQuery(quotationsQuerySchema), quotationController.list);
 router.get('/:id', quotationController.getById);
 router.get('/:id/html', quotationController.getHtml);
