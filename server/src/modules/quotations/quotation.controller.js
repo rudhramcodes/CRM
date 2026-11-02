@@ -1,6 +1,18 @@
 import ApiResponse from '../../utils/ApiResponse.js';
 import * as quotationService from './quotation.service.js';
 
+export const defaults = async (req, res, next) => {
+  try {
+    const result = await quotationService.getQuotationDefaults({
+      clientId: req.query.clientId,
+      projectId: req.query.projectId,
+    });
+    ApiResponse.success(res, 200, { defaults: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const list = async (req, res, next) => {
   try {
     const result = await quotationService.getQuotations(req.query);

@@ -8,6 +8,7 @@ import FormTextarea from '../../../components/forms/FormTextarea';
 import DatePicker from '../../../components/forms/DatePicker';
 import Button from '../../../components/ui/Button';
 import { useGetProjectsQuery } from '../../../services/projectApi';
+import { useGetQuotationDefaultsQuery } from '../../../services/quotationApi';
 
 const quotationFormSchema = z.object({
   client: z.string().min(1, 'Client is required'),
@@ -37,6 +38,11 @@ const TAX_OPTIONS = [
 ];
 
 const toDateInput = (value) => (value ? new Date(value).toISOString().split('T')[0] : '');
+const addDays = (dateString, days) => {
+  const date = dateString ? new Date(dateString) : new Date();
+  date.setDate(date.getDate() + days);
+  return toDateInput(date);
+};
 
 export default function QuotationForm({
   clients,
@@ -73,7 +79,7 @@ export default function QuotationForm({
         client: '',
         project: '',
         issueDate: toDateInput(new Date()),
-        validUntil: '',
+        validUntil: addDays(new Date(), 30),
         budget: 0,
         price: 0,
         taxRate: '18',
@@ -82,10 +88,10 @@ export default function QuotationForm({
         scopeTitle: '',
         scopeIntro: '',
         scopeOfWork: '',
-        deliverables: 'As per the letterhead',
-        note: '',
+        deliverables: 'Brand Identity Design\nLogo & Visual Assets\nPrint & Digital Collateral\nSocial Media Creatives\nFinal Files (Source + Export Formats)',
+        note: 'Payment Terms: 50% advance along with the confirmation, 50% before final delivery.\nGST @18% is applicable as quoted.\nAny additional scope will be quoted separately.',
         letterBody: '',
-        letterSignoff: '',
+        letterSignoff: 'Warm Regards,\nRudhram Enterprises',
       };
 
   const {
@@ -95,7 +101,7 @@ export default function QuotationForm({
     watch,
     reset,
     setValue,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm({
     resolver: zodResolver(quotationFormSchema),
     defaultValues,
@@ -110,6 +116,32 @@ export default function QuotationForm({
   const price = watch('price');
   const taxRate = watch('taxRate');
   const budget = watch('budget');
+
+  const { data: defaultsData } = useGetQuotationDefaultsQuery(
+    { clientId: selectedClient || undefined, projectId: selectedProject || undefined },
+    { skip: Boolean(initialData) },
+  );
+  const defaults = defaultsData?.data?.defaults;
+
+  const applyDefaults = useCallback((fields, { force = false } = {}) => {
+    if (!defaults) return;
+    for (const name of fields) {
+      if (!force && dirtyFields[name]) continue;
+      const value = defaults[name];
+      if (value === undefined || value === null) continue;
+      setValue(name, name === 'scopeOfWork' && Array.isArray(value) ? value.join('\n') : value, {
+        shouldDirty: false,
+        shouldValidate: false,
+      });
+    }
+  }, [defaults, dirtyFields, setValue]);
+
+  useEffect(() => {
+    applyDefaults([
+      'salutation', 'subject', 'letterBody', 'letterSignoff', 'scopeTitle',
+      'scopeIntro', 'scopeOfWork', 'deliverables', 'note', 'budget', 'price', 'validUntil',
+    ]);
+  }, [applyDefaults]);
 
   const clientProjects = selectedClient
     ? projects.filter((p) => String(p.client?._id || p.client) === String(selectedClient))
@@ -263,9 +295,19 @@ export default function QuotationForm({
       </div>
 
       <div className="border-t border-zinc-200 pt-5 space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-900">Cover Letter</h3>
-          <p className="text-xs text-zinc-500 mt-0.5">Page 1 of the quotation. Leave blank to use the default letter.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900">Cover Letter</h3>
+            <p className="text-xs text-zinc-500 mt-0.5">Page 1 of the quotation. Leave blank to use the default letter.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => applyDefaults(['salutation', 'letterBody', 'letterSignoff'], { force: true })}
+            disabled={!defaults}
+            className="text-xs font-medium text-primary-900 hover:underline disabled:text-zinc-300"
+          >
+            Load default text
+          </button>
         </div>
         <FormInput
           label="Salutation"
@@ -290,9 +332,19 @@ export default function QuotationForm({
       </div>
 
       <div className="border-t border-zinc-200 pt-5 space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-900">Scope</h3>
-          <p className="text-xs text-zinc-500 mt-0.5">Page 2 and page 3 of the quotation. Client and project details are pulled automatically.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900">Scope</h3>
+            <p className="text-xs text-zinc-500 mt-0.5">Page 2 and page 3 of the quotation. Client and project details are pulled automatically.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => applyDefaults(['subject', 'scopeTitle', 'scopeIntro', 'scopeOfWork', 'deliverables', 'note'], { force: true })}
+            disabled={!defaults}
+            className="text-xs font-medium text-primary-900 hover:underline disabled:text-zinc-300"
+          >
+            Load default text
+          </button>
         </div>
         <FormInput
           label="Subject"
@@ -300,20 +352,20 @@ export default function QuotationForm({
           error={errors.subject?.message}
           {...register('subject')}
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormInput
-            label="Scope of Work (summary)"
-            placeholder="Brand Kit"
-            error={errors.scopeTitle?.message}
-            {...register('scopeTitle')}
-          />
-          <FormInput
-            label="Deliverables"
-            placeholder="As per the letterhead"
-            error={errors.deliverables?.message}
-            {...register('deliverables')}
-          />
-        </div>
+        <FormTextarea
+          label="Scope of Work (summary)"
+          placeholder={'Brand Kit\nBrand Identity System'}
+          rows={2}
+          error={errors.scopeTitle?.message}
+          {...register('scopeTitle')}
+        />
+        <FormTextarea
+          label="Deliverables"
+          placeholder={'One deliverable per line\nBrand Identity Design\nLogo & Visual Assets'}
+          rows={4}
+          error={errors.deliverables?.message}
+          {...register('deliverables')}
+        />
         <FormTextarea
           label="Scope Introduction"
           placeholder="The assignment covers..."
