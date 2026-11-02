@@ -338,6 +338,10 @@ projectSchema.index({ deadline: 1 });
 projectSchema.index({ tags: 1 });
 projectSchema.index({ client: 1 });
 projectSchema.index({ createdAt: -1 });
+projectSchema.index(
+  { client: 1, projectCode: 1 },
+  { unique: true, partialFilterExpression: { projectCode: { $gt: '' } } },
+);
 
 const Project = mongoose.model('Project', projectSchema);
 

@@ -244,6 +244,11 @@ export default function ProjectDetail() {
           <div>
             <h1 className="text-xl font-bold text-primary-900">{project.title}</h1>
             <div className="flex items-center gap-3 mt-2">
+              {project.projectCode && (
+                <span className="font-mono text-xs font-semibold text-primary-900 bg-primary-50 border border-primary-100 px-2 py-0.5 rounded">
+                  {project.projectCode}
+                </span>
+              )}
               <ProjectPriorityBadge priority={project.priority} />
             </div>
           </div>

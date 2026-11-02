@@ -82,7 +82,6 @@ export const createProject = async (data, user) => {
       createdBy: user._id,
     })),
     tags: data.tags || [],
-    projectCode: data.projectCode?.trim() || (await generateProjectCode()),
     location: data.location,
     duration: data.duration,
     inwardData: data.inwardData,
@@ -92,7 +91,16 @@ export const createProject = async (data, user) => {
     activities: [{ action: 'project_created', performedBy: user._id }],
   };
 
-  const project = await projectRepository.create(payload);
+  let project;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const projectCode = await generateProjectCode(client._id);
+    try {
+      project = await projectRepository.create({ ...payload, projectCode });
+      break;
+    } catch (error) {
+      if (error.code !== 11000 || attempt === 4) throw error;
+    }
+  }
 
   // Notify team members (empty members → Cliq team broadcast still fires)
   const members = (data.teamMembers || [])
@@ -141,6 +149,7 @@ export const updateProject = async (id, data, user, { milestonesOnly = false } =
   }
 
   const updateData = { ...data };
+  delete updateData.projectCode;
   delete updateData.reason;
   delete updateData.stage;
   delete updateData.status;

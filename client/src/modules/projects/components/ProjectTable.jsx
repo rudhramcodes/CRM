@@ -65,6 +65,9 @@ export default function ProjectTable({
                 Project
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                No.
+              </th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                 Client
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
@@ -115,6 +118,13 @@ export default function ProjectTable({
                       )}
                     </div>
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  {project.projectCode ? (
+                    <span className="font-mono text-xs font-medium text-zinc-700">{project.projectCode}</span>
+                  ) : (
+                    <span className="text-sm text-zinc-300">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   {project.client ? (

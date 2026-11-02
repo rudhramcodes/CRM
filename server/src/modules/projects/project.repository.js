@@ -30,7 +30,7 @@ export const findAll = async (query = {}, options = {}) => {
 
   if (query.search) {
     const searchRegex = new RegExp(escapeRegex(query.search), 'i');
-    filter.$or = [{ title: searchRegex }, { description: searchRegex }];
+    filter.$or = [{ title: searchRegex }, { description: searchRegex }, { projectCode: searchRegex }];
   }
 
   if (query.status) filter.status = query.status;
