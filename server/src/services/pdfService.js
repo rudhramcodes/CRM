@@ -984,8 +984,12 @@ export const generateQuotationHtml = (quotation) => {
       line-height: 1.55;
     }
     .letter-body p { margin: 0 0 15px; }
+    .letter-body p.letter-split { margin-bottom: 0; }
     .letter-body .salutation { margin-bottom: 20px; }
     .letter-body .signoff { margin-top: 18px; }
+    .letter-signature { margin-top: auto; padding: 6px 10px 12px; display: flex; justify-content: flex-end; }
+    .letter-closing .letter-body { margin-top: auto; padding-top: 0; }
+    .letter-closing .letter-signature { margin-top: 20px; }
 
     .q-footer {
       position: relative;
@@ -1164,6 +1168,7 @@ export const generateQuotationHtml = (quotation) => {
         ${quotationParagraphs(meta.letterBody)}
         <div class="signoff">${quotationParagraphs(meta.letterSignoff)}</div>
       </div>
+      <div class="letter-signature">${quotationSignature()}</div>
     </div>
     ${quotationContactFooter()}
   </section>
@@ -1259,6 +1264,149 @@ export const generateQuotationHtml = (quotation) => {
       </div>
     </div>
   </section>
+
+  <script>
+    window.__quotationPaginationPending = true;
+    (function () {
+      var finished = false;
+      var PAGE_HEIGHT = 1123;
+      var PRINT_ROUNDING_BUFFER = 12;
+      var LIMIT = PAGE_HEIGHT - PRINT_ROUNDING_BUFFER;
+
+      function measure(page) {
+        var previousHeight = page.style.height;
+        var previousMinHeight = page.style.minHeight;
+        page.style.height = 'auto';
+        page.style.minHeight = '0';
+        var height = page.offsetHeight;
+        page.style.height = previousHeight;
+        page.style.minHeight = previousMinHeight;
+        return height;
+      }
+
+      function createContinuationPage(template) {
+        var page = template.cloneNode(true);
+        page.removeAttribute('data-paginated');
+        var toBlock = page.querySelector('.to-block');
+        if (toBlock) toBlock.parentNode.removeChild(toBlock);
+        var body = page.querySelector('.letter-body');
+        if (body) body.innerHTML = '';
+        var signature = page.querySelector('.letter-signature');
+        if (signature) signature.parentNode.removeChild(signature);
+        var scopePage = document.querySelector('.page-scope');
+        if (scopePage && scopePage.parentNode) {
+          scopePage.parentNode.insertBefore(page, scopePage);
+        } else {
+          document.body.appendChild(page);
+        }
+        return page;
+      }
+
+      function reflow() {
+        if (finished) return;
+        finished = true;
+
+        var letterPage = document.querySelector('.page-letter');
+        var body = letterPage && letterPage.querySelector('.letter-body');
+        if (!letterPage || !body) {
+          window.__quotationPaginationDone = true;
+          return;
+        }
+
+        var signature = letterPage.querySelector('.letter-signature');
+        var template = letterPage.cloneNode(true);
+        var blocks = Array.prototype.slice.call(body.children);
+        blocks.forEach(function (block) { body.removeChild(block); });
+        if (signature) signature.parentNode.removeChild(signature);
+
+        var currentPage = letterPage;
+        var currentBody = body;
+
+        function splitBlock(block) {
+          if (!block || block.tagName !== 'P' || block.classList.contains('salutation')) return null;
+          var normalized = block.cloneNode(true);
+          var lineBreaks = normalized.querySelectorAll('br');
+          for (var i = 0; i < lineBreaks.length; i++) {
+            lineBreaks[i].parentNode.replaceChild(document.createTextNode(' '), lineBreaks[i]);
+          }
+          var text = (normalized.textContent || '').replace(/\s+/g, ' ').trim();
+          if (text.length < 400) return null;
+          var middle = Math.floor(text.length / 2);
+          var cut = text.lastIndexOf('. ', middle);
+          if (cut < middle * 0.45) cut = text.lastIndexOf(' ', middle);
+          if (cut < middle * 0.45) cut = middle;
+          var firstText = text.slice(0, cut + 1).trim();
+          var secondText = text.slice(cut + 1).trim();
+          if (!firstText || !secondText) return null;
+          var first = block.cloneNode(false);
+          first.textContent = firstText;
+          first.classList.add('letter-split');
+          var second = block.cloneNode(false);
+          second.textContent = secondText;
+          block.parentNode.insertBefore(first, block);
+          block.parentNode.insertBefore(second, block);
+          block.parentNode.removeChild(block);
+          return [first, second];
+        }
+
+        function placeBlock(block) {
+          currentBody.appendChild(block);
+          if (measure(currentPage) <= LIMIT) return;
+          var parts = splitBlock(block);
+          if (parts) {
+            currentBody.removeChild(parts[0]);
+            currentBody.removeChild(parts[1]);
+            placeBlock(parts[0]);
+            placeBlock(parts[1]);
+            return;
+          }
+          currentBody.removeChild(block);
+          currentPage = createContinuationPage(template);
+          currentBody = currentPage.querySelector('.letter-body');
+          currentBody.appendChild(block);
+        }
+
+        blocks.forEach(placeBlock);
+
+        if (signature) {
+          currentBody.parentNode.appendChild(signature);
+          while (measure(currentPage) > LIMIT && currentBody.children.length > 1) {
+            var lastBlock = currentBody.lastElementChild;
+            currentBody.removeChild(lastBlock);
+            currentPage = createContinuationPage(template);
+            currentBody = currentPage.querySelector('.letter-body');
+            currentBody.appendChild(lastBlock);
+            signature.parentNode.removeChild(signature);
+            currentBody.parentNode.appendChild(signature);
+          }
+        }
+
+        var letterPages = document.querySelectorAll('.page-letter');
+        var lastLetterPage = letterPages[letterPages.length - 1];
+        var lastBody = lastLetterPage && lastLetterPage.querySelector('.letter-body');
+        if (lastBody && lastBody.children.length === 1 && lastBody.firstElementChild.classList.contains('signoff')) {
+          lastLetterPage.classList.add('letter-closing');
+        }
+
+        letterPage.setAttribute('data-paginated', 'true');
+        window.__quotationPaginationDone = true;
+      }
+
+      function start() {
+        if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+          Promise.race([
+            document.fonts.ready,
+            new Promise(function (resolve) { setTimeout(resolve, 400); })
+          ]).then(reflow).catch(reflow);
+        } else {
+          reflow();
+        }
+      }
+
+      if (document.readyState === 'complete') start();
+      else window.addEventListener('load', start);
+    })();
+  </script>
 </body>
 </html>`;
 };
@@ -1272,7 +1420,11 @@ export const generateQuotationPdf = async (quotation) => {
 
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.setContent(html, { waitUntil: 'load' });
+    const paginationPending = await page.evaluate(() => Boolean(window.__quotationPaginationPending));
+    if (paginationPending) {
+      await page.waitForFunction('window.__quotationPaginationDone === true', { timeout: 5000 }).catch(() => {});
+    }
     const raw = await page.pdf({
       format: 'A4',
       printBackground: true,

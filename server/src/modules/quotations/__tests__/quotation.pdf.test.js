@@ -62,6 +62,21 @@ describe('quotation PDF template', () => {
     expect(html).toContain('QUOTATION');
   });
 
+  it('renders the authorized signature on the cover letter page', () => {
+    const html = generateQuotationHtml(quotation);
+    const coverLetter = html.split('<!-- PAGE 2: SCOPE OF WORK -->')[0];
+    expect(coverLetter).toContain('class="letter-signature"');
+    expect(coverLetter).toContain('AUTHORIZED SIGNATURE');
+    expect(coverLetter).toContain('For, <strong>RUDHRAM ENTERTAINMENT</strong>');
+  });
+
+  it('includes the cover-letter pagination guard', () => {
+    const html = generateQuotationHtml(quotation);
+    expect(html).toContain('__quotationPaginationPending');
+    expect(html).toContain('__quotationPaginationDone');
+    expect(html).toContain("document.querySelector('.page-letter')");
+  });
+
   it('pulls client and project identifiers into the summary page', () => {
     const html = generateQuotationHtml(quotation);
     expect(html).toContain('RE-AG-2026-018');
