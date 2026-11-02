@@ -114,33 +114,33 @@ export default function HeaderAttendancePill() {
 
   return (
     <>
-      <div className="flex items-center">
+      <div className="flex items-center shrink-0">
         {!isClockedIn ? (
           <button
             type="button"
             onClick={handleClockIn}
             disabled={clockingIn}
             className={cn(
-              'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-2xs border group',
+              'flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs border group shrink-0',
               'bg-emerald-50/90 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100 hover:border-emerald-300'
             )}
             title="Click to Clock In for today"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform shrink-0" />
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform shrink-0" />
             <span className="whitespace-nowrap">
-              {clockingIn ? 'Punching in...' : 'Punch In'}
+              {clockingIn ? 'Punching...' : 'Punch In'}
             </span>
           </button>
         ) : (
-          <div className="flex items-center gap-1.5 p-0.5 rounded-full bg-zinc-100/90 border border-zinc-200/80 text-xs shadow-2xs">
-            <div className="flex items-center gap-2 px-2.5 py-1 text-zinc-800 font-mono font-medium text-xs">
-              <span className="relative flex h-2 w-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 p-0.5 rounded-full bg-zinc-100/90 border border-zinc-200/80 text-[11px] sm:text-xs shadow-2xs shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-zinc-800 font-mono font-medium text-[11px] sm:text-xs">
+              <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-emerald-500" />
               </span>
-              <span className="whitespace-nowrap tracking-wide">{formatElapsed(elapsed)}</span>
+              <span className="whitespace-nowrap tracking-tight sm:tracking-wide font-mono text-[11px] sm:text-xs">{formatElapsed(elapsed)}</span>
               {isOnBreak && (
-                <span className="text-[10px] text-amber-700 bg-amber-100 font-sans font-semibold px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                <span className="hidden sm:flex text-[10px] text-amber-700 bg-amber-100 font-sans font-semibold px-1 py-0.5 rounded-md items-center gap-0.5">
                   <Coffee className="w-3 h-3" /> Break
                 </span>
               )}
@@ -149,10 +149,10 @@ export default function HeaderAttendancePill() {
               type="button"
               onClick={() => setShowSummary(true)}
               disabled={clockingOut}
-              className="px-2.5 py-1 rounded-full bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 font-semibold border border-zinc-200/60 hover:border-rose-200 transition-all cursor-pointer text-xs shadow-2xs"
+              className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 font-semibold border border-zinc-200/60 hover:border-rose-200 transition-all cursor-pointer text-[10px] sm:text-xs shadow-2xs whitespace-nowrap"
               title="Click to Clock Out"
             >
-              {clockingOut ? '...' : 'Clock Out'}
+              {clockingOut ? '...' : <><span className="hidden sm:inline">Clock </span>Out</>}
             </button>
           </div>
         )}
