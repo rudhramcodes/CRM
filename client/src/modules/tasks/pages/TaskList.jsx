@@ -50,7 +50,7 @@ export default function TaskList() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
 
-  const [view, setView] = useState('kanban'); // 'kanban' | 'table' | 'my-day' | 'calendar'
+  const [view, setView] = useState('table'); // 'table' | 'kanban' | 'my-day' | 'calendar'
   const [queryParams, setQueryParams] = useState(() => ({
     limit: 100,
     ...(projectParam ? { project: projectParam } : {}),
@@ -436,8 +436,8 @@ export default function TaskList() {
           {/* Segmented View Switcher */}
           <div className="flex items-center bg-zinc-100/90 rounded-xl p-1 border border-zinc-200/80 shadow-2xs overflow-x-auto">
             {[
-              { id: 'kanban', label: 'Kanban', icon: FolderKanban },
               { id: 'table', label: 'List', icon: LayoutList },
+              { id: 'kanban', label: 'Kanban', icon: FolderKanban },             
               { id: 'my-day', label: 'My Day', icon: CheckCircle2 },
               { id: 'calendar', label: 'Calendar', icon: CalendarDays },
             ].map((v) => {
