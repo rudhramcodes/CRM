@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Send, Printer, Edit2, Download, CheckCircle, XCircle, Clock, Trash2, RefreshCw,
@@ -24,6 +24,8 @@ import { API_BASE_URL, BRANDS } from '../../../constants';
 const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN') : '-');
 
+const PREVIEW_WIDTH = 794;
+
 const BRAND_LABELS = BRANDS.reduce((acc, b) => {
   acc[b.value] = b.label;
   return acc;
@@ -45,7 +47,23 @@ export default function QuotationDetail() {
   const [loadingAction, setLoadingAction] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false });
+  const [previewScale, setPreviewScale] = useState(1);
+  const [previewHeight, setPreviewHeight] = useState(1150);
   const iframeRef = useRef(null);
+  const previewWrapRef = useRef(null);
+
+  useEffect(() => {
+    const element = previewWrapRef.current;
+    if (!element) return undefined;
+    const updateScale = () => {
+      const width = element.clientWidth;
+      setPreviewScale(width > 0 ? Math.min(1, width / PREVIEW_WIDTH) : 1);
+    };
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [quotationHtml]);
 
   const quotation = data?.data?.quotation;
   const clients = clientsData?.data || [];
@@ -249,8 +267,8 @@ export default function QuotationDetail() {
       </div>
 
       <div className="bg-white rounded-lg border border-zinc-200 print:border-none print:rounded-none print:overflow-visible overflow-hidden">
-        <div className="flex items-center justify-between p-4 pb-0 print:hidden">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-0 print:hidden">
+          <div className="flex flex-wrap items-center gap-3">
             <QuotationStatusBadge status={quotation.status} />
             {quotation.client?.brand && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 text-xs font-medium text-zinc-700">
@@ -261,32 +279,47 @@ export default function QuotationDetail() {
               <span className="text-xs font-medium text-green-700">Accepted on {fmtDate(quotation.acceptedAt)}</span>
             )}
           </div>
-          <span className="text-xs text-zinc-400">3-page template · cover letter, scope, summary</span>
+          <span className="hidden text-xs text-zinc-400 sm:inline">3-page template · cover letter, scope, summary</span>
         </div>
 
         {quotationHtml ? (
-          <div className="p-4 sm:p-6 flex justify-center bg-zinc-100/50 print:p-0">
-            <iframe
-              ref={iframeRef}
-              srcDoc={quotationHtml}
-              title={`Quotation ${quotation.quotationNumber}`}
-              className="w-full max-w-[850px] border-0 rounded-lg shadow-sm bg-transparent"
-              style={{ minHeight: '1150px' }}
-              onLoad={(e) => {
-                try {
-                  const iframe = e.target;
-                  const doc = iframe?.contentWindow?.document;
-                  const height = Math.max(
-                    doc?.body?.scrollHeight || 0,
-                    doc?.documentElement?.scrollHeight || 0,
-                    1130,
-                  );
-                  iframe.style.height = `${height + 25}px`;
-                } catch {
-                  // Keep the default height.
-                }
-              }}
-            />
+          <div className="p-3 sm:p-6 flex justify-center bg-zinc-100/50 print:p-0">
+            <div
+              ref={previewWrapRef}
+              className="w-full max-w-[794px] overflow-hidden print:max-w-none print:overflow-visible"
+            >
+              <div
+                className="relative print:h-auto"
+                style={{ height: previewHeight * previewScale }}
+              >
+                <iframe
+                  ref={iframeRef}
+                  srcDoc={quotationHtml}
+                  title={`Quotation ${quotation.quotationNumber}`}
+                  className="border-0 rounded-lg shadow-sm bg-transparent"
+                  style={{
+                    width: PREVIEW_WIDTH,
+                    height: previewHeight,
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: 'top left',
+                  }}
+                  onLoad={(e) => {
+                    try {
+                      const iframe = e.target;
+                      const doc = iframe?.contentWindow?.document;
+                      const height = Math.max(
+                        doc?.body?.scrollHeight || 0,
+                        doc?.documentElement?.scrollHeight || 0,
+                        1130,
+                      );
+                      setPreviewHeight(height + 25);
+                    } catch {
+                      // Keep the default height.
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </div>
         ) : (
           <div className="p-8 text-zinc-400 text-center text-sm">Loading preview...</div>
@@ -339,8 +372,8 @@ export default function QuotationDetail() {
             {quotation.expiredAt && <p className="text-amber-600">Expired: {new Date(quotation.expiredAt).toLocaleString('en-IN')}</p>}
           </div>
           <div className="mt-4 pt-3 border-t border-zinc-100 text-xs text-zinc-500 space-y-1">
-            <p><span className="font-medium text-zinc-700">Scope:</span> {quotation.scopeTitle || '-'}</p>
-            <p><span className="font-medium text-zinc-700">Deliverables:</span> {quotation.deliverables || '-'}</p>
+            <p className="whitespace-pre-line"><span className="font-medium text-zinc-700">Scope:</span> {quotation.scopeTitle || '-'}</p>
+            <p className="whitespace-pre-line"><span className="font-medium text-zinc-700">Deliverables:</span> {quotation.deliverables || '-'}</p>
           </div>
         </div>
       </div>
