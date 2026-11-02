@@ -49,8 +49,18 @@ export default function PaymentFilters({ onFilterChange }) {
           placeholder="Search by reference..."
           value={filters.search}
           onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
-          className="w-full pl-9 pr-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-900 bg-white"
+          className="w-full pl-9 pr-9 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-900 bg-white"
         />
+        {filters.search && (
+          <button
+            type="button"
+            onClick={() => setFilters((p) => ({ ...p, search: '' }))}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-zinc-400 hover:text-zinc-600 rounded-md hover:bg-zinc-100 transition-colors"
+            aria-label="Clear search input"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       <Select
@@ -103,6 +113,7 @@ export default function PaymentFilters({ onFilterChange }) {
         placeholder="From date"
         value={filters.dateFrom}
         onChange={(val) => setFilters((p) => ({ ...p, dateFrom: val }))}
+        containerClassName="w-full sm:w-40"
       />
 
       <DatePickerSimple
@@ -110,6 +121,7 @@ export default function PaymentFilters({ onFilterChange }) {
         placeholder="To date"
         value={filters.dateTo}
         onChange={(val) => setFilters((p) => ({ ...p, dateTo: val }))}
+        containerClassName="w-full sm:w-40"
       />
 
       {hasFilters && (

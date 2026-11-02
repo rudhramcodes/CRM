@@ -21,6 +21,7 @@ export function DatePickerSimple({
   maxDate,
   error,
   className,
+  containerClassName,
 }) {
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState(undefined)
@@ -58,7 +59,7 @@ export function DatePickerSimple({
   }
 
   return (
-    <Field className="w-full">
+    <Field className={cn("w-full sm:w-auto", containerClassName)}>
       {label && <FieldLabel>{label}</FieldLabel>}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild disabled={disabled}>
