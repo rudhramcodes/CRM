@@ -2,6 +2,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useCallback, useRef } from 'react';
+import { Check } from 'lucide-react';
 import FormInput from '../../../components/forms/FormInput';
 import FormSelect from '../../../components/forms/FormSelect';
 import FormTextarea from '../../../components/forms/FormTextarea';
@@ -9,8 +10,19 @@ import DatePicker from '../../../components/forms/DatePicker';
 import Button from '../../../components/ui/Button';
 import { useGetProjectsQuery } from '../../../services/projectApi';
 import { useGetQuotationDefaultsQuery } from '../../../services/quotationApi';
+import QuotationDocumentFields from './QuotationDocumentFields';
+
+const PRINTED_FIELDS = [
+  'recipientName', 'recipientAddress', 'recipientEmail', 'recipientPhone', 'recipientGst',
+  'clientReference', 'projectReference', 'issuerName', 'issuerAddress', 'issuerEmail',
+  'issuerPhone', 'issuerWebsite', 'issuerGst', 'bankName', 'bankAccountName',
+  'bankAccountNumber', 'bankIfsc', 'bankGst', 'bankUpi', 'signatoryName',
+  'closingNote', 'paymentTerms', 'conditions',
+];
 
 const quotationFormSchema = z.object({
+  templateId: z.enum(['standard', 'panigrahna']),
+  ...Object.fromEntries(PRINTED_FIELDS.map((field) => [field, z.string().optional()])),
   client: z.string().min(1, 'Client is required'),
   project: z.string().optional().or(z.literal('')),
   issueDate: z.string({ required_error: 'Issue date is required' }),
@@ -55,9 +67,12 @@ export default function QuotationForm({
 }) {
   const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
   const projects = projectsData?.data || [];
+  const printedDefaults = Object.fromEntries(PRINTED_FIELDS.map((field) => [field, initialData?.[field] ?? '']));
 
   const defaultValues = initialData
     ? {
+        templateId: initialData.templateId || (initialData.client?.brand === 'panigrahna' ? 'panigrahna' : 'standard'),
+        ...printedDefaults,
         client: initialData.client?._id || initialData.client || '',
         project: initialData.project?._id || initialData.project || '',
         issueDate: toDateInput(initialData.issueDate) || toDateInput(new Date()),
@@ -76,6 +91,8 @@ export default function QuotationForm({
         letterSignoff: initialData.letterSignoff || '',
       }
     : {
+        templateId: 'standard',
+        ...printedDefaults,
         client: '',
         project: '',
         issueDate: toDateInput(new Date()),
@@ -113,12 +130,22 @@ export default function QuotationForm({
 
   const selectedClient = watch('client');
   const selectedProject = watch('project');
+  const selectedTemplate = watch('templateId');
   const price = watch('price');
   const taxRate = watch('taxRate');
   const budget = watch('budget');
+  const selectedClientInfo = (clients || []).find((client) => String(client._id) === String(selectedClient));
+  const recommendedTemplate = selectedClientInfo?.brand === 'panigrahna' ? 'panigrahna' : 'standard';
+  const lastTemplateClient = useRef(initialData?.client?._id || initialData?.client || '');
+
+  useEffect(() => {
+    if (initialData || selectedClient === lastTemplateClient.current) return;
+    lastTemplateClient.current = selectedClient;
+    setValue('templateId', recommendedTemplate, { shouldDirty: false });
+  }, [initialData, recommendedTemplate, selectedClient, setValue]);
 
   const { data: defaultsData } = useGetQuotationDefaultsQuery(
-    { clientId: selectedClient || undefined, projectId: selectedProject || undefined },
+    { clientId: selectedClient || undefined, projectId: selectedProject || undefined, templateId: selectedTemplate },
     { skip: Boolean(initialData) },
   );
   const defaults = defaultsData?.data?.defaults;
@@ -140,6 +167,7 @@ export default function QuotationForm({
     applyDefaults([
       'salutation', 'subject', 'letterBody', 'letterSignoff', 'scopeTitle',
       'scopeIntro', 'scopeOfWork', 'deliverables', 'note', 'budget', 'price', 'validUntil',
+      ...PRINTED_FIELDS,
     ]);
   }, [applyDefaults]);
 
@@ -162,10 +190,10 @@ export default function QuotationForm({
     const project = projects.find((p) => String(p._id) === String(selectedProject));
     if (!project) return;
     lastAutoProject.current = selectedProject;
-    setValue('budget', project.budget ?? 0);
-    setValue('scopeTitle', project.title || '');
-    setValue('subject', `Submission of Quotation for Professional ${project.title || 'Brand Kit'}.`);
-  }, [selectedProject, projects, setValue]);
+    if (!dirtyFields.budget) setValue('budget', project.budget ?? 0);
+    if (!dirtyFields.scopeTitle) setValue('scopeTitle', project.title || '');
+    if (!dirtyFields.subject) setValue('subject', `Submission of Quotation for Professional ${project.title || 'Brand Kit'}.`);
+  }, [selectedProject, projects, setValue, dirtyFields]);
 
   const subtotal = parseFloat(price) || 0;
   const gstRate = parseFloat(taxRate) || 0;
@@ -219,6 +247,45 @@ export default function QuotationForm({
           placeholder={selectedClient ? 'Select project (optional)' : 'Select client first'}
         />
       </div>
+
+      <fieldset className="space-y-3 rounded-xl bg-zinc-50 p-4 sm:p-5">
+        <legend className="px-1 text-sm font-semibold text-zinc-900">Quotation template</legend>
+        <p className="text-sm text-zinc-600">
+          {selectedClientInfo
+            ? `${selectedClientInfo.companyName} belongs to ${selectedClientInfo.brand === 'panigrahna' ? 'Panigrahna' : 'another venture'}. ${recommendedTemplate === 'panigrahna' ? 'The wedding quotation is recommended.' : 'The standard quotation is recommended.'}`
+            : 'Choose a client to get a recommended template. You can always change it.'}
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            { id: 'standard', title: 'Standard quotation', detail: '3 pages: cover letter, scope, summary' },
+            { id: 'panigrahna', title: 'Panigrahna wedding', detail: '4 pages: letter + scope, deliverables, terms, pricing' },
+          ].map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              aria-pressed={selectedTemplate === template.id}
+              onClick={() => setValue('templateId', template.id, { shouldDirty: true })}
+              className={`min-h-20 rounded-lg border border-zinc-200 p-4 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 ${selectedTemplate === template.id ? 'bg-amber-50 text-amber-950' : 'bg-white text-zinc-800 hover:bg-zinc-100'}`}
+            >
+              <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                {template.title}
+                {selectedTemplate === template.id && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
+              </span>
+              <span className="mt-1 block text-xs text-zinc-600">{template.detail}</span>
+            </button>
+          ))}
+        </div>
+        {selectedClient && selectedTemplate !== recommendedTemplate && (
+          <button
+            type="button"
+            onClick={() => setValue('templateId', recommendedTemplate, { shouldDirty: false })}
+            className="min-h-9 text-sm font-medium text-amber-800 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
+          >
+            Use recommended template
+          </button>
+        )}
+        <p className="text-xs text-zinc-500">Changing templates updates suggested text you have not edited. Your own writing is kept.</p>
+      </fieldset>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Controller
@@ -294,100 +361,17 @@ export default function QuotationForm({
         </div>
       </div>
 
-      <div className="border-t border-zinc-200 pt-5 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">Cover Letter</h3>
-            <p className="text-xs text-zinc-500 mt-0.5">Page 1 of the quotation. Leave blank to use the default letter.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => applyDefaults(['salutation', 'letterBody', 'letterSignoff'], { force: true })}
-            disabled={!defaults}
-            className="text-xs font-medium text-primary-900 hover:underline disabled:text-zinc-300"
-          >
-            Load default text
-          </button>
-        </div>
-        <FormInput
-          label="Salutation"
-          placeholder="Dear Client,"
-          error={errors.salutation?.message}
-          {...register('salutation')}
-        />
-        <FormTextarea
-          label="Letter Body"
-          placeholder="Write the cover letter. Use a blank line between paragraphs."
-          rows={10}
-          error={errors.letterBody?.message}
-          {...register('letterBody')}
-        />
-        <FormTextarea
-          label="Sign-off"
-          placeholder="Warm regards,&#10;Rudhram Enterprises"
-          rows={2}
-          error={errors.letterSignoff?.message}
-          {...register('letterSignoff')}
-        />
+      <div className="space-y-2">
+        <h2 className="text-base font-semibold text-zinc-900">Write the document</h2>
+        <p className="text-sm text-zinc-500">Each section below maps to a page in the final PDF. You can review the rendered pages after creating the draft.</p>
       </div>
-
-      <div className="border-t border-zinc-200 pt-5 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">Scope</h3>
-            <p className="text-xs text-zinc-500 mt-0.5">Page 2 and page 3 of the quotation. Client and project details are pulled automatically.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => applyDefaults(['subject', 'scopeTitle', 'scopeIntro', 'scopeOfWork', 'deliverables', 'note'], { force: true })}
-            disabled={!defaults}
-            className="text-xs font-medium text-primary-900 hover:underline disabled:text-zinc-300"
-          >
-            Load default text
-          </button>
-        </div>
-        <FormInput
-          label="Subject"
-          placeholder="Submission of Quotation for Professional Brand Kit."
-          error={errors.subject?.message}
-          {...register('subject')}
-        />
-        <FormTextarea
-          label="Scope of Work (summary)"
-          placeholder={'Brand Kit\nBrand Identity System'}
-          rows={2}
-          error={errors.scopeTitle?.message}
-          {...register('scopeTitle')}
-        />
-        <FormTextarea
-          label="Deliverables"
-          placeholder={'One deliverable per line\nBrand Identity Design\nLogo & Visual Assets'}
-          rows={4}
-          error={errors.deliverables?.message}
-          {...register('deliverables')}
-        />
-        <FormTextarea
-          label="Scope Introduction"
-          placeholder="The assignment covers..."
-          rows={3}
-          error={errors.scopeIntro?.message}
-          {...register('scopeIntro')}
-        />
-        <FormTextarea
-          label="Scope of Work Bullets"
-          placeholder="One bullet point per line"
-          rows={8}
-          error={errors.scopeOfWork?.message}
-          {...register('scopeOfWork')}
-        />
-        <FormTextarea
-          label="Note"
-          placeholder="Payment terms, exclusions, or other notes..."
-          rows={3}
-          error={errors.note?.message}
-          {...register('note')}
-        />
-      </div>
+      <QuotationDocumentFields
+        templateId={selectedTemplate}
+        register={register}
+        errors={errors}
+        applyDefaults={applyDefaults}
+        canRestore={Boolean(defaults)}
+      />
 
       <div className="flex items-center justify-end gap-3 pt-2">
         {onCancel && (

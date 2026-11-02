@@ -13,9 +13,9 @@ export default function QuotationCreate() {
 
   const handleSubmit = async (data) => {
     try {
-      await createQuotation(data).unwrap();
-      toast.success('Quotation created successfully');
-      navigate('/quotations');
+      const result = await createQuotation(data).unwrap();
+      toast.success('Quotation draft created. Review the pages before sending.');
+      navigate(`/quotations/${result.data.quotation._id}`);
     } catch (err) {
       const errors = err?.data?.errors;
       if (errors && Array.isArray(errors)) {
@@ -27,7 +27,7 @@ export default function QuotationCreate() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <button
         type="button"
         onClick={() => navigate('/quotations')}
@@ -39,10 +39,10 @@ export default function QuotationCreate() {
 
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">Create Quotation</h1>
-        <p className="text-sm text-zinc-500 mt-0.5">Client and project details will be pulled into the quotation automatically.</p>
+        <p className="text-sm text-zinc-500 mt-0.5">Choose a client, review the suggested template, then edit each document section. Nothing is sent until you approve the draft.</p>
       </div>
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-6">
+      <div className="bg-white rounded-lg border border-zinc-200 p-4 sm:p-6">
         <QuotationForm
           clients={clients}
           clientsLoading={clientsLoading}

@@ -9,6 +9,7 @@ import FormTextarea from '../../../components/forms/FormTextarea';
 import DatePicker from '../../../components/forms/DatePicker';
 import Button from '../../../components/ui/Button';
 import { useGetProjectsQuery } from '../../../services/projectApi';
+import { INVOICE_PRINTED_FIELDS } from '../quotationToInvoice';
 
 const itemSchema = z.object({
   description: z.string().min(1, 'Required').max(500),
@@ -17,9 +18,12 @@ const itemSchema = z.object({
 });
 
 const invoiceFormSchema = z.object({
+  ...Object.fromEntries(INVOICE_PRINTED_FIELDS.map((field) => [field, z.string().optional()])),
   client: z.string().min(1, 'Client is required'),
   project: z.string().optional().or(z.literal('')),
-  dueDate: z.string({ required_error: 'Due date is required' }),
+  sourceQuotation: z.string().optional().or(z.literal('')),
+  issueDate: z.string().min(1, 'Issue date is required'),
+  dueDate: z.string({ required_error: 'Due date is required' }).min(1, 'Due date is required'),
   items: z.array(itemSchema).min(1, 'At least one item required'),
   taxRate: z.coerce.number().min(0).max(100).optional().default(0),
   discountPercent: z.coerce.number().min(0).max(100).optional().default(0),
@@ -32,6 +36,8 @@ const invoiceFormSchema = z.object({
   }).optional(),
   notes: z.string().optional().or(z.literal('')),
   termsConditions: z.string().optional().or(z.literal('')),
+}).refine((data) => new Date(data.dueDate) >= new Date(data.issueDate), {
+  path: ['dueDate'], message: 'Due date must be on or after issue date',
 });
 
 const TAX_OPTIONS = [
@@ -45,11 +51,18 @@ const TAX_OPTIONS = [
 export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmitting, onCancel, initialData, submitLabel = 'Create Invoice' }) {
   const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
   const projects = projectsData?.data || [];
+  const today = new Date();
+  const defaultDueDate = new Date(today);
+  defaultDueDate.setDate(defaultDueDate.getDate() + 30);
+  const printedDefaults = Object.fromEntries(INVOICE_PRINTED_FIELDS.map((field) => [field, initialData?.[field] ?? '']));
 
   const defaultValues = initialData
     ? {
+        ...printedDefaults,
         client: initialData.client?._id || initialData.client || '',
         project: initialData.project?._id || initialData.project || '',
+        sourceQuotation: initialData.sourceQuotation?._id || initialData.sourceQuotation || '',
+        issueDate: initialData.issueDate ? new Date(initialData.issueDate).toISOString().split('T')[0] : today.toISOString().split('T')[0],
         dueDate: initialData.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
         items: (initialData.items || []).map((item) => ({
           description: item.description,
@@ -63,9 +76,12 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
         termsConditions: initialData.termsConditions || '',
       }
     : {
+        ...printedDefaults,
         client: '',
-        project: '',
-        dueDate: '',
+         project: '',
+         sourceQuotation: '',
+         issueDate: today.toISOString().split('T')[0],
+         dueDate: defaultDueDate.toISOString().split('T')[0],
         items: [{ description: '', quantity: 1, unitPrice: 0 }],
         taxRate: 0,
         discountPercent: 0,
@@ -81,7 +97,7 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
     watch,
     reset,
     setValue,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues,
@@ -112,6 +128,33 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
     );
     if (!belongsToClient) setValue('project', '');
   }, [selectedClient, selectedProject, projects, setValue]);
+
+  useEffect(() => {
+    if (initialData || !selectedClient) return;
+    const client = (clients || []).find((item) => String(item._id) === String(selectedClient));
+    if (!client) return;
+    for (const [field, value] of Object.entries({
+      recipientName: client.companyName || '',
+      recipientEmail: client.email || '',
+      recipientPhone: client.phone || '',
+      recipientGst: client.gstNumber || '',
+      clientReference: client.clientId || '',
+    })) {
+      if (!dirtyFields[field]) setValue(field, value);
+    }
+    if (!client.address) return;
+    for (const field of ['street', 'city', 'state', 'pincode', 'country']) {
+      if (!dirtyFields.billingAddress?.[field]) {
+        setValue(`billingAddress.${field}`, client.address[field] || (field === 'country' ? 'India' : ''));
+      }
+    }
+  }, [selectedClient, clients, initialData, dirtyFields, setValue]);
+
+  useEffect(() => {
+    if (initialData || !selectedProject || dirtyFields.projectReference) return;
+    const project = projects.find((item) => String(item._id) === String(selectedProject));
+    if (project) setValue('projectReference', project.projectCode || '');
+  }, [selectedProject, projects, initialData, dirtyFields.projectReference, setValue]);
 
   const subtotal = (watchedItems || []).reduce(
     (sum, item) => sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0),
@@ -145,7 +188,7 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <FormSelect
           name="client"
           control={control}
@@ -153,6 +196,19 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
           options={clientOptions}
           placeholder={clientsLoading ? 'Loading clients...' : 'Select client'}
           error={errors.client?.message}
+        />
+        <Controller
+          name="issueDate"
+          control={control}
+          render={({ field }) => (
+            <DatePicker
+              label="Issue Date *"
+              value={field.value}
+              onChange={field.onChange}
+              error={errors.issueDate?.message}
+              placeholder="Select issue date"
+            />
+          )}
         />
         <Controller
           name="dueDate"
@@ -228,10 +284,9 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
                   {...register(`items.${index}.unitPrice`)}
                 />
               </div>
-              <div className="w-24 pt-2 text-sm text-right text-zinc-600 font-medium">
-                {(parseFloat(watchedItems?.[index]?.quantity) || 0) *
-                  (parseFloat(watchedItems?.[index]?.unitPrice) || 0)
-                  .toFixed(2)}
+        <div className="w-24 pt-2 text-sm text-right text-zinc-600 font-medium">
+                {((parseFloat(watchedItems?.[index]?.quantity) || 0) *
+                  (parseFloat(watchedItems?.[index]?.unitPrice) || 0)).toFixed(2)}
               </div>
               {fields.length > 1 && (
                 <button
@@ -294,6 +349,46 @@ export default function InvoiceForm({ clients, clientsLoading, onSubmit, isSubmi
           <FormInput label="State" placeholder="State" {...register('billingAddress.state')} />
           <FormInput label="Pincode" placeholder="Pincode" {...register('billingAddress.pincode')} />
           <FormInput label="Country" placeholder="Country" {...register('billingAddress.country')} />
+        </div>
+      </details>
+
+      <details className="border border-zinc-200 rounded-lg">
+        <summary className="text-sm font-medium text-zinc-700 px-4 py-2.5 cursor-pointer hover:bg-zinc-50 select-none">Edit printed client, issuer and bank details</summary>
+        <div className="space-y-5 border-t border-zinc-200 p-4">
+          <p className="text-sm text-zinc-600">These fields control what appears on this invoice. Blank issuer or bank fields use the current company details; changing them does not edit the client record.</p>
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-zinc-800">Billed to</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormInput label="Printed client name" {...register('recipientName')} />
+              <FormInput label="Printed client ID" {...register('clientReference')} />
+              <FormInput label="Printed client email" type="email" {...register('recipientEmail')} />
+              <FormInput label="Printed client phone" {...register('recipientPhone')} />
+              <FormInput label="Printed client GST" {...register('recipientGst')} />
+              <FormInput label="Printed project reference" {...register('projectReference')} />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-zinc-800">Issuer</h3>
+            <FormInput label="Issuer name" {...register('issuerName')} />
+            <FormTextarea label="Issuer address" rows={3} {...register('issuerAddress')} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormInput label="Issuer email" type="email" {...register('issuerEmail')} />
+              <FormInput label="Issuer phone" {...register('issuerPhone')} />
+              <FormInput label="Issuer GST" {...register('issuerGst')} />
+              <FormInput label="Signature name" {...register('signatoryName')} />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-zinc-800">Bank details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormInput label="Bank name" {...register('bankName')} />
+              <FormInput label="Account name" {...register('bankAccountName')} />
+              <FormInput label="Account number" {...register('bankAccountNumber')} />
+              <FormInput label="IFSC code" {...register('bankIfsc')} />
+              <FormInput label="Bank GST" {...register('bankGst')} />
+              <FormInput label="UPI ID" {...register('bankUpi')} />
+            </div>
+          </div>
         </div>
       </details>
 

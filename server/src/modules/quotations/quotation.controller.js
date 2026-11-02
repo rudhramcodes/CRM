@@ -6,6 +6,7 @@ export const defaults = async (req, res, next) => {
     const result = await quotationService.getQuotationDefaults({
       clientId: req.query.clientId,
       projectId: req.query.projectId,
+      templateId: req.query.templateId,
     });
     ApiResponse.success(res, 200, { defaults: result });
   } catch (error) {

@@ -40,12 +40,61 @@ export const DEFAULT_NOTE = [
 export const DEFAULT_TAX_RATE = 18;
 export const DEFAULT_QUOTE_VALIDITY_DAYS = 30;
 
-export const buildQuotationDefaults = ({ client = null, project = null } = {}) => {
-  const scopeTitle = project?.title || 'Brand Kit';
+export const DEFAULT_ISSUER = Object.freeze({
+  issuerName: 'RUDHRAM ENTERPRISES PVT. LTD',
+  issuerAddress: '7th Floor, S-11, 1171, 1172, Solitaire Corporate Park,\nAndheri Ghalkopar Link Road\nMumbai, Maharashtra, 400093.',
+  issuerEmail: 'hello@rudhramenterprises.com',
+  issuerPhone: '+91 7285833101',
+  issuerWebsite: 'www.rudhramenterprises.com',
+  issuerGst: '27CYSPG6483K1ZK',
+  signatoryName: 'Rudhram Entertainment',
+});
+
+export const DEFAULT_BANK = Object.freeze({
+  bankName: 'HDFC Bank',
+  bankAccountName: 'Rudhram Entertainment',
+  bankAccountNumber: '50200095934904',
+  bankIfsc: 'HDFC0006679',
+  bankGst: DEFAULT_ISSUER.issuerGst,
+  bankUpi: '7285833101@hdfcbank',
+});
+
+const PANIGRAHNA_CONTENT = {
+  letterBody: 'Thank you for considering Panigrahna for your wedding celebrations. We look forward to capturing the emotions, rituals and moments that make your story unique.\n\nOur wedding photography and cinematography services are tailored to your events and agreed coverage, with care from planning through final delivery.',
+  scopeIntro: 'The wedding photography and cinematography assignment includes the agreed services below:',
+  scopeOfWork: [
+    'Wedding photography covering the agreed ceremonies and celebrations.',
+    'Wedding cinematography capturing the key rituals, emotions and moments.',
+    'Pre-event coordination to confirm the schedule, locations and coverage requirements.',
+    'Selection, editing and post-production of the agreed photographs and films.',
+  ],
+  deliverables: 'Edited high-resolution photographs\nWedding highlight film\nEdited wedding film\nDigital delivery of the agreed final files',
+  closingNote: 'We look forward to being part of your celebrations and preserving memories for you and your family.',
+  paymentTerms: '50% advance on booking confirmation; the remaining 50% before final delivery. GST is applicable as quoted.',
+  conditions: 'Booking is confirmed upon receipt of the advance and agreement on the event schedule and scope.\nCoverage dates, hours, locations, crew and deliverables must be agreed before the event.\nAdditional events, overtime, travel and accommodation outside the agreed scope will be quoted separately.\nDelivery timelines will be agreed following the event and receipt of any required selections or approvals.\nChanges, cancellation or rescheduling are subject to mutual written agreement and crew availability.',
+};
+
+export const buildQuotationDefaults = ({ client = null, project = null, templateId } = {}) => {
+  const selectedTemplate = templateId ?? (client?.brand === 'panigrahna' ? 'panigrahna' : 'standard');
+  const scopeTitle = project?.title || (selectedTemplate === 'panigrahna' ? 'Wedding Photography & Cinematography' : 'Brand Kit');
   const issueDate = new Date();
   const validUntil = new Date(issueDate.getTime() + DEFAULT_QUOTE_VALIDITY_DAYS * 86400000);
   const toDateInput = (date) => date.toISOString().slice(0, 10);
   return {
+    templateId: selectedTemplate,
+    recipientName: client?.companyName ?? '',
+    recipientAddress: ['street', 'city', 'state', 'pincode', 'country']
+      .map((field) => client?.address?.[field]).filter(Boolean).join(', '),
+    recipientEmail: client?.email ?? '',
+    recipientPhone: client?.phone ?? '',
+    recipientGst: client?.gstNumber ?? '',
+    clientReference: client?.clientId ?? '',
+    projectReference: project?.projectCode ?? '',
+    ...DEFAULT_ISSUER,
+    ...DEFAULT_BANK,
+    closingNote: '',
+    paymentTerms: '',
+    conditions: '',
     salutation: client?.companyName ? `Dear ${client.companyName},` : '',
     subject: `Submission of Quotation for Professional ${scopeTitle.replace(/\s+/g, ' ').trim()}.`,
     letterBody: DEFAULT_LETTER_BODY,
@@ -60,5 +109,11 @@ export const buildQuotationDefaults = ({ client = null, project = null } = {}) =
     taxRate: DEFAULT_TAX_RATE,
     issueDate: toDateInput(issueDate),
     validUntil: toDateInput(validUntil),
+    ...(selectedTemplate === 'panigrahna' ? {
+      ...PANIGRAHNA_CONTENT,
+      scopeOfWork: [...PANIGRAHNA_CONTENT.scopeOfWork],
+      subject: `Submission of Quotation for ${scopeTitle.replace(/\s+/g, ' ').trim()}.`,
+      note: PANIGRAHNA_CONTENT.paymentTerms,
+    } : {}),
   };
 };

@@ -20,6 +20,10 @@ export const findByInvoiceNumber = async (invoiceNumber) => {
   return Invoice.findOne({ invoiceNumber });
 };
 
+export const findBySourceQuotation = async (sourceQuotation) => {
+  return Invoice.findOne({ sourceQuotation });
+};
+
 export const findAll = async (query = {}, options = {}) => {
   const { page, limit, skip, sort } = paginate(options);
   const filter = {};
@@ -43,6 +47,10 @@ export const findAll = async (query = {}, options = {}) => {
 
   if (query.client) {
     filter.client = query.client;
+  }
+
+  if (query.sourceQuotation) {
+    filter.sourceQuotation = query.sourceQuotation;
   }
 
   if (query.brand) {

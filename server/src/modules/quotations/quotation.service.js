@@ -6,15 +6,7 @@ import logger from '../../utils/logger.js';
 import Client from '../clients/client.model.js';
 import Project from '../projects/project.model.js';
 import { VENTURE_CODES, QUOTATION_STATUS } from '../../constants/index.js';
-import {
-  DEFAULT_SCOPE_INTRO,
-  DEFAULT_SCOPE,
-  DEFAULT_LETTER_BODY,
-  DEFAULT_SIGNOFF,
-  DEFAULT_DELIVERABLES,
-  DEFAULT_NOTE,
-  buildQuotationDefaults,
-} from './quotation.defaults.js';
+import { buildQuotationDefaults } from './quotation.defaults.js';
 
 const VALID_TRANSITIONS = {
   draft: ['sent', 'accepted', 'rejected', 'expired'],
@@ -33,7 +25,8 @@ export const generateQuotationNumber = async (brand) => {
 };
 
 const getClientAndProject = async (clientId, projectId) => {
-  const client = await Client.findById(clientId).select('brand companyName');
+  const client = await Client.findById(clientId)
+    .select('brand clientId companyName contactPerson email phone gstNumber address');
   if (!client) throw ApiError.badRequest('Client not found');
 
   let project = null;
@@ -48,10 +41,10 @@ const getClientAndProject = async (clientId, projectId) => {
   return { client, project };
 };
 
-export const getQuotationDefaults = async ({ clientId, projectId } = {}) => {
-  if (!clientId) return buildQuotationDefaults();
+export const getQuotationDefaults = async ({ clientId, projectId, templateId } = {}) => {
+  if (!clientId) return buildQuotationDefaults({ templateId });
   const { client, project } = await getClientAndProject(clientId, projectId || null);
-  return buildQuotationDefaults({ client, project });
+  return buildQuotationDefaults({ client, project, templateId });
 };
 
 const normalizeDate = (value) => (value ? new Date(value) : null);
@@ -69,28 +62,24 @@ const assertStatusTransition = (currentStatus, newStatus) => {
 export const createQuotation = async (data, user) => {
   const { client, project } = await getClientAndProject(data.client, data.project);
   const quotationNumber = await generateQuotationNumber(client.brand);
-  const scopeTitle = data.scopeTitle || project?.title || 'Brand Kit';
+  const defaults = buildQuotationDefaults({ client, project, templateId: data.templateId });
+  const documentFields = Object.fromEntries(
+    Object.entries(defaults).map(([field, value]) => [field, data[field] ?? value]),
+  );
+  const scopeTitle = data.scopeTitle ?? defaults.scopeTitle;
 
   const payload = {
+    ...documentFields,
     quotationNumber,
     client: data.client,
     project: data.project || null,
     issueDate: data.issueDate ? new Date(data.issueDate) : new Date(),
     validUntil: normalizeDate(data.validUntil),
-    salutation: data.salutation || `Dear ${client.companyName},`,
     subject:
-      data.subject ||
-      `Submission of Quotation for Professional ${String(scopeTitle).replace(/\s+/g, ' ').trim()}.`,
-    letterBody: data.letterBody || DEFAULT_LETTER_BODY,
-    letterSignoff: data.letterSignoff || DEFAULT_SIGNOFF,
+      data.subject ??
+      (data.scopeTitle === undefined ? defaults.subject :
+      `Submission of Quotation for Professional ${String(scopeTitle).replace(/\s+/g, ' ').trim()}.`),
     scopeTitle,
-    scopeIntro: data.scopeIntro || DEFAULT_SCOPE_INTRO,
-    scopeOfWork:
-      Array.isArray(data.scopeOfWork) && data.scopeOfWork.length > 0
-        ? data.scopeOfWork
-        : DEFAULT_SCOPE,
-    deliverables: data.deliverables || DEFAULT_DELIVERABLES,
-    note: data.note || DEFAULT_NOTE,
     budget: data.budget ?? project?.budget ?? 0,
     price: data.price ?? 0,
     taxRate: data.taxRate ?? 18,

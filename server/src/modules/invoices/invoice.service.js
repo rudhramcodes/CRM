@@ -4,9 +4,11 @@ import { sendEmail, renderInvoiceEmail } from '../../services/emailService.js';
 import { generateInvoicePdf, generateInvoiceHtml } from '../../services/pdfService.js';
 import logger from '../../utils/logger.js';
 import Client from '../clients/client.model.js';
+import Quotation from '../quotations/quotation.model.js';
 import Payment from '../payments/payment.model.js';
 import { VENTURE_CODES } from '../../constants/index.js';
 import * as notificationService from '../notifications/notification.service.js';
+import { INVOICE_PRINTED_FIELDS } from './invoice.printed-fields.js';
 
 // Invoice service manages NON-FINANCIAL status transitions only.
 // Financial transitions (→ partially_paid, → paid) are handled by Payment service
@@ -40,12 +42,30 @@ const validateStatusTransition = (currentStatus, newStatus) => {
 
 export const createInvoice = async (data, user) => {
   const clientDoc = await Client.findById(data.client).select('brand');
-  const invoiceNumber = await generateInvoiceNumber(clientDoc?.brand);
+  if (!clientDoc) throw ApiError.notFound('Client not found');
+  if (data.sourceQuotation) {
+    const quotation = await Quotation.findById(data.sourceQuotation).select('client project');
+    if (!quotation) throw ApiError.notFound('Quotation not found');
+    if (String(quotation.client) !== String(data.client)) {
+      throw ApiError.badRequest('Quotation does not belong to the selected client');
+    }
+    if (quotation.project && String(quotation.project) !== String(data.project)) {
+      throw ApiError.badRequest('Quotation does not belong to the selected project');
+    }
+    if (await invoiceRepository.findBySourceQuotation(data.sourceQuotation)) {
+      throw ApiError.conflict('An invoice already exists for this quotation');
+    }
+  }
+  const invoiceNumber = await generateInvoiceNumber(clientDoc.brand);
 
   const payload = {
+    ...Object.fromEntries(Object.keys(INVOICE_PRINTED_FIELDS)
+      .filter((field) => data[field] !== undefined)
+      .map((field) => [field, data[field]])),
     invoiceNumber,
     client: data.client,
     project: data.project || null,
+    ...(data.sourceQuotation ? { sourceQuotation: data.sourceQuotation } : {}),
     issueDate: data.issueDate ? new Date(data.issueDate) : new Date(),
     dueDate: new Date(data.dueDate),
     items: data.items,
@@ -57,7 +77,16 @@ export const createInvoice = async (data, user) => {
     createdBy: user._id,
   };
 
-  return invoiceRepository.create(payload);
+  try {
+    return await invoiceRepository.create(payload);
+  } catch (error) {
+    if (error instanceof Error && error.code === 11000 && data.sourceQuotation &&
+        (error.keyPattern?.sourceQuotation ||
+         await invoiceRepository.findBySourceQuotation(data.sourceQuotation))) {
+      throw ApiError.conflict('An invoice already exists for this quotation');
+    }
+    throw error;
+  }
 };
 
 export const getInvoices = async (query, user, clientProfile) => {

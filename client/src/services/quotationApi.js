@@ -3,9 +3,9 @@ import { api } from './api';
 export const quotationApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getQuotationDefaults: builder.query({
-      query: ({ clientId, projectId } = {}) => ({
+      query: ({ clientId, projectId, templateId } = {}) => ({
         url: '/quotations/defaults',
-        params: { clientId, projectId },
+        params: { clientId, projectId, templateId },
       }),
       keepUnusedDataFor: 0,
     }),

@@ -1,6 +1,9 @@
 import puppeteer from 'puppeteer';
 import { readFileSync } from 'fs';
-import { DEFAULT_SIGNOFF, DEFAULT_DELIVERABLES } from '../modules/quotations/quotation.defaults.js';
+import {
+  DEFAULT_SIGNOFF, DEFAULT_DELIVERABLES, DEFAULT_ISSUER, DEFAULT_BANK,
+} from '../modules/quotations/quotation.defaults.js';
+import { generatePanigrahnaQuotationHtml } from './panigrahnaQuotation.js';
 
 const loadAssetBase64 = (relativePath) => {
   try {
@@ -19,6 +22,10 @@ const CALIFORNIAN_FB_BOLD_FONT = loadAssetBase64('../../assets/fonts/Californian
 const RUDHRAM_EMBLEM_BASE64 = loadAssetBase64('../../assets/rudhram-emblem.png');
 const RUDHRAM_LOGO_BASE64 = loadAssetBase64('../../assets/rudhram-logo.png');
 const PAPER_GRAIN_TILE_BASE64 = loadAssetBase64('../../assets/paper-grain-tile.jpg');
+const PANIGRAHNA_LOGO_BASE64 = loadAssetBase64('../../assets/panigrahna-logo.png');
+const PANIGRAHNA_RUDHRAM_LOGO_BASE64 = loadAssetBase64('../../assets/panigrahna-rudhram-logo.png');
+const PANIGRAHNA_RUDHRAM_SYMBOL_BASE64 = loadAssetBase64('../../assets/panigrahna-rudhram-symbol.png');
+const PANIGRAHNA_RUDHRAM_WORDMARK_BASE64 = loadAssetBase64('../../assets/panigrahna-rudhram-wordmark.png');
 
 
 const RUDHRAM_LOGO_URL = 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png';
@@ -132,7 +139,31 @@ const getVentureLogoHtml = (brand) => {
    ============================================================ */
 export const generateInvoiceHtml = (invoice) => {
   const client = invoice.client || {};
-  const clientAddress = client.address || invoice.billingAddress || {};
+  const billingAddress = invoice.billingAddress || {};
+  const hasBillingAddress = ['street', 'city', 'state', 'pincode']
+    .some((key) => String(billingAddress[key] || '').trim());
+  const clientAddress = hasBillingAddress ? billingAddress : client.address || {};
+  const recipient = {
+    name: invoice.recipientName ?? client.companyName ?? client.contactPerson ?? '-',
+    email: invoice.recipientEmail ?? client.email ?? '',
+    phone: invoice.recipientPhone ?? client.phone ?? '',
+    gst: invoice.recipientGst ?? client.gstNumber ?? '',
+  };
+  const issuer = {
+    name: invoice.issuerName ?? INVOICE_COMPANY.legalName,
+    address: invoice.issuerAddress ?? [INVOICE_COMPANY.addressLine1, INVOICE_COMPANY.addressLine2, INVOICE_COMPANY.addressLine3].join('\n'),
+    email: invoice.issuerEmail ?? INVOICE_COMPANY.email,
+    phone: invoice.issuerPhone ?? INVOICE_COMPANY.contact,
+    gst: invoice.issuerGst ?? INVOICE_COMPANY.gstin,
+  };
+  const bankDetails = {
+    name: invoice.bankName ?? BANK.bankName,
+    accountName: invoice.bankAccountName ?? BANK.accountHolder,
+    accountNumber: invoice.bankAccountNumber ?? BANK.accountNumber,
+    ifsc: invoice.bankIfsc ?? BANK.ifscCode,
+    gst: invoice.bankGst ?? COMPANY.gstin,
+    upi: invoice.bankUpi ?? BANK.upiId,
+  };
   const items = invoice.items && invoice.items.length > 0
     ? invoice.items
     : [{ description: 'Creative Development & Execution', amount: invoice.total || 0 }];
@@ -435,6 +466,8 @@ export const generateInvoiceHtml = (invoice) => {
       display: block;
       margin-bottom: 4px;
     }
+    .terms-box { margin-top: 18px; font-size: 13.5px; line-height: 1.5; }
+    .terms-box strong { font-family: 'Goldenbook', serif; display: block; margin-bottom: 4px; }
 
     .calc-stack {
       display: flex;
@@ -565,9 +598,10 @@ export const generateInvoiceHtml = (invoice) => {
                 <h1 class="invoice-heading">INVOICE</h1>
                 <div class="meta-list">
                   <div class="meta-item"><span class="meta-lbl">Invoice No.</span> <span>${esc(invoice.invoiceNumber || '-')}</span></div>
-                  <div class="meta-item"><span class="meta-lbl">Client Id :</span> <span>${esc(client.clientId || '-')}</span></div>
-                  <div class="meta-item"><span class="meta-lbl">Project Id :</span> <span>${esc(invoice.project?.projectCode || '-')}</span></div>
+                  <div class="meta-item"><span class="meta-lbl">Client Id :</span> <span>${esc(invoice.clientReference ?? client.clientId ?? '-')}</span></div>
+                  <div class="meta-item"><span class="meta-lbl">Project Id :</span> <span>${esc(invoice.projectReference ?? invoice.project?.projectCode ?? '-')}</span></div>
                   <div class="meta-item"><span class="meta-lbl">Date:</span> <span>${fmtDate(invoice.issueDate)}</span></div>
+                  <div class="meta-item"><span class="meta-lbl">Due Date:</span> <span>${fmtDate(invoice.dueDate)}</span></div>
                 </div>
               </div>
 
@@ -586,25 +620,23 @@ export const generateInvoiceHtml = (invoice) => {
             <!-- Parties -->
             <div class="parties-grid">
               <div>
-                <div class="company-title">${INVOICE_COMPANY.legalName}</div>
-                <div>${INVOICE_COMPANY.addressLine1}</div>
-                <div>${INVOICE_COMPANY.addressLine2}</div>
-                <div>${INVOICE_COMPANY.addressLine3}</div>
-                <div>${INVOICE_COMPANY.email}</div>
-                <div>Mobile: ${INVOICE_COMPANY.contact}</div>
-                <div>GST NO: ${INVOICE_COMPANY.gstin}</div>
+                <div class="company-title">${esc(issuer.name)}</div>
+                <div>${esc(issuer.address).replace(/\n/g, '<br>')}</div>
+                <div>${esc(issuer.email)}</div>
+                <div>Mobile: ${esc(issuer.phone)}</div>
+                <div>GST NO: ${esc(issuer.gst)}</div>
               </div>
 
               <div>
                 <div class="billed-label">BILLED TO:</div>
-                <div class="client-name">${esc(client.companyName || client.contactPerson || '-')}</div>
-                ${clientAddress.street ? `<div>${esc(clientAddress.street)}</div>` : '<div>Rio Empire 905,</div>'}
+                <div class="client-name">${esc(recipient.name)}</div>
+                ${clientAddress.street ? `<div>${esc(clientAddress.street).replace(/\n/g, '<br>')}</div>` : ''}
                 ${clientAddress.city || clientAddress.state
-      ? `<div>${esc(clientAddress.city ? `${clientAddress.city}, ` : '')}${esc(clientAddress.state || '')}${clientAddress.pincode ? ` - ${clientAddress.pincode}` : ''}</div>`
-      : '<div>Nr. Reliance Mart, Adajan Gam, Pal,</div><div>Surat, Gujarat - 395009</div>'}
-                <div>Email: ${esc(client.email || '')}</div>
-                <div>Mobile: ${esc(client.phone || '')}</div>
-                <div>GST NO: ${esc(client.gstNumber || '')}</div>
+      ? `<div>${esc(clientAddress.city ? `${clientAddress.city}, ` : '')}${esc(clientAddress.state || '')}${clientAddress.pincode ? ` - ${esc(clientAddress.pincode)}` : ''}</div>`
+      : ''}
+                <div>Email: ${esc(recipient.email)}</div>
+                <div>Mobile: ${esc(recipient.phone)}</div>
+                <div>GST NO: ${esc(recipient.gst)}</div>
               </div>
             </div>
 
@@ -664,21 +696,23 @@ export const generateInvoiceHtml = (invoice) => {
               </div>
             </div>
 
+            ${invoice.termsConditions ? `<div class="terms-box"><strong>TERMS &amp; CONDITIONS</strong>${esc(invoice.termsConditions).replace(/\n/g, '<br>')}</div>` : ''}
+
             <!-- FOOTER: Appears only on the last page after all items and totals -->
             <div class="footer-grid">
               <div class="bank-box">
                 <div class="bank-title">BANK DETAILS</div>
-                <div>Bank Name: ${BANK.bankName}</div>
-                <div>Account Name: ${BANK.accountHolder}</div>
-                <div>Account No: ${BANK.accountNumber}</div>
-                <div>IFSC Code: ${BANK.ifscCode}</div>
-                <div>GST: ${COMPANY.gstin}</div>
-                <div>UPI ID: ${BANK.upiId}</div>
+                <div>Bank Name: ${esc(bankDetails.name)}</div>
+                <div>Account Name: ${esc(bankDetails.accountName)}</div>
+                <div>Account No: ${esc(bankDetails.accountNumber)}</div>
+                <div>IFSC Code: ${esc(bankDetails.ifsc)}</div>
+                <div>GST: ${esc(bankDetails.gst)}</div>
+                <div>UPI ID: ${esc(bankDetails.upi)}</div>
               </div>
 
               <div class="sign-box">
                 <div class="sign-top">AUTHORIZED SIGNATURE</div>
-                <div class="sign-bottom">Rudhram Entertainment</div>
+                <div class="sign-bottom">${esc(invoice.signatoryName ?? 'Rudhram Entertainment')}</div>
               </div>
             </div>
           </td>
@@ -755,15 +789,40 @@ const quotationParagraphs = (value) =>
     .join('');
 
 const quotationMeta = (quotation) => {
-  const client = quotation.client || {};
+  const sourceClient = quotation.client || {};
+  const client = {
+    ...sourceClient,
+    companyName: quotation.recipientName ?? sourceClient.companyName,
+    address: quotation.recipientAddress ?? sourceClient.address,
+    email: quotation.recipientEmail ?? sourceClient.email,
+    phone: quotation.recipientPhone ?? sourceClient.phone,
+    gstNumber: quotation.recipientGst ?? sourceClient.gstNumber,
+  };
   const project = quotation.project || {};
   return {
     client,
     project,
     brand: client.brand || project.brand,
     quotationNumber: quotation.quotationNumber || '-',
-    clientId: client.clientId || '-',
-    projectCode: project.projectCode || '-',
+    clientId: quotation.clientReference ?? client.clientId ?? '-',
+    projectCode: quotation.projectReference ?? project.projectCode ?? '-',
+    issuer: {
+      name: quotation.issuerName ?? COMPANY.legalName,
+      address: quotation.issuerAddress ?? [COMPANY.addressLine1, COMPANY.addressLine2, COMPANY.addressLine3].join('\n'),
+      email: quotation.issuerEmail ?? 'info@rudhramenterprises.com',
+      phone: quotation.issuerPhone ?? COMPANY.contact,
+      website: quotation.issuerWebsite ?? QUOTATION_CONTACT.website,
+      gst: quotation.issuerGst ?? COMPANY.gstin,
+    },
+    bank: {
+      name: quotation.bankName ?? BANK.bankName,
+      accountName: quotation.bankAccountName ?? BANK.accountHolder,
+      accountNumber: quotation.bankAccountNumber ?? BANK.accountNumber,
+      ifsc: quotation.bankIfsc ?? BANK.ifscCode,
+      gst: quotation.bankGst ?? COMPANY.gstin,
+      upi: quotation.bankUpi ?? BANK.upiId,
+    },
+    signatoryName: quotation.signatoryName ?? COMPANY.signatoryLine2,
     quoteDate: fmtDate(quotation.issueDate),
     validUntil: quotation.validUntil ? fmtDate(quotation.validUntil) : '',
     price: Number(quotation.price || 0),
@@ -804,28 +863,55 @@ const quotationHeader = (brand, variant = 'split') => {
     </header>`;
 };
 
-const quotationContactFooter = () => `
+const quotationContactFooter = (meta) => `
   <footer class="q-footer">
     <div class="footer-rail"></div>
     <div class="contact-block">
-      <div class="contact-row"><span class="contact-icon">${quotationIcon('location')}</span><div><strong>RUDHRAM ENTERPRISES PVT. LTD</strong><br>${QUOTATION_CONTACT.addressLine1}<br>${QUOTATION_CONTACT.addressLine2}<br>${QUOTATION_CONTACT.addressLine3}</div></div>
-      <div class="contact-row"><span class="contact-icon">${quotationIcon('phone')}</span><span>${QUOTATION_CONTACT.phone}</span></div>
-      <div class="contact-row"><span class="contact-icon">${quotationIcon('mail')}</span><span>${QUOTATION_CONTACT.email}</span></div>
-      <div class="contact-row"><span class="contact-icon">${quotationIcon('globe')}</span><span>${QUOTATION_CONTACT.website}</span></div>
+      <div class="contact-row"><span class="contact-icon">${quotationIcon('location')}</span><div><strong>${esc(meta.issuer.name)}</strong><br>${esc(meta.issuer.address).replace(/\n/g, '<br>')}</div></div>
+      <div class="contact-row"><span class="contact-icon">${quotationIcon('phone')}</span><span>${esc(meta.issuer.phone)}</span></div>
+      <div class="contact-row"><span class="contact-icon">${quotationIcon('mail')}</span><span>${esc(meta.issuer.email)}</span></div>
+      <div class="contact-row"><span class="contact-icon">${quotationIcon('globe')}</span><span>${esc(meta.issuer.website)}</span></div>
     </div>
     <div class="bottom-mark"></div>
   </footer>`;
 
-const quotationSignature = () => `
+const quotationSignature = (meta) => `
   <div class="signature">
     <div class="sig-label">AUTHORIZED SIGNATURE</div>
     <div class="sig-for">For, <strong>RUDHRAM ENTERTAINMENT</strong></div>
     <div class="sig-space"></div>
     <div class="sig-role">PROPRIETOR</div>
-    <div class="sig-company">Rudhram Entertainment</div>
+    <div class="sig-company">${esc(meta.signatoryName)}</div>
   </div>`;
 
 export const generateQuotationHtml = (quotation) => {
+  if ((quotation.templateId || (quotation.client?.brand === 'panigrahna' ? 'panigrahna' : 'standard')) === 'panigrahna') {
+    return generatePanigrahnaQuotationHtml(quotation, {
+      goldenbookRegular: GOLDENBOOK_REGULAR_FONT,
+      goldenbookBold: GOLDENBOOK_BOLD_FONT,
+      panigrahnaLogo: PANIGRAHNA_LOGO_BASE64,
+      rudhramLogo: PANIGRAHNA_RUDHRAM_LOGO_BASE64,
+      rudhramSymbol: PANIGRAHNA_RUDHRAM_SYMBOL_BASE64,
+      rudhramWordmark: PANIGRAHNA_RUDHRAM_WORDMARK_BASE64,
+      grain: PAPER_GRAIN_TILE_BASE64,
+      issuer: {
+        name: DEFAULT_ISSUER.issuerName,
+        address: DEFAULT_ISSUER.issuerAddress,
+        email: DEFAULT_ISSUER.issuerEmail,
+        phone: DEFAULT_ISSUER.issuerPhone,
+        website: DEFAULT_ISSUER.issuerWebsite,
+        gst: DEFAULT_ISSUER.issuerGst,
+      },
+      bank: {
+        name: DEFAULT_BANK.bankName,
+        accountName: DEFAULT_BANK.bankAccountName,
+        accountNumber: DEFAULT_BANK.bankAccountNumber,
+        ifsc: DEFAULT_BANK.bankIfsc,
+        gst: DEFAULT_BANK.bankGst,
+        upi: DEFAULT_BANK.bankUpi,
+      },
+    });
+  }
   const meta = quotationMeta(quotation);
   const { client } = meta;
   const addressLines = quotationAddressLines(client);
@@ -1168,9 +1254,9 @@ export const generateQuotationHtml = (quotation) => {
         ${quotationParagraphs(meta.letterBody)}
         <div class="signoff">${quotationParagraphs(meta.letterSignoff)}</div>
       </div>
-      <div class="letter-signature">${quotationSignature()}</div>
+      <div class="letter-signature">${quotationSignature(meta)}</div>
     </div>
-    ${quotationContactFooter()}
+    ${quotationContactFooter(meta)}
   </section>
 
   <!-- PAGE 2: SCOPE OF WORK -->
@@ -1194,9 +1280,9 @@ export const generateQuotationHtml = (quotation) => {
         ${scopeItems.map((item) => `<li>${esc(item).replace(/\n/g, '<br>')}</li>`).join('')}
       </ul>
 
-      <div class="scope-footer">${quotationSignature()}</div>
+      <div class="scope-footer">${quotationSignature(meta)}</div>
     </div>
-    ${quotationContactFooter()}
+    ${quotationContactFooter(meta)}
   </section>
 
   <!-- PAGE 3: QUOTATION SUMMARY -->
@@ -1214,16 +1300,14 @@ export const generateQuotationHtml = (quotation) => {
         </div>
         <div class="billed-label">BILLED TO:</div>
 
-        <div class="company-name">${COMPANY.legalName}</div>
+        <div class="company-name">${esc(meta.issuer.name)}</div>
         <div class="billed-name">${esc(client.companyName || '-')}</div>
 
         <div class="summary-company-details">
-          <div>${COMPANY.addressLine1}</div>
-          <div>${COMPANY.addressLine2}</div>
-          <div>${COMPANY.addressLine3}</div>
-          <div>info@rudhramenterprises.com</div>
-          <div>Mobile: ${COMPANY.contact}</div>
-          <div>GST NO: ${COMPANY.gstin}</div>
+          <div>${esc(meta.issuer.address).replace(/\n/g, '<br>')}</div>
+          <div>${esc(meta.issuer.email)}</div>
+          <div>Mobile: ${esc(meta.issuer.phone)}</div>
+          <div>GST NO: ${esc(meta.issuer.gst)}</div>
         </div>
         <div class="summary-client-details">
           ${addressLines.map((line) => `<div>${esc(line)}</div>`).join('')}
@@ -1252,14 +1336,14 @@ export const generateQuotationHtml = (quotation) => {
         <div class="summary-bottom-grid">
           <div class="bank-details">
             <div class="bank-title">BANK DETAILS</div>
-            <div>Bank Name: ${BANK.bankName}</div>
-            <div>Account Name: ${BANK.accountHolder}</div>
-            <div>Account No: ${BANK.accountNumber}</div>
-            <div>IFSC Code: ${BANK.ifscCode}</div>
-            <div>GST: ${COMPANY.gstin}</div>
-            <div>UPI ID: ${BANK.upiId}</div>
+            <div>Bank Name: ${esc(meta.bank.name)}</div>
+            <div>Account Name: ${esc(meta.bank.accountName)}</div>
+            <div>Account No: ${esc(meta.bank.accountNumber)}</div>
+            <div>IFSC Code: ${esc(meta.bank.ifsc)}</div>
+            <div>GST: ${esc(meta.bank.gst)}</div>
+            <div>UPI ID: ${esc(meta.bank.upi)}</div>
           </div>
-          <div class="summary-signature">${quotationSignature()}</div>
+          <div class="summary-signature">${quotationSignature(meta)}</div>
         </div>
       </div>
     </div>

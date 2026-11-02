@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { INVOICE_STATUS } from '../../constants/index.js';
+import { INVOICE_PRINTED_FIELDS } from './invoice.printed-fields.js';
 
 const INVOICE_STATUS_LIST = Object.values(INVOICE_STATUS);
+const sourceQuotationSchema = z.string().regex(/^[a-fA-F0-9]{24}$/, 'Invalid source quotation ID').optional();
+const printedFieldsSchema = Object.fromEntries(
+  Object.entries(INVOICE_PRINTED_FIELDS).map(([field, max]) => [field, z.string().max(max).optional()]),
+);
 
 const invoiceItemSchema = z.object({
   description: z
@@ -39,7 +44,9 @@ const billingAddressSchema = z.preprocess((val) => {
 
 export const createInvoiceSchema = z
   .object({
+    ...printedFieldsSchema,
     client: z.string().min(1, 'Client is required'),
+    sourceQuotation: sourceQuotationSchema,
     project: z.string().optional().nullable().or(z.literal('')),
     issueDate: z
       .string()
@@ -68,6 +75,7 @@ export const createInvoiceSchema = z
   );
 
 export const updateInvoiceSchema = z.object({
+  ...printedFieldsSchema,
   client: z.string().optional(),
   project: z.string().optional().nullable().or(z.literal('')),
   issueDate: z
@@ -98,6 +106,7 @@ export const invoicesQuerySchema = z.object({
   status: z.enum(INVOICE_STATUS_LIST).optional(),
   client: z.string().optional(),
   brand: z.string().optional(),
+  sourceQuotation: sourceQuotationSchema,
   dateFrom: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), 'Invalid dateFrom')

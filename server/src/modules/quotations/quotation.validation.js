@@ -2,6 +2,13 @@ import { z } from 'zod';
 import { QUOTATION_STATUS } from '../../constants/index.js';
 
 const QUOTATION_STATUS_LIST = Object.values(QUOTATION_STATUS);
+const quotationTemplateSchema = z.enum(['standard', 'panigrahna']);
+
+export const quotationDefaultsQuerySchema = z.object({
+  clientId: z.string().optional(),
+  projectId: z.string().optional(),
+  templateId: quotationTemplateSchema.optional(),
+});
 
 const optionalText = (max) =>
   z.preprocess(
@@ -22,6 +29,30 @@ const scopeOfWorkSchema = z.preprocess((value) => {
 }, z.array(z.string().max(500)).optional());
 
 const quotationFields = {
+  templateId: quotationTemplateSchema.optional(),
+  recipientName: optionalText(200),
+  recipientAddress: optionalText(2000),
+  recipientEmail: optionalText(320),
+  recipientPhone: optionalText(100),
+  recipientGst: optionalText(100),
+  clientReference: optionalText(200),
+  projectReference: optionalText(200),
+  issuerName: optionalText(200),
+  issuerAddress: optionalText(2000),
+  issuerEmail: optionalText(320),
+  issuerPhone: optionalText(100),
+  issuerWebsite: optionalText(500),
+  issuerGst: optionalText(100),
+  bankName: optionalText(200),
+  bankAccountName: optionalText(200),
+  bankAccountNumber: optionalText(100),
+  bankIfsc: optionalText(100),
+  bankGst: optionalText(100),
+  bankUpi: optionalText(200),
+  signatoryName: optionalText(200),
+  closingNote: optionalText(5000),
+  paymentTerms: optionalText(10000),
+  conditions: optionalText(20000),
   client: z.string().min(1, 'Client is required'),
   project: z.string().optional().nullable().or(z.literal('')),
   issueDate: z

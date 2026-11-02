@@ -110,4 +110,71 @@ describe('quotation PDF template', () => {
     });
     expect(html).toContain('Logo Identity<br>Primary and secondary marks');
   });
+
+  it('uses the four-page Panigrahna layout for a Panigrahna client', () => {
+    const html = generateQuotationHtml({
+      ...quotation,
+      client: { ...quotation.client, brand: 'panigrahna' },
+      paymentTerms: '50% on booking',
+      conditions: 'Dates must be confirmed',
+    });
+
+    expect(html.match(/class="pg-page /g)).toHaveLength(4);
+    expect(html).toContain('class="pg-page pg-letter-page"');
+    expect(html).toContain('class="pg-page pg-deliverables-page"');
+    expect(html).toContain('class="pg-page pg-terms-page"');
+    expect(html).toContain('class="pg-page pg-summary-page"');
+    expect(html).toContain('50% on booking');
+    expect(html).toContain('Dates must be confirmed');
+  });
+
+  it('keeps an explicit standard template even for a Panigrahna client', () => {
+    const html = generateQuotationHtml({
+      ...quotation,
+      templateId: 'standard',
+      client: { ...quotation.client, brand: 'panigrahna' },
+    });
+
+    expect(html).toContain('class="page page-letter"');
+    expect(html).not.toContain('class="pg-page ');
+  });
+
+  it('renders editable printed details without interpreting HTML', () => {
+    const html = generateQuotationHtml({
+      ...quotation,
+      templateId: 'panigrahna',
+      recipientName: 'Edited <Client>',
+      recipientAddress: 'Street & City',
+      issuerName: 'Edited Issuer',
+      bankName: 'Edited Bank',
+      signatoryName: 'Edited Signatory',
+      conditions: '<script>alert(1)</script>',
+    });
+
+    expect(html).toContain('Edited &lt;Client&gt;');
+    expect(html).toContain('Street &amp; City');
+    expect(html).toContain('Edited Issuer');
+    expect(html).toContain('Edited Bank');
+    expect(html).toContain('Edited Signatory');
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).not.toContain('<script>alert(1)</script>');
+  });
+
+  it('uses edited recipient, issuer and bank details in the standard template too', () => {
+    const html = generateQuotationHtml({
+      ...quotation,
+      templateId: 'standard',
+      recipientName: 'Edited Client',
+      issuerName: 'Edited Issuer',
+      issuerEmail: 'issuer@example.com',
+      bankName: 'Edited Bank',
+      signatoryName: 'Edited Signatory',
+    });
+
+    expect(html).toContain('class="to-name">Edited Client</div>');
+    expect(html).toContain('class="company-name">Edited Issuer</div>');
+    expect(html).toContain('issuer@example.com');
+    expect(html).toContain('Bank Name: Edited Bank');
+    expect(html).toContain('class="sig-company">Edited Signatory</div>');
+  });
 });

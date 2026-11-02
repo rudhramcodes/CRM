@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Send, Printer, Edit2, Download, CheckCircle, XCircle, Clock, Trash2, RefreshCw,
+  ArrowLeft, Send, Printer, Edit2, Download, CheckCircle, XCircle, Clock, Trash2, RefreshCw, Receipt,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QuotationStatusBadge from '../components/QuotationStatusBadge';
@@ -19,6 +19,7 @@ import {
   useResendQuotationEmailMutation,
 } from '../../../services/quotationApi';
 import { useGetClientsQuery } from '../../../services/clientApi';
+import { useGetInvoicesQuery } from '../../../services/invoiceApi';
 import { API_BASE_URL, BRANDS } from '../../../constants';
 
 const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -38,6 +39,10 @@ export default function QuotationDetail() {
   const { data, isLoading, refetch } = useGetQuotationByIdQuery(id);
   const { data: quotationHtml } = useGetQuotationHtmlQuery(id, { skip: !id });
   const { data: clientsData } = useGetClientsQuery({ limit: 100 });
+  const { data: linkedInvoicesData } = useGetInvoicesQuery(
+    { sourceQuotation: id, limit: 1 },
+    { skip: !id },
+  );
   const [updateQuotation, { isLoading: isUpdating }] = useUpdateQuotationMutation();
   const [updateStatus] = useUpdateQuotationStatusMutation();
   const [deleteQuotation, { isLoading: isDeleting }] = useDeleteQuotationMutation();
@@ -67,6 +72,7 @@ export default function QuotationDetail() {
 
   const quotation = data?.data?.quotation;
   const clients = clientsData?.data || [];
+  const linkedInvoice = linkedInvoicesData?.data?.[0];
 
   const confirmAndExecute = (title, message, label, variant, action) => {
     setConfirmDialog({
@@ -202,6 +208,7 @@ export default function QuotationDetail() {
   const canSend = quotation.status === 'draft';
   const canDecide = ['draft', 'sent'].includes(quotation.status);
   const canExpire = quotation.status === 'sent';
+  const templateId = quotation.templateId || (quotation.client?.brand === 'panigrahna' ? 'panigrahna' : 'standard');
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 print:max-w-none print:mx-0 print:space-y-0">
@@ -216,6 +223,13 @@ export default function QuotationDetail() {
         </button>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={quotation.status === 'accepted' && !linkedInvoice ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => navigate(linkedInvoice ? `/invoices/${linkedInvoice._id}` : `/invoices/new?quotationId=${id}`)}
+          >
+            <Receipt className="w-4 h-4 mr-1" /> {linkedInvoice ? 'Open invoice' : 'Create invoice'}
+          </Button>
           {canEdit && (
             <Button variant="secondary" size="sm" onClick={() => setShowEditModal(true)}>
               <Edit2 className="w-4 h-4 mr-1" /> Edit
@@ -279,7 +293,9 @@ export default function QuotationDetail() {
               <span className="text-xs font-medium text-green-700">Accepted on {fmtDate(quotation.acceptedAt)}</span>
             )}
           </div>
-          <span className="hidden text-xs text-zinc-400 sm:inline">3-page template · cover letter, scope, summary</span>
+          <span className="hidden text-xs text-zinc-500 sm:inline">
+            {templateId === 'panigrahna' ? 'Panigrahna: letter, deliverables, terms, pricing' : 'Standard: cover letter, scope, summary'}
+          </span>
         </div>
 
         {quotationHtml ? (

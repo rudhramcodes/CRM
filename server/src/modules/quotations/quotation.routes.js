@@ -5,6 +5,7 @@ import { verifyToken, authorize } from '../../middleware/auth.js';
 import { ROLES } from '../../constants/index.js';
 import {
   createQuotationSchema,
+  quotationDefaultsQuerySchema,
   updateQuotationSchema,
   updateQuotationStatusSchema,
   quotationsQuerySchema,
@@ -16,7 +17,7 @@ router.use(verifyToken);
 router.use(authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN));
 
 router.get('/stats', quotationController.stats);
-router.get('/defaults', quotationController.defaults);
+router.get('/defaults', validateQuery(quotationDefaultsQuerySchema), quotationController.defaults);
 router.get('/', validateQuery(quotationsQuerySchema), quotationController.list);
 router.get('/:id', quotationController.getById);
 router.get('/:id/html', quotationController.getHtml);

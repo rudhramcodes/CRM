@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { INVOICE_STATUS } from '../../constants/index.js';
+import { INVOICE_PRINTED_FIELDS } from './invoice.printed-fields.js';
 
 const invoiceItemSchema = new mongoose.Schema(
   {
@@ -44,6 +45,14 @@ const invoiceSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
       default: null,
+    },
+    ...Object.fromEntries(Object.entries(INVOICE_PRINTED_FIELDS).map(([field, max]) => [field, {
+      type: String, trim: true, maxlength: max,
+    }])),
+    sourceQuotation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Quotation',
+      immutable: true,
     },
     issueDate: {
       type: Date,
@@ -129,6 +138,10 @@ invoiceSchema.index({ client: 1 });
 invoiceSchema.index({ status: 1 });
 invoiceSchema.index({ dueDate: 1 });
 invoiceSchema.index({ issueDate: -1 });
+invoiceSchema.index(
+  { sourceQuotation: 1 },
+  { unique: true, partialFilterExpression: { sourceQuotation: { $type: 'objectId' } } },
+);
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);
 
