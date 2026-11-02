@@ -48,10 +48,10 @@ function InvoiceActions({ invoice, onDelete, compact = false }) {
         aria-label={`View invoice ${invoice.invoiceNumber}`}
         title="View invoice"
       >
-        <Eye className="w-4 h-4" />
+        <Eye className="w-4 h-4 cursor-pointer" />
         {compact && 'View'}
       </button>
-      {canRecordPayment && (
+      {canRecordPayment && (    
         <button
           type="button"
           onClick={() => navigate(`/invoices/${invoice._id}?recordPayment=1`)}
@@ -61,7 +61,7 @@ function InvoiceActions({ invoice, onDelete, compact = false }) {
           aria-label={`${paymentLabel} for ${invoice.invoiceNumber}`}
           title={paymentLabel}
         >
-          <CreditCard className="w-4 h-4" />
+          <CreditCard className="w-4 h-4 cursor-pointer" />
           {compact && paymentLabel}
         </button>
       )}
@@ -77,10 +77,10 @@ function InvoiceActions({ invoice, onDelete, compact = false }) {
             {invoice.status === 'draft' && (
               <>
                 <button type="button" onClick={() => navigate(`/invoices/${invoice._id}`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50">
-                  <Edit2 className="w-4 h-4" /> Edit invoice
+                  <Edit2 className="w-4 h-4 cursor-pointer" /> Edit invoice
                 </button>
                 <button type="button" onClick={() => onDelete?.(invoice._id)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
-                  <Trash2 className="w-4 h-4" /> Delete invoice
+                  <Trash2 className="w-4 h-4 cursor-pointer" /> Delete invoice
                 </button>
               </>
             )}
@@ -111,7 +111,7 @@ function InvoiceActions({ invoice, onDelete, compact = false }) {
                 aria-label={`Edit invoice ${invoice.invoiceNumber}`}
                 title="Edit invoice"
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit2 className="w-4 h-4 cursor-pointer" />
               </button>
               <button
                 type="button"
@@ -120,7 +120,7 @@ function InvoiceActions({ invoice, onDelete, compact = false }) {
                 aria-label={`Delete invoice ${invoice.invoiceNumber}`}
                 title="Delete invoice"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4 cursor-pointer" />
               </button>
             </>
           )}
@@ -195,12 +195,21 @@ export default function InvoiceTable({ invoices, onDelete, onStatusChange }) {
         const status = getValue();
         const transitions = STATUS_TRANSITIONS[status] || [];
         if (!transitions.length) return <InvoiceStatusBadge status={status} />;
+        const currentLabel = status.replace('_', ' ');
         return (
-          <div className="flex items-center gap-1.5" onClick={(event) => event.stopPropagation()}>
-            <InvoiceStatusBadge status={status} />
+          <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
             <Select value={status} onValueChange={(newStatus) => onStatusChange?.(row._id, newStatus)}>
-              <SelectTrigger className="h-8 w-8 border-0 p-0 shadow-none" aria-label={`Change status for ${row.invoiceNumber}`}><SelectValue /></SelectTrigger>
-              <SelectContent align="end">{transitions.map((transition) => <SelectItem key={transition.value} value={transition.value}>{transition.label}</SelectItem>)}</SelectContent>
+              <SelectTrigger className="h-8 border-0 p-0 shadow-none text-xs font-medium text-zinc-700 capitalize flex items-center gap-1 cursor-pointer" aria-label={`Change status for ${row.invoiceNumber}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value={status} className="capitalize">{currentLabel}</SelectItem>
+                {transitions.map((transition) => (
+                  <SelectItem key={transition.value} value={transition.value}>
+                    {transition.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         );
