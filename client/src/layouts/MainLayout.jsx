@@ -15,7 +15,7 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f7f5] flex text-zinc-900 selection:bg-primary-900 selection:text-white">
+    <div className="min-h-screen bg-[#f7f7f5] flex text-zinc-900 selection:bg-primary-900 selection:text-white overflow-x-hidden">
       <div className="print:hidden">
         <Sidebar
           open={mobileMenuOpen}

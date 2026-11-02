@@ -161,9 +161,9 @@ export default function Header({ onMobileMenuOpen }) {
 
   return (
     <>
-    <header className="h-16 bg-white border-b border-zinc-200/80 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+    <header className="h-16 bg-white border-b border-zinc-200/80 flex items-center justify-between px-2.5 sm:px-6 lg:px-8 sticky top-0 z-30 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.02)] max-w-full">
       {/* Left Area: Sidebar Toggle & Page Title */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-1.5 sm:gap-4 min-w-0 shrink">
         <button
           type="button"
           aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -181,7 +181,7 @@ export default function Header({ onMobileMenuOpen }) {
           type="button"
           aria-label="Open navigation menu"
           onClick={onMobileMenuOpen}
-          className="lg:hidden p-2 rounded-xl hover:bg-zinc-100 text-zinc-600 hover:text-primary-900 transition-colors cursor-pointer"
+          className="lg:hidden p-1.5 sm:p-2 rounded-xl hover:bg-zinc-100 text-zinc-600 hover:text-primary-900 transition-colors cursor-pointer shrink-0"
         >
           <Menu className="w-5 h-5" strokeWidth={1.8} />
         </button>
@@ -190,14 +190,14 @@ export default function Header({ onMobileMenuOpen }) {
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 hidden md:inline shrink-0">
             Workspace /
           </span>
-          <h1 className="text-base sm:text-lg font-bold text-primary-900 tracking-tight truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none">
+          <h1 className="text-sm sm:text-lg font-bold text-primary-900 tracking-tight truncate max-w-[90px] xs:max-w-[140px] sm:max-w-none">
             {routeTitle}
           </h1>
         </div>
       </div>
 
       {/* Right Area: Search, Notifications & User */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1 sm:gap-3 shrink-0 min-w-0">
         {/* Command Search Trigger */}
         <button
           type="button"
@@ -217,7 +217,7 @@ export default function Header({ onMobileMenuOpen }) {
         <button
           type="button"
           onClick={() => setIsCmdOpen(true)}
-          className="sm:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-600 hover:text-primary-900 bg-zinc-100/80 hover:bg-zinc-100 transition-colors active:scale-95"
+          className="sm:hidden flex items-center justify-center w-8 h-8 rounded-xl text-zinc-600 hover:text-primary-900 bg-zinc-100/80 hover:bg-zinc-100 transition-colors active:scale-95 shrink-0"
           aria-label="Open command search"
           title="Search (⌘K)"
         >
@@ -228,7 +228,7 @@ export default function Header({ onMobileMenuOpen }) {
         <HeaderAttendancePill />
 
         {/* Notifications */}
-        <div className="relative" ref={notifRef}>
+        <div className="relative shrink-0" ref={notifRef}>
           <button
             aria-label={`${unreadCount > 0 ? `${unreadCount} unread ` : ''}Notifications`}
             onClick={async () => {
@@ -236,7 +236,7 @@ export default function Header({ onMobileMenuOpen }) {
               setShowNotifDropdown(!showNotifDropdown);
             }}
             className={cn(
-              'relative p-2.5 rounded-xl transition-all duration-150',
+              'relative p-1.5 sm:p-2.5 rounded-xl transition-all duration-150',
               showNotifDropdown
                 ? 'bg-zinc-100 text-primary-900'
                 : unreadCount > 0
@@ -244,9 +244,9 @@ export default function Header({ onMobileMenuOpen }) {
                   : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100',
             )}
           >
-            <Bell className="w-5 h-5" strokeWidth={1.8} />
+            <Bell className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 min-w-[17px] h-[17px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-sm ring-2 ring-white animate-pulse">
+              <span className="absolute top-1 sm:top-1.5 right-1 sm:right-1.5 min-w-[15px] h-[15px] sm:min-w-[17px] sm:h-[17px] flex items-center justify-center px-1 text-[9px] sm:text-[10px] font-bold text-white bg-red-500 rounded-full shadow-sm ring-2 ring-white animate-pulse">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -362,20 +362,20 @@ export default function Header({ onMobileMenuOpen }) {
 
         {/* User Profile Avatar & Dropdown */}
         {user && (
-          <div className="relative pl-1.5 border-l border-zinc-200/80" ref={dropdownRef}>
+          <div className="relative pl-1 sm:pl-1.5 border-l border-zinc-200/80 shrink-0" ref={dropdownRef}>
             <button
               aria-label="Open account menu"
               onClick={() => setShowDropdown(!showDropdown)}
               className={cn(
-                'flex items-center gap-2 p-1.5 rounded-xl hover:bg-zinc-100 transition-colors cursor-pointer',
+                'flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 rounded-xl hover:bg-zinc-100 transition-colors cursor-pointer',
                 showDropdown && 'bg-zinc-100',
               )}
             >
-              <div className="relative">
-                <div className="w-8 h-8 bg-primary-900 text-white rounded-xl flex items-center justify-center font-bold text-xs shadow-sm">
+              <div className="relative shrink-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary-900 text-white rounded-xl flex items-center justify-center font-bold text-[11px] sm:text-xs shadow-sm">
                   {user.name?.[0]?.toUpperCase() || 'U'}
                 </div>
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
+                <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
               </div>
               <ChevronDown className={cn('w-3.5 h-3.5 text-zinc-400 transition-transform hidden sm:block', showDropdown && 'rotate-180')} />
             </button>
