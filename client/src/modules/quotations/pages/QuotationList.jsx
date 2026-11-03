@@ -195,7 +195,7 @@ export default function QuotationList() {
           <button
             key={brand.value || 'all'}
             onClick={() => handleBrandChange(brand.value)}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            className={`px-3.5 py-1.5 text-xs font-medium cursor-pointer rounded-lg transition-colors ${
               activeBrand === brand.value
                 ? 'bg-primary-900 text-white shadow-sm'
                 : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'

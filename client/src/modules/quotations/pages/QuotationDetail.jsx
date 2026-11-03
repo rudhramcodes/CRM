@@ -209,7 +209,7 @@ export default function QuotationDetail() {
         <button
           type="button"
           onClick={() => navigate('/quotations')}
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
+          className="inline-flex items-center cursor-pointer gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Quotations

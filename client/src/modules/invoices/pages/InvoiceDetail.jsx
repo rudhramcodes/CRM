@@ -241,7 +241,7 @@ export default function InvoiceDetail() {
         <button
           type="button"
           onClick={() => navigate('/invoices')}
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
+          className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Invoices

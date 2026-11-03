@@ -62,16 +62,17 @@ export default function InvoiceFilters({ onFilterChange }) {
         </div>
 
         <Select
+          
           value={filters.status || 'all'}
           onValueChange={(value) => setFilters((p) => ({ ...p, status: value === 'all' ? '' : value }))}
         >
-          <SelectTrigger className="w-full sm:w-44 shrink-0">
+          <SelectTrigger className="w-full sm:w-44 shrink-0 cursor-pointer">
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
+          <SelectContent >
+            <SelectItem value="all" className="cursor-pointer" >All Statuses</SelectItem>
             {INVOICE_STATUS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
+              <SelectItem key={s.value} value={s.value} className="cursor-pointer">
                 {s.label}
               </SelectItem>
             ))}
