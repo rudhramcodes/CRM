@@ -55,7 +55,7 @@ export default function PaymentFilters({ onFilterChange }) {
           <button
             type="button"
             onClick={() => setFilters((p) => ({ ...p, search: '' }))}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-zinc-400 hover:text-zinc-600 rounded-md hover:bg-zinc-100 transition-colors"
+            className="absolute cursor-pointer right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-zinc-400 hover:text-zinc-600 rounded-md hover:bg-zinc-100 transition-colors"
             aria-label="Clear search input"
           >
             <X className="w-4 h-4" />
@@ -67,13 +67,15 @@ export default function PaymentFilters({ onFilterChange }) {
         value={filters.status || 'all'}
         onValueChange={(value) => setFilters((p) => ({ ...p, status: value === 'all' ? '' : value }))}
       >
-        <SelectTrigger className="w-full sm:w-40">
+        <SelectTrigger className="w-full sm:w-40 cursor-pointer">
           <SelectValue placeholder="All Statuses" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Statuses</SelectItem>
+          <SelectItem value="all" className="cursor-pointer">
+            All Statuses 
+          </SelectItem>
           {PAYMENT_STATUS.map((s) => (
-            <SelectItem key={s.value} value={s.value}>
+            <SelectItem key={s.value} value={s.value} className="cursor-pointer">
               {s.label}
             </SelectItem>
           ))}
@@ -84,13 +86,15 @@ export default function PaymentFilters({ onFilterChange }) {
         value={filters.paymentMethod || 'all'}
         onValueChange={(value) => setFilters((p) => ({ ...p, paymentMethod: value === 'all' ? '' : value }))}
       >
-        <SelectTrigger className="w-full sm:w-40">
+        <SelectTrigger className="w-full sm:w-40 cursor-pointer">
           <SelectValue placeholder="All Methods" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Methods</SelectItem>
+          <SelectItem value="all" className="cursor-pointer">
+            All Methods
+          </SelectItem>
           {PAYMENT_METHODS.map((m) => (
-            <SelectItem key={m.value} value={m.value}>
+            <SelectItem key={m.value} value={m.value} className="cursor-pointer">
               {m.label}
             </SelectItem>
           ))}
@@ -101,10 +105,18 @@ export default function PaymentFilters({ onFilterChange }) {
         value={filters.paymentType || 'all'}
         onValueChange={(value) => setFilters((p) => ({ ...p, paymentType: value === 'all' ? '' : value }))}
       >
-        <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="All Payment Types" /></SelectTrigger>
+        <SelectTrigger className="w-full sm:w-44 cursor-pointer">
+          <SelectValue placeholder="All Payment Types" />
+        </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Payment Types</SelectItem>
-          {PAYMENT_TYPES.map((type) => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
+          <SelectItem value="all" className="cursor-pointer">
+            All Payment Types
+          </SelectItem>
+          {PAYMENT_TYPES.map((type) => (
+            <SelectItem key={type.value} value={type.value} className="cursor-pointer">
+              {type.label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 
@@ -127,7 +139,7 @@ export default function PaymentFilters({ onFilterChange }) {
       {hasFilters && (
         <button
           onClick={clearFilters}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-500 hover:text-zinc-700 transition-colors shrink-0"
+          className="inline-flex cursor-pointer items-center gap-1.5 px-3 py-2 text-sm text-zinc-500 hover:text-zinc-700 transition-colors shrink-0"
         >
           <X className="w-4 h-4" />
           Clear

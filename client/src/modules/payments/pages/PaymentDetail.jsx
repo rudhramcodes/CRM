@@ -93,7 +93,7 @@ export default function PaymentDetail() {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/payments')}
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700"
+          className="inline-flex items-center gap-1.5 cursor-pointer text-sm text-zinc-500 hover:text-zinc-700"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Payments
         </button>

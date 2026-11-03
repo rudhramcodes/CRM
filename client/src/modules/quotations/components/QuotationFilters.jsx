@@ -69,9 +69,11 @@ export default function QuotationFilters({ onFilterChange }) {
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="all" className="cursor-pointer">
+              All Statuses
+            </SelectItem>
             {QUOTATION_STATUS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
+              <SelectItem key={s.value} value={s.value} className="cursor-pointer">
                 {s.label}
               </SelectItem>
             ))}

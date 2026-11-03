@@ -123,7 +123,7 @@ export default function PaymentList() {
           <button
             key={b.value}
             onClick={() => handleBrandChange(b.value)}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors ${
               activeBrand === b.value
                 ? 'bg-primary-900 text-white shadow-sm'
                 : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
