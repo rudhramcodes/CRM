@@ -7,6 +7,7 @@ import {
   renderNotificationEmail,
   renderMeetingEmail,
   renderInvoiceEmail,
+  renderQuotationEmail,
   renderPaymentEmail,
   renderPortalInviteEmail,
   renderLeaveAppliedEmail,
@@ -255,6 +256,28 @@ const emails = [
       { label: 'Heading', value: 'Invoice {invoiceNumber}' },
       { label: 'Body', value: 'Please find attached the invoice {invoiceNumber} for ₹{total}, due by {dueDate}.' },
       { label: 'Note', value: 'The PDF copy is attached to this email for your records. If you have any questions, feel free to reach out.' }
+    ]
+  },
+  {
+    id: 'quotation-sent',
+    category: 'Financials',
+    badge: 'Proposal & PDF',
+    title: 'Quotation / Proposal Sent to Client',
+    recipient: 'Client Lead / Contact',
+    trigger: 'When a quotation is sent or resent from Quotation Details.',
+    subject: 'Quotation QTN-PG-2026-0042 from Rudhram',
+    preheader: 'Quotation QTN-PG-2026-0042 for ₹6,00,000 from Rudhram Enterprises.',
+    html: renderQuotationEmail({
+      clientName: 'Shubham Vidyarthi',
+      quotationNumber: 'QTN-PG-2026-0042',
+      total: 708000,
+      validUntil: '2026-11-30'
+    }),
+    editableFields: [
+      { label: 'Subject', value: 'Quotation {quotationNumber} from Rudhram' },
+      { label: 'Heading', value: 'Quotation {quotationNumber}' },
+      { label: 'Body', value: 'Please find attached our quotation {quotationNumber} for ₹{total}. Valid until {validUntil}.' },
+      { label: 'Note', value: 'The PDF copy is attached for your review. If you have any questions or would like to discuss the scope, feel free to reach out.' }
     ]
   },
   {
