@@ -7,6 +7,7 @@ import Client from '../clients/client.model.js';
 import Project from '../projects/project.model.js';
 import { VENTURE_CODES, QUOTATION_STATUS } from '../../constants/index.js';
 import { buildQuotationDefaults } from './quotation.defaults.js';
+import { makeWorkingCopy, getRevisionArtifact, getWorkingArtifact } from './quotationRevision.service.js';
 
 const VALID_TRANSITIONS = {
   draft: ['sent', 'accepted', 'rejected', 'expired'],
@@ -86,7 +87,19 @@ export const createQuotation = async (data, user) => {
     createdBy: user._id,
   };
 
-  return quotationRepository.create(payload);
+  if (payload.validUntil && payload.validUntil < payload.issueDate) {
+    throw ApiError.badRequest('Valid until must be on or after issue date');
+  }
+
+  const taxAmount = payload.price * payload.taxRate / 100;
+  const content = {
+    ...payload, taxAmount, total: payload.price + taxAmount,
+    client: { ...(client.toObject ? client.toObject() : client), _id: data.client },
+    project: project ? { ...(project.toObject ? project.toObject() : project), _id: data.project } : null,
+  };
+  return quotationRepository.create({ ...payload, schemaVersion: 2, latestVersion: 0,
+    workingCopy: makeWorkingCopy(content, { sourceVersion: 0, baseVersion: 0 }, user),
+  });
 };
 
 export const getQuotations = async (query) => {
@@ -102,17 +115,23 @@ export const getQuotationById = async (id) => {
 
 export const getQuotationHtml = async (id) => {
   const quotation = await getQuotationById(id);
+  if (quotation.schemaVersion === 2) {
+    const bytes = quotation.latestVersion ? await getRevisionArtifact(id, quotation.latestVersion, 'html') : await getWorkingArtifact(id, 'html');
+    return bytes.toString('utf8');
+  }
   return generateQuotationHtml(quotation);
 };
 
 export const getQuotationPdf = async (id) => {
   const quotation = await getQuotationById(id);
+  if (quotation.schemaVersion === 2) return quotation.latestVersion ? getRevisionArtifact(id, quotation.latestVersion, 'pdf') : getWorkingArtifact(id, 'pdf');
   return generateQuotationPdf(quotation);
 };
 
 export const updateQuotation = async (id, data) => {
   const quotation = await quotationRepository.findById(id);
   if (!quotation) throw ApiError.notFound('Quotation not found');
+  if (quotation.schemaVersion === 2) throw ApiError.conflict('Use the working-copy endpoint with baseVersion and editVersion');
   if (quotation.status !== QUOTATION_STATUS.DRAFT) {
     throw ApiError.badRequest('Only draft quotations can be edited');
   }
@@ -146,6 +165,7 @@ export const updateQuotation = async (id, data) => {
 export const updateQuotationStatus = async (id, status) => {
   const quotation = await quotationRepository.findById(id);
   if (!quotation) throw ApiError.notFound('Quotation not found');
+  if (quotation.schemaVersion === 2) throw ApiError.conflict('Use a revision-specific status or send endpoint with expectedStatus');
 
   assertStatusTransition(quotation.status, status);
 
@@ -198,6 +218,7 @@ const sendQuotationEmail = async (quotation) => {
 
 export const resendQuotationEmail = async (id) => {
   const quotation = await getQuotationById(id);
+  if (quotation.schemaVersion === 2) throw ApiError.conflict('Use the revision-specific resend endpoint');
   if (!quotation.client?.email) {
     throw ApiError.badRequest('Client has no email address');
   }
@@ -207,6 +228,7 @@ export const resendQuotationEmail = async (id) => {
 export const deleteQuotation = async (id) => {
   const quotation = await quotationRepository.findById(id);
   if (!quotation) throw ApiError.notFound('Quotation not found');
+  if (quotation.schemaVersion === 2) throw ApiError.conflict('Versioned quotations cannot be deleted; archive the quotation instead');
   if (quotation.status !== QUOTATION_STATUS.DRAFT) {
     throw ApiError.badRequest('Only draft quotations can be deleted');
   }

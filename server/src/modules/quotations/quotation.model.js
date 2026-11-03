@@ -1,8 +1,15 @@
 import mongoose from 'mongoose';
 import { QUOTATION_STATUS } from '../../constants/index.js';
+import { revisionSchema, workingCopySchema } from './quotationRevision.schema.js';
 
 const quotationSchema = new mongoose.Schema(
   {
+    schemaVersion: Number,
+    latestVersion: { type: Number, default: 0 },
+    revisions: { type: [revisionSchema], default: [] },
+    workingCopy: { type: workingCopySchema, default: null },
+    archivedAt: { type: Date, default: null },
+    archivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     quotationNumber: {
       type: String,
       unique: true,

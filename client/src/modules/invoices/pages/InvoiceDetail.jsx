@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import InvoiceStatusBadge from '../components/InvoiceStatusBadge';
 import InvoiceForm from '../components/InvoiceForm';
+import InvoiceSourceLink from '../components/InvoiceSourceLink';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import {
@@ -448,14 +449,7 @@ export default function InvoiceDetail() {
         <h3 className="text-sm font-medium text-zinc-700 mb-3">Timeline</h3>
         <div className="space-y-2 text-sm text-zinc-500">
           <p>Created: {new Date(invoice.createdAt).toLocaleString('en-IN')} by {invoice.createdBy?.name || 'N/A'}</p>
-          {invoice.sourceQuotation && (
-            <p>
-              Created from{' '}
-              <button type="button" onClick={() => navigate(`/quotations/${invoice.sourceQuotation}`)} className="font-medium text-amber-800 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700">
-                source quotation
-              </button>
-            </p>
-          )}
+          <InvoiceSourceLink invoice={invoice} />
           {invoice.sentAt && <p>Sent: {new Date(invoice.sentAt).toLocaleString('en-IN')}</p>}
           {invoice.paidAt && <p>Paid: {new Date(invoice.paidAt).toLocaleString('en-IN')}</p>}
           {invoice.cancelledAt && <p>Cancelled: {new Date(invoice.cancelledAt).toLocaleString('en-IN')}</p>}

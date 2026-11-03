@@ -54,6 +54,24 @@ const invoiceSchema = new mongoose.Schema(
       ref: 'Quotation',
       immutable: true,
     },
+    sourceRevision: {
+      type: mongoose.Schema.Types.ObjectId,
+      immutable: true,
+      validate: {
+        validator: function (value) { return !value || Boolean(this.sourceQuotation); },
+        message: 'Source revision requires a source quotation',
+      },
+    },
+    sourceRevisionVersion: {
+      type: Number,
+      immutable: true,
+      min: 1,
+      validate: {
+        validator: function (value) { return value === undefined || (Number.isInteger(value) && Boolean(this.sourceRevision)); },
+        message: 'Source revision version requires a source revision and must be an integer',
+      },
+      required: function () { return Boolean(this.sourceRevision); },
+    },
     issueDate: {
       type: Date,
       required: [true, 'Issue date is required'],

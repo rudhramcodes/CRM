@@ -64,6 +64,7 @@ export default function QuotationForm({
   onCancel,
   initialData,
   submitLabel = 'Create Quotation',
+  lockIdentity = false,
 }) {
   const { data: projectsData } = useGetProjectsQuery({ limit: 100 });
   const projects = projectsData?.data || [];
@@ -178,12 +179,12 @@ export default function QuotationForm({
   const lastAutoProject = useRef(initialData?.project?._id || initialData?.project || '');
 
   useEffect(() => {
-    if (!selectedClient || !selectedProject || projects.length === 0) return;
+    if (lockIdentity || !selectedClient || !selectedProject || projects.length === 0) return;
     const belongsToClient = clientProjects.some(
       (p) => String(p._id) === String(selectedProject),
     );
     if (!belongsToClient) setValue('project', '');
-  }, [selectedClient, selectedProject, projects, setValue]);
+  }, [lockIdentity, selectedClient, selectedProject, projects, setValue]);
 
   useEffect(() => {
     if (!selectedProject || selectedProject === lastAutoProject.current) return;
@@ -226,8 +227,8 @@ export default function QuotationForm({
   );
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <form aria-label={submitLabel} onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      <fieldset disabled={lockIdentity} className="grid grid-cols-1 sm:grid-cols-2 gap-4 disabled:opacity-60">
         <FormSelect
           name="client"
           control={control}
@@ -246,7 +247,8 @@ export default function QuotationForm({
           }))}
           placeholder={selectedClient ? 'Select project (optional)' : 'Select client first'}
         />
-      </div>
+      </fieldset>
+      {lockIdentity && <p className="text-xs text-zinc-500">The client and project stay fixed across revisions. Printed recipient details remain editable below.</p>}
 
       <fieldset className="space-y-3 rounded-xl bg-zinc-50 p-4 sm:p-5">
         <legend className="px-1 text-sm font-semibold text-zinc-900">Quotation template</legend>

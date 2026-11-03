@@ -37,7 +37,7 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN') : '-');
 
 function QuotationActions({ quotation, onDelete, onStatusChange, compact = false }) {
   const navigate = useNavigate();
-  const transitions = STATUS_TRANSITIONS[quotation.status] || [];
+  const transitions = quotation.schemaVersion === 2 || quotation.archivedAt ? [] : STATUS_TRANSITIONS[quotation.status] || [];
   const stop = (event) => event.stopPropagation();
   return (
     <div className={compact ? 'flex items-center gap-2' : 'flex items-center gap-1'} onClick={stop}>
@@ -71,7 +71,7 @@ function QuotationActions({ quotation, onDelete, onStatusChange, compact = false
             >
               <ArrowUpRight className="w-4 h-4" /> Open details
             </button>
-            {quotation.status === 'draft' && (
+            {quotation.status === 'draft' && quotation.schemaVersion !== 2 && !quotation.archivedAt && (
               <>
                 <button
                   type="button"
@@ -113,7 +113,7 @@ function QuotationActions({ quotation, onDelete, onStatusChange, compact = false
         </details>
       ) : (
         <>
-          {quotation.status === 'draft' && (
+          {quotation.status === 'draft' && quotation.schemaVersion !== 2 && !quotation.archivedAt && (
             <>
               <button
                 type="button"
@@ -152,6 +152,7 @@ function QuotationMobileCard({ quotation, onDelete, onStatusChange }) {
           <p className="mt-0.5 truncate text-xs text-zinc-500">
             {quotation.client?.companyName || 'No client assigned'}
           </p>
+          {quotation.schemaVersion === 2 && <p className="mt-1 text-xs text-zinc-500">{quotation.latestVersion ? `V${quotation.latestVersion}` : 'Working draft'}{quotation.archivedAt ? ' · Archived' : quotation.hasWorkingCopy ? ' · Working draft available' : ''}</p>}
         </div>
         <QuotationStatusBadge status={quotation.status} />
       </div>
@@ -190,7 +191,9 @@ function QuotationMobileCard({ quotation, onDelete, onStatusChange }) {
 export default function QuotationTable({ quotations, onDelete, onStatusChange }) {
   const navigate = useNavigate();
   const columns = [
-    { header: 'Quotation #', accessor: 'quotationNumber' },
+    { header: 'Quotation #', accessor: 'quotationNumber', cell: ({ getValue, row }) => (
+      <div><span>{getValue()}</span>{row.schemaVersion === 2 && <p className="mt-1 text-xs text-zinc-500">{row.latestVersion ? `V${row.latestVersion}` : 'Working draft'}{row.archivedAt ? ' · Archived' : row.hasWorkingCopy ? ' · Working draft available' : ''}</p>}</div>
+    ) },
     {
       header: 'Client',
       accessor: 'client',
@@ -220,7 +223,7 @@ export default function QuotationTable({ quotations, onDelete, onStatusChange })
       accessor: 'status',
       cell: ({ getValue, row }) => {
         const status = getValue();
-        const transitions = STATUS_TRANSITIONS[status] || [];
+        const transitions = row.schemaVersion === 2 || row.archivedAt ? [] : STATUS_TRANSITIONS[status] || [];
         if (!transitions.length) return <QuotationStatusBadge status={status} />;
         return (
           <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
