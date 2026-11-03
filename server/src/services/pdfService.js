@@ -1369,7 +1369,7 @@ export const generateQuotationHtml = (quotation) => {
     </div>
   </section>
 
-  <script>
+ <script>
     window.__quotationPaginationPending = true;
     (function () {
       var finished = false;
@@ -1388,40 +1388,34 @@ export const generateQuotationHtml = (quotation) => {
         return height;
       }
 
-      function createContinuationPage(template) {
-        var page = template.cloneNode(true);
-        page.removeAttribute('data-paginated');
-        var toBlock = page.querySelector('.to-block');
-        if (toBlock) toBlock.parentNode.removeChild(toBlock);
-        var body = page.querySelector('.letter-body');
-        if (body) body.innerHTML = '';
-        var signature = page.querySelector('.letter-signature');
-        if (signature) signature.parentNode.removeChild(signature);
-        var scopePage = document.querySelector('.page-scope');
-        if (scopePage && scopePage.parentNode) {
-          scopePage.parentNode.insertBefore(page, scopePage);
-        } else {
-          document.body.appendChild(page);
-        }
-        return page;
-      }
-
-      function reflow() {
-        if (finished) return;
-        finished = true;
-
+      function reflowLetter() {
         var letterPage = document.querySelector('.page-letter');
         var body = letterPage && letterPage.querySelector('.letter-body');
-        if (!letterPage || !body) {
-          window.__quotationPaginationDone = true;
-          return;
-        }
+        if (!letterPage || !body) return;
 
         var signature = letterPage.querySelector('.letter-signature');
         var template = letterPage.cloneNode(true);
         var blocks = Array.prototype.slice.call(body.children);
         blocks.forEach(function (block) { body.removeChild(block); });
-        if (signature) signature.parentNode.removeChild(signature);
+        if (signature && signature.parentNode) signature.parentNode.removeChild(signature);
+
+        function createLetterContinuationPage(templatePage) {
+          var page = templatePage.cloneNode(true);
+          page.removeAttribute('data-paginated');
+          var toBlock = page.querySelector('.to-block');
+          if (toBlock && toBlock.parentNode) toBlock.parentNode.removeChild(toBlock);
+          var b = page.querySelector('.letter-body');
+          if (b) b.innerHTML = '';
+          var sig = page.querySelector('.letter-signature');
+          if (sig && sig.parentNode) sig.parentNode.removeChild(sig);
+          var scopePage = document.querySelector('.page-scope');
+          if (scopePage && scopePage.parentNode) {
+            scopePage.parentNode.insertBefore(page, scopePage);
+          } else {
+            document.body.appendChild(page);
+          }
+          return page;
+        }
 
         var currentPage = letterPage;
         var currentBody = body;
@@ -1465,7 +1459,7 @@ export const generateQuotationHtml = (quotation) => {
             return;
           }
           currentBody.removeChild(block);
-          currentPage = createContinuationPage(template);
+          currentPage = createLetterContinuationPage(template);
           currentBody = currentPage.querySelector('.letter-body');
           currentBody.appendChild(block);
         }
@@ -1477,10 +1471,10 @@ export const generateQuotationHtml = (quotation) => {
           while (measure(currentPage) > LIMIT && currentBody.children.length > 1) {
             var lastBlock = currentBody.lastElementChild;
             currentBody.removeChild(lastBlock);
-            currentPage = createContinuationPage(template);
+            currentPage = createLetterContinuationPage(template);
             currentBody = currentPage.querySelector('.letter-body');
             currentBody.appendChild(lastBlock);
-            signature.parentNode.removeChild(signature);
+            if (signature.parentNode) signature.parentNode.removeChild(signature);
             currentBody.parentNode.appendChild(signature);
           }
         }
@@ -1493,7 +1487,141 @@ export const generateQuotationHtml = (quotation) => {
         }
 
         letterPage.setAttribute('data-paginated', 'true');
-        window.__quotationPaginationDone = true;
+      }
+
+      function reflowScope() {
+        var scopePage = document.querySelector('.page-scope');
+        if (!scopePage) return;
+
+        var scopeList = scopePage.querySelector('.scope-list');
+        if (!scopeList) return;
+
+        var scopeFooter = scopePage.querySelector('.scope-footer');
+
+        if (measure(scopePage) <= LIMIT) return;
+
+        var items = Array.prototype.slice.call(scopeList.children);
+        items.forEach(function (item) { scopeList.removeChild(item); });
+
+        if (scopeFooter && scopeFooter.parentNode) {
+          scopeFooter.parentNode.removeChild(scopeFooter);
+        }
+
+        function createScopeContinuationPage(templatePage) {
+          var page = templatePage.cloneNode(true);
+          page.classList.add('page-scope-continuation');
+
+          var toBlock = page.querySelector('.to-block');
+          if (toBlock && toBlock.parentNode) toBlock.parentNode.removeChild(toBlock);
+          var subjectLine = page.querySelector('.subject-line');
+          if (subjectLine && subjectLine.parentNode) subjectLine.parentNode.removeChild(subjectLine);
+          var scopeIntro = page.querySelector('.scope-intro');
+          if (scopeIntro && scopeIntro.parentNode) scopeIntro.parentNode.removeChild(scopeIntro);
+
+          var list = page.querySelector('.scope-list');
+          if (list) list.innerHTML = '';
+
+          var footer = page.querySelector('.scope-footer');
+          if (footer && footer.parentNode) footer.parentNode.removeChild(footer);
+
+          return page;
+        }
+
+        function splitScopeItem(item) {
+          if (!item || item.tagName !== 'LI') return null;
+          var text = (item.innerHTML || '').trim();
+          if (text.length < 300) return null;
+          var middle = Math.floor(text.length / 2);
+          var cut = text.lastIndexOf('. ', middle);
+          if (cut < middle * 0.4) cut = text.lastIndexOf('<br>', middle);
+          if (cut < middle * 0.4) cut = text.lastIndexOf(' ', middle);
+          if (cut < middle * 0.4) cut = middle;
+          var firstHtml = text.slice(0, cut + 1).trim();
+          var secondHtml = text.slice(cut + 1).trim();
+          if (!firstHtml || !secondHtml) return null;
+          var first = item.cloneNode(false);
+          first.innerHTML = firstHtml;
+          var second = item.cloneNode(false);
+          second.innerHTML = secondHtml;
+          return [first, second];
+        }
+
+        var currentPage = scopePage;
+        var currentList = scopeList;
+
+        function placeScopeItem(item) {
+          currentList.appendChild(item);
+          if (measure(currentPage) <= LIMIT) return;
+
+          var parts = splitScopeItem(item);
+          if (parts) {
+            currentList.removeChild(parts[0]);
+            currentList.removeChild(parts[1]);
+            placeScopeItem(parts[0]);
+            placeScopeItem(parts[1]);
+            return;
+          }
+
+          if (currentList.children.length > 1) {
+            currentList.removeChild(item);
+            var newPage = createScopeContinuationPage(scopePage);
+            currentPage.parentNode.insertBefore(newPage, currentPage.nextSibling);
+            currentPage = newPage;
+            currentList = currentPage.querySelector('.scope-list');
+            currentList.appendChild(item);
+          } else {
+            if (currentPage.querySelector('.to-block') || currentPage.querySelector('.scope-intro')) {
+              currentList.removeChild(item);
+              var newPage = createScopeContinuationPage(scopePage);
+              currentPage.parentNode.insertBefore(newPage, currentPage.nextSibling);
+              currentPage = newPage;
+              currentList = currentPage.querySelector('.scope-list');
+              currentList.appendChild(item);
+            }
+          }
+        }
+
+        items.forEach(placeScopeItem);
+
+        if (scopeFooter) {
+          var body = currentPage.querySelector('.page-body');
+          body.appendChild(scopeFooter);
+
+          while (measure(currentPage) > LIMIT && currentList.children.length > 1) {
+            var lastItem = currentList.lastElementChild;
+            currentList.removeChild(lastItem);
+            var newPage = createScopeContinuationPage(scopePage);
+            currentPage.parentNode.insertBefore(newPage, currentPage.nextSibling);
+            currentPage = newPage;
+            currentList = currentPage.querySelector('.scope-list');
+            currentList.appendChild(lastItem);
+            if (scopeFooter.parentNode) scopeFooter.parentNode.removeChild(scopeFooter);
+            currentPage.querySelector('.page-body').appendChild(scopeFooter);
+          }
+
+          if (measure(currentPage) > LIMIT && currentList.children.length === 1 && (currentPage.querySelector('.to-block') || currentPage.querySelector('.scope-intro'))) {
+            var lastItem = currentList.lastElementChild;
+            currentList.removeChild(lastItem);
+            var newPage = createScopeContinuationPage(scopePage);
+            currentPage.parentNode.insertBefore(newPage, currentPage.nextSibling);
+            currentPage = newPage;
+            currentList = currentPage.querySelector('.scope-list');
+            currentList.appendChild(lastItem);
+            if (scopeFooter.parentNode) scopeFooter.parentNode.removeChild(scopeFooter);
+            currentPage.querySelector('.page-body').appendChild(scopeFooter);
+          }
+        }
+      }
+
+      function reflow() {
+        if (finished) return;
+        finished = true;
+        try {
+          reflowLetter();
+          reflowScope();
+        } finally {
+          window.__quotationPaginationDone = true;
+        }
       }
 
       function start() {
