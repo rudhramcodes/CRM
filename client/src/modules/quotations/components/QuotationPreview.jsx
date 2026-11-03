@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import DocumentPreviewSkeleton from '../../../components/ui/DocumentPreviewSkeleton';
 
 const PREVIEW_WIDTH = 794;
 
@@ -25,7 +26,7 @@ export default function QuotationPreview({ html, title, iframeRef, isFetching, e
     return <p role="alert" className="p-8 text-center text-sm text-red-700">Unable to load this quotation preview.</p>;
   }
   if (!html || isFetching) {
-    return <p role="status" className="p-8 text-center text-sm text-zinc-500">Loading preview...</p>;
+    return <DocumentPreviewSkeleton maxWidth={794} />;
   }
 
   return (

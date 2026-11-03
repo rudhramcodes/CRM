@@ -26,6 +26,7 @@ import PaymentStatusBadge from '../../payments/components/PaymentStatusBadge';
 import { PAYMENT_METHODS } from '../../../constants';
 import Button from '../../../components/ui/Button';
 import { DetailSkeleton } from '../../../components/ui/Skeleton';
+import DocumentPreviewSkeleton from '../../../components/ui/DocumentPreviewSkeleton';
 import { BRANDS } from '../../../constants';
 
 const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -62,7 +63,12 @@ export default function InvoiceDetail() {
   const iframeRef = useRef(null);
 
   const invoice = data?.data?.invoice;
-  const { data: invoiceHtml } = useGetInvoiceHtmlQuery(id, { skip: !id });
+  const {
+    data: invoiceHtml,
+    isLoading: isHtmlLoading,
+    isFetching: isHtmlFetching,
+    error: htmlError,
+  } = useGetInvoiceHtmlQuery(id, { skip: !id });
   const clients = clientsData?.data || [];
 
   useEffect(() => {
@@ -318,7 +324,13 @@ export default function InvoiceDetail() {
             )}
           </div>
         </div>
-        {invoiceHtml ? (
+        {htmlError ? (
+          <div role="alert" className="p-8 text-center text-sm text-red-700">
+            Unable to load invoice preview.
+          </div>
+        ) : isHtmlLoading || isHtmlFetching || !invoiceHtml ? (
+          <DocumentPreviewSkeleton maxWidth={850} />
+        ) : (
           <div className="p-4 sm:p-6 flex justify-center bg-zinc-100/50 print:p-0">
             <iframe
               ref={iframeRef}
@@ -344,8 +356,6 @@ export default function InvoiceDetail() {
               }}
             />
           </div>
-        ) : (
-          <div className="p-8 text-zinc-400 text-center text-sm">Loading preview...</div>
         )}
       </div>
 
