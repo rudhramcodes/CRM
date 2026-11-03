@@ -28,6 +28,7 @@ const PANIGRAHNA_RUDHRAM_LOGO_BASE64 = loadAssetBase64('../../assets/panigrahna-
 const PANIGRAHNA_RUDHRAM_SYMBOL_BASE64 = loadAssetBase64('../../assets/panigrahna-rudhram-symbol.png');
 const PANIGRAHNA_RUDHRAM_WORDMARK_BASE64 = loadAssetBase64('../../assets/panigrahna-rudhram-wordmark.png');
 const AGHORI_LOGO_DATA_URL = readFileSync(new URL('../../assets/aghori-logo.txt', import.meta.url), 'utf8').trim();
+const QUOTATION_RUDHRAM_LOGO = `data:image/png;base64,${RUDHRAM_LOGO_BASE64 || PANIGRAHNA_RUDHRAM_LOGO_BASE64}`;
 
 
 const RUDHRAM_LOGO_URL = 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png';
@@ -842,7 +843,7 @@ const quotationHeader = (brand, variant = 'split') => {
     return `
       <header class="q-header q-header-summary">
         <div class="summary-rudhram">
-          <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" alt="Rudhram" />
+          <img src="${QUOTATION_RUDHRAM_LOGO}" alt="Rudhram" />
         </div>
         <div class="summary-brand">${ventureLogoHtml}</div>
       </header>`;
@@ -852,7 +853,7 @@ const quotationHeader = (brand, variant = 'split') => {
     <header class="q-header">
       <div class="q-brand">${ventureLogoHtml}</div>
       <div class="q-rudhram">
-        <img src="${RUDHRAM_LOGO_BASE64 ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}` : RUDHRAM_LOGO_URL}" alt="Rudhram" />
+        <img src="${QUOTATION_RUDHRAM_LOGO}" alt="Rudhram" />
       </div>
     </header>`;
 };
@@ -912,9 +913,7 @@ export const generateQuotationHtml = (quotation) => {
   const scopeItems = meta.scopeItems.length > 0
     ? meta.scopeItems
     : ['As per the scope discussed with the client.'];
-  const watermark = RUDHRAM_LOGO_BASE64
-    ? `data:image/png;base64,${RUDHRAM_LOGO_BASE64}`
-    : RUDHRAM_LOGO_URL;
+  const watermark = QUOTATION_RUDHRAM_LOGO;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -997,8 +996,7 @@ export const generateQuotationHtml = (quotation) => {
         margin: 0;
         padding: 12mm 15mm 11mm;
       }
-      .q-header::before,
-      .footer-rail { left: -15mm; }
+      .page .footer-rail { left: -15mm; }
     }
 
     .page-watermark {
@@ -1021,23 +1019,58 @@ export const generateQuotationHtml = (quotation) => {
       align-items: flex-start;
       min-height: 102px;
       padding-bottom: 17px;
-      border-bottom: 2px solid #B3712D;
+      border-bottom: 2px solid transparent;
       margin-bottom: 28px;
       z-index: 2;
+    }
+    .q-header:not(.q-header-summary) {
+      align-items: flex-end;
+      min-height: 158px;
+      padding-bottom: 0;
+      margin-left: -24px;
+      margin-right: -28px;
     }
     .q-header::before {
       content: '';
       position: absolute;
       left: 0;
       bottom: -2px;
-      width: 72px;
-      height: 10px;
+      width: 56px;
+      height: 15px;
       background: #B3712D;
-      transform: skewX(-34deg);
-      transform-origin: left bottom;
+      clip-path: polygon(0 0, 72% 0, 100% 100%, 28% 100%);
     }
-    .q-brand img { height: 74px; max-width: 205px; object-fit: contain; }
-    .q-rudhram img { height: 80px; max-width: 205px; object-fit: contain; }
+    .q-header:not(.q-header-summary)::after {
+      content: '';
+      position: absolute;
+      left: 56px;
+      right: 0;
+      bottom: -2px;
+      border-bottom: 2px solid #B3712D;
+    }
+    .q-brand img {
+      display: block;
+      width: 184px;
+      height: 142px;
+      margin-left: 60px;
+      object-fit: contain;
+      object-position: left bottom;
+      transform: translateY(-10px);
+    }
+    .q-rudhram img {
+      display: block;
+      width: 180px;
+      height: 142px;
+      object-fit: contain;
+      object-position: right bottom;
+      transform: translateY(-10px);
+    }
+    @media print {
+      .q-header:not(.q-header-summary) {
+        margin-left: calc(24px - 15mm);
+        margin-right: calc(20px - 15mm);
+      }
+    }
     .q-header-summary {
       justify-content: center;
       align-items: center;
@@ -1086,9 +1119,9 @@ export const generateQuotationHtml = (quotation) => {
     .footer-rail {
       position: absolute;
       left: -48px;
-      bottom: 38px;
-      width: 22px;
-      height: 95px;
+      top: -10px;
+      bottom: 8px;
+      width: 32px;
       background: #B3712D;
     }
     .contact-row { display: flex; gap: 8px; margin-top: 5px; }
