@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import puppeteer from 'puppeteer';
 import { generateQuotationHtml } from '../../../services/pdfService.js';
+import Client from '../../clients/client.model.js';
 
 const quotation = {
   quotationNumber: 'QTN-AG-0001',
@@ -40,6 +42,47 @@ const quotation = {
 };
 
 describe('quotation PDF template', () => {
+  it.each([
+    { brand: 'aghori', alt: 'AGHHORI', logos: 3, iconSize: 18, stroke: 'rgb(179, 113, 45)' },
+    { brand: 'panigrahna', alt: 'Panigrahna', logos: 4, iconSize: 18, stroke: 'rgb(174, 119, 60)' },
+  ])('renders $brand logos and outline contact icons without external images', async ({ brand, alt, logos, iconSize, stroke }) => {
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    try {
+      const page = await browser.newPage();
+      await page.setRequestInterception(true);
+      page.on('request', (request) => {
+        if (request.url().startsWith('https:')) void request.abort();
+        else void request.continue();
+      });
+
+      await page.setContent(generateQuotationHtml({
+        ...quotation,
+        client: new Client({ ...quotation.client, brand }),
+      }), { waitUntil: 'load' });
+
+      const rendered = await page.evaluate((logoAlt) => ({
+        logos: [...document.images].filter((image) => image.alt === logoAlt)
+          .map((image) => image.complete && image.naturalWidth > 0),
+        icons: [...document.querySelectorAll('.contact-icon svg, .pg-footer-icon svg')]
+          .map((icon) => ({
+            size: icon.getBoundingClientRect().width,
+            stroke: getComputedStyle(icon).stroke,
+            round: getComputedStyle(icon).strokeLinecap,
+            outline: [...icon.querySelectorAll('path, circle, rect')]
+              .every((shape) => getComputedStyle(shape).fill === 'none'),
+          })),
+      }), alt);
+
+      expect(rendered.logos).toEqual(Array(logos).fill(true));
+      expect(rendered.icons).toHaveLength(brand === 'aghori' ? 8 : 12);
+      for (const icon of rendered.icons) {
+        expect(icon).toEqual({ size: iconSize, stroke, round: 'round', outline: true });
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+
   it('preserves line breaks in the letter sign-off', () => {
     const html = generateQuotationHtml(quotation);
     expect(html).toContain('Warm Regards,<br>Rudhram Enterprises');

@@ -1,3 +1,5 @@
+import { quotationIcon } from './quotationIcon.js';
+
 const esc = (value) => String(value ?? '')
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
@@ -38,15 +40,7 @@ const addressFromClient = (client) => {
   ].filter(Boolean).join('\n');
 };
 
-const footerIcon = (name) => {
-  const paths = {
-    location: '<path d="M12 22s8-7 8-14a8 8 0 1 0-16 0c0 7 8 14 8 14z" fill="#ae773c"/><circle cx="12" cy="8" r="3" fill="#f8f4eb" stroke="none"/>',
-    phone: '<path d="M21 16v3a2 2 0 0 1-2.2 2A18 18 0 0 1 3 5.2 2 2 0 0 1 5 3h3l2 5-2 2a14 14 0 0 0 6 6l2-2 5 2z" fill="#ae773c" stroke="none"/>',
-    mail: '<rect x="2" y="4" width="20" height="16" fill="#ae773c" stroke="none"/><path d="m2 6 10 7 10-7" stroke="#f8f4eb" stroke-width="1.5" fill="none"/>',
-    globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
-  };
-  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ae773c" stroke-width="2" aria-hidden="true">${paths[name]}</svg>`;
-};
+const footerIcon = (name) => quotationIcon(name, 18, '#ae773c');
 
 export const generatePanigrahnaQuotationHtml = (quotation, assets) => {
   const client = quotation.client || {};
@@ -150,8 +144,9 @@ export const generatePanigrahnaQuotationHtml = (quotation, assets) => {
     .pg-footer-content { padding: 12px 0 26px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; line-height: 1.18; }
     .pg-footer-content > div { display: flex; align-items: flex-start; gap: 6px; }
     .pg-footer-icon { width: 18px; flex: none; line-height: 1; }
-    .pg-footer-rule { position: absolute; left: 22px; right: 12px; bottom: -14px; border-bottom: 2px solid #ae773c; }
-    .pg-footer-rule::after { content: ''; position: absolute; right: 0; bottom: -2px; width: 60px; height: 18px; background: #ae773c; clip-path: polygon(25% 0, 100% 0, 75% 100%, 0 100%); }
+    .pg-footer-rule { position: absolute; left: 22px; right: 14px; bottom: -14px; height: 18px; pointer-events: none; }
+    .pg-footer-rule::after { content: ''; position: absolute; right: 0; bottom: 0px; width: 60px; height: 18px; background: #ae773c; clip-path: polygon(25% 0, 100% 0, 75% 100%, 0 100%); }
+    .pg-footer-rule::before { content: ''; position: absolute; left: 0; right: 60px; bottom: 0px; height: 2px; background: #ae773c; }
     .pg-terms { padding: 0 20px; font-size: 13.2px; line-height: 1.25; }
     .pg-terms h3 { font-size: 14px; font-weight: 400; margin: 18px 0 4px; }
     .pg-terms p { margin: 0 0 4px; }

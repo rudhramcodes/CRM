@@ -4,6 +4,7 @@ import {
   DEFAULT_SIGNOFF, DEFAULT_DELIVERABLES, DEFAULT_ISSUER, DEFAULT_BANK,
 } from '../modules/quotations/quotation.defaults.js';
 import { generatePanigrahnaQuotationHtml } from './panigrahnaQuotation.js';
+import { quotationIcon } from './quotationIcon.js';
 
 const loadAssetBase64 = (relativePath) => {
   try {
@@ -26,6 +27,7 @@ const PANIGRAHNA_LOGO_BASE64 = loadAssetBase64('../../assets/panigrahna-logo.png
 const PANIGRAHNA_RUDHRAM_LOGO_BASE64 = loadAssetBase64('../../assets/panigrahna-rudhram-logo.png');
 const PANIGRAHNA_RUDHRAM_SYMBOL_BASE64 = loadAssetBase64('../../assets/panigrahna-rudhram-symbol.png');
 const PANIGRAHNA_RUDHRAM_WORDMARK_BASE64 = loadAssetBase64('../../assets/panigrahna-rudhram-wordmark.png');
+const AGHORI_LOGO_DATA_URL = readFileSync(new URL('../../assets/aghori-logo.txt', import.meta.url), 'utf8').trim();
 
 
 const RUDHRAM_LOGO_URL = 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png';
@@ -758,16 +760,6 @@ const QUOTATION_CONTACT = {
   website: 'www.rudhramenterprises.com',
 };
 
-const quotationIcon = (name) => {
-  const icons = {
-    location: '<path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/>',
-    phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 2.1 2.4z"/>',
-    mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
-    globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
-  };
-  return `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#B3712D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icons[name] || ''}</svg>`;
-};
-
 const quotationAddressLines = (client) => {
   const address = client?.address || {};
   if (typeof address === 'string') return [address].filter(Boolean);
@@ -802,7 +794,7 @@ const quotationMeta = (quotation) => {
   return {
     client,
     project,
-    brand: client.brand || project.brand,
+    brand: sourceClient.brand || project.brand,
     quotationNumber: quotation.quotationNumber || '-',
     clientId: quotation.clientReference ?? client.clientId ?? '-',
     projectCode: quotation.projectReference ?? project.projectCode ?? '-',
@@ -843,7 +835,9 @@ const quotationMeta = (quotation) => {
 };
 
 const quotationHeader = (brand, variant = 'split') => {
-  const ventureLogoHtml = getVentureLogoHtml(brand);
+  const ventureLogoHtml = brand === 'aghori'
+    ? `<img src="${AGHORI_LOGO_DATA_URL}" alt="AGHHORI" />`
+    : getVentureLogoHtml(brand);
   if (variant === 'summary') {
     return `
       <header class="q-header q-header-summary">
@@ -1034,9 +1028,9 @@ export const generateQuotationHtml = (quotation) => {
     .q-header::before {
       content: '';
       position: absolute;
-      left: -48px;
+      left: 0;
       bottom: -2px;
-      width: 132px;
+      width: 72px;
       height: 10px;
       background: #B3712D;
       transform: skewX(-34deg);
@@ -1099,7 +1093,7 @@ export const generateQuotationHtml = (quotation) => {
     }
     .contact-row { display: flex; gap: 8px; margin-top: 5px; }
     .contact-row:first-child { margin-top: 0; }
-    .contact-icon { width: 13px; flex: 0 0 13px; padding-top: 2px; }
+    .contact-icon { width: 18px; flex: 0 0 18px; padding-top: 2px; }
     .contact-row strong { font-family: 'Goldenbook', serif; font-size: 12.4px; letter-spacing: 0.04em; }
     .bottom-mark {
       position: absolute;
