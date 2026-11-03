@@ -953,23 +953,11 @@ export const generateQuotationHtml = (quotation) => {
       padding: 0;
       width: 100%;
       height: 100%;
-      background: #FAF6F0;
+      background: #f8f4eb;
       color: #2b1d14;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       font-family: 'Californian FB', Georgia, serif;
-    }
-
-    .grain-overlay {
-      position: fixed;
-      inset: 0;
-      background-image: url('data:image/jpeg;base64,${PAPER_GRAIN_TILE_BASE64}');
-      background-size: cover;
-      background-position: center;
-      opacity: 0.32;
-      mix-blend-mode: multiply;
-      pointer-events: none;
-      z-index: 1;
     }
 
     .page {
@@ -979,12 +967,20 @@ export const generateQuotationHtml = (quotation) => {
       min-height: 1123px;
       margin: 0 auto 24px;
       padding: 34px 48px 30px;
-      background: transparent;
+      background: #f8f4eb;
       display: flex;
       flex-direction: column;
       overflow: hidden;
       page-break-after: always;
       break-after: page;
+    }
+    .page::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url('data:image/jpeg;base64,${PAPER_GRAIN_TILE_BASE64}') center / cover;
+      opacity: 0.28;
+      pointer-events: none;
     }
     .page:last-child { page-break-after: auto; break-after: auto; }
 
@@ -1001,16 +997,15 @@ export const generateQuotationHtml = (quotation) => {
 
     .page-watermark {
       position: absolute;
-      top: 50%;
+      top: 39%;
       left: 50%;
-      width: 520px;
-      transform: translate(-50%, -50%);
-      opacity: 0.055;
+      width: 480px;
+      transform: translateX(-50%);
+      opacity: 0.08;
       pointer-events: none;
       z-index: 0;
     }
     .page-watermark img { width: 100%; height: auto; display: block; }
-    .page-summary .page-watermark { width: 460px; opacity: 0.075; }
 
     .q-header {
       position: relative;
@@ -1264,8 +1259,6 @@ export const generateQuotationHtml = (quotation) => {
   </style>
 </head>
 <body>
-  <div class="grain-overlay"></div>
-
   <!-- PAGE 1: COVER LETTER -->
   <section class="page page-letter">
     <div class="page-watermark"><img src="${watermark}" alt=""></div>

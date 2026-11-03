@@ -71,6 +71,16 @@ describe('quotation PDF template', () => {
             outline: [...icon.querySelectorAll('path, circle, rect')]
               .every((shape) => getComputedStyle(shape).fill === 'none'),
           })),
+        paper: [...document.querySelectorAll('.page, .pg-page')].map((sheet) => {
+          const watermark = getComputedStyle(sheet.querySelector('.page-watermark, .pg-watermark'));
+          return {
+            background: getComputedStyle(sheet).backgroundColor,
+            grainOpacity: getComputedStyle(sheet, '::before').opacity,
+            watermarkWidth: watermark.width,
+            watermarkOpacity: watermark.opacity,
+            watermarkTop: Math.round(parseFloat(watermark.top) / sheet.getBoundingClientRect().height * 100),
+          };
+        }),
       }), alt);
 
       expect(rendered.logos).toEqual(Array(logos).fill(true));
@@ -78,6 +88,10 @@ describe('quotation PDF template', () => {
       for (const icon of rendered.icons) {
         expect(icon).toEqual({ size: iconSize, stroke, round: 'round', outline: true });
       }
+      expect(rendered.paper).toEqual(Array(logos).fill({
+        background: 'rgb(248, 244, 235)', grainOpacity: '0.28',
+        watermarkWidth: '480px', watermarkOpacity: '0.08', watermarkTop: 39,
+      }));
     } finally {
       await browser.close();
     }
