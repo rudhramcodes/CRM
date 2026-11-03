@@ -1114,8 +1114,8 @@ export const generateQuotationHtml = (quotation) => {
     .footer-rail {
       position: absolute;
       left: -48px;
-      top: -10px;
-      bottom: 8px;
+      top: -2px;
+      bottom: 0px;
       width: 32px;
       background: #B3712D;
     }
@@ -1527,7 +1527,7 @@ export const generateQuotationPdf = async (quotation) => {
     await page.setContent(html, { waitUntil: 'load' });
     const paginationPending = await page.evaluate(() => Boolean(window.__quotationPaginationPending));
     if (paginationPending) {
-      await page.waitForFunction('window.__quotationPaginationDone === true', { timeout: 5000 }).catch(() => {});
+      await page.waitForFunction('window.__quotationPaginationDone === true', { timeout: 5000 }).catch(() => { });
     }
     const raw = await page.pdf({
       format: 'A4',
