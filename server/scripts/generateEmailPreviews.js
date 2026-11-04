@@ -42,10 +42,10 @@ const emails = [
       { label: 'Top Announcement Banner', value: '#8A5C2A Bronze Bar (White Text) — Welcome to Rudhram • Your client portal is now active →' },
       { label: 'Button Styling', value: 'Background: #8A5C2A | Text: #FFFFFF | Radius: 7px' },
       { label: 'Brand Logo', value: 'client/public/rudhram-logo.png' },
-      { label: 'Hero Image', value: 'client/public/welcome-banner.avif' },
+      { label: 'Hero Image', value: 'client/public/welcome-banner.jpg' },
       { label: 'Hero Headline', value: 'Welcome to Rudhram, {clientName}' },
-      { label: 'Feature 1 (Left Image / Right Copy)', value: 'Real-Time Project & Deliverable Tracking (Image: client/public/team-support.avif)' },
-      { label: 'Feature 2 (Left Copy / Right Image)', value: 'Dedicated Brand Team & Direct Communication (Image: client/public/team-management.avif)' },
+      { label: 'Feature 1 (Left Image / Right Copy)', value: 'Real-Time Project & Deliverable Tracking (Image: client/public/team-support.jpg)' },
+      { label: 'Feature 2 (Left Copy / Right Image)', value: 'Dedicated Brand Team & Direct Communication (Image: client/public/team-management.jpg)' },
       { label: 'Highlight Callout Card', value: 'Your Client Portal is Ready ({clientId} • {companyName})' },
       { label: 'Assigned Brand Support', value: 'Damrru (+91 8655695629 & damrru@rudhramenterprises.com)' }
     ] 
@@ -1142,8 +1142,6 @@ const htmlContent = `<!DOCTYPE html>
 </html>
 `;
 
-const targetPath1 = path.resolve(import.meta.dirname, '../../mail.html');
 const targetPath2 = path.resolve(import.meta.dirname, '../../client/public/mail.html');
-fs.writeFileSync(targetPath1, htmlContent, 'utf-8');
 fs.writeFileSync(targetPath2, htmlContent, 'utf-8');
-console.log('Successfully generated ' + targetPath1 + ' and ' + targetPath2);
+console.log('Successfully generated ' + targetPath2);
