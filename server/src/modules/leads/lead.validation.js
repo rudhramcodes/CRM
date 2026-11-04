@@ -23,17 +23,15 @@ export const createLeadSchema = z.object({
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(200, 'Name must not exceed 200 characters'),
-  email: z.string().email('Invalid email address'),
+  email: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.string().email('Invalid email address')).optional().nullable(),
   phone: z
     .string()
+    .min(1, 'Phone number is required')
     .regex(/^[+]?[\d\s()-]{7,15}$/, 'Please enter a valid phone number')
     .refine(
-      (val) => !val || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
+      (val) => val && val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
       { message: 'Phone number must have at least 10 digits' }
-    )
-    .optional()
-    .nullable()
-    .or(z.literal('')),
+    ),
   brand: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.enum(LEAD_BRANDS, { required_error: 'Please select a brand/venture' })).optional().nullable(),
   company: z
     .string()
@@ -66,7 +64,7 @@ export const updateLeadSchema = z.object({
     .min(2, 'Name must be at least 2 characters')
     .max(200, 'Name must not exceed 200 characters')
     .optional(),
-  email: z.string().email('Invalid email address').optional(),
+  email: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.string().email('Invalid email address')).optional().nullable(),
   phone: z
     .string()
     .regex(/^[+]?[\d\s()-]{7,15}$/, 'Please enter a valid phone number')

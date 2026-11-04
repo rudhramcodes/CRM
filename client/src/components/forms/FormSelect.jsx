@@ -6,6 +6,8 @@ import {
   SelectContent,
   SelectItem,
 } from '../ui/Select';
+import { BRAND_METAS } from '../../constants';
+import { cn } from '../../utils/cn';
 
 const FormSelect = ({ name, control, label, options = [], error, placeholder }) => {
   return (
@@ -32,11 +34,39 @@ const FormSelect = ({ name, control, label, options = [], error, placeholder }) 
               <SelectValue placeholder={placeholder || `Select ${label?.toLowerCase() || '...'}`} />
             </SelectTrigger>
             <SelectContent>
-              {options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
+              {options.map((opt) => {
+                const meta = BRAND_METAS[opt.value];
+                const logo = opt.logo || meta?.logo;
+                const initial = opt.initial || meta?.initial || (typeof opt.label === 'string' ? opt.label[0] : '');
+                const gradient = opt.gradient || meta?.gradient || 'from-zinc-700 to-zinc-900';
+                const hasMeta = !!(meta || opt.logo || opt.initial);
+
+                return (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    <div className="flex items-center gap-2 min-w-0 cursor-pointer">
+                      {hasMeta && (
+                        logo ? (
+                          <img
+                            src={logo}
+                            alt={opt.label}
+                            className="w-5 h-5 object-contain"
+                          />
+                        ) : (
+                          <div
+                            className={cn(
+                              'w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-2xs bg-gradient-to-br',
+                              gradient,
+                            )}
+                          >
+                            {initial}
+                          </div>
+                        )
+                      )}
+                      <span className="truncate">{opt.label}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         )}
