@@ -29,11 +29,11 @@ const emails = [
     title: 'Client Welcome & Onboarding',
     recipient: 'Client (client@innovatex.com)',
     trigger: 'When a lead is converted to a client or a new client is created in CRM with onboarding enabled.',
-    subject: 'Welcome to Rudhram, Rajesh Mehta',
+    subject: 'Welcome to Rudhram, Rajesh Mehta   f dfjeifeifji',
     preheader: 'Your partnership begins here. Your account has been created.',
     html: renderClientOnboardingEmail({
       clientName: 'Rajesh Mehta',
-      companyName: 'InnovateX Media Ltd.',
+      companyName: 'InnovateX fijeifefji Media Ltd.',
       clientId: 'C-00249',
       brand: 'damrru'
     }),
@@ -43,10 +43,10 @@ const emails = [
       { label: 'Top Announcement Banner', value: '#8A5C2A Bronze Bar (White Text) — Welcome to Rudhram • Your client portal is now active →' },
       { label: 'Button Styling', value: 'Background: #8A5C2A | Text: #FFFFFF | Radius: 7px' },
       { label: 'Brand Logo', value: 'client/public/rudhram-logo.png' },
-      { label: 'Hero Image', value: 'client/public/welcome-banner.jpg' },
+      { label: 'Hero Image', value: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/welcome-banner.avif' },
       { label: 'Hero Headline', value: 'Welcome to Rudhram, {clientName}' },
-      { label: 'Feature 1 (Left Image / Right Copy)', value: 'Real-Time Project & Deliverable Tracking (Image: client/public/team-support.jpg)' },
-      { label: 'Feature 2 (Left Copy / Right Image)', value: 'Dedicated Brand Team & Direct Communication (Image: client/public/team-management.jpg)' },
+      { label: 'Feature 1 (Left Image / Right Copy)', value: 'Real-Time Project & Deliverable Tracking (Image: https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/team-support.avif)' },
+      { label: 'Feature 2 (Left Copy / Right Image)', value: 'Dedicated Brand Team & Direct Communication (Image: https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775842/team-management.avif)' },
       { label: 'Highlight Callout Card', value: 'Your Client Portal is Ready ({clientId} • {companyName})' },
       { label: 'Assigned Brand Support', value: 'Damrru (+91 8655695629 & damrru@rudhramenterprises.com)' }
     ] 
