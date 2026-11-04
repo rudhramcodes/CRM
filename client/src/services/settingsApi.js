@@ -61,6 +61,11 @@ export const settingsApi = api.injectEndpoints({
       query: () => ({ url: '/settings/zoho/disconnect', method: 'POST' }),
       invalidatesTags: ['IntegrationSettings'],
     }),
+    getEmailPreviews: builder.query({
+      query: () => '/settings/email-previews',
+      transformResponse: (r) => r.data?.templates,
+      providesTags: ['EmailPreviews'],
+    }),
   }),
 });
 
@@ -79,4 +84,5 @@ export const {
   useUpdateIntegrationSettingsMutation,
   useGetZohoAuthUrlMutation,
   useDisconnectZohoMutation,
+  useGetEmailPreviewsQuery,
 } = settingsApi;

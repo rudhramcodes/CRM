@@ -1,5 +1,6 @@
 import ApiResponse from '../../utils/ApiResponse.js';
 import * as quotationService from './quotation.service.js';
+import { serializeQuotation } from '../../services/quotationSnapshot.js';
 
 export const defaults = async (req, res, next) => {
   try {
@@ -26,7 +27,7 @@ export const list = async (req, res, next) => {
 export const getById = async (req, res, next) => {
   try {
     const quotation = await quotationService.getQuotationById(req.params.id);
-    ApiResponse.success(res, 200, { quotation });
+    ApiResponse.success(res, 200, { quotation: serializeQuotation(quotation) });
   } catch (error) {
     next(error);
   }
@@ -57,7 +58,7 @@ export const downloadPdf = async (req, res, next) => {
 export const create = async (req, res, next) => {
   try {
     const quotation = await quotationService.createQuotation(req.body, req.user);
-    ApiResponse.created(res, { quotation }, 'Quotation created successfully');
+    ApiResponse.created(res, { quotation: serializeQuotation(quotation) }, 'Quotation created successfully');
   } catch (error) {
     next(error);
   }

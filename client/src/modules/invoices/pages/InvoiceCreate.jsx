@@ -7,30 +7,40 @@ import { useCreateInvoiceMutation, useGetInvoicesQuery } from '../../../services
 import { useGetClientsQuery } from '../../../services/clientApi';
 import { useGetQuotationByIdQuery } from '../../../services/quotationApi';
 import { quotationToInvoiceDraft } from '../quotationToInvoice';
+import { selectInvoiceSource } from '../invoiceSource';
+import { useGetInvoiceSourceRevisionQuery } from '../invoiceSourceApi';
 
 export default function InvoiceCreate() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const quotationId = searchParams.get('quotationId');
+  const revisionQuery = searchParams.get('revision');
   const [createInvoice, { isLoading }] = useCreateInvoiceMutation();
   const { data: clientsData, isLoading: clientsLoading } = useGetClientsQuery({ limit: 100 });
-  const { data: quotationData, isLoading: quotationLoading, isError: quotationError } = useGetQuotationByIdQuery(
+  const { currentData: quotationData, isFetching: quotationLoading, isError: quotationError } = useGetQuotationByIdQuery(
     quotationId,
     { skip: !quotationId },
   );
-  const { data: existingData, isLoading: existingLoading, refetch: refetchExisting } = useGetInvoicesQuery(
+  const { currentData: existingData, isFetching: existingLoading, refetch: refetchExisting } = useGetInvoicesQuery(
     { sourceQuotation: quotationId, limit: 1 },
     { skip: !quotationId },
   );
   const clients = clientsData?.data || [];
   const quotation = quotationData?.data?.quotation;
+  const selection = selectInvoiceSource(quotation, revisionQuery);
+  const { currentData: revision, isFetching: revisionLoading, isError: revisionError } = useGetInvoiceSourceRevisionQuery(
+    { quotationId, version: selection.version },
+    { skip: !quotationId || !selection.version || Boolean(selection.error) },
+  );
   const existingInvoice = existingData?.data?.[0];
-  const initialData = useMemo(() => quotation && quotationToInvoiceDraft(quotation), [quotation]);
-  const cancelPath = quotationId ? `/quotations/${quotationId}` : '/invoices';
+  const initialData = useMemo(() => quotation && quotationToInvoiceDraft(quotation, new Date(), revision), [quotation, revision]);
+  const cancelPath = quotationId ? `/quotations/${quotationId}${selection.version ? `?version=${selection.version}` : ''}` : '/invoices';
 
   const handleSubmit = async (data) => {
     try {
-      const result = await createInvoice({ ...data, sourceQuotation: quotationId || undefined }).unwrap();
+      const result = await createInvoice({
+        ...data, sourceQuotation: quotationId || undefined, sourceRevision: revision?._id,
+      }).unwrap();
       toast.success('Invoice draft created. Review it before sending.');
       navigate(`/invoices/${result.data.invoice._id}`);
     } catch (err) {
@@ -53,7 +63,7 @@ export default function InvoiceCreate() {
     }
   };
 
-  if (quotationId && (quotationLoading || existingLoading)) {
+  if (quotationId && (quotationLoading || existingLoading || revisionLoading)) {
     return <div className="rounded-lg border border-zinc-200 bg-white p-8 text-sm text-zinc-600">Loading quotation and invoice history...</div>;
   }
 
@@ -77,6 +87,16 @@ export default function InvoiceCreate() {
     );
   }
 
+  if (quotationId && (selection.error || revisionError || (selection.version && !revision))) {
+    return (
+      <div className="max-w-3xl mx-auto rounded-lg border border-zinc-200 bg-white p-6 space-y-3">
+        <h1 className="text-xl font-semibold text-zinc-900">Quotation cannot be invoiced</h1>
+        <p role="alert" className="text-sm text-zinc-600">{selection.error || 'The saved quotation revision could not be loaded.'}</p>
+        <button type="button" onClick={() => navigate(cancelPath)} className="min-h-11 text-sm font-medium text-amber-800 hover:underline focus-visible:outline">Back to quotation</button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <button
@@ -91,7 +111,7 @@ export default function InvoiceCreate() {
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">{quotation ? 'Review invoice from quotation' : 'Create invoice'}</h1>
         {quotation && (
-          <p className="mt-1 text-sm text-zinc-600">From {quotation.quotationNumber} for {quotation.client?.companyName}. Check every field below, then confirm to create an editable draft. No email will be sent.</p>
+          <p className="mt-1 text-sm text-zinc-600">From {quotation.quotationNumber}{revision ? ` V${revision.version}` : ''} for {(revision?.content || quotation).client?.companyName}. Check every field below, then confirm to create an editable draft. No email will be sent.</p>
         )}
       </div>
 

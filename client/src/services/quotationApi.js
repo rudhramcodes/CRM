@@ -1,5 +1,9 @@
 import { api } from './api';
 
+const revisionTags = (_result, _error, { id }) => [
+  { type: 'Quotation', id }, 'Quotation', 'QuotationStats',
+];
+
 export const quotationApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getQuotationDefaults: builder.query({
@@ -78,6 +82,56 @@ export const quotationApi = api.injectEndpoints({
         responseHandler: (response) => response.blob(),
       }),
     }),
+
+    getQuotationRevision: builder.query({
+      query: ({ id, version }) => `/quotations/${id}/revisions/${version}`,
+      providesTags: (_result, _error, { id }) => [{ type: 'Quotation', id }],
+    }),
+    getQuotationPreview: builder.query({
+      query: ({ id, version }) => ({
+        url: version === 'working'
+          ? `/quotations/${id}/working-copy/html`
+          : `/quotations/${id}/revisions/${version}/html`,
+        responseHandler: 'text',
+      }),
+      providesTags: (_result, _error, { id }) => [{ type: 'Quotation', id }],
+    }),
+    createQuotationWorkingCopy: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/quotations/${id}/working-copy`, method: 'POST', body }),
+      invalidatesTags: revisionTags,
+    }),
+    updateQuotationWorkingCopy: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/quotations/${id}/working-copy`, method: 'PATCH', body }),
+      invalidatesTags: revisionTags,
+    }),
+    discardQuotationWorkingCopy: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/quotations/${id}/working-copy/discard`, method: 'POST', body }),
+      invalidatesTags: revisionTags,
+    }),
+    saveQuotationRevision: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/quotations/${id}/revisions`, method: 'POST', body }),
+      invalidatesTags: revisionTags,
+    }),
+    initializeQuotationHistory: builder.mutation({
+      query: ({ id }) => ({ url: `/quotations/${id}/revisions/baseline`, method: 'POST' }),
+      invalidatesTags: revisionTags,
+    }),
+    sendQuotationRevision: builder.mutation({
+      query: ({ id, version }) => ({ url: `/quotations/${id}/revisions/${version}/send`, method: 'POST' }),
+      invalidatesTags: revisionTags,
+    }),
+    resendQuotationRevision: builder.mutation({
+      query: ({ id, version }) => ({ url: `/quotations/${id}/revisions/${version}/resend`, method: 'POST' }),
+      invalidatesTags: revisionTags,
+    }),
+    updateQuotationRevisionStatus: builder.mutation({
+      query: ({ id, version, ...body }) => ({ url: `/quotations/${id}/revisions/${version}/status`, method: 'PATCH', body }),
+      invalidatesTags: revisionTags,
+    }),
+    setQuotationArchive: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/quotations/${id}/archive`, method: 'PATCH', body }),
+      invalidatesTags: revisionTags,
+    }),
   }),
 });
 
@@ -93,4 +147,15 @@ export const {
   useResendQuotationEmailMutation,
   useGetQuotationHtmlQuery,
   useLazyGetQuotationPdfQuery,
+  useGetQuotationRevisionQuery,
+  useGetQuotationPreviewQuery,
+  useCreateQuotationWorkingCopyMutation,
+  useUpdateQuotationWorkingCopyMutation,
+  useDiscardQuotationWorkingCopyMutation,
+  useSaveQuotationRevisionMutation,
+  useInitializeQuotationHistoryMutation,
+  useSendQuotationRevisionMutation,
+  useResendQuotationRevisionMutation,
+  useUpdateQuotationRevisionStatusMutation,
+  useSetQuotationArchiveMutation,
 } = quotationApi;

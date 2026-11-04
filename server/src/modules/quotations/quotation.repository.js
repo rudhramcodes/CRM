@@ -18,7 +18,7 @@ export const findByQuotationNumber = async (quotationNumber) =>
 
 export const findAll = async (query = {}, options = {}) => {
   const { page, limit, skip, sort } = paginate(options);
-  const filter = {};
+  const filter = { archivedAt: query.archived ? { $ne: null } : null };
 
   if (query.search) {
     const searchRegex = new RegExp(escapeRegex(query.search), 'i');
@@ -50,6 +50,7 @@ export const findAll = async (query = {}, options = {}) => {
 
   const [quotations, total] = await Promise.all([
     Quotation.find(filter)
+      .select('-revisions.content -revisions.artifacts -workingCopy.content')
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -69,13 +70,14 @@ export const updateById = async (id, data) =>
 
 export const deleteById = async (id) => Quotation.findByIdAndDelete(id);
 
-export const countAll = async (filter = {}) => Quotation.countDocuments(filter);
+export const countAll = async (filter = {}) => Quotation.countDocuments({ archivedAt: null, ...filter });
 
 export const countByStatus = async () =>
-  Quotation.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
+  Quotation.aggregate([{ $match: { archivedAt: null } }, { $group: { _id: '$status', count: { $sum: 1 } } }]);
 
 export const getFinancialStats = async () => {
   const result = await Quotation.aggregate([
+    { $match: { archivedAt: null } },
     {
       $group: {
         _id: null,
@@ -98,7 +100,7 @@ export const getFinancialStats = async () => {
 
 export const getAcceptedStats = async () => {
   const result = await Quotation.aggregate([
-    { $match: { status: 'accepted' } },
+    { $match: { status: 'accepted', archivedAt: null } },
     {
       $group: {
         _id: null,
@@ -112,6 +114,7 @@ export const getAcceptedStats = async () => {
 
 export const countByBrand = async () =>
   Quotation.aggregate([
+    { $match: { archivedAt: null } },
     {
       $lookup: {
         from: 'clients',

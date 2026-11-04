@@ -56,6 +56,7 @@ import AttendanceLeaves from '../modules/attendance/pages/AttendanceLeaves';
 import AttendanceHolidays from '../modules/attendance/pages/AttendanceHolidays';
 import AttendanceReports from '../modules/attendance/pages/AttendanceReports';
 import SettingsPage from '../modules/settings/pages/SettingsPage';
+import EmailPreviewStudio from '../pages/EmailPreviewStudio';
 import UserManagement from '../modules/users/pages/UserManagement';
 import PayrollRuns from '../modules/payroll/pages/PayrollRuns';
 import PayrollRunDetail from '../modules/payroll/pages/PayrollRunDetail';
@@ -178,6 +179,7 @@ const router = createBrowserRouter([
       { path: 'freelancers/:id/edit', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><FreelancerForm /></ProtectedRoute> },
       { path: 'freelancers/:id', element: <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}><FreelancerDetail /></ProtectedRoute> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'email-previews', element: <EmailPreviewStudio /> },
     ],
   },
   {

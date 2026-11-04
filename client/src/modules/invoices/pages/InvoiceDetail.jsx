@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import InvoiceStatusBadge from '../components/InvoiceStatusBadge';
 import InvoiceForm from '../components/InvoiceForm';
+import InvoiceSourceLink from '../components/InvoiceSourceLink';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import {
@@ -25,6 +26,7 @@ import PaymentStatusBadge from '../../payments/components/PaymentStatusBadge';
 import { PAYMENT_METHODS } from '../../../constants';
 import Button from '../../../components/ui/Button';
 import { DetailSkeleton } from '../../../components/ui/Skeleton';
+import DocumentPreviewSkeleton from '../../../components/ui/DocumentPreviewSkeleton';
 import { BRANDS } from '../../../constants';
 
 const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -61,7 +63,12 @@ export default function InvoiceDetail() {
   const iframeRef = useRef(null);
 
   const invoice = data?.data?.invoice;
-  const { data: invoiceHtml } = useGetInvoiceHtmlQuery(id, { skip: !id });
+  const {
+    data: invoiceHtml,
+    isLoading: isHtmlLoading,
+    isFetching: isHtmlFetching,
+    error: htmlError,
+  } = useGetInvoiceHtmlQuery(id, { skip: !id });
   const clients = clientsData?.data || [];
 
   useEffect(() => {
@@ -317,7 +324,13 @@ export default function InvoiceDetail() {
             )}
           </div>
         </div>
-        {invoiceHtml ? (
+        {htmlError ? (
+          <div role="alert" className="p-8 text-center text-sm text-red-700">
+            Unable to load invoice preview.
+          </div>
+        ) : isHtmlLoading || isHtmlFetching || !invoiceHtml ? (
+          <DocumentPreviewSkeleton maxWidth={850} />
+        ) : (
           <div className="p-4 sm:p-6 flex justify-center bg-zinc-100/50 print:p-0">
             <iframe
               ref={iframeRef}
@@ -343,8 +356,6 @@ export default function InvoiceDetail() {
               }}
             />
           </div>
-        ) : (
-          <div className="p-8 text-zinc-400 text-center text-sm">Loading preview...</div>
         )}
       </div>
 
@@ -448,14 +459,7 @@ export default function InvoiceDetail() {
         <h3 className="text-sm font-medium text-zinc-700 mb-3">Timeline</h3>
         <div className="space-y-2 text-sm text-zinc-500">
           <p>Created: {new Date(invoice.createdAt).toLocaleString('en-IN')} by {invoice.createdBy?.name || 'N/A'}</p>
-          {invoice.sourceQuotation && (
-            <p>
-              Created from{' '}
-              <button type="button" onClick={() => navigate(`/quotations/${invoice.sourceQuotation}`)} className="font-medium text-amber-800 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700">
-                source quotation
-              </button>
-            </p>
-          )}
+          <InvoiceSourceLink invoice={invoice} />
           {invoice.sentAt && <p>Sent: {new Date(invoice.sentAt).toLocaleString('en-IN')}</p>}
           {invoice.paidAt && <p>Paid: {new Date(invoice.paidAt).toLocaleString('en-IN')}</p>}
           {invoice.cancelledAt && <p>Cancelled: {new Date(invoice.cancelledAt).toLocaleString('en-IN')}</p>}

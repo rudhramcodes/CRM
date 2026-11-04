@@ -36,13 +36,14 @@ export default function QuotationList() {
   const [page, setPage] = useState(1);
   const [activeBrand, setActiveBrand] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const {
     data: quotationsData,
     isLoading,
     isFetching,
     refetch: refetchQuotations,
-  } = useGetQuotationsQuery({ ...filters, page, limit: 10 });
+  } = useGetQuotationsQuery({ ...filters, page, limit: 10, archived: showArchived });
   const {
     data: statsData,
     isLoading: statsLoading,
@@ -117,6 +118,10 @@ export default function QuotationList() {
           <p className="text-sm text-zinc-500 mt-0.5">Create, send, and track client proposals.</p>
         </div>
         <div className="flex items-center gap-2">
+          <label className="inline-flex items-center gap-2 text-xs text-zinc-600">
+            <input type="checkbox" checked={showArchived} onChange={(event) => { setShowArchived(event.target.checked); setPage(1); }} className="h-4 w-4 accent-primary-900" />
+            Archived
+          </label>
           <button
             aria-label="Refresh quotations"
             onClick={() => { refetchQuotations(); refetchStats(); }}

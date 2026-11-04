@@ -3,12 +3,9 @@ import * as invoiceRepository from './invoice.repository.js';
 import { sendEmail, renderInvoiceEmail } from '../../services/emailService.js';
 import { generateInvoicePdf, generateInvoiceHtml } from '../../services/pdfService.js';
 import logger from '../../utils/logger.js';
-import Client from '../clients/client.model.js';
-import Quotation from '../quotations/quotation.model.js';
 import Payment from '../payments/payment.model.js';
-import { VENTURE_CODES } from '../../constants/index.js';
 import * as notificationService from '../notifications/notification.service.js';
-import { INVOICE_PRINTED_FIELDS } from './invoice.printed-fields.js';
+export { createInvoice, generateInvoiceNumber } from './invoice.creation.js';
 
 // Invoice service manages NON-FINANCIAL status transitions only.
 // Financial transitions (→ partially_paid, → paid) are handled by Payment service
@@ -22,14 +19,6 @@ const VALID_TRANSITIONS = {
   cancelled: [],
 };
 
-export const generateInvoiceNumber = async (brand) => {
-  const ventureCode = VENTURE_CODES[brand] || 'PG';
-  const prefix = `INV-${ventureCode}-`;
-  const count = await invoiceRepository.getInvoiceCountByPrefix(prefix);
-  const seq = String(count + 1).padStart(4, '0');
-  return `${prefix}${seq}`;
-};
-
 const validateStatusTransition = (currentStatus, newStatus) => {
   if (currentStatus === newStatus) return;
   const allowed = VALID_TRANSITIONS[currentStatus];
@@ -37,55 +26,6 @@ const validateStatusTransition = (currentStatus, newStatus) => {
     throw ApiError.badRequest(
       `Cannot transition invoice from '${currentStatus}' to '${newStatus}'`,
     );
-  }
-};
-
-export const createInvoice = async (data, user) => {
-  const clientDoc = await Client.findById(data.client).select('brand');
-  if (!clientDoc) throw ApiError.notFound('Client not found');
-  if (data.sourceQuotation) {
-    const quotation = await Quotation.findById(data.sourceQuotation).select('client project');
-    if (!quotation) throw ApiError.notFound('Quotation not found');
-    if (String(quotation.client) !== String(data.client)) {
-      throw ApiError.badRequest('Quotation does not belong to the selected client');
-    }
-    if (quotation.project && String(quotation.project) !== String(data.project)) {
-      throw ApiError.badRequest('Quotation does not belong to the selected project');
-    }
-    if (await invoiceRepository.findBySourceQuotation(data.sourceQuotation)) {
-      throw ApiError.conflict('An invoice already exists for this quotation');
-    }
-  }
-  const invoiceNumber = await generateInvoiceNumber(clientDoc.brand);
-
-  const payload = {
-    ...Object.fromEntries(Object.keys(INVOICE_PRINTED_FIELDS)
-      .filter((field) => data[field] !== undefined)
-      .map((field) => [field, data[field]])),
-    invoiceNumber,
-    client: data.client,
-    project: data.project || null,
-    ...(data.sourceQuotation ? { sourceQuotation: data.sourceQuotation } : {}),
-    issueDate: data.issueDate ? new Date(data.issueDate) : new Date(),
-    dueDate: new Date(data.dueDate),
-    items: data.items,
-    taxRate: data.taxRate || 0,
-    discountPercent: data.discountPercent || 0,
-    billingAddress: data.billingAddress || {},
-    notes: data.notes || '',
-    termsConditions: data.termsConditions || '',
-    createdBy: user._id,
-  };
-
-  try {
-    return await invoiceRepository.create(payload);
-  } catch (error) {
-    if (error instanceof Error && error.code === 11000 && data.sourceQuotation &&
-        (error.keyPattern?.sourceQuotation ||
-         await invoiceRepository.findBySourceQuotation(data.sourceQuotation))) {
-      throw ApiError.conflict('An invoice already exists for this quotation');
-    }
-    throw error;
   }
 };
 
@@ -150,6 +90,9 @@ export const getInvoicePdf = async (id, user, clientProfile) => {
 };
 
 export const updateInvoice = async (id, data) => {
+  if (['sourceQuotation', 'sourceRevision', 'sourceRevisionVersion'].some((field) => Object.hasOwn(data, field))) {
+    throw ApiError.badRequest('Invoice source provenance cannot be changed');
+  }
   const invoice = await invoiceRepository.findById(id);
   if (!invoice) {
     throw ApiError.notFound('Invoice not found');

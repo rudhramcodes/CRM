@@ -3,6 +3,14 @@ import config from '../../config/index.js';
 import logger from '../../utils/logger.js';
 import * as settingsService from './settings.service.js';
 import * as zohoMeetService from '../../services/zohoMeetService.js';
+import { getEmailPreviewsList } from './emailPreviewData.js';
+
+export const getEmailPreviews = async (req, res, next) => {
+  try {
+    const templates = getEmailPreviewsList();
+    ApiResponse.success(res, 200, { templates });
+  } catch (err) { next(err); }
+};
 
 export const getNotifPrefs = async (req, res, next) => {
   try {
