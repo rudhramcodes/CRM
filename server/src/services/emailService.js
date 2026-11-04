@@ -581,7 +581,7 @@ export const renderClientOnboardingEmail = ({
 <table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
 
   <!-- Main White Card Container -->
-  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;box-shadow:0 8px 30px rgba(0,0,0,0.04);">
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
     
     <!-- Top Announcement Strip (Apollo-style dark green strip) -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -620,7 +620,7 @@ export const renderClientOnboardingEmail = ({
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center" style="padding:0 32px;" class="mobile-padding">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:516px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;box-shadow:0 6px 20px rgba(0,0,0,0.06);">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:516px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;">
             <tr>
               <td style="padding:0;background-color:#000000;line-height:0;font-size:0;">
                 <img src="${resolvedWelcomeImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/welcome-banner.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='welcome-banner.jpg';}" alt="Welcome to Rudhram" width="516" style="width:100%;max-width:516px;height:auto;display:block;border:0;" class="fluid">
@@ -668,7 +668,7 @@ export const renderClientOnboardingEmail = ({
             <tr>
               <!-- Left: Framed Image (client/public/team-support.jpg) -->
               <td class="stack-col" width="230" valign="top" style="width:230px;vertical-align:top;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;box-shadow:0 4px 14px rgba(0,0,0,0.06);background-color:#ffffff;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;background-color:#ffffff;">
                   <tr>
                     <td style="padding:0;line-height:0;font-size:0;">
                       <img src="${resolvedProjectImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/team-support.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='team-support.jpg';}" alt="Real-Time Project & Deliverable Tracking" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
@@ -732,7 +732,7 @@ export const renderClientOnboardingEmail = ({
               <td class="stack-col-spacer" width="26" style="width:26px;font-size:0;line-height:0;">&nbsp;</td>
               <!-- Right: Framed Image (client/public/team-management.jpg) -->
               <td class="stack-col" width="230" valign="top" style="width:230px;vertical-align:top;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;box-shadow:0 4px 14px rgba(0,0,0,0.06);background-color:#ffffff;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;background-color:#ffffff;">
                   <tr>
                     <td style="padding:0;line-height:0;font-size:0;">
                       <img src="${resolvedTeamImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775842/team-management.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='team-management.jpg';}" alt="Dedicated Brand Team" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
@@ -899,7 +899,7 @@ export const renderClientCredentialsEmail = ({ clientName = 'Valued Client', ema
 <table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
 
   <!-- Main White Card Container -->
-  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;box-shadow:0 8px 30px rgba(0,0,0,0.04);">
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
     
     <!-- Top Announcement Strip -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
