@@ -137,48 +137,608 @@ export const renderEmail = ({ preheader = '', heading, subtext = '', bodyHtml = 
 </html>`;
 };
 
-export const renderVerificationEmail = (email, otp) => {
-  const bodyHtml = `
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 6px;"><tr>
-      <td align="center" style="background:${BG};border:1px solid ${BORDER};border-radius:14px;padding:22px 30px;">
-        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          <td><span style="font-family:${FONT};font-size:34px;font-weight:700;letter-spacing:12px;color:${INK};-webkit-user-select:all;user-select:all;cursor:pointer;line-height:1.2;">${otp}</span></td>
-          <td style="padding-left:14px;line-height:0;"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></td>
-        </tr></table>
-      </td>
-    </tr></table>
-    <p style="margin:6px 0 0;font-family:${FONT};font-size:13px;color:#71717a;line-height:1.6;">Tap the code above &mdash; it selects itself so you can copy it in one tap &mdash; then paste it in the app.</p>
-  `;
-  return renderEmail({
-    preheader: `Your verification code is ${otp}. It expires in 10 minutes.`,
-    heading: 'Verify your email',
-    subtext: `We sent this code to <strong style="color:${INK};">${email}</strong>. Enter it in the app to verify your account. The code expires in <strong>10 minutes</strong>.`,
-    bodyHtml,
-    footerNote: 'Didn\u2019t request this? You can safely ignore this email.',
-  });
+export const renderVerificationEmail = (email, otp, options = {}) => {
+  const brand = options.brand || 'damrru';
+  const { brandLabel, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
+
+  const resolvedLogoUrl = options.logoUrl || `${config.clientUrl}/rudhram-logo.png`;
+  const topBannerText = options.topBannerText || 'Your email verification OTP is ready';
+  const topBannerBg = options.topBannerBg || '#8A5C2A';
+  const topBannerTextColor = options.topBannerTextColor || '#ffffff';
+  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-scheme" content="light">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Verify Your Email - Rudhram</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .fluid { max-width: 100% !important; height: auto !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
+    .otp-code { font-size: 28px !important; letter-spacing: 8px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
+
+  <!-- Main White Card Container -->
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
+    <!-- Top Announcement Strip -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+            <tr>
+              <td valign="middle">
+                <span
+                  style="color:${topBannerTextColor};font-family:${SANS_FONT};font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
+                >
+                  ${topBannerText}
+                </span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Brand Header (Centered Rudhram Logo) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:34px 24px 20px;">
+          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Hero Headline -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px 20px;" class="mobile-padding">
+          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
+            Verify Your Email
+          </h1>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Body & OTP Box -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px 34px;" class="mobile-padding">
+          <p style="margin:0 0 22px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
+            We sent a 6-digit verification code to <strong style="color:#191919;">${email}</strong>.<br>Enter this code in the application to complete your verification.
+          </p>
+
+          <!-- Large Monospace OTP Box -->
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 16px;">
+            <tr>
+              <td align="center" style="background-color:#f3efe6;border:1.5px solid #e0d8c8;border-radius:14px;padding:20px 36px;">
+                <span class="otp-code" style="font-family:'JetBrains Mono', Consolas, Monaco, monospace;font-size:36px;font-weight:700;letter-spacing:12px;color:#191919;-webkit-user-select:all;user-select:all;cursor:pointer;line-height:1.2;display:inline-block;padding-left:12px;">${otp}</span>
+              </td>
+            </tr>
+          </table>
+
+          <p style="margin:0 0 20px;font-family:${SANS_FONT};font-size:12px;color:#71717a;line-height:1.5;text-align:center;">
+            &bull; Tap or click the code above to select and copy it easily.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Security Callout Card -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:32px;" class="mobile-padding">
+          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
+            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:15px;font-weight:700;color:#191919;">
+              Security & Expiry Notice
+            </h3>
+            <p style="margin:0 0 14px;font-family:${SANS_FONT};font-size:12.5px;color:#555555;line-height:1.6;">
+              This verification code expires in <strong>10 minutes</strong>. If you did not request this verification code, please ignore this email or contact our support team immediately.
+            </p>
+            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
+                </tr>
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+  <!-- End of Main White Card -->
+
+  <!-- Outer Footer Section -->
+  <tr>
+    <td align="center" style="padding:32px 20px 0;">
+      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Rudhram Home</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Support Center</a>
+      </p>
+      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
+        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
+        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
+      </p>
+      <div align="center" style="margin-top:20px;">
+        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
+        </a>
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 };
 
-export const renderWelcomeEmail = (name) => {
-  const loginUrl = `${config.clientUrl}/auth/login`;
-  return renderEmail({
-    preheader: 'Your Rudhram account is ready. Verify your email to get started.',
-    heading: 'Welcome to Rudhram',
-    subtext: `Hi ${name}, your account has been created. Verify your email to unlock everything.`,
-    bodyHtml: `<p style="margin:0;font-family:${FONT};font-size:15px;color:${BODY};line-height:1.7;">We\u2019ve sent a verification code to your inbox in a separate email. Use it to confirm your address and start managing your business.</p>`,
-    cta: { url: loginUrl, text: 'Sign in to Rudhram' },
-    footerNote: 'If you didn\u2019t expect this email, you can safely ignore it.',
-  });
+export const renderWelcomeEmail = (name = 'Valued User', options = {}) => {
+  const brand = options.brand || 'damrru';
+  const { brandLabel, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
+
+  const resolvedLogoUrl = options.logoUrl || `${config.clientUrl}/rudhram-logo.png`;
+  const loginUrl = options.loginUrl || `${config.clientUrl}/auth/login`;
+  const topBannerText = options.topBannerText || 'Welcome to Rudhram Enterprises';
+  const topBannerBg = options.topBannerBg || '#8A5C2A';
+  const topBannerTextColor = options.topBannerTextColor || '#ffffff';
+  const buttonBg = options.buttonBg || '#8A5C2A';
+  const buttonTextColor = options.buttonTextColor || '#ffffff';
+  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-scheme" content="light">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Welcome to Rudhram, ${name}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .fluid { max-width: 100% !important; height: auto !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
+
+  <!-- Main White Card Container -->
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
+    <!-- Top Announcement Strip -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+            <tr>
+              <td valign="middle" style="padding-right:6px;">
+                <a
+                  href="${loginUrl}"
+                  target="_blank"
+                  style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
+                >
+                  ${topBannerText}
+                </a>
+              </td>
+
+              <td valign="bottom" style="line-height:0;">
+                <a
+                  href="${loginUrl}"
+                  target="_blank"
+                  style="display:block;color:${topBannerTextColor};text-decoration:none;"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Brand Header (Centered Rudhram Logo) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:34px 24px 20px;">
+          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Hero Headline -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
+          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
+            Welcome to Rudhram, ${name}
+          </h1>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Body & CTA -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px 34px;" class="mobile-padding">
+          <p style="margin:0 0 18px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
+            Hi <strong style="color:#191919;">${name}</strong>,<br>Your account has been created successfully. We are excited to have you on board! You can now sign in to access your platform dashboard, collaborate with your team, and manage your account.
+          </p>
+
+          <!-- CTA Button -->
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:24px auto 16px;">
+            <tr>
+              <td align="center">
+                <a href="${loginUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
+                  Sign In to Rudhram &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Verification Note Box -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;border:1px solid #ebe6dd;border-radius:12px;overflow:hidden;background-color:#faf9f6;">
+            <tr>
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:12.5px;color:#666666;line-height:1.5;">
+                <strong>Verification Note:</strong> We have sent a verification OTP code in a separate email. Please use it to confirm your address and unlock full account permissions.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Support Callout Card -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:32px;" class="mobile-padding">
+          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
+            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:15px;font-weight:700;color:#191919;">
+              Need Any Help Getting Started?
+            </h3>
+            <p style="margin:0 0 14px;font-family:${SANS_FONT};font-size:12.5px;color:#555555;line-height:1.6;">
+              If you have any questions or require assistance setting up your workspace, our team is available to assist you.
+            </p>
+            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
+                </tr>
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+  <!-- End of Main White Card -->
+
+  <!-- Outer Footer Section -->
+  <tr>
+    <td align="center" style="padding:32px 20px 0;">
+      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Rudhram Home</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Support Center</a>
+      </p>
+      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
+        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
+        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
+      </p>
+      <div align="center" style="margin-top:20px;">
+        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
+        </a>
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 };
 
-export const renderPasswordResetEmail = (resetUrl) =>
-  renderEmail({
-    preheader: 'Reset your Rudhram password. The link expires in 1 hour.',
-    heading: 'Reset your password',
-    subtext: 'Click the button below to choose a new password. This link is valid for <strong>1 hour</strong>.',
-    bodyHtml: `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${BG};border:1px solid ${BORDER};border-radius:12px;padding:16px 20px;font-family:${FONT};font-size:13px;color:${MUTED};">If the button doesn\u2019t work, copy this link into your browser:<br><a href="${resetUrl}" style="color:${INK};">${resetUrl}</a></td></tr></table>`,
-    cta: { url: resetUrl, text: 'Reset password' },
-    footerNote: 'If you didn\u2019t request a password reset, you can safely ignore this email.',
+export const sendWelcomeEmail = async (email, name, options = {}) =>
+  sendEmail({ to: email, subject: `Welcome to Rudhram, ${name}`, html: renderWelcomeEmail(name, options) });
+
+export const renderPasswordResetEmail = (resetUrl, options = {}) => {
+  const clientName = options.clientName || 'Valued User';
+  const brand = options.brand || 'damrru';
+  const { brandLabel, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
+
+  const resolvedLogoUrl = options.logoUrl || `${config.clientUrl}/rudhram-logo.png`;
+  const resolvedResetUrl = resetUrl || `${config.clientUrl}/auth/reset-password`;
+  const topBannerText = options.topBannerText || 'Password reset request';
+  const topBannerBg = options.topBannerBg || '#8A5C2A';
+  const topBannerTextColor = options.topBannerTextColor || '#ffffff';
+  const buttonBg = options.buttonBg || '#8A5C2A';
+  const buttonTextColor = options.buttonTextColor || '#ffffff';
+  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-scheme" content="light">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Reset Your Rudhram Password</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .fluid { max-width: 100% !important; height: auto !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
+
+  <!-- Main White Card Container -->
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
+    <!-- Top Announcement Strip -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+            <tr>
+              <td valign="middle" style="padding-right:6px;">
+                <a
+                  href="${resolvedResetUrl}"
+                  target="_blank"
+                  style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
+                >
+                  ${topBannerText}
+                </a>
+              </td>
+
+              <td valign="bottom" style="line-height:0;">
+                <a
+                  href="${resolvedResetUrl}"
+                  target="_blank"
+                  style="display:block;color:${topBannerTextColor};text-decoration:none;"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Brand Header (Centered Rudhram Logo) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:34px 24px 20px;">
+          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Hero Headline -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
+          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
+            Reset Your Password
+          </h1>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Body & CTA -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px 34px;" class="mobile-padding">
+          <p style="margin:0 0 18px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
+            Hi <strong style="color:#191919;">${clientName}</strong>,<br>We received a request to reset your password for your Rudhram account. Click the button below to choose a new password.
+          </p>
+
+          <!-- CTA Button -->
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:24px auto 16px;">
+            <tr>
+              <td align="center">
+                <a href="${resolvedResetUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
+                  Reset Password &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Direct Link Fallback Box -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;border:1px solid #ebe6dd;border-radius:12px;overflow:hidden;background-color:#faf9f6;">
+            <tr>
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:12px;color:#666666;line-height:1.5;">
+                If the button above doesn&rsquo;t work, copy and paste this link into your browser:<br>
+                <a href="${resolvedResetUrl}" target="_blank" style="color:#191919;font-weight:600;word-break:break-all;text-decoration:underline;">${resolvedResetUrl}</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Expiration & Security Callout -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:32px;" class="mobile-padding">
+          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
+            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:15px;font-weight:700;color:#191919;">
+              Security & Link Expiry Notice
+            </h3>
+            <p style="margin:0 0 14px;font-family:${SANS_FONT};font-size:12.5px;color:#555555;line-height:1.6;">
+              This password reset link is valid for <strong>1 hour</strong>. If you did not request a password reset, your account is safe and you can safely ignore this email.
+            </p>
+            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
+                </tr>
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+  <!-- End of Main White Card -->
+
+  <!-- Outer Footer Section -->
+  <tr>
+    <td align="center" style="padding:32px 20px 0;">
+      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Rudhram Home</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Support Center</a>
+      </p>
+      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
+        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
+        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
+      </p>
+      <div align="center" style="margin-top:20px;">
+        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
+        </a>
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+};
+
+export const sendPasswordResetEmail = async (email, resetToken, options = {}) => {
+  const resetUrl = `${config.clientUrl}/auth/reset-password?token=${resetToken}`;
+  return sendEmail({
+    to: email,
+    subject: 'Reset your Rudhram password',
+    html: renderPasswordResetEmail(resetUrl, options),
   });
+};
 
 export const renderNotificationEmail = ({ title, message, link }) => {
   const fullUrl = link && link.startsWith('/') ? `${config.clientUrl}${link}` : link;
@@ -285,34 +845,228 @@ export const renderPaymentEmail = ({ clientName, invoiceNumber, amount, date, ou
     footerNote: 'Rudhram &middot; Thank you for your payment.',
   });
 
-export const sendWelcomeEmail = async (email, name) =>
-  sendEmail({ to: email, subject: 'Welcome to Rudhram', html: renderWelcomeEmail(name) });
+export const sendVerificationEmail = async (email, otp, options = {}) =>
+  sendEmail({ to: email, subject: `Your Rudhram verification code: ${otp}`, html: renderVerificationEmail(email, otp, options) });
 
-export const sendVerificationEmail = async (email, otp) =>
-  sendEmail({ to: email, subject: `Your Rudhram verification code: ${otp}`, html: renderVerificationEmail(email, otp) });
+export const renderPortalInviteEmail = ({
+  portalName = 'Rudhram',
+  inviteUrl,
+  clientName = 'Valued Client',
+  brand = 'damrru',
+  logoUrl,
+  topBannerText = `You are invited to join ${portalName}`,
+  topBannerUrl,
+  topBannerBg = '#8A5C2A',
+  topBannerTextColor = '#ffffff',
+  buttonBg = '#8A5C2A',
+  buttonTextColor = '#ffffff',
+} = {}) => {
+  const { brandLabel, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
 
-export const sendPasswordResetEmail = async (email, resetToken) => {
-  const resetUrl = `${config.clientUrl}/auth/reset-password?token=${resetToken}`;
-  return sendEmail({ to: email, subject: 'Reset your Rudhram password', html: renderPasswordResetEmail(resetUrl) });
+  const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
+  const resolvedInviteUrl = inviteUrl || `${config.clientUrl}/portal/accept-invite`;
+  const effectiveTopBannerUrl = topBannerUrl || resolvedInviteUrl;
+  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-scheme" content="light">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Welcome to ${portalName}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .fluid { max-width: 100% !important; height: auto !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
+
+  <!-- Main White Card Container -->
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
+    <!-- Top Announcement Strip -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+            <tr>
+              <td valign="middle" style="padding-right:6px;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
+                >
+                  ${topBannerText}
+                </a>
+              </td>
+
+              <td valign="bottom" style="line-height:0;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="display:block;color:${topBannerTextColor};text-decoration:none;"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Brand Header (Centered Rudhram Logo) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:34px 24px 20px;">
+          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Hero Headline -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
+          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
+            Welcome to ${portalName}
+          </h1>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Body & CTA -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px 34px;" class="mobile-padding">
+          <p style="margin:0 0 18px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
+            Hello ${clientName},<br>You have been invited to access the <strong style="color:#191919;">${portalName}</strong> client portal. Set your password to activate your account and start reviewing project deliverables, tracking timelines, and managing invoices seamlessly.
+          </p>
+
+          <!-- CTA Button -->
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:24px auto 16px;">
+            <tr>
+              <td align="center">
+                <a href="${resolvedInviteUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
+                  Set Your Password &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Direct Link Fallback Box -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;border:1px solid #ebe6dd;border-radius:12px;overflow:hidden;background-color:#faf9f6;">
+            <tr>
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:12px;color:#666666;line-height:1.5;">
+                If the button above doesn&rsquo;t work, copy and paste this link into your browser:<br>
+                <a href="${resolvedInviteUrl}" target="_blank" style="color:#191919;font-weight:600;word-break:break-all;text-decoration:underline;">${resolvedInviteUrl}</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Expiration & Security Callout -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:32px;" class="mobile-padding">
+          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
+            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:15px;font-weight:700;color:#191919;">
+              Important Security Information
+            </h3>
+            <p style="margin:0 0 14px;font-family:${SANS_FONT};font-size:12.5px;color:#555555;line-height:1.6;">
+              *This invitation link is valid for <strong>7 days</strong>. If you did not expect this invitation, you can safely ignore this email.
+            </p>
+            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
+                </tr>
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+  <!-- End of Main White Card -->
+
+  <!-- Outer Footer Section -->
+  <tr>
+    <td align="center" style="padding:32px 20px 0;">
+      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Client Portal</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Support Center</a>
+      </p>
+      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
+        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
+        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
+      </p>
+      <div align="center" style="margin-top:20px;">
+        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
+        </a>
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 };
 
-export const renderPortalInviteEmail = ({ portalName, inviteUrl }) =>
-  renderEmail({
-    preheader: `You've been invited to the ${portalName} client portal. Set your password to get started.`,
-    heading: `Welcome to ${portalName}`,
-    subtext: `You've been invited to the <strong style="color:${INK};">${portalName}</strong> client portal. Set a password to sign in and access your projects, tasks, and meetings.`,
-    bodyHtml: `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${BG};border:1px solid ${BORDER};border-radius:12px;padding:16px 20px;font-family:${FONT};font-size:13px;color:${MUTED};">If the button doesn\u2019t work, copy this link into your browser:<br><a href="${inviteUrl}" style="color:${INK};">${inviteUrl}</a></td></tr></table>`,
-    cta: { url: inviteUrl, text: 'Set your password' },
-    footerNote: 'This link expires in 7 days. If you didn\u2019t expect this email, you can safely ignore it.',
-  });
-
-export const sendPortalInviteEmail = async (email, inviteToken) => {
-  const portalName = 'Rudhram';
+export const sendPortalInviteEmail = async (email, inviteToken, options = {}) => {
+  const portalName = options.portalName || 'Rudhram';
   const inviteUrl = `${config.clientUrl}/portal/accept-invite?token=${inviteToken}`;
   return sendEmail({
     to: email,
     subject: `You're invited to the ${portalName} client portal`,
-    html: renderPortalInviteEmail({ portalName, inviteUrl }),
+    html: renderPortalInviteEmail({ portalName, inviteUrl, clientName: options.clientName, brand: options.brand }),
   });
 };
 
@@ -861,7 +1615,7 @@ export const sendClientOnboardingEmail = async (email, { clientName, companyName
   });
 };
 
-export const renderClientCredentialsEmail = ({ clientName = 'Valued Client', email, password, portalUrl = `${config.clientUrl}/portal/login`, brand = 'damrru', logoUrl, topBannerText = 'Your client portal login credentials are ready &rarr;', topBannerUrl, topBannerBg = '#8A5C2A', topBannerTextColor = '#ffffff', buttonBg = '#8A5C2A', buttonTextColor = '#ffffff' } = {}) => {
+export const renderClientCredentialsEmail = ({ clientName = 'Valued Client', email, password, portalUrl = `${config.clientUrl}/portal/login`, brand = 'damrru', logoUrl, topBannerText = 'Your client portal login is ready', topBannerUrl, topBannerBg = '#8A5C2A', topBannerTextColor = '#ffffff', buttonBg = '#8A5C2A', buttonTextColor = '#ffffff' } = {}) => {
   const { brandLabel, brandPhone, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
 
   const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
@@ -910,14 +1664,35 @@ export const renderClientCredentialsEmail = ({ clientName = 'Valued Client', ema
 
   <!-- Main White Card Container -->
   <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
-    udate: cloudinary images added
     <!-- Top Announcement Strip -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
-          <a href="${effectiveTopBannerUrl}" target="_blank" style="text-decoration:none;color:${topBannerTextColor};font-family:${SANS_FONT};font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:1.4;display:inline-block;">
-            ${topBannerText}
-          </a>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+            <tr>
+              <td valign="middle" style="padding-right:6px;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
+                >
+                  ${topBannerText}
+                </a>
+              </td>
+
+              <td valign="bottom" style="line-height:0;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="display:block;color:${topBannerTextColor};text-decoration:none;"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </a>
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>
