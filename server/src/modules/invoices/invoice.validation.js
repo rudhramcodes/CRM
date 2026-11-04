@@ -47,6 +47,7 @@ export const createInvoiceSchema = z
     ...printedFieldsSchema,
     client: z.string().min(1, 'Client is required'),
     sourceQuotation: sourceQuotationSchema,
+    sourceRevision: z.string().regex(/^[a-fA-F0-9]{24}$/, 'Invalid source revision ID').optional(),
     project: z.string().optional().nullable().or(z.literal('')),
     issueDate: z
       .string()
@@ -63,6 +64,9 @@ export const createInvoiceSchema = z
     billingAddress: billingAddressSchema.optional(),
     notes: z.string().max(2000).optional().or(z.literal('')),
     termsConditions: z.string().max(2000).optional().or(z.literal('')),
+  })
+  .refine((data) => !data.sourceRevision || Boolean(data.sourceQuotation), {
+    message: 'Source revision requires a source quotation', path: ['sourceRevision'],
   })
   .refine(
     (data) => {

@@ -36,4 +36,7 @@ router.put('/security', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), validate(upda
 router.get('/integrations', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), settingsController.getIntegrationSettings);
 router.put('/integrations', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), validate(updateIntegrationSchema), settingsController.updateIntegrationSettings);
 
+// Email Template Previews for Developers/Designers (authenticated staff)
+router.get('/email-previews', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE), settingsController.getEmailPreviews);
+
 export default router;

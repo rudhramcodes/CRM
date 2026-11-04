@@ -3,6 +3,7 @@ import * as quotationController from './quotation.controller.js';
 import validate, { validateQuery } from '../../middleware/validate.js';
 import { verifyToken, authorize } from '../../middleware/auth.js';
 import { ROLES } from '../../constants/index.js';
+import revisionRoutes from './quotationRevision.routes.js';
 import {
   createQuotationSchema,
   quotationDefaultsQuerySchema,
@@ -15,6 +16,7 @@ const router = Router();
 
 router.use(verifyToken);
 router.use(authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN));
+router.use(revisionRoutes);
 
 router.get('/stats', quotationController.stats);
 router.get('/defaults', validateQuery(quotationDefaultsQuerySchema), quotationController.defaults);

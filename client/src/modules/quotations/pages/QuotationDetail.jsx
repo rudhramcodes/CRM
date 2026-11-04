@@ -1,420 +1,128 @@
-import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft, Send, Printer, Edit2, Download, CheckCircle, XCircle, Clock, Trash2, RefreshCw, Receipt,
-} from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
-import QuotationStatusBadge from '../components/QuotationStatusBadge';
 import QuotationForm from '../components/QuotationForm';
+import QuotationPreview from '../components/QuotationPreview';
+import QuotationRevisionHistory from '../components/QuotationRevisionHistory';
+import QuotationVersionActions from '../components/QuotationVersionActions';
+import QuotationSummary from '../components/QuotationSummary';
+import QuotationStatusBadge from '../components/QuotationStatusBadge';
+import useQuotationVersions from '../hooks/useQuotationVersions';
 import Modal from '../../../components/ui/Modal';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Button from '../../../components/ui/Button';
 import { DetailSkeleton } from '../../../components/ui/Skeleton';
-import {
-  useGetQuotationByIdQuery,
-  useGetQuotationHtmlQuery,
-  useUpdateQuotationMutation,
-  useUpdateQuotationStatusMutation,
-  useDeleteQuotationMutation,
-  useResendQuotationEmailMutation,
-} from '../../../services/quotationApi';
+import { useGetQuotationByIdQuery, useGetQuotationHtmlQuery } from '../../../services/quotationApi';
 import { useGetClientsQuery } from '../../../services/clientApi';
 import { useGetInvoicesQuery } from '../../../services/invoiceApi';
-import { API_BASE_URL, BRANDS } from '../../../constants';
-
-const fmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN') : '-');
-
-const PREVIEW_WIDTH = 794;
-
-const BRAND_LABELS = BRANDS.reduce((acc, b) => {
-  acc[b.value] = b.label;
-  return acc;
-}, {});
 
 export default function QuotationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const { data, isLoading, refetch } = useGetQuotationByIdQuery(id);
-  const { data: quotationHtml } = useGetQuotationHtmlQuery(id, { skip: !id });
+  const query = useGetQuotationByIdQuery(id);
+  const quotation = query.data?.data?.quotation;
+  const versions = useQuotationVersions({ id, quotation, refetch: query.refetch });
+  const legacyPreview = useGetQuotationHtmlQuery(id, { skip: !quotation || versions.versioned });
   const { data: clientsData } = useGetClientsQuery({ limit: 100 });
-  const { data: linkedInvoicesData } = useGetInvoicesQuery(
-    { sourceQuotation: id, limit: 1 },
-    { skip: !id },
-  );
-  const [updateQuotation, { isLoading: isUpdating }] = useUpdateQuotationMutation();
-  const [updateStatus] = useUpdateQuotationStatusMutation();
-  const [deleteQuotation, { isLoading: isDeleting }] = useDeleteQuotationMutation();
-  const [resendEmail, { isLoading: isResending }] = useResendQuotationEmailMutation();
-
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [loadingAction, setLoadingAction] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState({ open: false });
-  const [previewScale, setPreviewScale] = useState(1);
-  const [previewHeight, setPreviewHeight] = useState(1150);
+  const { data: invoicesData } = useGetInvoicesQuery({ sourceQuotation: id, limit: 1 }, { skip: !id });
+  const [editor, setEditor] = useState(null);
+  const [saveContext, setSaveContext] = useState(null);
+  const [revisionNote, setRevisionNote] = useState('');
+  const [confirmation, setConfirmation] = useState(null);
   const iframeRef = useRef(null);
-  const previewWrapRef = useRef(null);
+  const linkedInvoice = invoicesData?.data?.[0];
+  const content = versions.versioned ? versions.document : quotation;
+  const html = versions.versioned ? versions.preview : legacyPreview.currentData;
 
-  useEffect(() => {
-    const element = previewWrapRef.current;
-    if (!element) return undefined;
-    const updateScale = () => {
-      const width = element.clientWidth;
-      setPreviewScale(width > 0 ? Math.min(1, width / PREVIEW_WIDTH) : 1);
-    };
-    updateScale();
-    const observer = new ResizeObserver(updateScale);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [quotationHtml]);
-
-  const quotation = data?.data?.quotation;
-  const clients = clientsData?.data || [];
-  const linkedInvoice = linkedInvoicesData?.data?.[0];
-
-  const confirmAndExecute = (title, message, label, variant, action) => {
-    setConfirmDialog({
-      open: true,
-      title,
-      message,
-      confirmLabel: label,
-      variant,
-      onConfirm: () => {
-        setConfirmDialog({ open: false });
-        action();
-      },
-    });
+  const edit = () => setEditor({
+    content: versions.workingCopy.content,
+    baseVersion: quotation.latestVersion,
+    editVersion: versions.workingCopy.editVersion,
+  });
+  const saveDraft = async (changes) => {
+    const saved = await versions.edit(changes, { baseVersion: editor.baseVersion, editVersion: editor.editVersion });
+    if (saved) setEditor(null);
   };
-
-  const performStatusChange = async (status) => {
-    setLoadingAction(status);
-    try {
-      await updateStatus({ id, status }).unwrap();
-      toast.success(
-        status === 'sent'
-          ? 'Quotation sent successfully'
-          : `Quotation marked ${status}`,
-      );
-      refetch();
-    } catch (err) {
-      toast.error(err?.data?.message || `Failed to mark quotation ${status}`);
-    } finally {
-      setLoadingAction(null);
+  const print = () => {
+    const frame = iframeRef.current?.contentWindow;
+    if (!frame) return;
+    frame.focus();
+    frame.print();
+  };
+  const confirmSave = async (event) => {
+    event.preventDefault();
+    if (await versions.save(revisionNote, saveContext)) {
+      setSaveContext(null);
+      setRevisionNote('');
     }
   };
 
-  const handleSend = () => confirmAndExecute(
-    'Send Quotation',
-    'Send this quotation to the client? An email with the PDF will be sent.',
-    'Send',
-    'primary',
-    () => performStatusChange('sent'),
-  );
-
-  const handleAccept = () => confirmAndExecute(
-    'Accept Quotation',
-    'Mark this quotation as accepted?',
-    'Accept',
-    'primary',
-    () => performStatusChange('accepted'),
-  );
-
-  const handleReject = () => confirmAndExecute(
-    'Reject Quotation',
-    'Mark this quotation as rejected?',
-    'Reject',
-    'danger',
-    () => performStatusChange('rejected'),
-  );
-
-  const handleExpire = () => confirmAndExecute(
-    'Expire Quotation',
-    'Mark this quotation as expired?',
-    'Expire',
-    'danger',
-    () => performStatusChange('expired'),
-  );
-
-  const handleResend = async () => {
-    try {
-      await resendEmail(id).unwrap();
-      toast.success('Quotation email resent');
-    } catch (err) {
-      toast.error(err?.data?.message || 'Failed to resend email');
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await deleteQuotation(id).unwrap();
-      toast.success('Quotation deleted');
-      navigate('/quotations');
-    } catch (err) {
-      toast.error(err?.data?.message || 'Failed to delete quotation');
-    }
-  };
-
-  const handleEdit = async (formData) => {
-    try {
-      await updateQuotation({ id, ...formData }).unwrap();
-      toast.success('Quotation updated');
-      setShowEditModal(false);
-    } catch (err) {
-      const errors = err?.data?.errors;
-      if (errors && Array.isArray(errors)) {
-        toast.error(errors.map((e) => e.message).join('. '));
-      } else {
-        toast.error(err?.data?.message || 'Failed to update quotation');
-      }
-    }
-  };
-
-  const handlePrint = () => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.focus();
-      iframeRef.current.contentWindow.print();
-    } else {
-      window.print();
-    }
-  };
-
-  const handleDownloadPdf = async () => {
-    setIsDownloading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/quotations/${id}/pdf`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `quotation-${quotation?.quotationNumber || id}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      toast.error(err.message || 'Failed to download PDF');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  if (isLoading) return <DetailSkeleton />;
-  if (!quotation) return <div className="text-zinc-500 py-8 text-center">Quotation not found</div>;
-
-  const canEdit = quotation.status === 'draft';
-  const canSend = quotation.status === 'draft';
-  const canDecide = ['draft', 'sent'].includes(quotation.status);
-  const canExpire = quotation.status === 'sent';
-  const templateId = quotation.templateId || (quotation.client?.brand === 'panigrahna' ? 'panigrahna' : 'standard');
+  if (query.isLoading) return <DetailSkeleton />;
+  if (query.error) return <p role="alert" className="py-8 text-center text-red-700">Unable to load this quotation. <button type="button" onClick={query.refetch} className="underline">Try again</button></p>;
+  if (!quotation) return <p className="py-8 text-center text-zinc-500">Quotation not found.</p>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 print:max-w-none print:mx-0 print:space-y-0">
-      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <button
-          type="button"
-          onClick={() => navigate('/quotations')}
-          className="inline-flex items-center cursor-pointer gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Quotations
+    <div className="mx-auto max-w-5xl space-y-5 print:m-0 print:max-w-none print:space-y-0">
+      <header className="space-y-4 print:hidden">
+        <button type="button" onClick={() => navigate('/quotations')} className="inline-flex min-h-9 items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 focus-visible:outline-2 focus-visible:outline-primary-900">
+          <ArrowLeft className="h-4 w-4" /> Back to quotations
         </button>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant={quotation.status === 'accepted' && !linkedInvoice ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => navigate(linkedInvoice ? `/invoices/${linkedInvoice._id}` : `/invoices/new?quotationId=${id}`)}
-          >
-            <Receipt className="w-4 h-4 mr-1" /> {linkedInvoice ? 'Open invoice' : 'Create invoice'}
-          </Button>
-          {canEdit && (
-            <Button variant="secondary" size="sm" onClick={() => setShowEditModal(true)}>
-              <Edit2 className="w-4 h-4 mr-1" /> Edit
-            </Button>
-          )}
-          {canSend && (
-            <Button variant="primary" size="sm" onClick={handleSend} loading={loadingAction === 'sent'}>
-              <Send className="w-4 h-4 mr-1" /> Send Quotation
-            </Button>
-          )}
-          {canDecide && (
-            <Button variant="primary" size="sm" onClick={handleAccept} loading={loadingAction === 'accepted'}>
-              <CheckCircle className="w-4 h-4 mr-1" /> Accept
-            </Button>
-          )}
-          {canDecide && (
-            <Button variant="danger" size="sm" onClick={handleReject} loading={loadingAction === 'rejected'}>
-              <XCircle className="w-4 h-4 mr-1" /> Reject
-            </Button>
-          )}
-          {canExpire && (
-            <Button variant="secondary" size="sm" onClick={handleExpire} loading={loadingAction === 'expired'}>
-              <Clock className="w-4 h-4 mr-1" /> Expire
-            </Button>
-          )}
-          {quotation.status === 'sent' && (
-            <Button variant="secondary" size="sm" onClick={handleResend} loading={isResending}>
-              <RefreshCw className="w-4 h-4 mr-1" /> Resend
-            </Button>
-          )}
-          {canEdit && (
-            <Button variant="danger" size="sm" onClick={() => confirmAndExecute(
-              'Delete Quotation',
-              'Are you sure? This cannot be undone.',
-              'Delete',
-              'danger',
-              handleDelete,
-            )} loading={isDeleting}>
-              <Trash2 className="w-4 h-4 mr-1" /> Delete
-            </Button>
-          )}
-          <Button variant="secondary" size="sm" onClick={handleDownloadPdf} loading={isDownloading}>
-            <Download className="w-4 h-4 mr-1" /> PDF
-          </Button>
-          <Button variant="secondary" size="sm" onClick={handlePrint}>
-            <Printer className="w-4 h-4 mr-1" /> Print
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-zinc-200 print:border-none print:rounded-none print:overflow-visible overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-0 print:hidden">
-          <div className="flex flex-wrap items-center gap-3">
-            <QuotationStatusBadge status={quotation.status} />
-            {quotation.client?.brand && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 text-xs font-medium text-zinc-700">
-                {BRAND_LABELS[quotation.client.brand] || quotation.client.brand}
-              </span>
-            )}
-            {quotation.status === 'accepted' && (
-              <span className="text-xs font-medium text-green-700">Accepted on {fmtDate(quotation.acceptedAt)}</span>
-            )}
-          </div>
-          <span className="hidden text-xs text-zinc-500 sm:inline">
-            {templateId === 'panigrahna' ? 'Panigrahna: letter, deliverables, terms, pricing' : 'Standard: cover letter, scope, summary'}
-          </span>
-        </div>
-
-        {quotationHtml ? (
-          <div className="p-3 sm:p-6 flex justify-center bg-zinc-100/50 print:p-0">
-            <div
-              ref={previewWrapRef}
-              className="w-full max-w-[794px] overflow-hidden print:max-w-none print:overflow-visible"
-            >
-              <div
-                className="relative print:h-auto"
-                style={{ height: previewHeight * previewScale }}
-              >
-                <iframe
-                  ref={iframeRef}
-                  srcDoc={quotationHtml}
-                  title={`Quotation ${quotation.quotationNumber}`}
-                  className="border-0 rounded-lg shadow-sm bg-transparent"
-                  style={{
-                    width: PREVIEW_WIDTH,
-                    height: previewHeight,
-                    transform: `scale(${previewScale})`,
-                    transformOrigin: 'top left',
-                  }}
-                  onLoad={(e) => {
-                    try {
-                      const iframe = e.target;
-                      const doc = iframe?.contentWindow?.document;
-                      const height = Math.max(
-                        doc?.body?.scrollHeight || 0,
-                        doc?.documentElement?.scrollHeight || 0,
-                        1130,
-                      );
-                      setPreviewHeight(height + 25);
-                    } catch {
-                      // Keep the default height.
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="p-8 text-zinc-400 text-center text-sm">Loading preview...</div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 print:hidden">
-        <div className="lg:col-span-2 bg-white rounded-lg border border-zinc-200 p-4">
-          <h3 className="text-sm font-medium text-zinc-700 mb-4">Quotation Summary</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-3 bg-zinc-50 rounded-lg">
-            <div>
-              <p className="text-xs text-zinc-500">Client Budget</p>
-              <p className="text-lg font-bold text-zinc-700">{fmt(quotation.budget)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-zinc-500">Subtotal</p>
-              <p className="text-lg font-bold text-zinc-900">{fmt(quotation.price)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-zinc-500">GST ({quotation.taxRate}%)</p>
-              <p className="text-lg font-bold text-zinc-900">{fmt(quotation.taxAmount)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-zinc-500">Total</p>
-              <p className="text-lg font-bold text-indigo-700">{fmt(quotation.total)}</p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div className="space-y-1.5">
-              <p><span className="text-zinc-500">Client Id:</span> <span className="font-medium">{quotation.client?.clientId || '-'}</span></p>
-              <p><span className="text-zinc-500">Project Id:</span> <span className="font-medium">{quotation.project?.projectCode || '-'}</span></p>
-              <p><span className="text-zinc-500">Quotation No:</span> <span className="font-medium">{quotation.quotationNumber}</span></p>
-            </div>
-            <div className="space-y-1.5">
-              <p><span className="text-zinc-500">Issue Date:</span> <span className="font-medium">{fmtDate(quotation.issueDate)}</span></p>
-              <p><span className="text-zinc-500">Valid Until:</span> <span className="font-medium">{fmtDate(quotation.validUntil)}</span></p>
-              <p><span className="text-zinc-500">Prepared By:</span> <span className="font-medium">{quotation.createdBy?.name || 'N/A'}</span></p>
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold text-zinc-900">{quotation.quotationNumber}</h1>
+          <div className="flex items-center gap-2">
+            {quotation.archivedAt && <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">Archived</span>}
+            {versions.working ? <span className="text-sm text-amber-800">Working draft</span> : versions.versioned && !versions.revision ? <span className="text-sm text-zinc-500">Loading version...</span> : <QuotationStatusBadge status={versions.revision?.status || quotation.status} />}
           </div>
         </div>
+        <QuotationVersionActions
+          quotation={quotation} versions={versions} onEdit={edit} onPrint={print}
+          onSave={() => setSaveContext({ baseVersion: quotation.latestVersion, editVersion: versions.workingCopy.editVersion })}
+          onConfirm={setConfirmation} linkedInvoice={linkedInvoice}
+          onInvoice={() => navigate(linkedInvoice ? `/invoices/${linkedInvoice._id}` : `/invoices/new?quotationId=${id}&revision=${versions.selection}`)}
+        />
+      </header>
 
-        <div className="bg-white rounded-lg border border-zinc-200 p-4">
-          <h3 className="text-sm font-medium text-zinc-700 mb-3">Timeline</h3>
-          <div className="space-y-2 text-sm text-zinc-500">
-            <p>Created: {new Date(quotation.createdAt).toLocaleString('en-IN')}</p>
-            {quotation.sentAt && <p>Sent: {new Date(quotation.sentAt).toLocaleString('en-IN')}</p>}
-            {quotation.acceptedAt && <p className="text-green-600">Accepted: {new Date(quotation.acceptedAt).toLocaleString('en-IN')}</p>}
-            {quotation.rejectedAt && <p className="text-red-600">Rejected: {new Date(quotation.rejectedAt).toLocaleString('en-IN')}</p>}
-            {quotation.expiredAt && <p className="text-amber-600">Expired: {new Date(quotation.expiredAt).toLocaleString('en-IN')}</p>}
-          </div>
-          <div className="mt-4 pt-3 border-t border-zinc-100 text-xs text-zinc-500 space-y-1">
-            <p className="whitespace-pre-line"><span className="font-medium text-zinc-700">Scope:</span> {quotation.scopeTitle || '-'}</p>
-            <p className="whitespace-pre-line"><span className="font-medium text-zinc-700">Deliverables:</span> {quotation.deliverables || '-'}</p>
-          </div>
-        </div>
-      </div>
+      {!versions.versioned ? (
+        <p className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900 print:hidden">This quotation predates version history. Enable history to preserve its current state as V1 and create revisions. The original sent artifact cannot be recovered.</p>
+      ) : <QuotationRevisionHistory quotation={quotation} versions={versions} />}
 
-      {showEditModal && (
-        <Modal open onClose={() => setShowEditModal(false)} title="Edit Quotation" size="xl">
-          <QuotationForm
-            clients={clients}
-            onSubmit={handleEdit}
-            isSubmitting={isUpdating}
-            onCancel={() => setShowEditModal(false)}
-            initialData={quotation}
-            submitLabel="Save Changes"
-          />
+      {versions.detailError && !versions.working && <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">Unable to load the selected revision. Choose another version or refresh the page.</p>}
+      <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white print:overflow-visible print:rounded-none print:border-none" aria-label="Quotation preview">
+        <QuotationPreview
+          html={html} iframeRef={iframeRef}
+          title={`Quotation ${quotation.quotationNumber}${versions.versioned ? ` · ${versions.working ? 'Working draft' : `V${versions.selection}`}` : ''}`}
+          isFetching={versions.versioned ? versions.previewLoading : legacyPreview.isFetching}
+          error={versions.versioned ? versions.previewError : legacyPreview.error}
+        />
+      </section>
+      {content && <QuotationSummary content={content} revision={versions.revision} />}
+
+      {editor && (
+        <Modal open onClose={() => setEditor(null)} title="Edit revision working draft" size="xl">
+          <p className="mb-4 text-sm text-zinc-500">Save the working draft, then use Save Revision to preserve a new immutable version.</p>
+          <QuotationForm clients={clientsData?.data || []} initialData={editor.content} onSubmit={saveDraft} isSubmitting={versions.busy === 'edit'} onCancel={() => setEditor(null)} submitLabel="Save Working Draft" lockIdentity={quotation.latestVersion > 0} />
         </Modal>
       )}
-
+      {saveContext && (
+        <Modal open onClose={() => setSaveContext(null)} title={`Save revision V${saveContext.baseVersion + 1}`} size="md">
+          <form aria-label="Save quotation revision" onSubmit={confirmSave} className="space-y-4">
+            <p className="text-sm text-zinc-600">The current working draft, preview and PDF will be frozen. Further edits will require a new revision. Saving does not send an email.</p>
+            <label className="block text-sm font-medium text-zinc-700">Revision note
+              <textarea value={revisionNote} onChange={(event) => setRevisionNote(event.target.value)} maxLength={1000} rows={3} placeholder="For example: Revised scope and pricing" className="mt-2 w-full rounded-lg border border-zinc-200 p-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-900" />
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setSaveContext(null)} disabled={Boolean(versions.busy)}>Cancel</Button>
+              <Button type="submit" loading={versions.busy === 'save'} disabled={Boolean(versions.busy)}>Save Revision</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
       <ConfirmDialog
-        open={confirmDialog.open}
-        onClose={() => setConfirmDialog({ open: false })}
-        onConfirm={confirmDialog.onConfirm}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        confirmLabel={confirmDialog.confirmLabel}
-        variant={confirmDialog.variant}
+        open={Boolean(confirmation)} onClose={() => setConfirmation(null)}
+        title={confirmation?.title} message={confirmation?.message}
+        confirmLabel={confirmation?.confirmLabel} variant={confirmation?.variant}
+        onConfirm={() => { const task = confirmation.task; setConfirmation(null); Promise.resolve(task()).catch(() => toast.error('Unable to complete this action')); }}
       />
     </div>
   );

@@ -7,7 +7,8 @@ export const INVOICE_PRINTED_FIELDS = [
   'bankAccountNumber', 'bankIfsc', 'bankGst', 'bankUpi', 'signatoryName',
 ];
 
-export function quotationToInvoiceDraft(quotation, now = new Date()) {
+export function quotationToInvoiceDraft(root, now = new Date(), revision = null) {
+  const quotation = revision ? revision.content : root;
   const dueDate = new Date(now);
   dueDate.setDate(dueDate.getDate() + 30);
   const clientAddress = quotation.client?.address || {};
@@ -29,7 +30,8 @@ export function quotationToInvoiceDraft(quotation, now = new Date()) {
     recipientGst: quotation.recipientGst ?? quotation.client?.gstNumber ?? '',
     clientReference: quotation.clientReference ?? quotation.client?.clientId ?? '',
     projectReference: quotation.projectReference ?? quotation.project?.projectCode ?? '',
-    sourceQuotation: quotation._id,
+    sourceQuotation: root._id,
+    ...(revision ? { sourceRevision: revision._id } : {}),
     client: quotation.client?._id || quotation.client,
     project: quotation.project?._id || quotation.project || '',
     issueDate: dateInput(now),

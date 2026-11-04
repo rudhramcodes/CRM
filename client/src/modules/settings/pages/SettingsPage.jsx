@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { User, Bell, Building2, Shield, Key, ScrollText, Lock, Plug } from 'lucide-react';
+import { User, Bell, Building2, Shield, Key, ScrollText, Lock, Plug, Mail } from 'lucide-react';
 import ProfileTab from '../components/ProfileTab';
 import NotificationsTab from '../components/NotificationsTab';
 import OrganizationTab from '../components/OrganizationTab';
 import RolesTab from '../components/RolesTab';
 import SecurityTab from '../components/SecurityTab';
 import IntegrationsTab from '../components/IntegrationsTab';
+import EmailTemplatesTab from '../components/EmailTemplatesTab';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User, roles: ['super_admin', 'admin', 'manager', 'employee'] },
@@ -13,6 +14,7 @@ const TABS = [
   { id: 'organization', label: 'Organization', icon: Building2, roles: ['super_admin', 'admin'] },
   { id: 'security', label: 'Security', icon: Lock, roles: ['super_admin', 'admin'] },
   { id: 'integrations', label: 'Integrations', icon: Plug, roles: ['super_admin', 'admin'] },
+  { id: 'email-templates', label: 'Email Templates', icon: Mail, roles: ['super_admin', 'admin', 'manager'] },
   { id: 'roles', label: 'Role Access', icon: Shield, roles: ['super_admin'] },
 ];
 
@@ -71,6 +73,7 @@ export default function SettingsPage() {
           {activeTab === 'organization' && <OrganizationTab />}
           {activeTab === 'security' && <SecurityTab />}
           {activeTab === 'integrations' && <IntegrationsTab />}
+          {activeTab === 'email-templates' && <EmailTemplatesTab />}
           {activeTab === 'roles' && <RolesTab />}
         </div>
       </div>

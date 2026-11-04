@@ -28,7 +28,7 @@ const scopeOfWorkSchema = z.preprocess((value) => {
   return [];
 }, z.array(z.string().max(500)).optional());
 
-const quotationFields = {
+export const quotationFields = {
   templateId: quotationTemplateSchema.optional(),
   recipientName: optionalText(200),
   recipientAddress: optionalText(2000),
@@ -114,6 +114,7 @@ export const updateQuotationStatusSchema = z.object({
 });
 
 export const quotationsQuerySchema = z.object({
+  archived: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
   search: z.string().optional(),
   status: z.enum(QUOTATION_STATUS_LIST).optional(),
   client: z.string().optional(),
