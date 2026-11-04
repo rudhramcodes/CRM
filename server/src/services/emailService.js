@@ -522,9 +522,9 @@ export const renderClientOnboardingEmail = ({
   const { brandLabel, brandPhone, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
 
   const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
-  const resolvedWelcomeImageUrl = welcomeImageUrl || `${config.clientUrl}/welcome-banner.avif`;
-  const resolvedProjectImageUrl = projectImageUrl || `${config.clientUrl}/team-support.avif`;
-  const resolvedTeamImageUrl = teamImageUrl || `${config.clientUrl}/team-management.avif`;
+  const resolvedWelcomeImageUrl = welcomeImageUrl || `${config.clientUrl}/welcome-banner.jpg`;
+  const resolvedProjectImageUrl = projectImageUrl || `${config.clientUrl}/team-support.jpg`;
+  const resolvedTeamImageUrl = teamImageUrl || `${config.clientUrl}/team-management.jpg`;
   const resolvedPortalUrl = portalUrl || `${config.clientUrl}/portal/login`;
   const effectiveTopBannerUrl = topBannerUrl || resolvedPortalUrl;
   const effectiveHeroCtaUrl = heroCtaUrl || resolvedPortalUrl;
@@ -623,7 +623,7 @@ export const renderClientOnboardingEmail = ({
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:516px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;box-shadow:0 6px 20px rgba(0,0,0,0.06);">
             <tr>
               <td style="padding:0;background-color:#000000;line-height:0;font-size:0;">
-                <img src="${resolvedWelcomeImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='welcome-banner.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/welcome-banner.avif';}" alt="Welcome to Rudhram" width="516" style="width:100%;max-width:516px;height:auto;display:block;border:0;" class="fluid">
+                <img src="${resolvedWelcomeImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='welcome-banner.jpg';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/welcome-banner.jpg';}" alt="Welcome to Rudhram" width="516" style="width:100%;max-width:516px;height:auto;display:block;border:0;" class="fluid">
               </td>
             </tr>
           </table>
@@ -671,7 +671,7 @@ export const renderClientOnboardingEmail = ({
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;box-shadow:0 4px 14px rgba(0,0,0,0.06);background-color:#ffffff;">
                   <tr>
                     <td style="padding:0;line-height:0;font-size:0;">
-                      <img src="${resolvedProjectImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='team-support.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/team-support.avif';}" alt="Real-Time Project & Deliverable Tracking" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
+                      <img src="${resolvedProjectImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='team-support.jpg';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/team-support.jpg';}" alt="Real-Time Project & Deliverable Tracking" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
                     </td>
                   </tr>
                 </table>
@@ -735,7 +735,7 @@ export const renderClientOnboardingEmail = ({
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;box-shadow:0 4px 14px rgba(0,0,0,0.06);background-color:#ffffff;">
                   <tr>
                     <td style="padding:0;line-height:0;font-size:0;">
-                      <img src="${resolvedTeamImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='team-management.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/team-management.avif';}" alt="Dedicated Brand Team" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
+                      <img src="${resolvedTeamImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='team-management.jpg';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/team-management.jpg';}" alt="Dedicated Brand Team" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
                     </td>
                   </tr>
                 </table>
