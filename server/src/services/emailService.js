@@ -494,7 +494,7 @@ export const renderClientOnboardingEmail = ({
   projectImageUrl,
   teamImageUrl,
   logoUrl,
-  topBannerText = 'Welcome to Rudhram &bull; Your client portal is now active &rarr;',
+  topBannerText = 'Your client portal is now active',
   topBannerUrl,
   topBannerBg = '#8A5C2A',
   topBannerTextColor = '#ffffff',
@@ -505,11 +505,11 @@ export const renderClientOnboardingEmail = ({
   heroCtaText = 'Access Client Portal',
   heroCtaUrl,
   feature1Title = 'Real-Time Project & Deliverable Tracking',
-  feature1Body = 'Follow each phase of your project in real time. Review work-in-progress drafts, approve deliverables, and ensure timeline milestones are met without back-and-forth email chains.',
+  feature1Body = 'Follow each phase of your project in real time. Review work-in-progress drafts and ensure timeline milestones are met without back-and-forth email chains.',
   feature1CtaText = 'Explore Projects',
   feature1CtaUrl,
   feature2Title = 'Dedicated Brand Team & Direct Communication',
-  feature2Body = 'Work directly with your assigned account manager and creative brand leads. Schedule check-ins, request adjustments, and get rapid responses during business hours.',
+  feature2Body = 'Work directly with your assigned account manager. Schedule check-ins, request adjustments, and get rapid responses during business hours.',
   feature2CtaText = 'Contact Account Team',
   feature2CtaUrl,
   calloutTitle = 'Your Client Portal is Ready',
@@ -566,12 +566,16 @@ export const renderClientOnboardingEmail = ({
   body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
   @media only screen and (max-width: 620px) {
     .email-container { width: 100% !important; max-width: 100% !important; }
-    .fluid { max-width: 100% !important; height: auto !important; }
+    .fluid { width: 100% !important; max-width: 100% !important; height: auto !important; }
     .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
-    .stack-col { width: 100% !important; max-width: 100% !important; display: block !important; }
-    .stack-col-spacer { height: 20px !important; display: block !important; }
+    .stack-col { width: 100% !important; max-width: 100% !important; display: block !important; box-sizing: border-box !important; text-align: left !important; }
+    .stack-col-spacer { display: none !important; width: 0 !important; height: 0 !important; font-size: 0 !important; line-height: 0 !important; }
     .mobile-center { text-align: center !important; }
     .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
+    .mobile-full-width { width: 100% !important; max-width: 100% !important; }
+    .mobile-full-width table { width: 100% !important; max-width: 100% !important; }
+    .mobile-full-width img { width: 100% !important; max-width: 100% !important; height: auto !important; }
+    .mobile-img-bottom { margin-bottom: 20px !important; }
   }
 </style>
 </head>
@@ -587,10 +591,32 @@ export const renderClientOnboardingEmail = ({
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
-          <a href="${effectiveTopBannerUrl}" target="_blank" style="text-decoration:none;color:${topBannerTextColor};font-family:${SANS_FONT};font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:1.4;display:inline-block;">
-            ${topBannerText}
-          </a>
-        </td>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+    <tr>
+      <td valign="middle" style="padding-right:6px;">
+        <a
+          href="${effectiveTopBannerUrl}"
+          target="_blank"
+          style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
+        >
+          ${topBannerText}
+        </a>
+      </td>
+
+      <td valign="bottom" style="line-height:0;">
+        <a
+          href="${effectiveTopBannerUrl}"
+          target="_blank"
+          style="display:block;color:${topBannerTextColor};text-decoration:none;"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </a>
+      </td>
+    </tr>
+  </table>
+</td>
       </tr>
     </table>
 
@@ -667,19 +693,15 @@ export const renderClientOnboardingEmail = ({
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <!-- Left: Framed Image (client/public/team-support.jpg) -->
-              <td class="stack-col" width="230" valign="top" style="width:230px;vertical-align:top;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;background-color:#ffffff;">
+              <td class="stack-col mobile-full-width mobile-img-bottom" width="230" valign="top" style="width:230px;vertical-align:top;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="mobile-full-width" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;background-color:#ffffff;">
                   <tr>
                     <td style="padding:0;line-height:0;font-size:0;">
                       <img src="${resolvedProjectImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/team-support.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='team-support.jpg';}" alt="Real-Time Project & Deliverable Tracking" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
                     </td>
                   </tr>
                 </table>
-                <div style="margin-top:10px;text-align:center;">
-                  <span style="display:inline-block;background-color:#f5f3ee;border:1px solid #ebe6dd;border-radius:14px;padding:3px 10px;font-family:${SANS_FONT};font-size:10.5px;font-weight:600;color:#5a544a;">
-                    Portal ID: ${clientId} &bull; Milestones Active
-                  </span>
-                </div>
+               
               </td>
               <!-- Spacer -->
               <td class="stack-col-spacer" width="26" style="width:26px;font-size:0;line-height:0;">&nbsp;</td>
@@ -710,14 +732,26 @@ export const renderClientOnboardingEmail = ({
       </tr>
     </table>
 
-    <!-- 2-Column Section 2: Left Content, Right Image (team-management.jpg - Alternating!) -->
+    <!-- 2-Column Section 2: Image Right on Desktop, Image Top on Mobile -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td style="padding:34px 32px;" class="mobile-padding">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="rtl">
             <tr>
-              <!-- Left: Content -->
-              <td class="stack-col" width="260" valign="middle" style="width:260px;vertical-align:middle;">
+              <!-- Right on Desktop, Top on Mobile: Framed Image -->
+              <td class="stack-col mobile-full-width mobile-img-bottom" width="230" valign="top" style="width:230px;vertical-align:top;" dir="ltr">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="mobile-full-width" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;background-color:#ffffff;">
+                  <tr>
+                    <td style="padding:0;line-height:0;font-size:0;">
+                      <img src="${resolvedTeamImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775842/team-management.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='team-management.jpg';}" alt="Dedicated Brand Team" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <!-- Spacer -->
+              <td class="stack-col-spacer" width="26" style="width:26px;font-size:0;line-height:0;" dir="ltr">&nbsp;</td>
+              <!-- Left on Desktop, Bottom on Mobile: Content -->
+              <td class="stack-col" width="260" valign="middle" style="width:260px;vertical-align:middle;" dir="ltr">
                 <h3 style="margin:0 0 10px;font-family:${SANS_FONT};font-size:17px;font-weight:700;color:#191919;line-height:1.35;letter-spacing:-0.2px;">
                   ${feature2Title}
                 </h3>
@@ -727,23 +761,6 @@ export const renderClientOnboardingEmail = ({
                 <a href="${effectiveFeature2CtaUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:12.5px;font-weight:600;text-decoration:none;padding:10px 20px;border-radius:7px;">
                   ${feature2CtaText}
                 </a>
-              </td>
-              <!-- Spacer -->
-              <td class="stack-col-spacer" width="26" style="width:26px;font-size:0;line-height:0;">&nbsp;</td>
-              <!-- Right: Framed Image (client/public/team-management.jpg) -->
-              <td class="stack-col" width="230" valign="top" style="width:230px;vertical-align:top;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;background-color:#ffffff;">
-                  <tr>
-                    <td style="padding:0;line-height:0;font-size:0;">
-                      <img src="${resolvedTeamImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775842/team-management.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='team-management.jpg';}" alt="Dedicated Brand Team" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
-                    </td>
-                  </tr>
-                </table>
-                <div style="margin-top:10px;text-align:center;">
-                  <span style="display:inline-block;background-color:#f5f3ee;border:1px solid #ebe6dd;border-radius:14px;padding:3px 10px;font-family:${SANS_FONT};font-size:10.5px;font-weight:600;color:#5a544a;">
-                    ${brandLabel} Lead: ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : rePhoneFormatted}
-                  </span>
-                </div>
               </td>
             </tr>
           </table>
@@ -766,8 +783,8 @@ export const renderClientOnboardingEmail = ({
               ${calloutBody}
             </p>
             <div style="margin:0 auto 18px;">
-              <span style="display:inline-block;background-color:#ffffff;border:1px solid #dedad1;border-radius:24px;padding:6px 16px;font-family:${SANS_FONT};font-size:12px;color:#2c2c2c;">
-                <span style="color:#8a8a8a;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;margin-right:4px;">Assigned Brand</span>
+              <span style="display:inline-block;background-color:#ffffff;border:1px solid #dedad1;border-radius:24px;padding:8px 16px;font-family:${SANS_FONT};font-size:12px;color:#2c2c2c;">
+                <span style="color:#8a8a8a;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;margin-right:4px;">Assigned Brand</span><br/>
                 <strong>${brandLabel}</strong> &nbsp;&bull;&nbsp;
                 <span style="color:#15803d;font-weight:600;">Verified Access</span>
               </span>
@@ -812,13 +829,6 @@ export const renderClientOnboardingEmail = ({
           </td>
         </tr>
       </table>
-
-      <!-- Navigation & Unsubscribe Links -->
-      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
-        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Manage preferences</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
-        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Unsubscribe</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
-        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Client Portal</a>
-      </p>
 
       <!-- Legal & Support Info -->
       <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
@@ -900,7 +910,7 @@ export const renderClientCredentialsEmail = ({ clientName = 'Valued Client', ema
 
   <!-- Main White Card Container -->
   <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
-    
+    udate: cloudinary images added
     <!-- Top Announcement Strip -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr>
