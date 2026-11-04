@@ -236,7 +236,7 @@ export default function Header({ onMobileMenuOpen }) {
               setShowNotifDropdown(!showNotifDropdown);
             }}
             className={cn(
-              'relative p-1.5 sm:p-2.5 rounded-xl transition-all duration-150',
+              'relative p-1.5 cursor-pointer sm:p-2.5 rounded-xl transition-all duration-150',
               showNotifDropdown
                 ? 'bg-zinc-100 text-primary-900'
                 : unreadCount > 0

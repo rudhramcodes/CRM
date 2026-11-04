@@ -24,7 +24,7 @@ const emails = [
   {
     id: 'client-onboarding',
     category: 'Client & Portal',
-    badge: 'Luxury Template',
+    badge: 'Apollo Editorial',
     title: 'Client Welcome & Onboarding',
     recipient: 'Client (client@innovatex.com)',
     trigger: 'When a lead is converted to a client or a new client is created in CRM with onboarding enabled.',
@@ -38,14 +38,17 @@ const emails = [
     }),
     editableFields: [
       { label: 'Subject', value: 'Welcome to Rudhram, {clientName}' },
-      { label: 'Rudhram Enterprises (Default All Mails)', value: '+91 8655695623 & support@rudhramenterprises.com' },
-      { label: 'Brand Contact (Damrru)', value: '+91 8655695629 & damrru@rudhramenterprises.com' },
-      { label: 'Brand Emails Configured', value: 'Damrru: damrru@rudhramenterprises.com | Panigrahna: panigrahna@rudhramenterprises.com | Aghori: aghhori@rudhramenterprises.com | House of Joggi: houseofjoogi@rudhramenterprises.com | Kalyannam: kalyannam@rudhramenterprises.com | Kapaalik: kapaalik@rudhramenterprises.com | Tandavs: tandavs@rudhramenterprises.com' },
-      { label: 'Brand Phones Configured', value: 'RE: 8655695623 | AG: 8655695624 | PG: 8655695625 | HG: 8655695626 | KL: 8655695627 | TD: 8655695628 | DM: 8655695629 | KP: -' },
-      { label: 'Greeting', value: 'Dear {clientName},' },
-      { label: 'Table Fields', value: 'Client ID, Company, Brand' },
-      { label: 'Direct Support Box', value: 'Rudhram Enterprises (+91 8655695623 / support@rudhramenterprises.com) & Damrru (+91 8655695629 / damrru@rudhramenterprises.com)' }
-    ]
+      { label: 'Design Style', value: 'Apollo-style Editorial (Stone & Ivory card, #8A5C2A bronze pill CTAs)' },
+      { label: 'Top Announcement Banner', value: '#8A5C2A Bronze Bar (White Text) — Welcome to Rudhram • Your client portal is now active →' },
+      { label: 'Button Styling', value: 'Background: #8A5C2A | Text: #FFFFFF | Radius: 7px' },
+      { label: 'Brand Logo', value: 'client/public/rudhram-logo.png' },
+      { label: 'Hero Image', value: 'client/public/welcome-banner.avif' },
+      { label: 'Hero Headline', value: 'Welcome to Rudhram, {clientName}' },
+      { label: 'Feature 1 (Left Image / Right Copy)', value: 'Real-Time Project & Deliverable Tracking (Image: client/public/team-support.avif)' },
+      { label: 'Feature 2 (Left Copy / Right Image)', value: 'Dedicated Brand Team & Direct Communication (Image: client/public/team-management.avif)' },
+      { label: 'Highlight Callout Card', value: 'Your Client Portal is Ready ({clientId} • {companyName})' },
+      { label: 'Assigned Brand Support', value: 'Damrru (+91 8655695629 & damrru@rudhramenterprises.com)' }
+    ] 
   },
   {
     id: 'client-credentials',
