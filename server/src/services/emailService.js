@@ -484,14 +484,59 @@ export const getBrandSupportInfo = (brand) => {
   };
 };
 
-export const renderClientOnboardingEmail = ({ clientName, companyName, clientId, brand }) => {
+export const renderClientOnboardingEmail = ({
+  clientName = 'Valued Client',
+  companyName = 'Your Organization',
+  clientId = 'C-00249',
+  brand = 'damrru',
+  portalUrl = `${config.clientUrl}/portal/login`,
+  welcomeImageUrl,
+  projectImageUrl,
+  teamImageUrl,
+  logoUrl,
+  topBannerText = 'Welcome to Rudhram &bull; Your client portal is now active &rarr;',
+  topBannerUrl,
+  topBannerBg = '#8A5C2A',
+  topBannerTextColor = '#ffffff',
+  buttonBg = '#8A5C2A',
+  buttonTextColor = '#ffffff',
+  heroHeadline,
+  heroBody,
+  heroCtaText = 'Access Client Portal',
+  heroCtaUrl,
+  feature1Title = 'Real-Time Project & Deliverable Tracking',
+  feature1Body = 'Follow each phase of your project in real time. Review work-in-progress drafts, approve deliverables, and ensure timeline milestones are met without back-and-forth email chains.',
+  feature1CtaText = 'Explore Projects',
+  feature1CtaUrl,
+  feature2Title = 'Dedicated Brand Team & Direct Communication',
+  feature2Body = 'Work directly with your assigned account manager and creative brand leads. Schedule check-ins, request adjustments, and get rapid responses during business hours.',
+  feature2CtaText = 'Contact Account Team',
+  feature2CtaUrl,
+  calloutTitle = 'Your Client Portal is Ready',
+  calloutSubtitle,
+  calloutBody = 'Your secure client workspace gives you centralized control over invoices, payments, project timelines, and real-time deliverables. Sign in now to get started.',
+  calloutCtaText = 'Open Client Portal &rarr;',
+  calloutCtaUrl,
+  calloutFinePrint = '*For your security, you will be prompted to set a new password upon your first sign-in. Never share your credentials with unauthorized third parties.',
+} = {}) => {
   const { brandLabel, brandPhone, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
-  const brandPhoneLink = brandPhone === '-'
-    ? '<span style="color:#8a7560;">-</span>'
-    : `<a href="tel:+91${brandPhone}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${brandPhoneFormatted}</a>`;
-  const rePhoneLink = `<a href="tel:+91${RE_PHONE}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${rePhoneFormatted}</a>`;
-  const reEmailLink = `<a href="mailto:${reEmail}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${reEmail}</a>`;
-  const brandEmailLink = `<a href="mailto:${brandEmail}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${brandEmail}</a>`;
+
+  const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
+  const resolvedWelcomeImageUrl = welcomeImageUrl || `${config.clientUrl}/welcome-banner.avif`;
+  const resolvedProjectImageUrl = projectImageUrl || `${config.clientUrl}/team-support.avif`;
+  const resolvedTeamImageUrl = teamImageUrl || `${config.clientUrl}/team-management.avif`;
+  const resolvedPortalUrl = portalUrl || `${config.clientUrl}/portal/login`;
+  const effectiveTopBannerUrl = topBannerUrl || resolvedPortalUrl;
+  const effectiveHeroCtaUrl = heroCtaUrl || resolvedPortalUrl;
+  const effectiveFeature1CtaUrl = feature1CtaUrl || resolvedPortalUrl;
+  const effectiveFeature2CtaUrl = feature2CtaUrl || (brandEmail ? `mailto:${brandEmail}` : `mailto:${reEmail}`);
+  const effectiveCalloutCtaUrl = calloutCtaUrl || resolvedPortalUrl;
+
+  const resolvedHeadline = heroHeadline || `Welcome to Rudhram, ${clientName}`;
+  const resolvedHeroBody = heroBody || `We are thrilled to welcome ${companyName ? `<strong>${companyName}</strong>` : 'you'} to Rudhram. Your dedicated client portal has been initialized, giving you centralized access to track project milestones, review deliverables, collaborate with your creative team, and manage invoices seamlessly.`;
+  const resolvedCalloutSubtitle = calloutSubtitle || `Client ID: <strong style="color:#191919;">${clientId}</strong> &bull; <strong style="color:#191919;">${companyName}</strong>`;
+
+  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -499,10 +544,12 @@ export const renderClientOnboardingEmail = ({ clientName, companyName, clientId,
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<meta name="supported-color-schemes" content="light">
+<meta name="supported-color-scheme" content="light">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Welcome to Rudhram</title>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Welcome to Rudhram, ${clientName}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!--[if mso]>
 <noscript>
 <xml>
@@ -516,103 +563,278 @@ export const renderClientOnboardingEmail = ({ clientName, companyName, clientId,
   body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
   table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
   img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
-  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
   @media only screen and (max-width: 620px) {
     .email-container { width: 100% !important; max-width: 100% !important; }
-    .fluid { max-width: 100% !important; height: auto !important; margin-left: auto !important; margin-right: auto !important; }
-    .mobile-padding { padding-left: 24px !important; padding-right: 24px !important; }
-    .details-table td { padding: 12px 16px !important; font-size: 12px !important; }
+    .fluid { max-width: 100% !important; height: auto !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .stack-col { width: 100% !important; max-width: 100% !important; display: block !important; }
+    .stack-col-spacer { height: 20px !important; display: block !important; }
+    .mobile-center { text-align: center !important; }
+    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:${CREAM};font-family:${EMAIL_BODY_FONT};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};">
+<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
 <tr><td align="center" style="padding:40px 16px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-container" style="max-width:600px;width:100%;">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
 
-<tr><td align="center" style="padding-bottom:32px;">
-  <a href="https://rudhramenterprises.com" target="_blank" style="text-decoration:none;">
-    <img src="https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png" alt="Rudhram" width="160" style="width:160px;max-width:160px;height:auto;display:block;border:0;" class="fluid">
-  </a>
-</td></tr>
+  <!-- Main White Card Container -->
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;box-shadow:0 8px 30px rgba(0,0,0,0.04);">
+    
+    <!-- Top Announcement Strip (Apollo-style dark green strip) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
+          <a href="${effectiveTopBannerUrl}" target="_blank" style="text-decoration:none;color:${topBannerTextColor};font-family:${SANS_FONT};font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:1.4;display:inline-block;">
+            ${topBannerText}
+          </a>
+        </td>
+      </tr>
+    </table>
 
-<tr><td style="background:#ffffff;border:1px solid ${LIGHT_GOLD};border-radius:20px;overflow:hidden;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="height:4px;background:linear-gradient(90deg,${GOLD},${LIGHT_GOLD},${GOLD});font-size:0;line-height:0;">&nbsp;</td>
-  </tr></table>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:44px 44px 36px;" class="mobile-padding">
-    <tr><td>
-      <h1 style="margin:0 0 6px;font-family:${EMAIL_FONT};font-size:28px;font-weight:700;color:${DARK_BROWN};line-height:1.2;">Welcome to Rudhram</h1>
-      <p style="margin:0 0 28px;font-family:${EMAIL_FONT};font-size:15px;color:${GOLD};line-height:1.5;">Your partnership begins here</p>
-      <p style="margin:0 0 20px;font-family:${EMAIL_BODY_FONT};font-size:15px;color:${DARK_BROWN};line-height:1.75;">Dear <strong style="font-weight:600;">${clientName}</strong>,</p>
-      <p style="margin:0 0 20px;font-family:${EMAIL_BODY_FONT};font-size:15px;color:${DARK_BROWN};line-height:1.75;">We are delighted to welcome you to Rudhram. Your account has been created and you now have access to our client portal where you can track projects, review invoices, and collaborate with our team.</p>
-      
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;border:1px solid ${LIGHT_GOLD};border-radius:14px;overflow:hidden;" class="details-table">
-        <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Your Account Details</td></tr>
-        <tr><td style="padding:0;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:150px;">Client ID</td>
-              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${clientId}</td>
-            </tr>
-            <tr>
-              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Company</td>
-              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${companyName}</td>
-            </tr>
-            <tr>
-              <td style="padding:14px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Brand</td>
-              <td style="padding:14px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${brandLabel}</td>
-            </tr>
-          </table>
-        </td></tr>
-      </table>
+    <!-- Brand Header (Centered Rudhram Logo) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:34px 24px 20px;">
+          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
+          </a>
+        </td>
+      </tr>
+    </table>
 
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;border:1px solid ${LIGHT_GOLD};border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:14px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Next Steps</td></tr>
-        <tr><td style="padding:18px 22px;">
-          <p style="margin:0 0 12px;font-family:${EMAIL_BODY_FONT};font-size:14px;color:${DARK_BROWN};line-height:1.7;">Your client portal account has been created. You will receive your <strong>login credentials</strong> shortly via a separate email.</p>
-          <p style="margin:0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:${DARK_BROWN};line-height:1.7;">For your security, you will be prompted to change your password after your first login.</p>
-        </td></tr>
-      </table>
+    <!-- Hero Headline -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
+          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
+            ${resolvedHeadline}
+          </h1>
+        </td>
+      </tr>
+    </table>
 
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;border:1px solid ${LIGHT_GOLD};border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:16px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:14px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Direct Support & Contact</td></tr>
-        <tr><td style="padding:18px 22px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <!-- Hero Image (Welcome Banner: client/public/welcome-banner.jpg) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px;" class="mobile-padding">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:516px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;box-shadow:0 6px 20px rgba(0,0,0,0.06);">
             <tr>
-              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:170px;vertical-align:top;">Rudhram Enterprises</td>
-              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};">
-                ${rePhoneLink} &nbsp;&middot;&nbsp; ${reEmailLink}
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;vertical-align:top;">${brandLabel}</td>
-              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};">
-                ${brandPhoneLink} &nbsp;&middot;&nbsp; ${brandEmailLink}
+              <td style="padding:0;background-color:#000000;line-height:0;font-size:0;">
+                <img src="${resolvedWelcomeImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='welcome-banner.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/welcome-banner.avif';}" alt="Welcome to Rudhram" width="516" style="width:100%;max-width:516px;height:auto;display:block;border:0;" class="fluid">
               </td>
             </tr>
           </table>
-          <p style="margin:12px 0 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;line-height:1.6;">
-            Feel free to contact us via phone or email during business hours, or reach out through your client portal.
+        </td>
+      </tr>
+    </table>
+
+    <!-- Hero Description & Primary CTA Button -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:24px 32px 34px;" class="mobile-padding">
+          <p style="margin:0 auto 24px;max-width:480px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
+            ${resolvedHeroBody}
           </p>
-        </td></tr>
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;">
+            <tr>
+              <td align="center">
+                <a href="${effectiveHeroCtaUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
+                  ${heroCtaText}
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- 2-Column Section 1: Left Image (team-support.jpg), Right Content -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:34px 32px;" class="mobile-padding">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <!-- Left: Framed Image (client/public/team-support.jpg) -->
+              <td class="stack-col" width="230" valign="top" style="width:230px;vertical-align:top;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;box-shadow:0 4px 14px rgba(0,0,0,0.06);background-color:#ffffff;">
+                  <tr>
+                    <td style="padding:0;line-height:0;font-size:0;">
+                      <img src="${resolvedProjectImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='team-support.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/team-support.avif';}" alt="Real-Time Project & Deliverable Tracking" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
+                    </td>
+                  </tr>
+                </table>
+                <div style="margin-top:10px;text-align:center;">
+                  <span style="display:inline-block;background-color:#f5f3ee;border:1px solid #ebe6dd;border-radius:14px;padding:3px 10px;font-family:${SANS_FONT};font-size:10.5px;font-weight:600;color:#5a544a;">
+                    Portal ID: ${clientId} &bull; Milestones Active
+                  </span>
+                </div>
+              </td>
+              <!-- Spacer -->
+              <td class="stack-col-spacer" width="26" style="width:26px;font-size:0;line-height:0;">&nbsp;</td>
+              <!-- Right: Content -->
+              <td class="stack-col" width="260" valign="middle" style="width:260px;vertical-align:middle;">
+                <h3 style="margin:0 0 10px;font-family:${SANS_FONT};font-size:17px;font-weight:700;color:#191919;line-height:1.35;letter-spacing:-0.2px;">
+                  ${feature1Title}
+                </h3>
+                <p style="margin:0 0 18px;font-family:${SANS_FONT};font-size:13px;color:#555555;line-height:1.6;">
+                  ${feature1Body}
+                </p>
+                <a href="${effectiveFeature1CtaUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:12.5px;font-weight:600;text-decoration:none;padding:10px 20px;border-radius:7px;">
+                  ${feature1CtaText}
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- 2-Column Section 2: Left Content, Right Image (team-management.jpg - Alternating!) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:34px 32px;" class="mobile-padding">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <!-- Left: Content -->
+              <td class="stack-col" width="260" valign="middle" style="width:260px;vertical-align:middle;">
+                <h3 style="margin:0 0 10px;font-family:${SANS_FONT};font-size:17px;font-weight:700;color:#191919;line-height:1.35;letter-spacing:-0.2px;">
+                  ${feature2Title}
+                </h3>
+                <p style="margin:0 0 18px;font-family:${SANS_FONT};font-size:13px;color:#555555;line-height:1.6;">
+                  ${feature2Body}
+                </p>
+                <a href="${effectiveFeature2CtaUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:12.5px;font-weight:600;text-decoration:none;padding:10px 20px;border-radius:7px;">
+                  ${feature2CtaText}
+                </a>
+              </td>
+              <!-- Spacer -->
+              <td class="stack-col-spacer" width="26" style="width:26px;font-size:0;line-height:0;">&nbsp;</td>
+              <!-- Right: Framed Image (client/public/team-management.jpg) -->
+              <td class="stack-col" width="230" valign="top" style="width:230px;vertical-align:top;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;box-shadow:0 4px 14px rgba(0,0,0,0.06);background-color:#ffffff;">
+                  <tr>
+                    <td style="padding:0;line-height:0;font-size:0;">
+                      <img src="${resolvedTeamImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='team-management.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/team-management.avif';}" alt="Dedicated Brand Team" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
+                    </td>
+                  </tr>
+                </table>
+                <div style="margin-top:10px;text-align:center;">
+                  <span style="display:inline-block;background-color:#f5f3ee;border:1px solid #ebe6dd;border-radius:14px;padding:3px 10px;font-family:${SANS_FONT};font-size:10.5px;font-weight:600;color:#5a544a;">
+                    ${brandLabel} Lead: ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : rePhoneFormatted}
+                  </span>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Highlight Callout Card (Apollo HubSpot Starter style) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px 36px;" class="mobile-padding">
+          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:32px 24px;text-align:center;">
+            <h2 style="margin:0 0 6px;font-family:${SANS_FONT};font-size:19px;font-weight:700;color:#191919;line-height:1.3;letter-spacing:-0.2px;">
+              ${calloutTitle}
+            </h2>
+            <p style="margin:0 0 14px;font-family:${SANS_FONT};font-size:13px;color:#666666;line-height:1.4;">
+              ${resolvedCalloutSubtitle}
+            </p>
+            <p style="margin:0 auto 16px;max-width:420px;font-family:${SANS_FONT};font-size:13px;color:#555555;line-height:1.6;">
+              ${calloutBody}
+            </p>
+            <div style="margin:0 auto 18px;">
+              <span style="display:inline-block;background-color:#ffffff;border:1px solid #dedad1;border-radius:24px;padding:6px 16px;font-family:${SANS_FONT};font-size:12px;color:#2c2c2c;">
+                <span style="color:#8a8a8a;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;margin-right:4px;">Assigned Brand</span>
+                <strong>${brandLabel}</strong> &nbsp;&bull;&nbsp;
+                <span style="color:#15803d;font-weight:600;">Verified Access</span>
+              </span>
+            </div>
+            <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;">
+              <tr>
+                <td align="center">
+                  <a href="${effectiveCalloutCtaUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13px;font-weight:600;text-decoration:none;padding:11px 26px;border-radius:7px;">
+                    ${calloutCtaText}
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:16px auto 0;max-width:440px;font-family:${SANS_FONT};font-size:10px;line-height:1.5;color:#888888;">
+              ${calloutFinePrint}
+            </p>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+  <!-- End of Main White Card -->
+
+  <!-- Outer Footer Section (Apollo-style outside footer) -->
+  <tr>
+    <td align="center" style="padding:32px 20px 0;">
+      
+      <!-- Social Media Icons (Rounded Outlined Squares) -->
+      <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 16px;">
+        <tr>
+          <td align="center">
+            <a href="https://linkedin.com" target="_blank" style="display:inline-block;width:32px;height:32px;line-height:30px;border:1px solid #c9c6bc;border-radius:6px;text-align:center;text-decoration:none;color:#222222;font-family:${SANS_FONT};font-size:12px;font-weight:700;margin:0 3px;vertical-align:middle;box-sizing:border-box;background-color:#ffffff;">
+              in
+            </a>
+            <a href="https://x.com" target="_blank" style="display:inline-block;width:32px;height:32px;line-height:30px;border:1px solid #c9c6bc;border-radius:6px;text-align:center;text-decoration:none;color:#222222;font-family:${SANS_FONT};font-size:12px;font-weight:700;margin:0 3px;vertical-align:middle;box-sizing:border-box;background-color:#ffffff;">
+              &#120143;
+            </a>
+            <a href="https://instagram.com" target="_blank" style="display:inline-block;width:32px;height:32px;line-height:30px;border:1px solid #c9c6bc;border-radius:6px;text-align:center;text-decoration:none;color:#222222;font-family:${SANS_FONT};font-size:11px;font-weight:700;margin:0 3px;vertical-align:middle;box-sizing:border-box;background-color:#ffffff;">
+              IG
+            </a>
+          </td>
+        </tr>
       </table>
 
-      <p style="margin:24px 0 0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:#8a7560;line-height:1.7;">If you have any questions, your dedicated account manager is here to help. Simply reply to this email, call our direct numbers, or reach out through the portal.</p>
-    </td></tr>
-  </table>
-</td></tr>
+      <!-- Navigation & Unsubscribe Links -->
+      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
+        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Manage preferences</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Unsubscribe</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Client Portal</a>
+      </p>
 
-<tr><td align="center" style="padding:32px 16px 0;">
-  <p style="margin:0;font-family:${EMAIL_FONT};font-size:13px;color:${GOLD};line-height:1.6;letter-spacing:0.5px;">RUDHRAM</p>
-  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Leading What's Next</p>
-  <p style="margin:6px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">
-    RE: <a href="tel:+91${RE_PHONE}" style="color:#a89880;text-decoration:none;">${rePhoneFormatted}</a> &middot; <a href="mailto:${reEmail}" style="color:#a89880;text-decoration:none;">${reEmail}</a>
-  </p>
-  <p style="margin:4px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">
-    ${brandLabel}: ${brandPhone !== '-' ? `<a href="tel:+91${brandPhone}" style="color:#a89880;text-decoration:none;">${brandPhoneFormatted}</a> &middot; ` : ''}<a href="mailto:${brandEmail}" style="color:#a89880;text-decoration:none;">${brandEmail}</a>
-  </p>
-</td></tr>
+      <!-- Legal & Support Info -->
+      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
+        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
+        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
+      </p>
+
+      <!-- Bottom Brand Mark -->
+      <div align="center" style="margin-top:20px;">
+        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
+        </a>
+      </div>
+
+    </td>
+  </tr>
 
 </table>
 </td></tr>
@@ -629,14 +851,13 @@ export const sendClientOnboardingEmail = async (email, { clientName, companyName
   });
 };
 
-export const renderClientCredentialsEmail = ({ clientName, email, password, portalUrl, brand }) => {
+export const renderClientCredentialsEmail = ({ clientName = 'Valued Client', email, password, portalUrl = `${config.clientUrl}/portal/login`, brand = 'damrru', logoUrl, topBannerText = 'Your client portal login credentials are ready &rarr;', topBannerUrl, topBannerBg = '#8A5C2A', topBannerTextColor = '#ffffff', buttonBg = '#8A5C2A', buttonTextColor = '#ffffff' } = {}) => {
   const { brandLabel, brandPhone, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
-  const brandPhoneLink = brandPhone === '-'
-    ? '<span style="color:#8a7560;">-</span>'
-    : `<a href="tel:+91${brandPhone}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${brandPhoneFormatted}</a>`;
-  const rePhoneLink = `<a href="tel:+91${RE_PHONE}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${rePhoneFormatted}</a>`;
-  const reEmailLink = `<a href="mailto:${reEmail}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${reEmail}</a>`;
-  const brandEmailLink = `<a href="mailto:${brandEmail}" style="color:${DARK_BROWN};font-weight:600;text-decoration:none;">${brandEmail}</a>`;
+
+  const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
+  const resolvedPortalUrl = portalUrl || `${config.clientUrl}/portal/login`;
+  const effectiveTopBannerUrl = topBannerUrl || resolvedPortalUrl;
+  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -644,111 +865,166 @@ export const renderClientCredentialsEmail = ({ clientName, email, password, port
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<meta name="supported-color-schemes" content="light">
+<meta name="supported-color-scheme" content="light">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Your Rudhram Portal Credentials</title>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Your Rudhram Portal Login Credentials</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
 <style>
   body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
   table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
   img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
-  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
   @media only screen and (max-width: 620px) {
     .email-container { width: 100% !important; max-width: 100% !important; }
-    .fluid { max-width: 100% !important; height: auto !important; margin-left: auto !important; margin-right: auto !important; }
-    .mobile-padding { padding-left: 24px !important; padding-right: 24px !important; }
-    .credentials-table td { padding: 12px 16px !important; font-size: 12px !important; }
+    .fluid { max-width: 100% !important; height: auto !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:${CREAM};font-family:${EMAIL_BODY_FONT};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};">
+<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
 <tr><td align="center" style="padding:40px 16px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-container" style="max-width:600px;width:100%;">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
 
-<tr><td align="center" style="padding-bottom:32px;">
-  <a href="https://rudhramenterprises.com" target="_blank" style="text-decoration:none;">
-    <img src="https://res.cloudinary.com/dvsrgdyi7/image/upload/v1784621259/rudhram-logo.png" alt="Rudhram" width="160" style="width:160px;max-width:160px;height:auto;display:block;border:0;" class="fluid">
-  </a>
-</td></tr>
+  <!-- Main White Card Container -->
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;box-shadow:0 8px 30px rgba(0,0,0,0.04);">
+    
+    <!-- Top Announcement Strip -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
+          <a href="${effectiveTopBannerUrl}" target="_blank" style="text-decoration:none;color:${topBannerTextColor};font-family:${SANS_FONT};font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:1.4;display:inline-block;">
+            ${topBannerText}
+          </a>
+        </td>
+      </tr>
+    </table>
 
-<tr><td style="background:#ffffff;border:1px solid ${LIGHT_GOLD};border-radius:20px;overflow:hidden;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="height:4px;background:linear-gradient(90deg,${GOLD},${LIGHT_GOLD},${GOLD});font-size:0;line-height:0;">&nbsp;</td>
-  </tr></table>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:44px 44px 36px;" class="mobile-padding">
-    <tr><td>
-      <h1 style="margin:0 0 6px;font-family:${EMAIL_FONT};font-size:28px;font-weight:700;color:${DARK_BROWN};line-height:1.2;">Your Portal Credentials</h1>
-      <p style="margin:0 0 28px;font-family:${EMAIL_FONT};font-size:15px;color:${GOLD};line-height:1.5;">Login details for your client portal</p>
-      <p style="margin:0 0 20px;font-family:${EMAIL_BODY_FONT};font-size:15px;color:${DARK_BROWN};line-height:1.75;">Dear <strong style="font-weight:600;">${clientName}</strong>,</p>
-      <p style="margin:0 0 20px;font-family:${EMAIL_BODY_FONT};font-size:15px;color:${DARK_BROWN};line-height:1.75;">Your client portal account is ready. Use the credentials below to sign in and access your projects, invoices, and meetings.</p>
-      
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;border:1px solid ${LIGHT_GOLD};border-radius:14px;overflow:hidden;" class="credentials-table">
-        <tr><td style="padding:18px 22px;background:${CREAM};font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Your Login Details</td></tr>
-        <tr><td style="padding:0;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:120px;">Email</td>
-              <td style="padding:14px 22px;border-bottom:1px solid #f0ebe0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;">${email}</td>
-            </tr>
-            <tr>
-              <td style="padding:14px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;">Password</td>
-              <td style="padding:14px 22px;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};text-align:right;font-family:monospace;letter-spacing:1px;">${password}</td>
-            </tr>
-          </table>
-        </td></tr>
-      </table>
+    <!-- Brand Header (Centered Rudhram Logo) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:34px 24px 20px;">
+          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
+          </a>
+        </td>
+      </tr>
+    </table>
 
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 0;">
-        <tr><td align="center" style="background:${DARK_BROWN};border-radius:12px;">
-          <a href="${portalUrl}" target="_blank" style="display:inline-block;padding:15px 40px;font-family:${EMAIL_FONT};font-size:15px;font-weight:700;color:${CREAM};text-decoration:none;letter-spacing:0.3px;">Sign In to Portal</a>
-        </td></tr>
-      </table>
+    <!-- Hero Headline -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
+          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
+            Your Client Portal Credentials
+          </h1>
+        </td>
+      </tr>
+    </table>
 
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 0;border:1px solid #fecaca;border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:16px 20px;background:#fef2f2;">
-          <p style="margin:0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#991b1b;line-height:1.6;">
-            <strong>Important:</strong> For your security, please change your password after your first login. Go to <strong>Settings &rarr; Change Password</strong> in the portal.
+    <!-- Hero Description & Credentials Box -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px 34px;" class="mobile-padding">
+          <p style="margin:0 0 20px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
+            Dear <strong style="color:#191919;">${clientName}</strong>,<br>Your secure client portal account has been activated. Use your assigned credentials below to sign in.
           </p>
-        </td></tr>
-      </table>
-
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;border:1px solid ${LIGHT_GOLD};border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:14px 18px;background:${CREAM};font-family:${EMAIL_FONT};font-size:13px;font-weight:700;color:${DARK_BROWN};border-bottom:1px solid ${LIGHT_GOLD};">Need Assistance? Direct Support</td></tr>
-        <tr><td style="padding:14px 18px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          
+          <!-- Credentials Card Table -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;border:1px solid #ebe6dd;border-radius:12px;overflow:hidden;background-color:#faf9f6;">
+            <tr><td style="padding:14px 18px;background-color:#f3efe6;border-bottom:1px solid #ebe6dd;font-family:${SANS_FONT};font-size:13px;font-weight:700;color:#191919;" colspan="2">Secure Portal Login Access</td></tr>
             <tr>
-              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;width:170px;vertical-align:top;">Rudhram Enterprises:</td>
-              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};">
-                ${rePhoneLink} &nbsp;&middot;&nbsp; ${reEmailLink}
-              </td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;width:110px;">Email / ID</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${email}</td>
             </tr>
             <tr>
-              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;color:#8a7560;vertical-align:top;">${brandLabel}:</td>
-              <td style="padding:6px 0;font-family:${EMAIL_BODY_FONT};font-size:13px;font-weight:600;color:${DARK_BROWN};">
-                ${brandPhoneLink} &nbsp;&middot;&nbsp; ${brandEmailLink}
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:13px;color:#666666;">Password</td>
+              <td style="padding:14px 18px;font-family:monospace;font-size:14px;font-weight:700;color:#191919;text-align:right;letter-spacing:1px;">${password}</td>
+            </tr>
+          </table>
+
+          <!-- CTA Button -->
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:24px auto 10px;">
+            <tr>
+              <td align="center">
+                <a href="${resolvedPortalUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
+                  Sign In to Portal &rarr;
+                </a>
               </td>
             </tr>
           </table>
-        </td></tr>
-      </table>
+        </td>
+      </tr>
+    </table>
 
-      <p style="margin:24px 0 0;font-family:${EMAIL_BODY_FONT};font-size:14px;color:#8a7560;line-height:1.7;">If you did not request this account, please contact our support team immediately.</p>
-    </td></tr>
-  </table>
-</td></tr>
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
 
-<tr><td align="center" style="padding:32px 16px 0;">
-  <p style="margin:0;font-family:${EMAIL_FONT};font-size:13px;color:${GOLD};line-height:1.6;letter-spacing:0.5px;">RUDHRAM</p>
-  <p style="margin:8px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">Leading What's Next</p>
-  <p style="margin:6px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">
-    RE: <a href="tel:+91${RE_PHONE}" style="color:#a89880;text-decoration:none;">${rePhoneFormatted}</a> &middot; <a href="mailto:${reEmail}" style="color:#a89880;text-decoration:none;">${reEmail}</a>
-  </p>
-  <p style="margin:4px 0 0;font-family:${EMAIL_BODY_FONT};font-size:12px;color:#a89880;line-height:1.6;">
-    ${brandLabel}: ${brandPhone !== '-' ? `<a href="tel:+91${brandPhone}" style="color:#a89880;text-decoration:none;">${brandPhoneFormatted}</a> &middot; ` : ''}<a href="mailto:${brandEmail}" style="color:#a89880;text-decoration:none;">${brandEmail}</a>
-  </p>
-</td></tr>
-</td></tr>
+    <!-- Highlight Callout Card (Security & Support) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:32px;" class="mobile-padding">
+          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
+            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:16px;font-weight:700;color:#191919;">
+              Important Security Notice
+            </h3>
+            <p style="margin:0 0 16px;font-family:${SANS_FONT};font-size:13px;color:#555555;line-height:1.6;">
+              For your protection, please update your temporary password immediately upon your first sign-in via <strong>Settings &rarr; Change Password</strong>.
+            </p>
+            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>Rudhram Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
+                </tr>
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+  <!-- End of Main White Card -->
+
+  <!-- Outer Footer Section -->
+  <tr>
+    <td align="center" style="padding:32px 20px 0;">
+      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
+        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Client Portal</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Support Center</a>
+      </p>
+      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
+        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
+        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
+      </p>
+      <div align="center" style="margin-top:20px;">
+        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
+        </a>
+      </div>
+    </td>
+  </tr>
 
 </table>
 </td></tr>
