@@ -153,19 +153,19 @@ export const generateInvoiceHtml = (invoice) => {
     gst: invoice.recipientGst ?? client.gstNumber ?? '',
   };
   const issuer = {
-    name: invoice.issuerName ?? INVOICE_COMPANY.legalName,
-    address: invoice.issuerAddress ?? [INVOICE_COMPANY.addressLine1, INVOICE_COMPANY.addressLine2, INVOICE_COMPANY.addressLine3].join('\n'),
-    email: invoice.issuerEmail ?? INVOICE_COMPANY.email,
-    phone: invoice.issuerPhone ?? INVOICE_COMPANY.contact,
-    gst: invoice.issuerGst ?? INVOICE_COMPANY.gstin,
+    name: invoice.issuerName?.trim() || INVOICE_COMPANY.legalName,
+    address: invoice.issuerAddress?.trim() || [INVOICE_COMPANY.addressLine1, INVOICE_COMPANY.addressLine2, INVOICE_COMPANY.addressLine3].join('\n'),
+    email: invoice.issuerEmail?.trim() || INVOICE_COMPANY.email,
+    phone: invoice.issuerPhone?.trim() || INVOICE_COMPANY.contact,
+    gst: invoice.issuerGst?.trim() || INVOICE_COMPANY.gstin,
   };
   const bankDetails = {
-    name: invoice.bankName ?? BANK.bankName,
-    accountName: invoice.bankAccountName ?? BANK.accountHolder,
-    accountNumber: invoice.bankAccountNumber ?? BANK.accountNumber,
-    ifsc: invoice.bankIfsc ?? BANK.ifscCode,
-    gst: invoice.bankGst ?? COMPANY.gstin,
-    upi: invoice.bankUpi ?? BANK.upiId,
+    name: invoice.bankName?.trim() || BANK.bankName,
+    accountName: invoice.bankAccountName?.trim() || BANK.accountHolder,
+    accountNumber: invoice.bankAccountNumber?.trim() || BANK.accountNumber,
+    ifsc: invoice.bankIfsc?.trim() || BANK.ifscCode,
+    gst: invoice.bankGst?.trim() || COMPANY.gstin,
+    upi: invoice.bankUpi?.trim() || BANK.upiId,
   };
   const items = invoice.items && invoice.items.length > 0
     ? invoice.items
@@ -715,7 +715,7 @@ export const generateInvoiceHtml = (invoice) => {
 
               <div class="sign-box">
                 <div class="sign-top">AUTHORIZED SIGNATURE</div>
-                <div class="sign-bottom">${esc(invoice.signatoryName ?? 'Rudhram Entertainment')}</div>
+                <div class="sign-bottom">${esc(invoice.signatoryName?.trim() || 'Rudhram Entertainment')}</div>
               </div>
             </div>
           </td>

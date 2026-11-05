@@ -34,6 +34,42 @@ describe('editable invoice details', () => {
     expect(html).toContain('Due Date:');
   });
 
+  const companyFields = {
+    issuerName: 'RUDHRAM ENTERTAINMENT',
+    issuerAddress: 'HD-563, 2ND FLOOR, 264-265, Vaswani Chamber,',
+    issuerEmail: 'billing@rudhramenterprises.com',
+    issuerPhone: '8655695623',
+    issuerGst: '27CYSPG6483K1ZK',
+    bankName: 'HDFC Bank',
+    bankAccountName: 'Rudhram Entertainment',
+    bankAccountNumber: '50200095934904',
+    bankIfsc: 'HDFC0006679',
+    bankGst: '27CYSPG6483K1ZK',
+    bankUpi: '7285833101@hdfcbank',
+    signatoryName: 'Rudhram Entertainment',
+  };
+
+  it.each([undefined, null, '', '   '])('uses company defaults for empty printed fields (%s)', (blank) => {
+    const html = generateInvoiceHtml({
+      ...invoice,
+      ...Object.fromEntries(Object.keys(companyFields).map((field) => [field, blank])),
+    });
+    for (const value of Object.values(companyFields)) expect(html).toContain(value);
+    expect(html).toContain('Worli Road, Near WeWork, Worli,');
+    expect(html).toContain('Mumbai, Maharastra, 400018');
+  });
+
+  it('preserves every non-empty company override alongside blank defaults', () => {
+    for (const field of Object.keys(companyFields)) {
+      const html = generateInvoiceHtml({
+        ...invoice,
+        ...Object.fromEntries(Object.keys(companyFields).map((key) => [key, ''])),
+        [field]: 'Custom printed value',
+      });
+      expect(html).toContain('Custom printed value');
+    }
+  });
+
   it('accepts editable printed fields at the create boundary', () => {
     const parsed = createInvoiceSchema.parse({
       client: 'client-id', dueDate: '2026-12-02',
