@@ -1,19 +1,30 @@
 import { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../../../components/ui/Select';
 
-export default function ClientFilters({ onFilterChange }) {
+export default function ClientFilters({ onFilterChange, isSuperAdmin = false }) {
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('active');
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      onFilterChange({ search });
+      onFilterChange({ search, status });
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, onFilterChange]);
+  }, [search, status, onFilterChange]);
 
   const clearFilters = () => {
     setSearch('');
+    setStatus('active');
   };
+
+  const isFiltered = search || (isSuperAdmin && status !== 'active');
 
   return (
     <div className="flex items-center gap-2 sm:gap-3 w-full">
@@ -30,7 +41,7 @@ export default function ClientFilters({ onFilterChange }) {
         {search && (
           <button
             type="button"
-            onClick={clearFilters}
+            onClick={() => setSearch('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-600 rounded-md hover:bg-zinc-100 transition-colors cursor-pointer"
             title="Clear search"
           >
@@ -39,8 +50,21 @@ export default function ClientFilters({ onFilterChange }) {
         )}
       </div>
 
+      {/* Status Filter Dropdown (Super Admin only) */}
+      {isSuperAdmin && (
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-32 cursor-pointer sm:w-36 h-9.5 rounded-xl text-xs sm:text-sm border-zinc-200/90 bg-white shadow-2xs focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 font-medium">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
+
       {/* Clear Filters Button */}
-      {search && (
+      {isFiltered && (
         <button
           onClick={clearFilters}
           className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-zinc-600 hover:text-primary-900 bg-white hover:bg-zinc-100 border border-zinc-200/80 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer active:scale-95"
