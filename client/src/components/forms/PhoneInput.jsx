@@ -3,7 +3,7 @@ import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import COUNTRIES from '../../data/countries';
 
-const PHONE_MAX_LENGTH = 10;
+const PHONE_MAX_LENGTH = 15;
 const DEFAULT_COUNTRY = COUNTRIES.find((c) => c.cca2 === 'IN') || COUNTRIES[0];
 
 function getFlagEmoji(cca2) {

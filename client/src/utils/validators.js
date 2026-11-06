@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 
 export const emailSchema = z
   .string()
@@ -11,7 +12,9 @@ export const passwordSchema = z
 
 export const phoneSchema = z
   .string()
-  .regex(/^[+]?[\d\s()-]{10,15}$/, 'Please enter a valid phone number')
+  .refine((val) => !val || val === '' || isValidPhoneNumber(val.trim(), 'IN'), {
+    message: 'Please enter a valid phone number',
+  })
   .optional();
 
 export const nameSchema = z

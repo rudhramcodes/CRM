@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 
 const cleanAddressString = (max) =>
   z
@@ -40,11 +41,9 @@ export const createClientSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z
     .string()
-    .regex(/^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
-    .refine(
-      (val) => !val || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
-      { message: 'Phone number must have at least 10 digits' }
-    )
+    .refine((val) => !val || val === '' || isValidPhoneNumber(val.trim(), 'IN'), {
+      message: 'Invalid phone number for selected country',
+    })
     .nullable()
     .optional()
     .or(z.literal('')),
@@ -80,11 +79,9 @@ export const updateClientSchema = z.object({
   email: z.string().email().optional(),
   phone: z
     .string()
-    .regex(/^[+]?[\d\s()-]{7,15}$/)
-    .refine(
-      (val) => !val || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
-      { message: 'Phone number must have at least 10 digits' }
-    )
+    .refine((val) => !val || val === '' || isValidPhoneNumber(val.trim(), 'IN'), {
+      message: 'Invalid phone number for selected country',
+    })
     .nullable()
     .optional()
     .or(z.literal('')),

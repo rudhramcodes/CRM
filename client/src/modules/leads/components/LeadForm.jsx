@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Mail, Phone, Building2, Globe, Tag, Check, Sparkles } from 'lucide-react';
@@ -23,11 +24,9 @@ const leadFormSchema = z.object({
   phone: z
     .string()
     .min(1, 'Phone number is required')
-    .regex(/^$|^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
-    .refine(
-      (val) => val !== '' && val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
-      { message: 'Phone number must have at least 10 digits' }
-    ),
+    .refine((val) => !!val && isValidPhoneNumber(val.trim(), 'IN'), {
+      message: 'Invalid phone number for selected country',
+    }),
   brand: z.string().optional().or(z.literal('')),
   company: z.string().max(200).optional().or(z.literal('')),
   source: z.string().optional(),

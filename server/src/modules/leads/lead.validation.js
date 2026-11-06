@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 import { LEAD_STATUS, LEAD_BRANDS } from '../../constants/index.js';
 
 const LEAD_STATUS_LIST = Object.values(LEAD_STATUS);
@@ -27,11 +28,9 @@ export const createLeadSchema = z.object({
   phone: z
     .string()
     .min(1, 'Phone number is required')
-    .regex(/^[+]?[\d\s()-]{7,15}$/, 'Please enter a valid phone number')
-    .refine(
-      (val) => val && val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
-      { message: 'Phone number must have at least 10 digits' }
-    ),
+    .refine((val) => !!val && isValidPhoneNumber(val.trim(), 'IN'), {
+      message: 'Please enter a valid phone number',
+    }),
   brand: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.enum(LEAD_BRANDS, { required_error: 'Please select a brand/venture' })).optional().nullable(),
   company: z
     .string()
@@ -67,11 +66,9 @@ export const updateLeadSchema = z.object({
   email: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.string().email('Invalid email address')).optional().nullable(),
   phone: z
     .string()
-    .regex(/^[+]?[\d\s()-]{7,15}$/, 'Please enter a valid phone number')
-    .refine(
-      (val) => !val || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
-      { message: 'Phone number must have at least 10 digits' }
-    )
+    .refine((val) => !val || val === '' || isValidPhoneNumber(val.trim(), 'IN'), {
+      message: 'Please enter a valid phone number',
+    })
     .optional()
     .nullable()
     .or(z.literal('')),

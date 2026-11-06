@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Building2, User, Mail, CreditCard, Hash, MapPin } from 'lucide-react';
@@ -20,11 +21,9 @@ const clientFormSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z
     .string()
-    .regex(/^$|^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
-    .refine(
-      (val) => val === '' || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
-      { message: 'Phone number must have at least 10 digits' }
-    )
+    .refine((val) => !val || val === '' || isValidPhoneNumber(val.trim(), 'IN'), {
+      message: 'Invalid phone number for selected country',
+    })
     .optional()
     .or(z.literal('')),
   gstNumber: z
