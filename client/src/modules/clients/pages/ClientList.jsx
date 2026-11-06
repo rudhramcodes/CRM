@@ -56,7 +56,7 @@ export default function ClientList() {
   const handleBrandChange = useCallback((brand) => {
     setActiveBrand(brand);
     setQueryParams((prev) => {
-      const next = { ...prev, page: 1, status: 'active' };
+      const next = { ...prev, page: 1, status: prev.status || 'active' };
       if (brand) next.brand = brand;
       else delete next.brand;
       return next;
@@ -65,9 +65,11 @@ export default function ClientList() {
 
   const handleFilterChange = useCallback((filters) => {
     setQueryParams((prev) => {
-      const next = { ...prev, page: 1, status: 'active' };
+      const next = { ...prev, page: 1 };
       if (filters.search) next.search = filters.search;
       else delete next.search;
+      if (filters.status) next.status = filters.status;
+      else next.status = 'active';
       return next;
     });
   }, []);
@@ -75,6 +77,7 @@ export default function ClientList() {
   const canCreate = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canEdit = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const canDelete = user && ['super_admin', 'admin'].includes(user.role);
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const handleEdit = useCallback(
     (row) => {
@@ -303,7 +306,7 @@ export default function ClientList() {
       </div>
 
       {/* Filters Bar */}
-      <ClientFilters onFilterChange={handleFilterChange} />
+      <ClientFilters onFilterChange={handleFilterChange} isSuperAdmin={isSuperAdmin} />
 
       {/* Table Section */}
       {isLoading ? (

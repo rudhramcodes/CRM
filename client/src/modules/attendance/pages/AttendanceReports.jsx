@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { BarChart3, Users, Clock, TrendingUp, ChevronLeft, ChevronRight, CalendarDays, UserCheck, UserX, Umbrella, Timer, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatHours, formatMinutes } from '../../../utils/formatters';
+import AttendanceSummaryTable from '../components/AttendanceSummaryTable';
 
 const STATUS_COLORS = {
   present: '#10b981',
@@ -238,6 +239,52 @@ export default function AttendanceReports() {
       .slice(0, 10);
   }, [records, reportSummary.employeeHours]);
 
+  const attendanceSummary = useMemo(() => {
+    const map = new Map();
+
+    for (const record of records) {
+      const emp = record.employee;
+      const key = getEmployeeKey(record);
+      if (!key) continue;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          employee: emp,
+          presentDays: 0,
+          absentDays: 0,
+          wfhDays: 0,
+          leaveDays: 0,
+          weekendDays: 0,
+          totalWorkHours: 0,
+        });
+      }
+
+      const item = map.get(key);
+      const status = record.status;
+
+      if (['present', 'late', 'half_day'].includes(status)) {
+        item.presentDays += 1;
+      } else if (status === 'wfh' || record.isWFH) {
+        item.wfhDays += 1;
+      } else if (status === 'absent') {
+        item.absentDays += 1;
+      } else if (status === 'leave') {
+        item.leaveDays += 1;
+      } else if (status === 'weekend' || status === 'holiday') {
+        item.weekendDays += 1;
+      }
+
+      item.totalWorkHours += getRecordWorkHours(record);
+    }
+
+    return Array.from(map.values()).sort((a, b) => {
+      const nameA = a.employee?.name || '';
+      const nameB = b.employee?.name || '';
+      return nameA.localeCompare(nameB);
+    });
+  }, [records]);
+
   const toggleExpand = (id) => {
     setExpandedRows((previous) => {
       const next = new Set(previous);
@@ -360,6 +407,13 @@ export default function AttendanceReports() {
           ) : <EmptyState icon={Clock} title="No worked hours" description="No completed work duration exists in this period." />}
         </motion.section>
       </div>
+
+      {/* Attendance Summary Table Component */}
+      <AttendanceSummaryTable
+        data={attendanceSummary}
+        isLoading={isLoading}
+        periodLabel={period.label}
+      />
 
       <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
         <div className="flex flex-col gap-1 border-b border-zinc-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold text-zinc-900">Attendance Details</h3><p className="text-xs text-zinc-400">{reportTotalRecords} records · {period.label}</p></div><span className="text-xs font-medium text-zinc-500">Times shown in local time</span></div>

@@ -19,16 +19,15 @@ const LEAD_ASSIGNEE_EMAIL = 'palakgupta@rudhramenterprises.com';
 
 const leadFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(200),
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
   phone: z
     .string()
+    .min(1, 'Phone number is required')
     .regex(/^$|^[+]?[\d\s()-]{7,15}$/, 'Invalid phone number')
     .refine(
-      (val) => val === '' || val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
+      (val) => val !== '' && val.replace(/^\+?\d{1,3}\s*/, '').replace(/[^\d]/g, '').length >= 10,
       { message: 'Phone number must have at least 10 digits' }
-    )
-    .optional()
-    .or(z.literal('')),
+    ),
   brand: z.string().optional().or(z.literal('')),
   company: z.string().max(200).optional().or(z.literal('')),
   source: z.string().optional(),
@@ -187,7 +186,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         />
 
         <FormInput
-          label="Email Address *"
+          label="Email Address"
           type="email"
           placeholder="john@example.com"
           autoComplete="email"
@@ -201,10 +200,10 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
           control={control}
           render={({ field }) => (
             <PhoneInput
-              label="Phone Number"
+              label="Phone Number *"
               placeholder="98765 43210"
               value={field.value}
-              onChange={field.onChange}
+              onChange={field.onChange}              
               error={errors.phone?.message}
             />
           )}

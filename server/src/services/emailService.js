@@ -1072,76 +1072,704 @@ export const sendPortalInviteEmail = async (email, inviteToken, options = {}) =>
 
 // ── Leave Emails ──
 
-export const renderLeaveAppliedEmail = ({ employeeName, leaveType, dates, duration, reason }) =>
-  renderEmail({
-    preheader: `New leave application from ${employeeName} for ${duration}.`,
-    heading: 'New Leave Application',
-    subtext: `<strong style="color:${INK};">${employeeName}</strong> has submitted a new leave request.`,
-    bodyHtml: `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:10px;overflow:hidden;margin-bottom:16px;">
-        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};width:120px;">Employee</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${employeeName}</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Leave Type</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${leaveType}</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Dates</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${dates} (${duration})</td></tr>
-        <tr><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${MUTED};">Reason</td><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${BODY};">${reason || '—'}</td></tr>
-      </table>
-    `,
-    cta: { url: `${config.clientUrl}/attendance/leaves`, text: 'Review & Approve Leave' },
-    footerNote: 'Rudhram &middot; Attendance & Leave Management',
-  });
+export const renderLeaveAppliedEmail = ({
+  employeeName = 'Employee',
+  leaveType = 'Leave',
+  dates = '—',
+  duration = '1 day',
+  reason = '',
+  reviewUrl,
+  brand = 'damrru',
+  logoUrl,
+  topBannerText = 'New Leave Application Submitted',
+  topBannerUrl,
+  topBannerBg = '#8A5C2A',
+  topBannerTextColor = '#ffffff',
+  buttonBg = '#8A5C2A',
+  buttonTextColor = '#ffffff',
+} = {}) => {
+  const { brandLabel, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
 
-export const renderLeaveApprovedEmail = ({ employeeName, leaveType, dates, duration }) =>
-  renderEmail({
-    preheader: `Your leave request for ${dates} has been approved.`,
-    heading: 'Leave Request Approved',
-    subtext: `Hello ${employeeName}, your leave request has been <strong style="color:#059669;">Approved</strong>.`,
-    bodyHtml: `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:10px;overflow:hidden;margin-bottom:16px;">
-        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};width:120px;">Leave Type</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${leaveType}</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Dates</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${dates} (${duration})</td></tr>
-        <tr><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${MUTED};">Status</td><td style="padding:12px 16px;font-family:${FONT};font-size:13px;font-weight:700;color:#059669;">Approved</td></tr>
-      </table>
-    `,
-    cta: { url: `${config.clientUrl}/attendance/leaves`, text: 'View Leave Details' },
-    footerNote: 'Rudhram &middot; Attendance & Leave Management',
-  });
+  const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
+  const resolvedReviewUrl = reviewUrl || `${config.clientUrl}/attendance/leaves`;
+  const effectiveTopBannerUrl = topBannerUrl || resolvedReviewUrl;
+  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
-export const renderLeaveRejectedEmail = ({ employeeName, leaveType, dates, duration, reason }) =>
-  renderEmail({
-    preheader: `Your leave request for ${dates} was rejected.`,
-    heading: 'Leave Request Update',
-    subtext: `Hello ${employeeName}, your leave request has been <strong style="color:#dc2626;">Rejected</strong>.`,
-    bodyHtml: `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:10px;overflow:hidden;margin-bottom:16px;">
-        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};width:120px;">Leave Type</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${leaveType}</td></tr>
-        <tr><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;color:${MUTED};">Dates</td><td style="padding:12px 16px;border-bottom:1px solid ${BORDER};font-family:${FONT};font-size:13px;font-weight:600;color:${INK};">${dates} (${duration})</td></tr>
-        <tr><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:${MUTED};">Rejection Reason</td><td style="padding:12px 16px;font-family:${FONT};font-size:13px;color:#dc2626;font-weight:500;">${reason || 'Not specified'}</td></tr>
-      </table>
-    `,
-    cta: { url: `${config.clientUrl}/attendance/leaves`, text: 'View Leave Details' },
-    footerNote: 'Rudhram &middot; Attendance & Leave Management',
-  });
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-scheme" content="light">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>New Leave Request - ${employeeName}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .fluid { max-width: 100% !important; height: auto !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
 
-export const sendLeaveAppliedEmail = async ({ to, employeeName, leaveType, dates, duration, reason }) => {
+  <!-- Main White Card Container -->
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
+    <!-- Top Announcement Strip -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+            <tr>
+              <td valign="middle" style="padding-right:6px;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
+                >
+                  ${topBannerText}
+                </a>
+              </td>
+
+              <td valign="bottom" style="line-height:0;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="display:block;color:${topBannerTextColor};text-decoration:none;"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Brand Header (Centered Rudhram Logo) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:34px 24px 20px;">
+          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Hero Headline -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
+          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
+            New Leave Application
+          </h1>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Body & Leave Details Box -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px 34px;" class="mobile-padding">
+          <p style="margin:0 0 20px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
+            <strong style="color:#191919;">${employeeName}</strong> has submitted a new leave application. Please review the details below and take action in the portal.
+          </p>
+
+          <!-- Leave Application Table -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;border:1px solid #ebe6dd;border-radius:12px;overflow:hidden;background-color:#faf9f6;">
+            <tr><td style="padding:14px 18px;background-color:#f3efe6;border-bottom:1px solid #ebe6dd;font-family:${SANS_FONT};font-size:13px;font-weight:700;color:#191919;" colspan="2">Leave Application Details</td></tr>
+            <tr>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;width:120px;">Employee</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${employeeName}</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;">Leave Type</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${leaveType}</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;">Dates &amp; Duration</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${dates} (${duration})</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:13px;color:#666666;">Reason</td>
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:13px;color:#333333;text-align:right;">${reason || '—'}</td>
+            </tr>
+          </table>
+
+          <!-- CTA Button -->
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:24px auto 10px;">
+            <tr>
+              <td align="center">
+                <a href="${resolvedReviewUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
+                  Review &amp; Approve Leave &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Support Callout Card -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:32px;" class="mobile-padding">
+          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
+            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:15px;font-weight:700;color:#191919;">
+              HR &amp; Attendance Management
+            </h3>
+            <p style="margin:0 0 14px;font-family:${SANS_FONT};font-size:12.5px;color:#555555;line-height:1.6;">
+              Review leave requests promptly to ensure proper team planning and attendance tracking across all ventures.
+            </p>
+            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>RE HR Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
+                </tr>
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+  <!-- End of Main White Card -->
+
+  <!-- Outer Footer Section -->
+  <tr>
+    <td align="center" style="padding:32px 20px 0;">
+      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
+        <a href="${config.clientUrl}/attendance/leaves" style="color:#555555;text-decoration:underline;">Leave Portal</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Rudhram CRM</a>
+      </p>
+      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
+        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
+        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
+      </p>
+      <div align="center" style="margin-top:20px;">
+        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
+        </a>
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+};
+
+export const renderLeaveApprovedEmail = ({
+  employeeName = 'Employee',
+  leaveType = 'Leave',
+  dates = '—',
+  duration = '1 day',
+  detailsUrl,
+  brand = 'damrru',
+  logoUrl,
+  topBannerText = 'Leave Application Approved',
+  topBannerUrl,
+  topBannerBg = '#8A5C2A',
+  topBannerTextColor = '#ffffff',
+  buttonBg = '#8A5C2A',
+  buttonTextColor = '#ffffff',
+} = {}) => {
+  const { brandLabel, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
+
+  const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
+  const resolvedDetailsUrl = detailsUrl || `${config.clientUrl}/attendance/leaves`;
+  const effectiveTopBannerUrl = topBannerUrl || resolvedDetailsUrl;
+  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-scheme" content="light">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Leave Request Approved - ${employeeName}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .fluid { max-width: 100% !important; height: auto !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
+
+  <!-- Main White Card Container -->
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
+    <!-- Top Announcement Strip -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+            <tr>
+              <td valign="middle" style="padding-right:6px;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
+                >
+                  ${topBannerText}
+                </a>
+              </td>
+
+              <td valign="bottom" style="line-height:0;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="display:block;color:${topBannerTextColor};text-decoration:none;"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Brand Header (Centered Rudhram Logo) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:34px 24px 20px;">
+          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Hero Headline -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
+          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
+            Leave Request Approved
+          </h1>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Body & Leave Details Box -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px 34px;" class="mobile-padding">
+          <p style="margin:0 0 20px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
+            Hello <strong style="color:#191919;">${employeeName}</strong>,<br>Great news! Your leave request has been officially <strong style="color:#059669;">Approved</strong>.
+          </p>
+
+          <!-- Leave Application Table -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;border:1px solid #ebe6dd;border-radius:12px;overflow:hidden;background-color:#faf9f6;">
+            <tr><td style="padding:14px 18px;background-color:#f3efe6;border-bottom:1px solid #ebe6dd;font-family:${SANS_FONT};font-size:13px;font-weight:700;color:#191919;" colspan="2">Approved Leave Details</td></tr>
+            <tr>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;width:120px;">Employee</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${employeeName}</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;">Leave Type</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${leaveType}</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;">Dates &amp; Duration</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${dates} (${duration})</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:13px;color:#666666;">Status</td>
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:13px;font-weight:700;color:#059669;text-align:right;">Approved</td>
+            </tr>
+          </table>
+
+          <!-- CTA Button -->
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:24px auto 10px;">
+            <tr>
+              <td align="center">
+                <a href="${resolvedDetailsUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
+                  View Leave Details &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- HR Callout Card -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:32px;" class="mobile-padding">
+          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
+            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:15px;font-weight:700;color:#191919;">
+              Enjoy Your Time Off!
+            </h3>
+            <p style="margin:0 0 14px;font-family:${SANS_FONT};font-size:12.5px;color:#555555;line-height:1.6;">
+              Please ensure any urgent pending handovers or team coverage notes are completed prior to your leave date.
+            </p>
+            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>RE HR Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
+                </tr>
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+  <!-- End of Main White Card -->
+
+  <!-- Outer Footer Section -->
+  <tr>
+    <td align="center" style="padding:32px 20px 0;">
+      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
+        <a href="${config.clientUrl}/attendance/leaves" style="color:#555555;text-decoration:underline;">Leave Portal</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Rudhram CRM</a>
+      </p>
+      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
+        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
+        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
+      </p>
+      <div align="center" style="margin-top:20px;">
+        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
+        </a>
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+};
+
+export const renderLeaveRejectedEmail = ({
+  employeeName = 'Employee',
+  leaveType = 'Leave',
+  dates = '—',
+  duration = '1 day',
+  reason = '',
+  detailsUrl,
+  brand = 'damrru',
+  logoUrl,
+  topBannerText = 'Leave Application Status Update',
+  topBannerUrl,
+  topBannerBg = '#8A5C2A',
+  topBannerTextColor = '#ffffff',
+  buttonBg = '#8A5C2A',
+  buttonTextColor = '#ffffff',
+} = {}) => {
+  const { brandLabel, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
+
+  const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
+  const resolvedDetailsUrl = detailsUrl || `${config.clientUrl}/attendance/leaves`;
+  const effectiveTopBannerUrl = topBannerUrl || resolvedDetailsUrl;
+  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-scheme" content="light">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Leave Request Rejected - ${employeeName}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .fluid { max-width: 100% !important; height: auto !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
+
+  <!-- Main White Card Container -->
+  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
+    <!-- Top Announcement Strip -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+            <tr>
+              <td valign="middle" style="padding-right:6px;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
+                >
+                  ${topBannerText}
+                </a>
+              </td>
+
+              <td valign="bottom" style="line-height:0;">
+                <a
+                  href="${effectiveTopBannerUrl}"
+                  target="_blank"
+                  style="display:block;color:${topBannerTextColor};text-decoration:none;"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Brand Header (Centered Rudhram Logo) -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:34px 24px 20px;">
+          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Hero Headline -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
+          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
+            Leave Request Update
+          </h1>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Body & Leave Details Box -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px 34px;" class="mobile-padding">
+          <p style="margin:0 0 20px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
+            Hello <strong style="color:#191919;">${employeeName}</strong>,<br>Your leave request has been reviewed by management and is marked as <strong style="color:#dc2626;">Rejected</strong>.
+          </p>
+
+          <!-- Leave Application Table -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;border:1px solid #ebe6dd;border-radius:12px;overflow:hidden;background-color:#faf9f6;">
+            <tr><td style="padding:14px 18px;background-color:#f3efe6;border-bottom:1px solid #ebe6dd;font-family:${SANS_FONT};font-size:13px;font-weight:700;color:#191919;" colspan="2">Leave Request Details</td></tr>
+            <tr>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;width:120px;">Leave Type</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${leaveType}</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;">Dates &amp; Duration</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${dates} (${duration})</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;">Status</td>
+              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:700;color:#dc2626;text-align:right;">Rejected</td>
+            </tr>
+            <tr>
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:13px;color:#666666;">Rejection Reason</td>
+              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:13px;color:#dc2626;font-weight:500;text-align:right;">${reason || 'Not specified'}</td>
+            </tr>
+          </table>
+
+          <!-- CTA Button -->
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:24px auto 10px;">
+            <tr>
+              <td align="center">
+                <a href="${resolvedDetailsUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
+                  View Leave Details &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Thin Divider -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 32px;" class="mobile-padding">
+          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- HR Callout Card -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:32px;" class="mobile-padding">
+          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
+            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:15px;font-weight:700;color:#191919;">
+              Questions Regarding This Decision?
+            </h3>
+            <p style="margin:0 0 14px;font-family:${SANS_FONT};font-size:12.5px;color:#555555;line-height:1.6;">
+              If you need further clarification or wish to discuss alternative dates, please reach out to your reporting manager or HR team.
+            </p>
+            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>RE HR Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
+                </tr>
+                <tr>
+                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+  <!-- End of Main White Card -->
+
+  <!-- Outer Footer Section -->
+  <tr>
+    <td align="center" style="padding:32px 20px 0;">
+      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
+        <a href="${config.clientUrl}/attendance/leaves" style="color:#555555;text-decoration:underline;">Leave Portal</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Rudhram CRM</a>
+      </p>
+      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
+        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
+        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
+      </p>
+      <div align="center" style="margin-top:20px;">
+        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
+        </a>
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+};
+
+export const sendLeaveAppliedEmail = async ({ to, employeeName, leaveType, dates, duration, reason, ...options }) => {
   return sendEmail({
     to,
     subject: `New Leave Request: ${employeeName} (${leaveType})`,
-    html: renderLeaveAppliedEmail({ employeeName, leaveType, dates, duration, reason }),
+    html: renderLeaveAppliedEmail({ employeeName, leaveType, dates, duration, reason, ...options }),
   });
 };
 
-export const sendLeaveApprovedEmail = async ({ to, employeeName, leaveType, dates, duration }) => {
+export const sendLeaveApprovedEmail = async ({ to, employeeName, leaveType, dates, duration, ...options }) => {
   return sendEmail({
     to,
     subject: `Leave Request Approved — ${leaveType} (${dates})`,
-    html: renderLeaveApprovedEmail({ employeeName, leaveType, dates, duration }),
+    html: renderLeaveApprovedEmail({ employeeName, leaveType, dates, duration, ...options }),
   });
 };
 
-export const sendLeaveRejectedEmail = async ({ to, employeeName, leaveType, dates, duration, reason }) => {
+export const sendLeaveRejectedEmail = async ({ to, employeeName, leaveType, dates, duration, reason, ...options }) => {
   return sendEmail({
     to,
     subject: `Leave Request Rejected — ${leaveType} (${dates})`,
-    html: renderLeaveRejectedEmail({ employeeName, leaveType, dates, duration, reason }),
+    html: renderLeaveRejectedEmail({ employeeName, leaveType, dates, duration, reason, ...options }),
   });
 };
 
