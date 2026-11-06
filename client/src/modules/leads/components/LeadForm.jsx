@@ -19,7 +19,7 @@ const LEAD_ASSIGNEE_EMAIL = 'palakgupta@rudhramenterprises.com';
 
 const leadFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(200),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  email: z.string().min(1, 'Email address is required').email('Invalid email address'),
   phone: z
     .string()
     .min(1, 'Phone number is required')
@@ -186,7 +186,7 @@ export default function LeadForm({ lead, onSuccess, onCancel }) {
         />
 
         <FormInput
-          label="Email Address"
+          label="Email Address *"
           type="email"
           placeholder="john@example.com"
           autoComplete="email"

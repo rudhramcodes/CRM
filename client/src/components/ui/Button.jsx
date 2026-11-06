@@ -4,7 +4,7 @@ import { cn } from '../../utils/cn';
 
 const variants = {
   primary:
-    'bg-primary-900 text-white hover:bg-primary-800 active:bg-primary-950 shadow-[0_4px_14px_-3px_rgba(11,11,11,0.25)] hover:shadow-[0_6px_20px_-4px_rgba(11,11,11,0.35)]',
+    'bg-primary-900 text-white hover:bg-primary-930 active:bg-primary-950 shadow-[0_4px_14px_-3px_rgba(137,91,42,0.3)] hover:shadow-[0_6px_20px_-4px_rgba(44,30,18,0.4)]',
   secondary:
     'bg-white text-zinc-800 hover:bg-zinc-50 active:bg-zinc-100 border border-zinc-200/90 shadow-2xs',
   danger:

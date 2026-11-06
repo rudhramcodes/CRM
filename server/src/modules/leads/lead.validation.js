@@ -23,7 +23,7 @@ export const createLeadSchema = z.object({
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(200, 'Name must not exceed 200 characters'),
-  email: z.preprocess((v) => (v === '' || v === undefined ? undefined : v), z.string().email('Invalid email address')).optional().nullable(),
+  email: z.string().min(1, 'Email address is required').email('Invalid email address'),
   phone: z
     .string()
     .min(1, 'Phone number is required')

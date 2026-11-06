@@ -70,7 +70,7 @@ const parseDate = (value) => {
 };
 
 export const createLead = async (data, user) => {
-  const existing = data.email ? await leadRepository.findByEmail(data.email) : null;
+  const existing = await leadRepository.findByEmail(data.email);
   if (existing) {
     throw ApiError.conflict('A lead with this email already exists');
   }
@@ -78,7 +78,7 @@ export const createLead = async (data, user) => {
   const brand = data.brand || 'panigrahna';
 
   // Check if a client with this email already exists or generate new inactive client
-  let client = data.email ? await clientRepository.findByEmail(data.email) : null;
+  let client = await clientRepository.findByEmail(data.email);
   let clientId = client?.clientId || null;
 
   if (!client) {
@@ -89,14 +89,14 @@ export const createLead = async (data, user) => {
         brand,
         companyName: data.company || `${data.name}'s Company`,
         contactPerson: data.name,
-        email: data.email || null,
+        email: data.email,
         phone: data.phone || null,
         status: 'inactive',
         createdBy: user._id,
       });
     } catch (err) {
       if (err.code === 11000) {
-        client = data.email ? await clientRepository.findByEmail(data.email) : null;
+        client = await clientRepository.findByEmail(data.email);
         if (client) {
           clientId = client.clientId;
         } else {
@@ -106,7 +106,7 @@ export const createLead = async (data, user) => {
             brand,
             companyName: data.company || `${data.name}'s Company`,
             contactPerson: data.name,
-            email: data.email || null,
+            email: data.email,
             phone: data.phone || null,
             status: 'inactive',
             createdBy: user._id,
