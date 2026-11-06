@@ -34,12 +34,10 @@ const leadSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: false,
+      required: [true, 'Email is required'],
       unique: true,
-      sparse: true,
       trim: true,
       lowercase: true,
-      default: null,
     },
     phone: {
       type: String,

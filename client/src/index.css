@@ -29,17 +29,18 @@
 }
 
 @theme {
-  --color-primary-50: #f2f2f2;
-  --color-primary-100: #e6e6e6;
-  --color-primary-200: #cccccc;
-  --color-primary-300: #b3b3b3;
-  --color-primary-400: #808080;
-  --color-primary-500: #4d4d4d;
-  --color-primary-600: #262626;
-  --color-primary-700: #1a1a1a;
-  --color-primary-800: #0f0f0f;
-  --color-primary-900: #0b0b0b;
-  --color-primary-950: #050505;
+  --color-primary-50: #fbf8f5;
+  --color-primary-100: #f3eae0;
+  --color-primary-200: #e7d5c2;
+  --color-primary-300: #d7b99c;
+  --color-primary-400: #c29972;
+  --color-primary-500: #a77848;
+  --color-primary-600: #916335;
+  --color-primary-700: #784d23;
+  --color-primary-800: #623e1b;
+  --color-primary-900: #895b2a;
+  --color-primary-930: #2C1E12;
+  --color-primary-950: #1b120a;
 
   --color-accent-1: #262626;
   --color-accent-2: #a1a1aa;
@@ -71,7 +72,7 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   background-color: #fafafa;
-  color: var(--color-primary-900);
+  color: #18181b;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-weight: 400;
@@ -82,7 +83,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 600;
   line-height: 1.3;
-  color: var(--color-primary-900);
+  color: var(--color-primary-930);
 }
 
 .card {
@@ -130,8 +131,8 @@ h1, h2, h3, h4, h5, h6 {
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: none;
-  ring: 2px solid var(--color-primary-900);
+  outline: 2px solid var(--color-primary-900);
+  outline-offset: 1px;
 }
 
 ::-webkit-scrollbar {

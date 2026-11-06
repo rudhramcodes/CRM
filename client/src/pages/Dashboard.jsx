@@ -206,7 +206,7 @@ export default function Dashboard() {
           value={kpis.totalRevenue}
           icon={IndianRupee}
           prefix="₹"
-          iconStyle="bg-zinc-900 text-white border-zinc-800 shadow-2xs"
+          iconStyle="bg-blue-50 text-blue-600 border-zinc-800 shadow-2xs"
           onClick={() => navigate('/payments')}
         />
         <StatCard

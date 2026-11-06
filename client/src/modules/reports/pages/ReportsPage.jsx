@@ -99,7 +99,7 @@ export default function ReportsPage() {
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
+            className={`flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
               activeTab === tab.key
                 ? 'bg-indigo-50 text-indigo-700'
                 : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50'
@@ -118,9 +118,9 @@ export default function ReportsPage() {
             key={range.label}
             type="button"
             onClick={() => setDateRange(range)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            className={`px-3 cursor-pointer py-1.5 text-xs font-medium rounded-md transition-colors ${
               dateRange.label === range.label
-                ? 'bg-zinc-800 text-white'
+                ? 'bg-[#895b2a] text-white'
                 : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
             }`}
           >

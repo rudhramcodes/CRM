@@ -105,12 +105,13 @@ export default function Sidebar({ open, onClose }) {
         )}>
           {isExpanded ? (
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="font-heading font-extrabold text-xl tracking-tight text-primary-900 truncate">
+              <img src="/favicon.png" alt="Rudhram CRM"  className="w-5 h-7" />
+              <span className="font-heading font-extrabold text-[22px] tracking-tight text-[#895b2a] truncate">
                 Rudhram
               </span>
-              <span className="text-[10px] font-bold bg-primary-900 text-white px-2 py-0.5 rounded-md tracking-wider uppercase shrink-0 shadow-xs">
+              {/* <span className="text-[10px] font-bold bg-primary-900 text-white px-2 py-0.5 rounded-md tracking-wider uppercase shrink-0 shadow-xs">
                 CRM
-              </span>
+              </span> */}
             </div>
           ) : (
             <button
