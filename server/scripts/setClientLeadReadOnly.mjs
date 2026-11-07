@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 const EMAILS = Object.freeze([
   'poojachoudhary.aghhori@rudhramenterprises.com',
   'prashantkanvinde@rudhramenterprises.com',
+  'nencykathiriya.aghhori@rudhramenterprises.com',
 ]);
 const MODULES = Object.freeze(['leads', 'clients']);
 const READS = Object.freeze(['leads:read', 'clients:read']);
@@ -39,7 +40,7 @@ const run = async () => {
       .select('_id email role permissions readOnlyModules')
       .lean();
 
-    // Complete both accounts' preflight before making any update.
+    // Complete every account's preflight before making any update.
     for (const email of EMAILS) {
       const matches = users.filter((user) => user.email === email);
       if (matches.length !== 1) {
