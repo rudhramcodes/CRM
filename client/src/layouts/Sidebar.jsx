@@ -63,7 +63,8 @@ export default function Sidebar({ open, onClose }) {
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (!user || !item.roles.includes(user.role)) return false;
     if (item.payrollOnly && !canAccessPayroll(user)) return false;
-    if ((item.path === '/leads' || item.path === '/clients') && isEmployee && !isSalesPerson) {
+    if ((item.path === '/leads' || item.path === '/clients') && isEmployee && !isSalesPerson
+      && !user.readOnlyModules?.includes(item.path.slice(1))) {
       return false;
     }
     return true;
@@ -74,7 +75,7 @@ export default function Sidebar({ open, onClose }) {
         { id: 'overview', label: 'Overview', paths: ['/dashboard'] },
         { id: 'my_work', label: 'My Work', paths: ['/tasks', '/projects', '/meetings'] },
         { id: 'my_hr', label: 'Self-Service & HR', paths: ['/attendance', '/my-payslips'] },
-        ...(isSalesPerson ? [{ id: 'crm', label: 'Sales & CRM', paths: ['/leads', '/clients'] }] : []),
+        { id: 'crm', label: 'Sales & CRM', paths: ['/leads', '/clients'] },
         { id: 'system', label: 'Workspace', paths: ['/notifications', '/settings'] },
       ]
     : SECTIONS;

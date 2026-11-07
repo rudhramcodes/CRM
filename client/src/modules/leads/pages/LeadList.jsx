@@ -34,6 +34,7 @@ import { LEAD_STATUS, LEAD_BRANDS, BRAND_METAS } from '../../../constants';
 import { downloadLeadsCsv, downloadLeadsExcel, downloadLeadsPdf } from '../../../utils/exportLeads';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../../utils/cn';
+import { canWriteModule } from '../../../utils/access';
 import toast from 'react-hot-toast';
 
 const BRAND_LABELS = LEAD_BRANDS.reduce((acc, b) => ({ ...acc, [b.value]: b.label }), {});
@@ -90,9 +91,9 @@ export default function LeadList() {
     });
   }, []);
 
-  const canCreate = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
-  const canEdit = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
-  const canImport = user && ['super_admin', 'admin'].includes(user.role);
+  const canCreate = canWriteModule(user, 'leads') && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
+  const canEdit = canCreate;
+  const canImport = canWriteModule(user, 'leads') && ['super_admin', 'admin'].includes(user.role);
 
   const handleEdit = useCallback((row) => {
     navigate(`/leads/${row._id}`);
@@ -462,7 +463,7 @@ export default function LeadList() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex-1 sm:flex-initial">
+              {canEdit && <div className="flex-1 sm:flex-initial">
                 <Select onValueChange={(val) => handleBulkStatusChange(val)} disabled={isBulkUpdating}>
                   <SelectTrigger className="h-8 sm:h-9 w-full sm:w-auto gap-1.5 text-xs font-medium rounded-xl border-zinc-200/90 shadow-2xs">
                     <SelectValue placeholder="Update stage" />
@@ -475,7 +476,7 @@ export default function LeadList() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </div>}
 
               <div className="flex-1 sm:flex-initial">
                 <Select onValueChange={(val) => handleDownload(val)}>

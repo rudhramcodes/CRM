@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { canWriteModule } from '../../../utils/access';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,6 +40,8 @@ const projectFormSchema = z
   );
 
 export default function ProjectForm({ project, onSuccess, onCancel }) {
+  const user = useSelector((state) => state.auth.user);
+  const canCreateClient = canWriteModule(user, 'clients');
   const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
   const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();
   const isEditing = !!project;
@@ -185,7 +189,7 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
                 error={errors.client?.message}
               />
             </div>
-            {!isEditing && (
+            {!isEditing && canCreateClient && (
               <Button
                 type="button"
                 variant="outline"
@@ -196,7 +200,7 @@ export default function ProjectForm({ project, onSuccess, onCancel }) {
               </Button>
             )}
           </div>
-          {!isEditing && (
+          {!isEditing && canCreateClient && (
             <p className="flex items-center gap-1.5 mt-1.5 text-xs text-zinc-500">
               <Building2 className="w-3.5 h-3.5" />
               Client not in the list? Create a new one — it will be selected automatically.

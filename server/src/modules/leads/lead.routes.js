@@ -4,6 +4,7 @@ import path from 'path';
 import * as leadController from './lead.controller.js';
 import validate, { validateQuery } from '../../middleware/validate.js';
 import { verifyToken, authorize } from '../../middleware/auth.js';
+import { restrictReadOnlyModule } from '../../middleware/readOnlyModules.js';
 import ApiError from '../../utils/ApiError.js';
 import { ROLES } from '../../constants/index.js';
 import {
@@ -18,8 +19,9 @@ import {
 const router = Router();
 
 router.use(verifyToken);
+router.use(restrictReadOnlyModule('leads'));
 
-router.get('/stats', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER), leadController.stats);
+router.get('/stats', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE), leadController.stats);
 
 // Bulk routes MUST be registered before any '/:id' route so 'bulk' isn't captured as an id.
 router.delete(

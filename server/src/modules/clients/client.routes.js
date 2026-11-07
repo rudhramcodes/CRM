@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import * as clientController from './client.controller.js';
 import validate, { validateQuery } from '../../middleware/validate.js';
 import { verifyToken, authorize } from '../../middleware/auth.js';
+import { restrictReadOnlyModule } from '../../middleware/readOnlyModules.js';
 import { attachClientProfile } from '../../middleware/clientPortal.js';
 import { ROLES } from '../../constants/index.js';
 import {
@@ -22,8 +23,9 @@ const portalInviteLimiter = rateLimit({
 });
 
 router.use(verifyToken);
+router.use(restrictReadOnlyModule('clients'));
 
-router.get('/stats', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER), clientController.stats);
+router.get('/stats', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE), clientController.stats);
 
 router.get(
   '/me',

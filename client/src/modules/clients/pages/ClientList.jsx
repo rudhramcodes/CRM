@@ -18,6 +18,7 @@ import { StatCardSkeleton, TableSkeleton } from '../../../components/ui/Skeleton
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { LEAD_BRANDS, BRAND_METAS } from '../../../constants';
 import { cn } from '../../../utils/cn';
+import { canWriteModule } from '../../../utils/access';
 import toast from 'react-hot-toast';
 
 export default function ClientList() {
@@ -74,9 +75,9 @@ export default function ClientList() {
     });
   }, []);
 
-  const canCreate = user && ['super_admin', 'admin', 'manager'].includes(user.role);
-  const canEdit = user && ['super_admin', 'admin', 'manager'].includes(user.role);
-  const canDelete = user && ['super_admin', 'admin'].includes(user.role);
+  const canCreate = canWriteModule(user, 'clients') && ['super_admin', 'admin', 'manager'].includes(user.role);
+  const canEdit = canCreate;
+  const canDelete = canWriteModule(user, 'clients') && ['super_admin', 'admin'].includes(user.role);
   const isSuperAdmin = user?.role === 'super_admin';
 
   const handleEdit = useCallback(
@@ -361,4 +362,3 @@ export default function ClientList() {
     </div>
   );
 }
-

@@ -37,6 +37,7 @@ import { DetailSkeleton } from '../../../components/ui/Skeleton';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '../../../components/ui/Select';
 import { CLIENT_STATUS, BRANDS, BRAND_METAS } from '../../../constants';
 import { cn } from '../../../utils/cn';
+import { canWriteModule } from '../../../utils/access';
 import toast from 'react-hot-toast';
 import { formatDate, getTimeAgo } from '../../../utils/formatters';
 
@@ -98,8 +99,9 @@ export default function ClientDetail() {
     }
   }, [id, deleteClient, navigate]);
 
-  const canManage = user && ['super_admin', 'admin', 'manager'].includes(user.role);
-  const canDelete = user && ['super_admin', 'admin'].includes(user.role);
+  const canManage = canWriteModule(user, 'clients') && ['super_admin', 'admin', 'manager'].includes(user.role);
+  const canDelete = canWriteModule(user, 'clients') && ['super_admin', 'admin'].includes(user.role);
+  const canScheduleMeeting = user && ['super_admin', 'admin', 'manager'].includes(user.role);
   const portalActive = !!client?.user;
 
   if (isLoading) {
@@ -169,7 +171,7 @@ export default function ClientDetail() {
               </Select>
             )}
 
-            {canManage && (
+            {canScheduleMeeting && (
               <Button
                 variant="outline"
                 size="sm"
@@ -596,4 +598,3 @@ export default function ClientDetail() {
     </div>
   );
 }
-

@@ -39,6 +39,7 @@ import toast from 'react-hot-toast';
 import { formatDate, formatDateTime, getTimeAgo } from '../../../utils/formatters';
 import { LEAD_STATUS, LEAD_SOURCES, LEAD_BRANDS, BRAND_METAS, BRAND_COMMUNITY_NAMES, VENTURE_CODES } from '../../../constants';
 import { cn } from '../../../utils/cn';
+import { canWriteModule } from '../../../utils/access';
 
 export default function LeadDetail() {
   const { id } = useParams();
@@ -157,7 +158,7 @@ export default function LeadDetail() {
   const sourceLabel = LEAD_SOURCES.find((s) => s.value === lead?.source)?.label || lead?.source || 'Other';
   const brandMeta = lead?.brand ? BRAND_METAS[lead.brand] : null;
   const brandObj = LEAD_BRANDS.find((b) => b.value === lead?.brand);
-  const canManage = user && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
+  const canManage = canWriteModule(user, 'leads') && ['super_admin', 'admin', 'manager', 'employee'].includes(user.role);
 
   // Clean phone number for whatsapp link
   const rawPhone = lead?.phone?.replace(/[^\d]/g, '') || '';

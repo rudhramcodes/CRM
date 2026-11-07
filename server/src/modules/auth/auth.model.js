@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema(
         type: String,
       },
     ],
+    readOnlyModules: {
+      type: [{ type: String, enum: ['leads', 'clients'] }],
+      default: [],
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,
