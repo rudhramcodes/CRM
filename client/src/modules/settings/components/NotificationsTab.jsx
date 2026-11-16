@@ -67,7 +67,7 @@ export default function NotificationsTab() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 p-6">
+    <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
       <h3 className="text-sm font-semibold text-primary-900 mb-1 flex items-center gap-2">
         <Bell className="w-4 h-4" /> Notification Preferences
       </h3>

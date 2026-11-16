@@ -27,7 +27,7 @@ export default function AttendanceLayout() {
     <div className="space-y-6">
       {/* Tab Navigation */}
       <div className="bg-white rounded-xl border border-zinc-200 p-1.5">
-        <div className="flex gap-1 overflow-x-auto">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;

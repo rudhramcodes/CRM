@@ -105,7 +105,7 @@ export default function ProfileTab() {
   return (
     <div className="space-y-6">
       {/* Profile Info */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-primary-900 mb-4 flex items-center gap-2">
           <User className="w-4 h-4" /> Profile Information
         </h3>
@@ -147,7 +147,7 @@ export default function ProfileTab() {
       </div>
 
       {/* Change Password */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-primary-900 mb-4 flex items-center gap-2">
           <Lock className="w-4 h-4" /> Change Password
         </h3>
@@ -207,7 +207,7 @@ export default function ProfileTab() {
       </div>
 
       {/* Account Info */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-primary-900 mb-2">Account Details</h3>
         <div className="space-y-1 text-sm text-zinc-600">
           <p>Role: <span className="font-medium capitalize text-zinc-800">{user?.role?.replace('_', ' ')}</span></p>
