@@ -123,40 +123,44 @@ export default function ProjectList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center">
-            <FolderKanban className="w-5 h-5 text-primary-900" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center shrink-0">
+              <FolderKanban className="w-5 h-5 text-primary-900" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-primary-900">Projects</h1>
+              <p className="text-sm text-zinc-500">
+                {stats.total > 0 ? `${stats.total} project${stats.total > 1 ? 's' : ''} total` : 'Manage your projects'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-primary-900">Projects</h1>
-            <p className="text-sm text-zinc-500">
-              {stats.total > 0 ? `${stats.total} project${stats.total > 1 ? 's' : ''} total` : 'Manage your projects'}
-            </p>
+
+          <div className="flex items-center gap-1.5 sm:ml-2">
+            <button onClick={() => { refetchProjects(); refetchStats(); }}
+              disabled={isFetchingProjects}
+              className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50 cursor-pointer"
+              title="Refresh projects"
+            >
+              <RefreshCwIcon className={`w-4 h-4 ${isFetchingProjects ? 'animate-spin' : ''}`} />
+            </button>
+            <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
+              <button onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-md transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-white shadow-sm text-primary-900' : 'text-zinc-400 hover:text-zinc-600'}`}
+                title="Table view"><LayoutList className="w-4 h-4" /></button>
+              <button onClick={() => setViewMode('kanban')}
+                className={`p-1.5 rounded-md transition-colors cursor-pointer ${viewMode === 'kanban' ? 'bg-white shadow-sm text-primary-900' : 'text-zinc-400 hover:text-zinc-600'}`}
+                title="Kanban view"><Columns className="w-4 h-4" /></button>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => { refetchProjects(); refetchStats(); }}
-            disabled={isFetchingProjects}
-            className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
-            title="Refresh projects"
-          >
-            <RefreshCwIcon className={`w-4 h-4 ${isFetchingProjects ? 'animate-spin' : ''}`} />
-          </button>
-          <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
-            <button onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow-sm text-primary-900' : 'text-zinc-400 hover:text-zinc-600'}`}
-              title="Table view"><LayoutList className="w-4 h-4" /></button>
-            <button onClick={() => setViewMode('kanban')}
-              className={`p-1.5 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-primary-900' : 'text-zinc-400 hover:text-zinc-600'}`}
-              title="Kanban view"><Columns className="w-4 h-4" /></button>
-          </div>
-          {canCreate && (
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="w-4 h-4" /> New Project
-            </Button>
-          )}
-        </div>
+
+        {canCreate && (
+          <Button onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto justify-center">
+            <Plus className="w-4 h-4 mr-1.5" /> New Project
+          </Button>
+        )}
       </div>
 
       {statsLoading ? (

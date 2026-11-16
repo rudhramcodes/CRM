@@ -71,11 +71,11 @@ export default function OrganizationTab() {
   return (
     <div className="space-y-6">
       {/* Branding */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-primary-900 mb-4 flex items-center gap-2">
           <Building2 className="w-4 h-4" /> Branding
         </h3>
-        <div className="grid grid-cols-2 gap-4 max-w-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
           <div className="col-span-2">
             <label className={labelClass}>Company Name</label>
             <input type="text" value={form.companyName}
@@ -101,11 +101,11 @@ export default function OrganizationTab() {
       </div>
 
       {/* Locale */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-primary-900 mb-4 flex items-center gap-2">
           <Globe className="w-4 h-4" /> Locale
         </h3>
-        <div className="grid grid-cols-2 gap-4 max-w-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
           <div>
             <label className={labelClass}><Clock className="w-3 h-3 inline mr-1" />Timezone</label>
             <select value={form.timezone} onChange={(e) => handleChange('timezone', e.target.value)}

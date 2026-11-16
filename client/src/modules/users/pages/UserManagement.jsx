@@ -82,13 +82,13 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">People & Employees</h1>
           <p className="mt-1 text-sm text-zinc-500">Manage access, employee records, and payroll-ready details.</p>
         </div>
-        <Button onClick={() => { setEditUser(null); setShowForm(true); }}>
-          <UserPlus className="w-4 h-4" /> Create User
+        <Button onClick={() => { setEditUser(null); setShowForm(true); }} className="w-full sm:w-auto justify-center">
+          <UserPlus className="w-4 h-4 mr-1.5" /> Create User
         </Button>
       </div>
 

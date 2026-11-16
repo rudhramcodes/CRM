@@ -80,14 +80,14 @@ export default function AttendanceCalendar() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="text-xl font-semibold text-primary-900">Attendance</h2>
           <p className="text-sm text-zinc-500 mt-1">Track your daily attendance and work hours</p>
         </div>
         {isAdmin && (
-          <Button variant="outline" onClick={() => setShowManualEntry(true)}>
-            <Pencil className="w-4 h-4" />
+          <Button onClick={() => setShowManualEntry(true)} className="w-full sm:w-auto justify-center">
+            <Pencil className="w-4 h-4 mr-1.5" />
             Manual Entry
           </Button>
         )}
