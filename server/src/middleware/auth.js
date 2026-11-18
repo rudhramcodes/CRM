@@ -16,7 +16,7 @@ export const verifyToken = async (req, _res, next) => {
     }
 
     const decoded = jwt.verify(token, config.jwt.secret);
-    const user = await User.findById(decoded.userId).select('-password -refreshToken');
+    const user = await User.findById(decoded.userId).select('-password -refreshTokens');
 
     if (!user) {
       throw ApiError.unauthorized('User not found');

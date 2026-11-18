@@ -7,20 +7,31 @@ const COOKIE_OPTIONS = {
   sameSite: 'strict',
 };
 
+// /api/auth (not just /refresh-token) so logout also receives the cookie and can sign out this device only.
+const REFRESH_COOKIE_PATH = '/api/auth';
+// shortcut: cookie from before the path change; drop this once those 7-day cookies have expired.
+const LEGACY_REFRESH_COOKIE_PATH = '/api/auth/refresh-token';
+
+const setAuthCookies = (res, { accessToken, refreshToken }) => {
+  res.cookie('accessToken', accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 });
+  res.cookie('refreshToken', refreshToken, {
+    ...COOKIE_OPTIONS,
+    path: REFRESH_COOKIE_PATH,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+  res.clearCookie('refreshToken', { path: LEGACY_REFRESH_COOKIE_PATH });
+};
+
+// Only the mobile app gets the refresh token in the body; the browser keeps it in an HttpOnly cookie
+// so page scripts can never read it.
+const isMobile = (req) => req.get('x-client') === 'mobile';
+const bodyRefreshToken = (req, refreshToken) => (isMobile(req) ? { refreshToken } : {});
+
 export const register = async (req, res, next) => {
   try {
     const result = await authService.registerUser(req.body);
 
-    res.cookie('accessToken', result.accessToken, {
-      ...COOKIE_OPTIONS,
-      maxAge: 15 * 60 * 1000,
-    });
-
-    res.cookie('refreshToken', result.refreshToken, {
-      ...COOKIE_OPTIONS,
-      path: '/api/auth/refresh-token',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookies(res, result);
 
     ApiResponse.created(res, {
       user: result.user,
@@ -36,21 +47,12 @@ export const login = async (req, res, next) => {
     const { email, password } = req.body;
     const result = await authService.loginUser(email, password);
 
-    res.cookie('accessToken', result.accessToken, {
-      ...COOKIE_OPTIONS,
-      maxAge: 15 * 60 * 1000,
-    });
-
-    res.cookie('refreshToken', result.refreshToken, {
-      ...COOKIE_OPTIONS,
-      path: '/api/auth/refresh-token',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookies(res, result);
 
     ApiResponse.success(res, 200, {
       user: result.user,
       accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
+      ...bodyRefreshToken(req, result.refreshToken),
     }, 'Login successful');
   } catch (error) {
     next(error);
@@ -59,10 +61,11 @@ export const login = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   try {
-    await authService.logoutUser(req.user._id);
+    await authService.logoutUser(req.user._id, req.body?.refreshToken || req.cookies?.refreshToken);
 
     res.clearCookie('accessToken');
-    res.clearCookie('refreshToken', { path: '/api/auth/refresh-token' });
+    res.clearCookie('refreshToken', { path: REFRESH_COOKIE_PATH });
+    res.clearCookie('refreshToken', { path: LEGACY_REFRESH_COOKIE_PATH });
 
     ApiResponse.success(res, 200, null, 'Logout successful');
   } catch (error) {
@@ -75,21 +78,12 @@ export const refresh = async (req, res, next) => {
     const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken;
     const tokens = await authService.refreshAccessToken(refreshToken);
 
-    res.cookie('accessToken', tokens.accessToken, {
-      ...COOKIE_OPTIONS,
-      maxAge: 15 * 60 * 1000,
-    });
-
-    res.cookie('refreshToken', tokens.refreshToken, {
-      ...COOKIE_OPTIONS,
-      path: '/api/auth/refresh-token',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookies(res, tokens);
 
     ApiResponse.success(
       res,
       200,
-      { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+      { accessToken: tokens.accessToken, ...bodyRefreshToken(req, tokens.refreshToken) },
       'Token refreshed'
     );
   } catch (error) {

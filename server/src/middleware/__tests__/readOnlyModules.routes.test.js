@@ -182,7 +182,7 @@ describe('read-only user storage and auth exposure', () => {
     actor.readOnlyModules = ['leads'];
     vi.spyOn(authRepository, 'findByEmail').mockResolvedValue(actor);
     vi.spyOn(actor, 'comparePassword').mockResolvedValue(true);
-    vi.spyOn(authRepository, 'updateRefreshToken').mockResolvedValue(actor);
+    vi.spyOn(authRepository, 'rotateRefreshToken').mockResolvedValue(actor);
 
     const response = await request('POST', '/auth/login', { auth: false, body: { email: actor.email, password: 'TestPassword1' } });
 

@@ -14,11 +14,14 @@ const toAuthUser = (user) => {
   return { ...userObj, canAccessPayroll: isPayrollAdmin(userObj) };
 };
 
-const generateTokens = async (user) => {
+const generateTokens = async (user, oldRefreshToken = null) => {
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
 
-  await authRepository.updateRefreshToken(user._id, refreshToken);
+  const saved = await authRepository.rotateRefreshToken(user._id, refreshToken, oldRefreshToken);
+  if (!saved) {
+    throw ApiError.unauthorized('Invalid refresh token');
+  }
 
   return { accessToken, refreshToken };
 };
@@ -91,12 +94,15 @@ export const loginUser = async (email, password) => {
   return { user: toAuthUser(user), mustChangePassword: user.mustChangePassword || false, ...tokens };
 };
 
-export const logoutUser = async (userId) => {
-  await authRepository.updateRefreshToken(userId, null);
+// Signs out only this device; other devices keep their sessions.
+export const logoutUser = async (userId, refreshToken) => {
+  if (typeof refreshToken === 'string' && refreshToken) {
+    await authRepository.removeRefreshToken(userId, refreshToken);
+  }
 };
 
 export const refreshAccessToken = async (refreshToken) => {
-  if (!refreshToken) {
+  if (!refreshToken || typeof refreshToken !== 'string') {
     throw ApiError.unauthorized('Refresh token is required');
   }
 
@@ -107,13 +113,13 @@ export const refreshAccessToken = async (refreshToken) => {
     throw ApiError.unauthorized('Invalid or expired refresh token');
   }
 
-  const user = await authRepository.findByIdWithPassword(decoded.userId);
-  if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
+  const user = await authRepository.findById(decoded.userId);
+  if (!user || !user.isActive) {
     throw ApiError.unauthorized('Invalid refresh token');
   }
 
-  const tokens = await generateTokens(user);
-  return tokens;
+  // Throws if this token was never issued, already rotated, or signed out.
+  return generateTokens(user, refreshToken);
 };
 
 export const getCurrentUser = async (userId) => {
@@ -165,7 +171,7 @@ export const resetPassword = async (token, newPassword) => {
   await user.save();
 
   // Invalidate all refresh tokens on password reset
-  await authRepository.updateRefreshToken(user._id, null);
+  await authRepository.clearRefreshTokens(user._id);
 };
 
 export const verifyEmail = async (token) => {

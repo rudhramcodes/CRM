@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -44,8 +45,9 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    refreshToken: {
-      type: String,
+    // One refresh token per signed-in device (web, phone, ...), newest last.
+    refreshTokens: {
+      type: [String],
       select: false,
     },
     emailVerificationToken: {
@@ -95,7 +97,7 @@ const userSchema = new mongoose.Schema(
     toJSON: {
       transform(_doc, ret) {
         delete ret.password;
-        delete ret.refreshToken;
+        delete ret.refreshTokens;
         delete ret.__v;
         return ret;
       },
@@ -120,7 +122,8 @@ userSchema.methods.generateAccessToken = function () {
 };
 
 userSchema.methods.generateRefreshToken = function () {
-  return jwt.sign({ userId: this._id }, config.jwt.refreshSecret, {
+  // jti keeps two logins in the same second from producing the same token.
+  return jwt.sign({ userId: this._id, jti: crypto.randomUUID() }, config.jwt.refreshSecret, {
     expiresIn: config.jwt.refreshExpiresIn,
   });
 };

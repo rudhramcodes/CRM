@@ -1,7 +1,7 @@
 import User from './auth.model.js';
 
 export const findByEmail = async (email) => {
-  return User.findOne({ email }).select('+password +refreshToken');
+  return User.findOne({ email }).select('+password');
 };
 
 export const findById = async (id) => {
@@ -12,29 +12,45 @@ export const createUser = async (userData) => {
   return User.create(userData);
 };
 
-export const updateRefreshToken = async (id, refreshToken) => {
-  return User.findByIdAndUpdate(id, { refreshToken }, { new: true });
+const MAX_DEVICES = 5;
+
+// Adds newToken (dropping oldToken) in one atomic update, keeping the newest MAX_DEVICES.
+// With oldToken it only matches while oldToken is still stored, so a token can be rotated once.
+export const rotateRefreshToken = async (id, newToken, oldToken = null) => {
+  const filter = oldToken ? { _id: id, refreshTokens: oldToken } : { _id: id };
+  const kept = { $filter: { input: { $ifNull: ['$refreshTokens', []] }, cond: { $ne: ['$$this', oldToken] } } };
+  return User.findOneAndUpdate(filter, [
+    { $set: { refreshTokens: { $slice: [{ $concatArrays: [kept, [newToken]] }, -MAX_DEVICES] } } },
+  ], { new: true });
+};
+
+export const removeRefreshToken = async (id, refreshToken) => {
+  return User.findByIdAndUpdate(id, { $pull: { refreshTokens: refreshToken } });
+};
+
+export const clearRefreshTokens = async (id) => {
+  return User.findByIdAndUpdate(id, { refreshTokens: [] });
 };
 
 export const findByIdWithPassword = async (id) => {
-  return User.findById(id).select('+password +refreshToken');
+  return User.findById(id).select('+password');
 };
 
 export const findByEmailWithSecrets = async (email) => {
   return User.findOne({ email }).select(
-    '+password +refreshToken +emailVerificationToken +emailVerificationExpires +emailVerificationAttempts +passwordResetToken +passwordResetExpires',
+    '+password +emailVerificationToken +emailVerificationExpires +emailVerificationAttempts +passwordResetToken +passwordResetExpires',
   );
 };
 
 export const findByIdWithSecrets = async (id) => {
   return User.findById(id).select(
-    '+password +refreshToken +emailVerificationToken +emailVerificationExpires +emailVerificationAttempts +passwordResetToken +passwordResetExpires',
+    '+password +emailVerificationToken +emailVerificationExpires +emailVerificationAttempts +passwordResetToken +passwordResetExpires',
   );
 };
 
 export const findOneByToken = async (field, token) => {
   return User.findOne({ [field]: token }).select(
-    '+password +refreshToken +emailVerificationToken +emailVerificationExpires +emailVerificationAttempts +passwordResetToken +passwordResetExpires',
+    '+password +emailVerificationToken +emailVerificationExpires +emailVerificationAttempts +passwordResetToken +passwordResetExpires',
   );
 };
 
