@@ -1,6 +1,7 @@
 import * as notifRepo from './notification.repository.js';
 import { NOTIFICATION_TEMPLATES } from './notification.constants.js';
 import { getIO } from '../../sockets/index.js';
+import { sendExpoPush } from './expoPush.js';
 import logger from '../../utils/logger.js';
 import config from '../../config/index.js';
 import { shouldNotify } from '../settings/settings.service.js';
@@ -106,6 +107,8 @@ export const createAndSend = async ({
     } catch (err) {
       logger.error(`[Notification] Socket emit failed: ${err.message}`);
     }
+    // Phone push rides the in-app channel; never hold up the request for it.
+    sendExpoPush(recipient, notification).catch((err) => logger.error(`[Notification] Push failed: ${err.message}`));
   } else {
     logger.info(`[Notification] InApp disabled, skipping socket emit for type=${type}`);
   }

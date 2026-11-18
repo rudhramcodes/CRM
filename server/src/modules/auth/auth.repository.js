@@ -28,6 +28,20 @@ export const removeRefreshToken = async (id, refreshToken) => {
   return User.findByIdAndUpdate(id, { $pull: { refreshTokens: refreshToken } });
 };
 
+// A phone belongs to whoever signed in on it last, so the token leaves any other account first.
+export const addPushToken = async (id, token) => {
+  await User.updateMany({ _id: { $ne: id }, pushTokens: token }, { $pull: { pushTokens: token } });
+  return User.findByIdAndUpdate(id, { $addToSet: { pushTokens: token } });
+};
+
+export const removePushTokens = async (id, tokens) => {
+  return User.findByIdAndUpdate(id, { $pull: { pushTokens: { $in: tokens } } });
+};
+
+export const findPushTokens = async (id) => {
+  return (await User.findById(id).select('+pushTokens'))?.pushTokens ?? [];
+};
+
 export const clearRefreshTokens = async (id) => {
   return User.findByIdAndUpdate(id, { refreshTokens: [] });
 };

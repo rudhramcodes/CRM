@@ -5,6 +5,7 @@ import { once } from 'node:events';
 import User from '../auth.model.js';
 import * as authRepository from '../auth.repository.js';
 import authRoutes from '../auth.routes.js';
+import * as settingsService from '../../settings/settings.service.js';
 
 // Real routes, controller and service; the repository's token writes run on an in-memory list
 // with the same rules as the Mongo update (rotate only a stored token, keep the newest 5).
@@ -93,9 +94,43 @@ describe('per-device refresh tokens', () => {
     expect((await refresh(b.refreshToken)).status).toBe(200);
   });
 
+  it('clears the forced password change once the password is changed', async () => {
+    actor.mustChangePassword = true;
+    vi.spyOn(authRepository, 'findByIdWithPassword').mockResolvedValue(actor);
+    vi.spyOn(actor, 'save').mockResolvedValue(actor);
+    vi.spyOn(settingsService, 'validatePasswordAgainstPolicy').mockResolvedValue([]);
+    const { accessToken } = await login();
+
+    const res = await fetch(`${base}/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ currentPassword: 'TestPassword1', newPassword: 'NewPassword2' }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(actor.mustChangePassword).toBe(false);
+  });
+
   it('rejects a refresh token for a deactivated account', async () => {
     const { refreshToken } = await login();
     actor.isActive = false;
     expect((await refresh(refreshToken)).status).toBe(401);
+  });
+
+  it('saves and removes the phone push token for the signed-in user only', async () => {
+    const add = vi.spyOn(authRepository, 'addPushToken').mockResolvedValue(actor);
+    const remove = vi.spyOn(authRepository, 'removePushTokens').mockResolvedValue(actor);
+    const { accessToken } = await login();
+    const call = (method, token) => fetch(`${base}/push-token`, {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ token }),
+    });
+
+    expect((await call('POST', 'not-a-token')).status).toBe(400);
+    expect((await call('POST', 'ExponentPushToken[abc]')).status).toBe(200);
+    expect((await call('DELETE', 'ExponentPushToken[abc]')).status).toBe(200);
+    expect(add).toHaveBeenCalledWith(actor._id, 'ExponentPushToken[abc]');
+    expect(remove).toHaveBeenCalledWith(actor._id, ['ExponentPushToken[abc]']);
   });
 });

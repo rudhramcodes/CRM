@@ -50,6 +50,11 @@ const userSchema = new mongoose.Schema(
       type: [String],
       select: false,
     },
+    // Expo push tokens of the phones this user is signed in on.
+    pushTokens: {
+      type: [String],
+      select: false,
+    },
     emailVerificationToken: {
       type: String,
       select: false,
@@ -98,6 +103,7 @@ const userSchema = new mongoose.Schema(
       transform(_doc, ret) {
         delete ret.password;
         delete ret.refreshTokens;
+        delete ret.pushTokens;
         delete ret.__v;
         return ret;
       },

@@ -22,7 +22,7 @@ const config = {
   cors: {
     origin: process.env.CORS_ORIGIN
       ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
-      : ['http://localhost:5173', 'https://crm-rb3f.onrender.com'],
+      : ['http://localhost:5173', 'http://localhost:8081', 'https://crm-rb3f.onrender.com'],
   },
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   // Production app URL for absolute links in Cliq/email (CORS_ORIGIN first entry is the frontend)

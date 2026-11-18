@@ -15,6 +15,7 @@ import {
   updateProfileSchema,
   changePasswordSchema,
   acceptClientInviteSchema,
+  pushTokenSchema,
 } from './auth.validation.js';
 
 const router = Router();
@@ -36,6 +37,8 @@ router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authC
 router.post('/logout', verifyToken, authController.logout);
 router.post('/refresh-token', authController.refresh);
 router.get('/me', verifyToken, authController.getMe);
+router.post('/push-token', verifyToken, validate(pushTokenSchema), authController.addPushToken);
+router.delete('/push-token', verifyToken, validate(pushTokenSchema), authController.removePushToken);
 router.post('/verify-email', authLimiter, validate(verifyEmailSchema), authController.verifyEmail);
 router.post('/verify-email-otp', authLimiter, validate(verifyEmailOtpSchema), authController.verifyEmailOtp);
 router.post('/resend-verification', authLimiter, validate(resendVerificationSchema), authController.resendVerification);

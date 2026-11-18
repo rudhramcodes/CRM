@@ -1,5 +1,6 @@
 import ApiResponse from '../../utils/ApiResponse.js';
 import * as authService from './auth.service.js';
+import * as authRepository from './auth.repository.js';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -181,6 +182,24 @@ export const changePassword = async (req, res, next) => {
   try {
     await authService.changePassword(req.user._id, req.body.currentPassword, req.body.newPassword);
     ApiResponse.success(res, 200, null, 'Password changed');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addPushToken = async (req, res, next) => {
+  try {
+    await authRepository.addPushToken(req.user._id, req.body.token);
+    ApiResponse.success(res, 200, null, 'Push notifications on');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removePushToken = async (req, res, next) => {
+  try {
+    await authRepository.removePushTokens(req.user._id, [req.body.token]);
+    ApiResponse.success(res, 200, null, 'Push notifications off');
   } catch (error) {
     next(error);
   }

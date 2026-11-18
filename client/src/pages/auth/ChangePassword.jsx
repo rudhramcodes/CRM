@@ -70,8 +70,8 @@ export default function ChangePassword() {
 
     setLoading(true);
     try {
-      await axios.post(
-        `${API_BASE_URL}/auth/change-password`,
+      await axios.put(
+        `${API_BASE_URL}/auth/password`,
         { currentPassword: form.currentPassword, newPassword: form.newPassword },
         { withCredentials: true },
       );
