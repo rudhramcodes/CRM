@@ -50,6 +50,7 @@ export const login = async (req, res, next) => {
     ApiResponse.success(res, 200, {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     }, 'Login successful');
   } catch (error) {
     next(error);
@@ -71,7 +72,7 @@ export const logout = async (req, res, next) => {
 
 export const refresh = async (req, res, next) => {
   try {
-    const refreshToken = req.cookies?.refreshToken;
+    const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken;
     const tokens = await authService.refreshAccessToken(refreshToken);
 
     res.cookie('accessToken', tokens.accessToken, {
@@ -85,7 +86,12 @@ export const refresh = async (req, res, next) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    ApiResponse.success(res, 200, { accessToken: tokens.accessToken }, 'Token refreshed');
+    ApiResponse.success(
+      res,
+      200,
+      { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+      'Token refreshed'
+    );
   } catch (error) {
     next(error);
   }
