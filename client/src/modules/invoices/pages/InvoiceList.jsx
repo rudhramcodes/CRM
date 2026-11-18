@@ -99,9 +99,12 @@ export default function InvoiceList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-zinc-900">Invoices</h1>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900">Invoices</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">Manage and track client invoices.</p>
+        </div>
+        <div className="flex items-center justify-between sm:justify-end gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
           <button aria-label="Refresh invoices" onClick={() => { refetchInvoices(); refetchStats(); }}
             disabled={isFetching}
             className="p-2 rounded-lg text-zinc-400 hover:text-primary-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
@@ -109,7 +112,7 @@ export default function InvoiceList() {
           >
             <RefreshCwIcon className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
-          <Button onClick={() => navigate('/invoices/new')}>
+          <Button onClick={() => navigate('/invoices/new')} className="w-full sm:w-auto justify-center">
             <Plus className="w-4 h-4 mr-1.5" /> Create Invoice
           </Button>
         </div>

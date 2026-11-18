@@ -45,18 +45,18 @@ export default function SecurityTab() {
   return (
     <div className="space-y-6">
       {/* Password Policy */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-primary-900 mb-4 flex items-center gap-2">
           <Key className="w-4 h-4" /> Password Policy
         </h3>
-        <div className="grid grid-cols-2 gap-4 max-w-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
           <div>
             <label className={labelClass}>Minimum Length</label>
             <input type="number" min={4} max={128} value={form.passwordMinLength}
               onChange={(e) => setForm((p) => ({ ...p, passwordMinLength: Number(e.target.value) }))}
               className={inputClass} />
           </div>
-          <div />
+          <div className="hidden sm:block" />
           <ToggleRow label="Require Uppercase (A-Z)" checked={form.passwordRequireUpper} onChange={() => toggle('passwordRequireUpper')} />
           <ToggleRow label="Require Lowercase (a-z)" checked={form.passwordRequireLower} onChange={() => toggle('passwordRequireLower')} />
           <ToggleRow label="Require Number (0-9)" checked={form.passwordRequireNumber} onChange={() => toggle('passwordRequireNumber')} />
@@ -65,11 +65,11 @@ export default function SecurityTab() {
       </div>
 
       {/* Login Lockout */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-primary-900 mb-4 flex items-center gap-2">
           <Lock className="w-4 h-4" /> Login Lockout
         </h3>
-        <div className="grid grid-cols-2 gap-4 max-w-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
           <div>
             <label className={labelClass}>Max Login Attempts</label>
             <input type="number" min={1} max={100} value={form.loginMaxAttempts}

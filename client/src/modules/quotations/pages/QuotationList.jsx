@@ -112,13 +112,13 @@ export default function QuotationList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">Quotations</h1>
           <p className="text-sm text-zinc-500 mt-0.5">Create, send, and track client proposals.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="inline-flex items-center gap-2 text-xs text-zinc-600">
+        <div className="flex items-center justify-between sm:justify-end gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+          <label className="inline-flex items-center gap-2 text-xs text-zinc-600 cursor-pointer select-none">
             <input type="checkbox" checked={showArchived} onChange={(event) => { setShowArchived(event.target.checked); setPage(1); }} className="h-4 w-4 accent-primary-900" />
             Archived
           </label>
@@ -131,7 +131,7 @@ export default function QuotationList() {
           >
             <RefreshCwIcon className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
-          <Button onClick={() => navigate('/quotations/new')}>
+          <Button onClick={() => navigate('/quotations/new')} className="w-full sm:w-auto justify-center">
             <Plus className="w-4 h-4 mr-1.5" /> Create Quotation
           </Button>
         </div>

@@ -285,7 +285,7 @@ export default function AttendanceList() {
       <div className="bg-white rounded-xl border border-zinc-200 p-4 space-y-3 shadow-xs">
         {/* Date Quick Presets */}
         <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-zinc-100">
-          <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden text-xs">
             <span className="text-zinc-400 font-medium mr-1 flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5" /> Date:
             </span>

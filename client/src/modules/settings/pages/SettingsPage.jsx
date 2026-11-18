@@ -46,21 +46,21 @@ export default function SettingsPage() {
         <p className="text-sm text-zinc-500 mt-1">Manage your account and application settings</p>
       </div>
 
-      <div className="flex gap-6">
-        <nav className="w-48 shrink-0 space-y-1">
+      <div className="flex flex-col md:flex-row gap-6">
+        <nav className="flex md:flex-col overflow-x-auto scrollbar-hide scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-0.5 md:py-0 px-1 -mx-1 md:mx-0 gap-1.5 md:gap-0 md:space-y-1 md:w-48 shrink-0 border-b md:border-b-0 border-zinc-200/80">
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors text-left ${
+                className={`shrink-0 cursor-pointer whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2 md:px-3 text-sm rounded-lg transition-colors text-left ${
                   activeTab === tab.id
-                    ? 'bg-primary-900 text-white'
-                    : 'text-zinc-600 hover:bg-zinc-100'
+                    ? 'bg-primary-900 text-white shadow-xs'
+                    : 'text-zinc-600 hover:bg-zinc-100 bg-zinc-50/80 md:bg-transparent'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-4 h-4 shrink-0" />
                 {tab.label}
               </button>
             );

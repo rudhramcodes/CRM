@@ -122,7 +122,7 @@ export default function IntegrationsTab() {
   return (
     <div className="space-y-6">
       {/* Resend Status */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-primary-900 mb-4 flex items-center gap-2">
           <Mail className="w-4 h-4" /> Resend — Email Service
         </h3>
@@ -145,7 +145,7 @@ export default function IntegrationsTab() {
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-4 max-w-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
           <div>
             <label className={labelClass}>From Email</label>
             <input type="email" value={form.resendFromEmail}
@@ -162,7 +162,7 @@ export default function IntegrationsTab() {
       </div>
 
       {/* Zoho Meetings — OAuth 2.0 */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-primary-900 mb-4 flex items-center gap-2">
           <CalendarClock className="w-4 h-4" /> Zoho Meetings — Auto-Generated Meeting Links
         </h3>
