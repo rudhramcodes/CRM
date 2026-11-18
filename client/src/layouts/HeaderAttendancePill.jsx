@@ -8,21 +8,9 @@ import {
 import ClockOutSummary from '../modules/attendance/components/ClockOutSummary';
 import { Play, LogOut, Coffee } from 'lucide-react';
 import toast from 'react-hot-toast';
+import showToast from '../utils/toast';
+import { getLocation } from '../utils/location';
 import { cn } from '../utils/cn';
-
-const getLocation = () => {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve(null);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(null),
-      { timeout: 8000, enableHighAccuracy: true }
-    );
-  });
-};
 
 function formatElapsed(totalSeconds) {
   const h = Math.floor(totalSeconds / 3600);
@@ -95,20 +83,20 @@ export default function HeaderAttendancePill() {
     try {
       const location = await getLocation();
       await clockIn({ isWFH: false, location }).unwrap();
-      toast.success('Punched In successfully! Have a great day.');
+      showToast.success('Punched In successfully! Have a great day.');
     } catch (err) {
-      toast.error(err?.data?.message || 'Clock In failed');
+      showToast.error(err?.data?.message || 'Clock In failed');
     }
   };
 
   const handleConfirmClockOut = async () => {
     try {
+      setShowSummary(false);
       const location = await getLocation();
       await clockOut({ location }).unwrap();
-      setShowSummary(false);
-      toast.success('Clocked out successfully');
+      showToast.success('Clocked out successfully');
     } catch (err) {
-      toast.error(err?.data?.message || 'Clock Out failed');
+      showToast.error(err?.data?.message || 'Clock Out failed');
     }
   };
 

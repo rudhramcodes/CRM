@@ -23,6 +23,17 @@ export const findAttendanceByEmployeeAndDate = async (employeeId, date) => {
     .populate('leave', 'leaveType startDate endDate status');
 };
 
+export const findActiveAttendanceByEmployee = async (employeeId) => {
+  return Attendance.findOne({
+    employee: employeeId,
+    'sessions.clockIn.time': { $ne: null },
+    'sessions.clockOut.time': null,
+  })
+    .sort({ date: -1 })
+    .populate('shift')
+    .populate('leave', 'leaveType startDate endDate status');
+};
+
 export const createAttendance = async (data) => {
   return Attendance.create(data);
 };

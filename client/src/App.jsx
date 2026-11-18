@@ -12,8 +12,15 @@ export default function App() {
         <RouterProvider router={router} />
         <Toaster
           position="top-right"
+          gutter={8}
           toastOptions={{
             duration: 3000,
+            success: {
+              duration: 3000,
+            },
+            error: {
+              duration: 4000,
+            },
             style: {
               borderRadius: '0.5rem',
               background: '#0b0b0b',

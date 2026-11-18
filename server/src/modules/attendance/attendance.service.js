@@ -9,7 +9,7 @@ import {
   sendLeaveApprovedEmail,
   sendLeaveRejectedEmail,
 } from '../../services/emailService.js';
-import { resolveLocationDetails } from '../../utils/geo.js';
+import { resolveLocationDetails, resolveLocationFast } from '../../utils/geo.js';
 import {
   calculateLeaveDays,
   isBalanceTrackedLeave,
@@ -158,22 +158,27 @@ export const clockIn = async (employeeId, data, ip) => {
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
 
-    // Cover the full local calendar day so date-only leave bounds still match
-    const leaves = await attendanceRepo.findAllLeaves(
-      {
-        employee: employeeId,
-        status: 'approved',
-        startDate: { $lte: parseEndOfDay(today) },
-        endDate: { $gte: today },
-      },
-      { limit: 1 }
-    );
-    if (leaves.leaves.length > 0) {
+    // Fetch leaves, shift, today's attendance record, and holiday in parallel
+    const [leavesResult, defaultShift, existingRecord, holiday] = await Promise.all([
+      attendanceRepo.findAllLeaves(
+        {
+          employee: employeeId,
+          status: 'approved',
+          startDate: { $lte: parseEndOfDay(today) },
+          endDate: { $gte: today },
+        },
+        { limit: 1 }
+      ),
+      attendanceRepo.findDefaultShift(),
+      attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today),
+      attendanceRepo.findHolidayByDate(today),
+    ]);
+
+    if (leavesResult.leaves.length > 0) {
       throw ApiError.badRequest('You have an approved leave for today');
     }
 
-    // Find or create shift
-    let shift = await attendanceRepo.findDefaultShift();
+    let shift = defaultShift;
     if (!shift) {
       shift = await Shift.create({
         name: 'General Shift',
@@ -185,7 +190,7 @@ export const clockIn = async (employeeId, data, ip) => {
       });
     }
 
-    let record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
+    let record = existingRecord;
 
     // Check if already has active session
     if (record) {
@@ -200,9 +205,20 @@ export const clockIn = async (employeeId, data, ip) => {
 
     // Check holiday / weekend
     if (!record) {
-      const holiday = await attendanceRepo.findHolidayByDate(today);
       if (holiday) {
         await attendanceRepo.createAttendance({
+          employee: employeeId,
+          date: today,
+          shift: shift._id,
+          status: 'holiday',
+          sessions: [],
+          createdBy: employeeId,
+        });
+        throw ApiError.badRequest(`Today is a holiday: ${holiday.name}`);
+      }
+
+      if (isWeekend(today)) {
+        record = await attendanceRepo.createAttendance({
           employee: employeeId,
           date: today,
           shift: shift._id,
@@ -308,11 +324,20 @@ export const clockOut = async (employeeId, location) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
-    if (!record) throw ApiError.badRequest('You have not clocked in today');
+    let record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
+    let activeSession = record ? ensureActiveSession(record) : null;
 
-    const activeSession = ensureActiveSession(record);
-    if (!activeSession) throw ApiError.badRequest('No active session to clock out');
+    if (!activeSession) {
+      const activeRecord = await attendanceRepo.findActiveAttendanceByEmployee(employeeId);
+      if (activeRecord) {
+        record = activeRecord;
+        activeSession = ensureActiveSession(record);
+      }
+    }
+
+    if (!record || !activeSession) {
+      throw ApiError.badRequest('No active clock-in session found to clock out');
+    }
 
     const now = new Date();
 

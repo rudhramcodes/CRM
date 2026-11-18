@@ -23,7 +23,9 @@ const fixStaleIndexes = async () => {
   try {
     const indexes = await Client.collection.indexes();
     // Contact details may be shared by separate companies.
-    const emailIdx = indexes.find((idx) => idx.unique && idx.key?.email === 1 && Object.keys(idx.key).length === 1);
+    const emailIdx = indexes.find(
+      (idx) => idx.unique && idx.key?.email === 1 && Object.keys(idx.key).length === 1,
+    );
     if (emailIdx) {
       await Client.collection.dropIndex(emailIdx.name);
       await Client.collection.createIndex({ email: 1 });
@@ -51,7 +53,9 @@ const removeLegacyNullPortalUsers = async () => {
   try {
     const result = await Client.updateMany({ user: { $type: 10 } }, { $unset: { user: 1 } });
     if (result.modifiedCount > 0) {
-      logger.info(`[client-fix] Removed legacy null portal-user fields from ${result.modifiedCount} client(s)`);
+      logger.info(
+        `[client-fix] Removed legacy null portal-user fields from ${result.modifiedCount} client(s)`,
+      );
     }
   } catch (err) {
     logger.warn(`[client-fix] Skipped null portal-user cleanup: ${err.message}`);
