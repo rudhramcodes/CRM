@@ -14,6 +14,8 @@ import Switch from '../../../components/ui/Switch';
 import { format } from 'date-fns';
 import { Play, LogOut, Coffee, PlayCircle, Plane, Gift, CalendarOff, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import showToast from '../../../utils/toast';
+import { getLocation } from '../../../utils/location';
 import { formatHours, formatMinutes } from '../../../utils/formatters';
 
 const BLOCKED_STATUS = {
@@ -36,20 +38,6 @@ const BLOCKED_STATUS = {
 
 const formatLeaveType = (type) =>
   type ? String(type).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Leave';
-
-const getLocation = () => {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve(null);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(null),
-      { timeout: 10000, enableHighAccuracy: true }
-    );
-  });
-};
 
 export default function AttendanceWidget() {
   const now = new Date();
@@ -104,13 +92,13 @@ export default function AttendanceWidget() {
   const handleClockIn = async () => {
     setClockInError(null);
     if (blockedKind) {
-      toast.error(BLOCKED_STATUS[blockedKind].title);
+      showToast.error(BLOCKED_STATUS[blockedKind].title);
       return;
     }
     try {
       const location = await getLocation();
       await clockIn({ isWFH, location }).unwrap();
-      toast.success(isWFH ? 'Clocked in (WFH)' : 'Clocked in successfully');
+      showToast.success(isWFH ? 'Clocked in (WFH)' : 'Clocked in successfully');
     } catch (err) {
       setClockInError(err?.data?.message || 'Clock in failed');
     }
@@ -122,30 +110,30 @@ export default function AttendanceWidget() {
 
   const confirmClockOut = async () => {
     try {
+      setShowSummary(false);
       const location = await getLocation();
       await clockOut({ location }).unwrap();
-      setShowSummary(false);
-      toast.success('Clocked out successfully');
+      showToast.success('Clocked out successfully');
     } catch (err) {
-      toast.error(err?.data?.message || 'Clock out failed');
+      showToast.error(err?.data?.message || 'Clock out failed');
     }
   };
 
   const handleStartBreak = async () => {
     try {
       await startBreak().unwrap();
-      toast.success('Break started');
+      showToast.success('Break started');
     } catch (err) {
-      toast.error(err?.data?.message || 'Failed to start break');
+      showToast.error(err?.data?.message || 'Failed to start break');
     }
   };
 
   const handleEndBreak = async () => {
     try {
       await endBreak().unwrap();
-      toast.success('Break ended');
+      showToast.success('Break ended');
     } catch (err) {
-      toast.error(err?.data?.message || 'Failed to end break');
+      showToast.error(err?.data?.message || 'Failed to end break');
     }
   };
 

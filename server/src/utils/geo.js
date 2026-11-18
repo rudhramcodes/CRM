@@ -21,7 +21,7 @@ export const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
   return Math.round(R * c);
 };
 
-export const resolveLocationDetails = async (location) => {
+export const resolveLocationFast = (location) => {
   if (!location || location.lat == null || location.lng == null) {
     return location || {};
   }
@@ -35,15 +35,24 @@ export const resolveLocationDetails = async (location) => {
 
   const isOffice = dist != null && dist <= RUDHRAM_OFFICE.radiusMeters;
 
-  if (isOffice) {
-    return {
-      lat: location.lat,
-      lng: location.lng,
-      isOffice: true,
-      locationName: RUDHRAM_OFFICE.name,
-      distanceMeters: dist,
-      address: `${RUDHRAM_OFFICE.name} (${dist}m away)`,
-    };
+  return {
+    lat: location.lat,
+    lng: location.lng,
+    isOffice,
+    locationName: isOffice ? RUDHRAM_OFFICE.name : `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
+    distanceMeters: dist,
+    address: isOffice ? `${RUDHRAM_OFFICE.name} (${dist}m away)` : `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
+  };
+};
+
+export const resolveLocationDetails = async (location) => {
+  if (!location || location.lat == null || location.lng == null) {
+    return location || {};
+  }
+
+  const fastLocation = resolveLocationFast(location);
+  if (fastLocation.isOffice) {
+    return fastLocation;
   }
 
   let locationName = null;
@@ -51,7 +60,7 @@ export const resolveLocationDetails = async (location) => {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const timeoutId = setTimeout(() => controller.abort(), 800);
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}&zoom=16&addressdetails=1`,
       {
@@ -72,15 +81,12 @@ export const resolveLocationDetails = async (location) => {
       fullAddress = data.display_name;
     }
   } catch (err) {
-    // If geocode fails, fallback to coordinates
+    // If geocode fails, fallback to fastLocation coordinates
   }
 
   return {
-    lat: location.lat,
-    lng: location.lng,
-    isOffice: false,
-    locationName: locationName || `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
-    distanceMeters: dist,
-    address: fullAddress || locationName,
+    ...fastLocation,
+    locationName: locationName || fastLocation.locationName,
+    address: fullAddress || locationName || fastLocation.address,
   };
 };
