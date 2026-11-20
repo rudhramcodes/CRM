@@ -97,6 +97,8 @@ const taskSchema = new mongoose.Schema(
 
     checklists: [checklistSchema],
     checklistProgress: { type: Number, default: 0 },
+    // How far along the doer says it is (25/50/75...). With a checklist, the checklist % is shown instead.
+    progress: { type: Number, min: 0, max: 100, default: 0 },
 
     timeEntries: [timeEntrySchema],
     activeTimers: [{

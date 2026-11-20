@@ -24,10 +24,13 @@ export const findById = (id) =>
 export const findAll = async (query, options = {}) => {
   const filter = {};
   if (query.search) {
-    const re = { $regex: query.search, $options: 'i' };
-    filter.$or = [{ title: re }, { description: re }];
+    // Escaped: a typed "(" or "*" is text to find, not a broken (or very slow) regex.
+    const re = { $regex: query.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+    filter.$or = [{ title: re }, { description: re }, { tags: re }];
   }
   if (query.status) filter.status = query.status;
+  else if (query.open === 'true') filter.status = { $ne: 'done' };
+  if (query.doneSince) Object.assign(filter, { status: 'done', completedAt: { $gte: new Date(query.doneSince) } });
   if (query.priority) filter.priority = query.priority;
   if (query.project) filter.project = query.project;
   if (query.tags) filter.tags = { $in: query.tags.split(',') };
@@ -48,7 +51,9 @@ export const findAll = async (query, options = {}) => {
   if (options.client) {
     const { default: Project } = await import('../projects/project.model.js');
     const projects = await Project.find({ client: options.client }).select('_id').lean();
-    filter.project = { $in: projects.map((p) => p._id) };
+    const own = projects.map((p) => String(p._id));
+    // A client may narrow to one of their own projects, never widen past them.
+    filter.project = { $in: query.project ? own.filter((id) => id === String(query.project)) : own };
   }
 
   const sort = {};

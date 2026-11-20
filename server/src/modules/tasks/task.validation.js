@@ -9,7 +9,8 @@ const dueDateSchema = z.union([z.string().min(1, 'Task deadline is required'), z
 export const createTaskSchema = z.object({
   title: z.string().min(2).max(200),
   description: z.string().optional().default(''),
-  status: z.enum(statusValues).optional().default(TASK_STATUS.TODO),
+  // A new task starts as To Do or In Progress; review and done go through their own steps.
+  status: z.enum([TASK_STATUS.TODO, TASK_STATUS.IN_PROGRESS]).optional().default(TASK_STATUS.TODO),
   priority: z.enum(priorityValues).optional().default(TASK_PRIORITY.MEDIUM),
   assignedTo: assigneeSchema,
   helpers: z.array(assigneeSchema).max(30).optional().default([]),
@@ -35,6 +36,7 @@ export const updateTaskSchema = z.object({
   // Submit-for-review note, or the reviewer's "what to change" note
   note: z.string().trim().max(2000).optional(),
   requestChanges: z.boolean().optional(),
+  progress: z.number().int().min(0).max(100).optional(),
   reviewer: assigneeSchema.optional(),
   title: z.string().min(2).max(200).optional(),
   description: z.string().optional(),
@@ -70,6 +72,8 @@ export const tasksQuerySchema = z.object({
   dueDateTo: z.string().optional(),
   parent: z.string().optional(),
   reviewer: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+  open: z.enum(['true', 'false']).optional(), // true: everything not done yet
+  doneSince: z.string().optional(), // done on or after this date (My Day's "Done today")
   sort: z.string().optional().default('-createdAt'),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(20),

@@ -68,7 +68,12 @@ export const NOTIFICATION_TEMPLATES = {
   },
   task_status_change: {
     title: 'Status Updated',
-    message: (d) => `${d.actorName} marked "${d.taskTitle}" as ${d.newStatus}`,
+    message: (d) => ({
+      in_progress: `${d.actorName} started "${d.taskTitle}"`,
+      todo: `${d.actorName} moved "${d.taskTitle}" back to To Do`,
+      done: `${d.actorName} finished "${d.taskTitle}"`,
+      review: `${d.actorName} sent "${d.taskTitle}" for review`,
+    }[d.newStatus] || `${d.actorName} marked "${d.taskTitle}" as ${d.newStatus}`),
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: false, cliq: false },
   },
@@ -195,6 +200,18 @@ export const NOTIFICATION_TEMPLATES = {
     title: 'Changes needed',
     message: (d) => `${d.actorName} asked for changes on "${d.taskTitle}": ${d.note}`,
     priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: false, cliq: false },
+  },
+  task_reassigned: {
+    title: 'Task moved',
+    message: (d) => `${d.actorName} moved "${d.taskTitle}" to ${d.newOwner}`,
+    priority: NOTIFICATION_PRIORITIES.MEDIUM,
+    channels: { email: false, cliq: false },
+  },
+  task_rescheduled: {
+    title: 'Due date moved',
+    message: (d) => `${d.actorName} moved "${d.taskTitle}" to ${d.newDate}${d.reason ? `: ${d.reason}` : ''}`,
+    priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: false, cliq: false },
   },
   task_approved: {

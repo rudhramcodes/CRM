@@ -55,14 +55,14 @@ export const getDependencies = async (req, res, next) => {
 
 export const addDependency = async (req, res, next) => {
   try {
-    const task = await taskService.addDependencies(req.params.id, req.body.dependsOn);
+    const task = await taskService.addDependencies(req.params.id, req.body.dependsOn, req.user);
     ApiResponse.success(res, 200, { task }, 'Dependencies added');
   } catch (err) { next(err); }
 };
 
 export const removeDependency = async (req, res, next) => {
   try {
-    const task = await taskService.removeDependency(req.params.id, req.params.depId);
+    const task = await taskService.removeDependency(req.params.id, req.params.depId, req.user);
     ApiResponse.success(res, 200, { task }, 'Dependency removed');
   } catch (err) { next(err); }
 };
@@ -143,7 +143,7 @@ export const addTimeEntry = async (req, res, next) => {
 
 export const removeTimeEntry = async (req, res, next) => {
   try {
-    const task = await taskService.removeTimeEntry(req.params.id, req.params.entryId);
+    const task = await taskService.removeTimeEntry(req.params.id, req.params.entryId, req.user);
     ApiResponse.success(res, 200, { task }, 'Time entry removed');
   } catch (err) { next(err); }
 };

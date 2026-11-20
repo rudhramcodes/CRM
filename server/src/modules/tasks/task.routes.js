@@ -58,7 +58,7 @@ router.delete('/:id/comments/:commentId', authorize(...STAFF, ROLES.CLIENT), att
 // Checklists — staff only
 router.post('/:id/checklist', authorize(...STAFF), validate(addChecklistSchema), ctrl.addChecklistItem);
 router.patch('/:id/checklist/:itemId', authorize(...STAFF), validate(updateChecklistSchema), ctrl.updateChecklistItem);
-router.delete('/:id/checklist/:itemId', authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), ctrl.removeChecklistItem);
+router.delete('/:id/checklist/:itemId', authorize(...STAFF), ctrl.removeChecklistItem); // task managers (checked in the service)
 
 // Watchers — staff only (client blocked)
 router.post('/:id/watch', authorize(...STAFF), ctrl.watchTask);

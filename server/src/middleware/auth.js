@@ -21,6 +21,8 @@ export const verifyToken = async (req, _res, next) => {
     if (!user) {
       throw ApiError.unauthorized('User not found');
     }
+    // A deactivated account stops working at once, not when its token expires.
+    if (user.isActive === false) throw ApiError.unauthorized('This account has been deactivated');
 
     req.user = user;
     next();

@@ -1,13 +1,18 @@
 import * as authRepository from '../auth/auth.repository.js';
 import logger from '../../utils/logger.js';
+import { countUnreadByRecipient } from './notification.repository.js';
+import { pushStyle } from './pushStyle.js';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
 // Sends one notification to every phone the recipient is signed in on, and forgets phones Expo says are gone.
 // shortcut: no receipt polling (the second Expo step); add it if delivery problems need tracing.
-export const sendExpoPush = async (recipient, { _id, title, message, link, type, priority, referenceModel, referenceId }) => {
+export const sendExpoPush = async (recipient, { _id, title, message, link, type, referenceModel, referenceId }) => {
   const tokens = await authRepository.findPushTokens(recipient);
   if (!tokens.length) return;
+  const style = pushStyle({ type, referenceModel, referenceId });
+  // The app icon shows how many notifications are unread.
+  const badge = await countUnreadByRecipient(recipient).catch(() => undefined);
 
   const res = await fetch(EXPO_PUSH_URL, {
     method: 'POST',
@@ -16,9 +21,9 @@ export const sendExpoPush = async (recipient, { _id, title, message, link, type,
       to,
       title: title || 'Rudhram CRM',
       body: message,
-      sound: 'default',
-      channelId: 'default',
-      priority: priority === 'high' ? 'high' : 'default',
+      sound: style.interruptionLevel === 'passive' ? null : 'default',
+      badge,
+      ...style,
       data: { id: _id ? String(_id) : undefined, type, link, referenceModel, referenceId: referenceId ? String(referenceId) : undefined },
     }))),
     signal: AbortSignal.timeout(10000),

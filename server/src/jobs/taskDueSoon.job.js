@@ -9,18 +9,18 @@ import logger from '../utils/logger.js';
 export const sendTaskDueReminders = async (now = new Date()) => {
   const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const tasks = await Task.find({
-    status: { $ne: 'done' },
+    status: { $nin: ['done', 'review'] }, // in review it waits on the reviewer, not the doer
     dueDate: { $gte: now, $lte: in24Hours },
     assignedTo: { $ne: null },
     $expr: { $ne: ['$dueSoonSentFor', '$dueDate'] },
-  }).select('title dueDate assignedTo project priority').lean();
+  }).select('title dueDate assignedTo helpers project priority').lean();
 
   const byUser = new Map();
   for (const t of tasks) {
     const { modifiedCount } = await Task.updateOne({ _id: t._id, dueSoonSentFor: { $ne: t.dueDate } }, { $set: { dueSoonSentFor: t.dueDate } });
     if (!modifiedCount) continue;
-    const k = String(t.assignedTo);
-    byUser.set(k, [...(byUser.get(k) || []), t]);
+    // The owner and every helper get it.
+    for (const k of new Set([t.assignedTo, ...(t.helpers || [])].map(String))) byUser.set(k, [...(byUser.get(k) || []), t]);
   }
 
   for (const [recipient, list] of byUser) {
