@@ -3,6 +3,13 @@ import { Attendance, Shift, Holiday } from './attendance.model.js';
 import User from '../auth/auth.model.js';
 import logger from '../../utils/logger.js';
 import { ensureActiveSession, recalcRecordTotals } from './attendance.service.js';
+import { sendExpoPush } from '../notifications/expoPush.js';
+
+// "18:30" → "6:30 PM"
+const toDisplay = (hhmm) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
 
 const autoClockOut = async () => {
   try {
@@ -49,6 +56,14 @@ const autoClockOut = async () => {
           metadata: { workHours: record.workHours, overtime: record.overtime, auto: true },
         });
         await record.save();
+        // Tell them on their phone, so a missed clock-out isn't a surprise on the attendance report.
+        sendExpoPush(record.employee, {
+          type: 'auto_clock_out',
+          title: 'Clocked out automatically',
+          message: `Your shift ended at ${toDisplay(shift.endTime)}, so you were clocked out. Request a regularization if this is wrong.`,
+          link: '/attendance',
+          priority: 'high',
+        }).catch((err) => logger.error(`[Attendance] Auto clock-out push failed: ${err.message}`));
       }
 
       logger.info(`[Attendance] Auto clock-out: ${records.length} employees for shift ${shift.name}`);
