@@ -8,6 +8,9 @@ export const ROLES = {
 
 export const ROLES_LIST = Object.values(ROLES);
 
+// Office a person works from; teams are grouped by it.
+export const LOCATIONS = ['Surat', 'Mumbai', 'Delhi'];
+
 export const LEAD_STATUS = {
   NEW: 'new',
   CONTACTED: 'contacted',

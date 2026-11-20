@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import config from '../../config/index.js';
-import { ROLES } from '../../constants/index.js';
+import { LOCATIONS, ROLES } from '../../constants/index.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -37,6 +37,11 @@ const userSchema = new mongoose.Schema(
         type: String,
       },
     ],
+    location: {
+      type: String,
+      enum: [...LOCATIONS, null],
+      default: null,
+    },
     readOnlyModules: {
       type: [{ type: String, enum: ['leads', 'clients'] }],
       default: [],
