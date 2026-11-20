@@ -28,7 +28,12 @@ const deliverableValidationSchema = z.object({
   category: z.enum(['photo', 'video', 'others']).optional(),
   details: z.string().optional().or(z.literal('')),
   status: z.enum(['pending', 'in_progress', 'ready', 'delivered']).optional(),
-  driveUrl: z.string().optional().or(z.literal('')),
+  // Web links only: a stored javascript: or data: URL would run when someone taps it on the web or mobile.
+  // Older links typed without a scheme ("drive.google.com/...") get https:// so they keep saving.
+  driveUrl: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() && !/^[a-z][a-z\d+.-]*:/i.test(v.trim()) ? `https://${v.trim()}` : v),
+    z.string().trim().max(2000).regex(/^https?:\/\/\S+$/i, 'Use a link starting with https://').optional().or(z.literal('')),
+  ),
   deliveredAt: z.string().optional().nullable(),
 });
 
@@ -157,17 +162,20 @@ export const updateProjectSchema = z
     { message: 'Deadline must be after start date', path: ['deadline'] },
   );
 
+const PROJECT_SORT_FIELDS = ['createdAt', 'updatedAt', 'deadline', 'startDate', 'title', 'priority', 'stage'];
+
 export const projectsQuerySchema = z.object({
-  search: z.string().optional(),
+  search: z.string().trim().max(100).optional(),
   status: z.enum(PROJECT_STATUS_LIST).optional(),
   stage: z.enum(Object.values(PROJECT_STAGES)).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  tag: z.string().optional(),
-  brand: z.string().optional(),
-  employeeFilter: z.string().optional(),
+  tag: z.string().max(100).optional(),
+  brand: z.string().max(50).optional(),
+  employeeFilter: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid user id').optional(),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(10),
-  sortBy: z.string().optional().default('createdAt'),
+  // Only real, indexed-ish fields: an open sortBy lets a client order by hidden fields (budget) and infer them.
+  sortBy: z.enum(PROJECT_SORT_FIELDS).optional().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 

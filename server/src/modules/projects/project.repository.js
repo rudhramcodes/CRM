@@ -40,8 +40,11 @@ export const findAll = async (query = {}, options = {}) => {
   if (query.employeeFilter) filter['teamMembers.user'] = query.employeeFilter;
   if (options.client) filter.client = options.client;
 
+  // A client user is pinned to their own profile; the venture filter must narrow that, never replace it.
   if (query.brand) {
-    const brandClientIds = (await Client.find({ brand: query.brand }).select('_id').lean()).map((c) => c._id);
+    const brandFilter = { brand: query.brand };
+    if (options.client) brandFilter._id = options.client;
+    const brandClientIds = (await Client.find(brandFilter).select('_id').lean()).map((c) => c._id);
     filter.client = { $in: brandClientIds };
   }
 
