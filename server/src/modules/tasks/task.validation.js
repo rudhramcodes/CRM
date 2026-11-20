@@ -61,12 +61,16 @@ export const updateTaskSchema = z.object({
   }).optional(),
 });
 
+// Sort only by these (optionally "-" for newest first): an open sort lets a caller order by hidden fields and infer them.
+const TASK_SORT_FIELDS = ['createdAt', 'updatedAt', 'dueDate', 'startDate', 'reviewDueAt', 'completedAt', 'priority', 'status', 'title'];
+const taskSort = z.string().refine((v) => TASK_SORT_FIELDS.includes(v.replace(/^-/, '')), 'Unknown sort field');
+
 export const tasksQuerySchema = z.object({
   search: z.string().optional(),
   status: z.string().optional(),
   priority: z.string().optional(),
   assignedTo: z.string().optional(),
-  project: z.string().optional(),
+  project: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid project id').or(z.literal('')).optional(),
   tags: z.string().optional(),
   dueDateFrom: z.string().optional(),
   dueDateTo: z.string().optional(),
@@ -74,7 +78,7 @@ export const tasksQuerySchema = z.object({
   reviewer: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   open: z.enum(['true', 'false']).optional(), // true: everything not done yet
   doneSince: z.string().optional(), // done on or after this date (My Day's "Done today")
-  sort: z.string().optional().default('-createdAt'),
+  sort: taskSort.optional().default('-createdAt'),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(20),
 });
