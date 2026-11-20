@@ -15,46 +15,48 @@ export const findById = async (id) => {
     .populate('createdBy', 'name email');
 };
 
-export const findAll = async (query = {}, options = {}) => {
-  const { page, limit, skip, sort } = paginate(options);
+// Pure: list filter from the query. Search and venture are each an $or, so they're ANDed, never overwrite each other.
+// brandIds = the clients/leads of query.brand (a meeting counts for a venture through its client or lead too).
+export const buildMeetingFilter = (query = {}, brandIds = { clientIds: [], leadIds: [] }) => {
   const filter = {};
+  const and = [];
 
   if (query.search) {
     const searchRegex = new RegExp(escapeRegex(query.search), 'i');
-    filter.$or = [{ title: searchRegex }, { notes: searchRegex }, { location: searchRegex }];
+    and.push({ $or: [{ title: searchRegex }, { notes: searchRegex }, { location: searchRegex }] });
   }
-
-  if (query.status) {
-    filter.status = query.status;
-  }
-
-  if (query.lead) {
-    filter.lead = query.lead;
-  }
-
-  if (query.client) {
-    filter.client = query.client;
-  }
-
+  if (query.status) filter.status = query.status;
+  if (query.lead) filter.lead = query.lead;
+  if (query.client) filter.client = query.client;
   if (query.brand) {
-    const [brandClientIds, brandLeadIds] = await Promise.all([
-      Client.find({ brand: query.brand }).select('_id').lean(),
-      Lead.find({ brand: query.brand, isDeleted: false }).select('_id').lean(),
-    ]);
-    const clientIds = brandClientIds.map((c) => c._id);
-    const leadIds = brandLeadIds.map((l) => l._id);
-    filter.$or = [
+    and.push({ $or: [
       { brand: query.brand },
-      { client: { $in: clientIds } },
-      { lead: { $in: leadIds } },
-    ];
+      { client: { $in: brandIds.clientIds } },
+      { lead: { $in: brandIds.leadIds } },
+    ] });
   }
+  if (and.length) filter.$and = and;
 
   if (query.dateFrom || query.dateTo) {
     filter.date = {};
     if (query.dateFrom) filter.date.$gte = new Date(query.dateFrom);
     if (query.dateTo) filter.date.$lte = new Date(query.dateTo);
   }
+  return filter;
+};
+
+export const findAll = async (query = {}, options = {}) => {
+  const { page, limit, skip, sort } = paginate(options);
+
+  let brandIds;
+  if (query.brand) {
+    const [brandClientIds, brandLeadIds] = await Promise.all([
+      Client.find({ brand: query.brand }).select('_id').lean(),
+      Lead.find({ brand: query.brand, isDeleted: false }).select('_id').lean(),
+    ]);
+    brandIds = { clientIds: brandClientIds.map((c) => c._id), leadIds: brandLeadIds.map((l) => l._id) };
+  }
+  const filter = buildMeetingFilter(query, brandIds);
 
   if (options.accessFilter) {
     Object.assign(filter, options.accessFilter);

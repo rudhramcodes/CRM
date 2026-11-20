@@ -161,6 +161,7 @@ export const createMeeting = async (data, user, clientProfile) => {
     recordingLink: data.recordingLink || '',
     lead: data.lead || null,
     client: data.client || null,
+    brand: data.brand || null,
     attendees,
     createdBy: user._id,
     status: data.status || 'scheduled',
