@@ -16,9 +16,10 @@ export const holidayQuerySchema = paginationQuerySchema.extend({
 export const clockInSchema = z.object({
   location: z
     .object({
-      lat: z.number().min(-90).max(90).optional(),
-      lng: z.number().min(-180).max(180).optional(),
+      lat: z.number().min(-90).max(90).nullable().optional(),
+      lng: z.number().min(-180).max(180).nullable().optional(),
     })
+    .nullable()
     .optional(),
   isWFH: z.boolean().optional(),
   wfhReason: z.string().max(500).optional(),
@@ -27,9 +28,10 @@ export const clockInSchema = z.object({
 export const clockOutSchema = z.object({
   location: z
     .object({
-      lat: z.number().min(-90).max(90).optional(),
-      lng: z.number().min(-180).max(180).optional(),
+      lat: z.number().min(-90).max(90).nullable().optional(),
+      lng: z.number().min(-180).max(180).nullable().optional(),
     })
+    .nullable()
     .optional(),
 });
 
