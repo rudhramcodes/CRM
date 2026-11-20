@@ -10,6 +10,7 @@ import { startTaskDueCron } from './jobs/taskDueSoon.job.js';
 import { startTaskReviewCron } from './jobs/taskReview.job.js';
 import { startHeldPushCron } from './jobs/heldPush.job.js';
 import { startCleanupCron } from './jobs/cleanupNotifications.job.js';
+import { startClockReminderCron } from './jobs/clockReminder.job.js';
 import User from './modules/auth/auth.model.js';
 import Client from './modules/clients/client.model.js';
 import { migrateProjectCodes } from './utils/generateProjectCode.js';
@@ -108,6 +109,7 @@ const startServer = async () => {
     startTaskReviewCron();
     startHeldPushCron();
     startCleanupCron();
+    startClockReminderCron();
 
     httpServer.listen(config.port, '0.0.0.0', () => {
       logger.info(`Server running on port ${config.port} in ${config.nodeEnv} mode`);
