@@ -124,5 +124,10 @@ describe.skipIf(!up)('task rules by role (database)', () => {
     expect(seen.activities).toBeUndefined();
     expect(seen.timeEntries).toBeUndefined();
     expect(seen.assignedTo.email).toBeUndefined();
+    // Posting in the chat answers with the same client view, not the internal task.
+    const after = await svc.addComment(String(base._id), { text: 'Looks great' }, clientUser, client);
+    expect(after.activities).toBeUndefined();
+    expect(after.comments.at(-1).text).toBe('Looks great');
+    expect(after.comments.at(-1).createdBy.email).toBeUndefined();
   });
 });

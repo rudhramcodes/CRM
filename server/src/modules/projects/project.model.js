@@ -87,6 +87,8 @@ const messageSchema = new mongoose.Schema(
       url: String,
       fileId: String,
       name: String,
+      mime: String,
+      size: Number,
     }],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     taskId: mongoose.Schema.Types.ObjectId,

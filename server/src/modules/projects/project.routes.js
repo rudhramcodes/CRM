@@ -6,7 +6,12 @@ import { verifyToken, authorize } from '../../middleware/auth.js';
 import { attachClientProfile } from '../../middleware/clientPortal.js';
 import { ROLES } from '../../constants/index.js';
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+// Project chat photos: up to 5 per message, 10 MB each, images only.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 5 },
+  fileFilter: (_req, f, cb) => cb(null, f.mimetype.startsWith('image/')),
+});
 import {
   createProjectSchema,
   updateProjectSchema,

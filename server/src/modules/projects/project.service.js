@@ -1,7 +1,7 @@
 import ApiError from '../../utils/ApiError.js';
 import generateProjectCode from '../../utils/generateProjectCode.js';
 import * as projectRepository from './project.repository.js';
-import { uploadBuffer } from '../../services/cloudinaryService.js';
+import { deleteFile, uploadFile } from '../../services/fileUploadService.js';
 import Task from '../tasks/task.model.js';
 import Client from '../clients/client.model.js';
 import * as notificationService from '../notifications/notification.service.js';
@@ -51,6 +51,22 @@ const assertClientProjectAccess = async (project, clientProfile) => {
     throw ApiError.forbidden('Access denied to this project');
   }
 };
+
+// What a client sees of a project: the work, dates, milestones, deliverables and crew size. Not the team's
+// activity details, budget, QC, inward storage, crew phone numbers, stage-change reasons or anyone's email.
+const person = (u) => (u && typeof u === 'object' && u._id ? { _id: u._id, name: u.name, avatar: u.avatar } : u);
+const forClientProject = (project) => {
+  const p = project.toObject ? project.toObject() : { ...project };
+  for (const k of ['activities', 'budget', 'currency', 'qcChecklist', 'inwardData', 'stageHistory', 'tasks', 'tags']) delete p[k];
+  p.ownerId = person(p.ownerId);
+  p.createdBy = person(p.createdBy);
+  p.teamMembers = (p.teamMembers || []).map((m) => ({ ...m, user: person(m.user) }));
+  p.messages = (p.messages || []).map((m) => ({ ...m, createdBy: person(m.createdBy) }));
+  if (p.closingNote) p.closingNote = { deliveredWhat: p.closingNote.deliveredWhat, deliveredWhen: p.closingNote.deliveredWhen };
+  if (p.teamDeployment) p.teamDeployment = { counts: p.teamDeployment.counts };
+  return p;
+};
+const isClientUser = (user) => user?.role === 'client';
 
 export const createProject = async (data, user) => {
   if (data.status && data.status !== 'planning') {
@@ -121,7 +137,8 @@ export const getProjects = async (query, _user, clientProfile) => {
   const options = { page, limit, sortBy, sortOrder };
   if (clientProfile) options.client = clientProfile._id;
 
-  return projectRepository.findAll(filters, options);
+  const res = await projectRepository.findAll(filters, options);
+  return isClientUser(_user) ? { ...res, projects: res.projects.map(forClientProject) } : res;
 };
 
 export const getProjectById = async (id, user, clientProfile) => {
@@ -131,6 +148,7 @@ export const getProjectById = async (id, user, clientProfile) => {
   }
   if (user?.role === 'client') {
     await assertClientProjectAccess(project, clientProfile);
+    return forClientProject(project);
   }
   return project;
 };
@@ -410,15 +428,10 @@ export const addMessage = async (projectId, data, user, clientProfile, files = [
     }
   }
 
-  const images = await Promise.all(
-    (files || []).map(async (f) => {
-      try {
-        return await uploadBuffer(f.buffer, { folder: 'crm/messages' });
-      } catch {
-        return { url: `/uploads/${f.originalname}`, fileId: `local-${Date.now()}`, name: f.originalname };
-      }
-    }),
-  );
+  if (!data.text?.trim() && !files?.length) throw ApiError.badRequest('Write a message or add a photo');
+  const images = await Promise.all((files || []).map(async (f) => ({
+    ...(await uploadFile(f, 'crm/messages')), name: f.originalname, mime: f.mimetype, size: f.size,
+  })));
 
   const messageData = {
     text: data.text || '',
@@ -466,49 +479,25 @@ export const addMessage = async (projectId, data, user, clientProfile, files = [
     message: data.text ? data.text.slice(0, 120) : '📎 image',
   });
 
-  if (user.role === 'client') {
-    // Broadcast notification to ALL internal staff users (Super Admin, Admin, Manager, Employee)
-    const User = (await import('../auth/auth.model.js')).default;
-    const staffUsers = await User.find({
-      role: { $ne: 'client' },
-      isActive: true,
-    }).select('_id');
-
-    const recipientIds = staffUsers
-      .map((u) => u._id.toString())
-      .filter((uid) => uid !== String(user._id));
-
-    const messagePreview = data.text?.trim()
-      ? (data.text.length > 120 ? `${data.text.slice(0, 117)}...` : data.text)
-      : (images?.length ? '📎 Sent an image/attachment' : 'New message');
-
-    const clientNotif = {
-      type: 'project_chat',
-      title: `Client Message • ${project.title}`,
-      message: `${user.name || 'Client'}: ${messagePreview}`,
-      priority: 'high',
-    };
-
-    notificationService.createAndSendBulk(recipientIds, {
-      referenceId: saved._id,
-      referenceModel: 'Project',
-      actionBy: user._id,
-      link: `/projects/${project._id}`,
-      ...clientNotif,
-    }).catch((err) => {
-      logger.error('Failed to notify staff of client message', { error: err.message });
-    });
-  } else {
+  // The project's people hear it (owner and team, never the sender). A client's message is high priority;
+  // staff messages also reach the client linked to the project. A project with nobody on it falls back to admins.
+  const preview = data.text?.trim() ? (data.text.length > 120 ? `${data.text.slice(0, 117)}...` : data.text) : (images?.length ? '📎 Sent a photo' : 'New message');
+  let team = [project.ownerId, ...(project.teamMembers || []).map((m) => m.user)].map((u) => String(u?._id || u || '')).filter(Boolean);
+  if (!team.length) team = (await User.find({ role: { $in: ['admin', 'super_admin'] }, isActive: true }).select('_id').lean()).map((u) => String(u._id));
+  const staff = [...new Set(team)].filter((uid) => uid !== String(user._id));
+  notificationService.createAndSendBulk(staff, {
+    referenceId: saved._id, referenceModel: 'Project', actionBy: user._id, link: `/projects/${project._id}`,
+    ...(user.role === 'client'
+      ? { type: 'project_chat', title: `Client message · ${project.title}`, message: `${user.name || 'Client'}: ${preview}`, priority: 'high' }
+      : chatNotif),
+  }).catch((err) => logger.error('Project chat notification failed', { error: err.message }));
+  if (user.role !== 'client') {
     const clientId = project.client?._id || project.client;
     const linkedClient = clientId ? await Client.findById(clientId).select('user').lean() : null;
     if (linkedClient?.user) {
       notificationService.createAndSend({
-        recipient: linkedClient.user,
-        referenceId: saved._id,
-        referenceModel: 'Project',
-        actionBy: user._id,
-        link: `/portal/projects/${project._id}`,
-        ...chatNotif,
+        recipient: linkedClient.user, referenceId: saved._id, referenceModel: 'Project', actionBy: user._id,
+        link: `/portal/projects/${project._id}`, ...chatNotif,
       }).catch(() => {});
     }
   }
@@ -552,7 +541,8 @@ export const getMessages = async (projectId, user, clientProfile) => {
   }
 
   await project.populate('messages.createdBy', 'name email avatar');
-  return (project.messages || []).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const list = (project.messages || []).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  return isClientUser(user) ? list.map((m) => ({ ...m.toObject(), createdBy: person(m.createdBy) })) : list;
 };
 
 export const deleteMessage = async (projectId, messageId, user, clientProfile) => {
@@ -566,6 +556,7 @@ export const deleteMessage = async (projectId, messageId, user, clientProfile) =
   if (!message) throw ApiError.notFound('Message not found');
   if (!message.createdBy._id.equals(user._id)) throw ApiError.forbidden('You can only delete your own messages');
 
+  (message.images || []).forEach((img) => img.fileId && deleteFile(img.fileId).catch(() => {}));
   project.messages.pull(messageId);
   await project.save();
   emitEntityUpdate('project', projectId, 'message_deleted', { messageId });
@@ -578,5 +569,7 @@ export const getActivities = async (projectId, user, clientProfile) => {
   if (user?.role === 'client') {
     await assertClientProjectAccess(project, clientProfile);
   }
-  return (project.activities || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const list = (project.activities || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // Clients see what happened and who did it, not the old and new values.
+  return isClientUser(user) ? list.map((a) => ({ _id: a._id, action: a.action, createdAt: a.createdAt, performedBy: person(a.performedBy) })) : list;
 }

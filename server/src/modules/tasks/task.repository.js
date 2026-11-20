@@ -6,7 +6,7 @@ const POPULATE_FIELDS = [
   { path: 'helpers', select: 'name email avatar' },
   { path: 'createdBy', select: 'name email avatar' },
   { path: 'reviewer', select: 'name email avatar' },
-  { path: 'project', select: 'title' },
+  { path: 'project', select: 'title client' },
   { path: 'parent', select: 'title status' },
   { path: 'dependsOn', select: 'title status' },
   { path: 'blockedBy', select: 'title status' },

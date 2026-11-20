@@ -493,7 +493,7 @@ export const addComment = async (taskId, { text = '', replyTo } = {}, user, clie
   emitEntityUpdate('task', taskId, 'comment_added');
   if (projectId) emitEntityUpdate('project', projectId, 'comment_added', { taskId });
 
-  return updated;
+  return isClient(user) ? forClient(updated) : updated;
 };
 
 // Checklists
@@ -520,7 +520,7 @@ export const removeComment = async (taskId, commentId, user, clientProfile) => {
   const projectId = task.project?._id || task.project;
   if (projectId) emitEntityUpdate('project', projectId, 'comment_removed', { taskId });
 
-  return updated;
+  return isClient(user) ? forClient(updated) : updated;
 };
 
 // After any checklist change: save the %, and move the task when the work clearly moved.
