@@ -57,6 +57,7 @@ export const usersQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional().default(10),
   search: z.string().optional(),
   role: z.enum(ROLES_LIST).optional(),
+  location: z.enum([...LOCATIONS, 'none']).optional(), // 'none' = no location set
   isActive: z.coerce.boolean().optional(),
   sort: z.string().optional().default('-createdAt'),
 });
