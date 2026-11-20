@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import multer from 'multer';
+import ApiError from '../../utils/ApiError.js';
 import { verifyToken } from '../../middleware/auth.js';
 import { authorize } from '../../middleware/auth.js';
 import { attachClientProfile } from '../../middleware/clientPortal.js';
@@ -20,6 +22,7 @@ const taskReadAuth = [authorize(...STAFF, ROLES.CLIENT), attachClientProfile];
 
 // Must be before /:id routes to avoid Express matching as id param
 router.get('/watching', ...taskReadAuth, ctrl.getWatchedTasks);
+router.get('/workload', authorize(...STAFF), ctrl.workload);
 router.patch('/reorder', authorize(...STAFF), validate(reorderTasksSchema), ctrl.reorderTasks);
 router.patch('/bulk', authorize(...STAFF), validate(bulkUpdateSchema), ctrl.bulkUpdate);
 
@@ -38,8 +41,18 @@ router.get('/:id/dependencies', ...taskReadAuth, ctrl.getDependencies);
 router.post('/:id/dependencies', authorize(...STAFF), validate(addDependencySchema), ctrl.addDependency);
 router.delete('/:id/dependencies/:depId', authorize(...STAFF), ctrl.removeDependency);
 
+// Task chat files: up to 5 photos or PDFs, 10 MB each (same limits as project chat).
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 5 },
+  fileFilter: (_req, f, cb) => cb(null, /^(image\/|application\/pdf$)/.test(f.mimetype)),
+});
+const chatFiles = (req, res, next) => upload.array('files', 5)(req, res, (err) => next(err && ApiError.badRequest(
+  err.code === 'LIMIT_FILE_SIZE' ? 'Each file must be 10 MB or less' : err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE' ? 'Up to 5 files per message' : err.message,
+)));
+
 // Comments — staff + client (client scoped + own-delete enforced in service)
-router.post('/:id/comments', authorize(...STAFF, ROLES.CLIENT), attachClientProfile, validate(addCommentSchema), ctrl.addComment);
+router.post('/:id/comments', authorize(...STAFF, ROLES.CLIENT), attachClientProfile, chatFiles, validate(addCommentSchema), ctrl.addComment);
 router.delete('/:id/comments/:commentId', authorize(...STAFF, ROLES.CLIENT), attachClientProfile, ctrl.removeComment);
 
 // Checklists — staff only

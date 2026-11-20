@@ -3,7 +3,9 @@ import ApiError from '../../utils/ApiError.js';
 
 const POPULATE_FIELDS = [
   { path: 'assignedTo', select: 'name email avatar' },
+  { path: 'helpers', select: 'name email avatar' },
   { path: 'createdBy', select: 'name email avatar' },
+  { path: 'reviewer', select: 'name email avatar' },
   { path: 'project', select: 'title' },
   { path: 'parent', select: 'title status' },
   { path: 'dependsOn', select: 'title status' },
@@ -27,7 +29,6 @@ export const findAll = async (query, options = {}) => {
   }
   if (query.status) filter.status = query.status;
   if (query.priority) filter.priority = query.priority;
-  if (query.assignedTo) filter.assignedTo = query.assignedTo;
   if (query.project) filter.project = query.project;
   if (query.tags) filter.tags = { $in: query.tags.split(',') };
   if (query.dueDateFrom || query.dueDateTo) {
@@ -37,6 +38,12 @@ export const findAll = async (query, options = {}) => {
   }
   if (query.parent !== undefined) filter.parent = query.parent || null;
   if (query.watchedBy) filter.watchers = query.watchedBy;
+  // Older tasks have no reviewer yet: their creator reviews them.
+  const and = [];
+  if (query.reviewer) and.push({ $or: [{ reviewer: query.reviewer }, { reviewer: null, createdBy: query.reviewer }] });
+  // "Assigned to X" means X owns it or helps on it.
+  if (query.assignedTo) and.push({ $or: [{ assignedTo: query.assignedTo }, { helpers: query.assignedTo }] });
+  if (and.length) filter.$and = and;
 
   if (options.client) {
     const { default: Project } = await import('../projects/project.model.js');
@@ -119,3 +126,16 @@ export const addDependency = (taskId, depId) =>
 
 export const removeDependency = (taskId, depId) =>
   Task.findByIdAndUpdate(taskId, { $pull: { dependsOn: depId } }, { new: true }).populate(POPULATE_FIELDS);
+
+// Open and overdue task counts per person (owner or helper), for the assignee picker.
+// shortcut: counts every user in one pass; fine for one studio, add a ?users= filter if staff grows to thousands.
+export const workload = async () => {
+  const today = new Date(`${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })}T00:00:00+05:30`);
+  const rows = await Task.aggregate([
+    { $match: { status: { $ne: 'done' } } },
+    { $project: { dueDate: 1, people: { $setUnion: [{ $cond: [{ $ifNull: ['$assignedTo', false] }, ['$assignedTo'], []] }, { $ifNull: ['$helpers', []] }] } } },
+    { $unwind: '$people' },
+    { $group: { _id: '$people', open: { $sum: 1 }, overdue: { $sum: { $cond: [{ $lt: ['$dueDate', today] }, 1, 0] } } } },
+  ]);
+  return Object.fromEntries(rows.map((r) => [String(r._id), { open: r.open, overdue: r.overdue }]));
+};

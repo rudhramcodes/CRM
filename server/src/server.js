@@ -7,6 +7,8 @@ import { initSocketIO } from './sockets/index.js';
 import { startOverdueCron } from './jobs/invoiceOverdue.job.js';
 import { startMeetingReminderCron } from './jobs/meetingReminder.job.js';
 import { startTaskDueCron } from './jobs/taskDueSoon.job.js';
+import { startTaskReviewCron } from './jobs/taskReview.job.js';
+import { startHeldPushCron } from './jobs/heldPush.job.js';
 import { startCleanupCron } from './jobs/cleanupNotifications.job.js';
 import User from './modules/auth/auth.model.js';
 import Client from './modules/clients/client.model.js';
@@ -99,6 +101,8 @@ const startServer = async () => {
     startOverdueCron();
     startMeetingReminderCron();
     startTaskDueCron();
+    startTaskReviewCron();
+    startHeldPushCron();
     startCleanupCron();
 
     httpServer.listen(config.port, '0.0.0.0', () => {

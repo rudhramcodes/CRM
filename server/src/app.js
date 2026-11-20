@@ -23,6 +23,7 @@ import clientRoutes from './modules/clients/client.routes.js';
 import meetingRoutes from './modules/meetings/meeting.routes.js';
 import projectRoutes from './modules/projects/project.routes.js';
 import taskRoutes from './modules/tasks/task.routes.js';
+import teamRoutes from './modules/teams/team.routes.js';
 import invoiceRoutes from './modules/invoices/invoice.routes.js';
 import quotationRoutes from './modules/quotations/quotation.routes.js';
 import paymentRoutes from './modules/payments/payment.routes.js';
@@ -116,6 +117,7 @@ app.use('/api/clients', clientRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/teams', teamRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/quotations', quotationRoutes);
 app.use('/api/payments', paymentRoutes);
@@ -129,6 +131,11 @@ app.use('/api/payroll', payrollRoutes);
 app.use('/api/freelancers/public', freelancerPublicRoutes);
 app.use('/api/freelancers/upload', freelancerUploadRoutes);
 app.use('/api/freelancers', freelancerRoutes);
+// Local-dev uploads (no Cloudinary); production never writes here.
+if (config.nodeEnv !== 'production') app.use('/uploads', express.static(path.resolve('uploads'), {
+  // Helmet's same-origin CORP would block these from the Expo web preview on another port.
+  setHeaders: (res) => res.set('Cross-Origin-Resource-Policy', 'cross-origin'),
+}));
 
 startAttendanceCrons();
 startPayrollCrons();

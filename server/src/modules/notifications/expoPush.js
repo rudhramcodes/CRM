@@ -5,7 +5,7 @@ const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
 // Sends one notification to every phone the recipient is signed in on, and forgets phones Expo says are gone.
 // shortcut: no receipt polling (the second Expo step); add it if delivery problems need tracing.
-export const sendExpoPush = async (recipient, { _id, title, message, link, type, priority }) => {
+export const sendExpoPush = async (recipient, { _id, title, message, link, type, priority, referenceModel, referenceId }) => {
   const tokens = await authRepository.findPushTokens(recipient);
   if (!tokens.length) return;
 
@@ -19,7 +19,7 @@ export const sendExpoPush = async (recipient, { _id, title, message, link, type,
       sound: 'default',
       channelId: 'default',
       priority: priority === 'high' ? 'high' : 'default',
-      data: { id: String(_id), type, link },
+      data: { id: _id ? String(_id) : undefined, type, link, referenceModel, referenceId: referenceId ? String(referenceId) : undefined },
     }))),
     signal: AbortSignal.timeout(10000),
   });

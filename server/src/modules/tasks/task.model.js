@@ -3,7 +3,9 @@ import { TASK_STATUS, TASK_PRIORITY } from '../../constants/index.js';
 
 const commentSchema = new mongoose.Schema(
   {
-    text: { type: String, required: true, trim: true },
+    text: { type: String, trim: true, default: '' }, // may be empty when the message is only files
+    files: [{ _id: false, url: String, fileId: String, name: String, mime: String, size: Number }],
+    replyTo: { type: mongoose.Schema.Types.ObjectId }, // another comment on the same task
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { _id: true, timestamps: true },
@@ -66,6 +68,8 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, ref: 'User',
       required() { return this.isNew || this.isModified?.('assignedTo'); },
     },
+    // assignedTo is the owner; helpers work on the same task (web app reads assignedTo only).
+    helpers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
     // ponytail: milestone lives embedded in Project.milestones; store its subdoc _id only
     milestone: { type: mongoose.Schema.Types.ObjectId },
@@ -73,6 +77,13 @@ const taskSchema = new mongoose.Schema(
     dueDate: { type: Date, required() { return this.isNew || this.isModified?.('dueDate'); } },
     startDate: Date,
     completedAt: Date,
+    // Review: who approves, and the 1-working-hour clock (see utils/workingHours.js)
+    reviewer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reviewRequestedAt: Date,
+    reviewDueAt: Date,
+    reviewNote: { type: String, trim: true, default: '' },
+    reviewNudges: { type: Number, default: 0 }, // 1 = reminder sent, 2 = late alert sent
+    dueSoonSentFor: Date, // the due date the "due soon" alert was last sent for
     estimatedHours: { type: Number, default: 0 },
     actualHours: { type: Number, default: 0 },
     totalLoggedHours: { type: Number, default: 0 },
@@ -130,6 +141,7 @@ const taskSchema = new mongoose.Schema(
 taskSchema.index({ status: 1 });
 taskSchema.index({ priority: 1 });
 taskSchema.index({ assignedTo: 1 });
+taskSchema.index({ helpers: 1 });
 taskSchema.index({ project: 1 });
 taskSchema.index({ dueDate: 1 });
 taskSchema.index({ createdAt: -1 });
@@ -139,6 +151,8 @@ taskSchema.index({ dependsOn: 1 });
 taskSchema.index({ watchers: 1 });
 taskSchema.index({ tags: 1 });
 taskSchema.index({ sprint: 1 });
+taskSchema.index({ status: 1, reviewDueAt: 1 });
+taskSchema.index({ reviewer: 1, status: 1 });
 
 const Task = mongoose.model('Task', taskSchema);
 export default Task;

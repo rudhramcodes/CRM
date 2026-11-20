@@ -2,6 +2,20 @@ import Notification from './notification.model.js';
 
 export const create = async (data) => Notification.create(data);
 
+// Folds a repeat (same person, type and reference within the window) into the earlier notification.
+// shortcut: two repeats in the same millisecond can both miss and make two rows; harmless (one extra item).
+export const groupRecent = async ({ recipient, type, referenceId, since, message }) => Notification.findOneAndUpdate(
+  { recipient, type, referenceId, createdAt: { $gte: since } },
+  [{ $set: {
+    message: { $concat: [message, ' (+', { $toString: { $ifNull: ['$count', 1] } }, ' more)'] },
+    count: { $add: [{ $ifNull: ['$count', 1] }, 1] },
+    read: false,
+  } }],
+  { new: true, sort: { createdAt: -1 } },
+);
+
+export const setPushAt = async (id, pushAt) => Notification.updateOne({ _id: id }, { $set: { pushAt } });
+
 export const createBulk = async (notifications) => Notification.insertMany(notifications);
 
 export const findById = async (id) => Notification.findById(id);

@@ -1,5 +1,6 @@
 import ApiResponse from '../../utils/ApiResponse.js';
 import * as taskService from './task.service.js';
+import * as taskRepo from './task.repository.js';
 
 export const list = async (req, res, next) => {
   try {
@@ -17,8 +18,8 @@ export const getById = async (req, res, next) => {
 
 export const create = async (req, res, next) => {
   try {
-    const task = await taskService.createTask(req.body, req.user);
-    ApiResponse.created(res, { task }, 'Task created successfully');
+    const tasks = await taskService.createTasks(req.body, req.user);
+    ApiResponse.created(res, { task: tasks[0], tasks }, tasks.length > 1 ? `${tasks.length} tasks created` : 'Task created successfully');
   } catch (err) { next(err); }
 };
 
@@ -69,7 +70,7 @@ export const removeDependency = async (req, res, next) => {
 // Comments
 export const addComment = async (req, res, next) => {
   try {
-    const task = await taskService.addComment(req.params.id, req.body.text, req.user, req.clientProfile);
+    const task = await taskService.addComment(req.params.id, req.body, req.user, req.clientProfile, req.files);
     ApiResponse.success(res, 200, { task }, 'Comment added');
   } catch (err) { next(err); }
 };
@@ -160,5 +161,11 @@ export const bulkUpdate = async (req, res, next) => {
   try {
     await taskService.bulkUpdate(req.body.ids, req.body.data, req.user);
     ApiResponse.success(res, 200, null, 'Bulk update completed');
+  } catch (err) { next(err); }
+};
+
+export const workload = async (req, res, next) => {
+  try {
+    ApiResponse.success(res, 200, { workload: await taskRepo.workload() });
   } catch (err) { next(err); }
 };

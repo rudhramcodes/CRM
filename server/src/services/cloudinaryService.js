@@ -19,14 +19,14 @@ const configure = () => {
   }
 };
 
-export const uploadBuffer = (buffer, { folder = 'crm/messages', publicId } = {}) =>
+export const uploadBuffer = (buffer, { folder = 'crm/messages', publicId, resourceType = 'image' } = {}) =>
   new Promise((resolve, reject) => {
     configure();
     if (!configured) {
       return reject(new Error('Cloudinary not configured'));
     }
     const uploadStream = cloudinary.uploader.upload_stream(
-      { folder, public_id: publicId, resource_type: 'image' },
+      { folder, public_id: publicId, resource_type: resourceType },
       (err, result) => {
         if (err) reject(err);
         else resolve({ url: result.secure_url, fileId: result.public_id, name: result.original_filename || 'image' });

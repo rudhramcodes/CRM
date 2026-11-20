@@ -5,6 +5,8 @@ import * as notificationService from '../notifications/notification.service.js';
 import { emitEntityUpdate } from '../../sockets/index.js';
 import ApiError from '../../utils/ApiError.js';
 import { deadlineChange } from '../../utils/deadlineChange.js';
+import { addWorkingMinutes } from '../../utils/workingHours.js';
+import { deleteFile, uploadFile } from '../../services/fileUploadService.js';
 
 const assertClientTaskAccess = async (taskId, clientProfile) => {
   if (!clientProfile) return null;
@@ -31,8 +33,20 @@ const checkCircularDependency = async (taskId, depId, visited = new Set()) => {
   return false;
 };
 
+// Helpers never include the owner or repeats.
+const cleanHelpers = (helpers = [], owner) => [...new Set(helpers.map(String))].filter((h) => h !== String(owner || ''));
+
+// The create endpoint: one shared task, or with copyForEach one task per person (owner first).
+export const createTasks = async ({ copyForEach, ...data }, user) => {
+  const helpers = cleanHelpers(data.helpers, data.assignedTo);
+  if (!copyForEach || !helpers.length) return [await createTask({ ...data, helpers }, user)];
+  const tasks = [];
+  for (const person of [data.assignedTo, ...helpers]) tasks.push(await createTask({ ...data, assignedTo: person, helpers: [] }, user));
+  return tasks;
+};
+
 export const createTask = async (data, user) => {
-  const taskData = { ...data, createdBy: user._id };
+  const taskData = { ...data, helpers: cleanHelpers(data.helpers, data.assignedTo), createdBy: user._id };
   if (data.parent) {
     const parent = await taskRepo.findById(data.parent);
     if (!parent) throw { status: 404, message: 'Parent task not found' };
@@ -64,11 +78,22 @@ export const createTask = async (data, user) => {
     });
     notificationService.createAndSend({
       recipient: data.assignedTo, referenceId: created._id, referenceModel: 'Task',
-      actionBy: user._id, link: `/projects/${created.project?._id || created.project}`, channels: { inApp: true, email: true },
+      actionBy: user._id, link: taskLink(created),
       ...notif,
     }).catch(() => {});
   }
+  notifyHelpersAdded(created, taskData.helpers, user);
   return created;
+};
+
+const notifyHelpersAdded = (task, ids, user) => {
+  const people = ids.map(String).filter((id) => id !== String(user._id));
+  if (!people.length) return;
+  notificationService.createAndSendBulk(people, {
+    referenceId: task._id, referenceModel: 'Task', actionBy: user._id, link: taskLink(task),
+    ...notificationService.buildNotification('task_assigned', { taskTitle: task.title, actorName: user.name }),
+    message: `${user.name} added you as a helper on "${task.title}"`,
+  }).catch(() => {});
 };
 
 export const getTasks = async (query, user, clientProfile) => {
@@ -85,31 +110,57 @@ export const getTaskById = async (id, user, clientProfile) => {
   return task;
 };
 
+const idOf = (x) => String(x?._id || x || '');
+export const taskLink = (t) => (t.project ? `/projects/${t.project._id || t.project}` : '/tasks');
+// "within 1 hour" when the clock is running now, else the office-hours deadline ("by 10:30 am, Tue").
+export const dueText = (due) => {
+  if (!due) return 'soon';
+  if (due - Date.now() <= 61 * 60e3) return 'within 1 hour';
+  const time = due.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' });
+  const day = due.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short' });
+  return `by ${time}, ${day}`;
+};
+
 export const updateTask = async (id, data, user) => {
   const task = await taskRepo.findById(id);
   if (!task) throw { status: 404, message: 'Task not found' };
+
+  const oldHelpers = (task.helpers || []).map(idOf);
+  if (data.helpers !== undefined || data.assignedTo !== undefined) {
+    data.helpers = cleanHelpers(data.helpers ?? oldHelpers, data.assignedTo ?? idOf(task.assignedTo));
+  }
 
   const deadlineActivity = data.dueDate !== undefined
     ? deadlineChange(task.dueDate, data.dueDate, data.reason, user) : null;
   delete data.reason;
 
-  // Creator gate: Only task creator can mark task as 'done' (completed)
-  if (data.status === 'done' && task.status !== 'done') {
-    const creatorId = task.createdBy?._id?.toString() || task.createdBy?.toString();
-    const userId = user?._id?.toString();
-    if (!creatorId || creatorId !== userId) {
-      const creatorName = task.createdBy?.name || 'the task creator';
-      throw ApiError.forbidden(`Only the task creator (${creatorName}) can review and mark this task as completed`);
-    }
+  // Review roles: the reviewer (default: the creator) approves or asks for changes.
+  const userId = idOf(user);
+  const creatorId = idOf(task.createdBy);
+  const canReview = !!userId && (userId === creatorId || userId === idOf(task.reviewer));
+  const reviewerName = task.reviewer?.name || task.createdBy?.name || 'the task creator';
+  const note = data.note || '';
+  const askedChanges = !!data.requestChanges;
+  delete data.note;
+  delete data.requestChanges;
+
+  const handedOver = data.reviewer !== undefined && data.reviewer !== idOf(task.reviewer || task.createdBy);
+  if (data.reviewer !== undefined && !handedOver) delete data.reviewer;
+  if (handedOver && userId !== creatorId && !['admin', 'super_admin'].includes(user?.role)) {
+    throw ApiError.forbidden('Only the task creator can choose who reviews it');
   }
 
-  // Change gate: If there are any content changes made to a completed or in-review task, revert it back to in_progress
-  if (data.requestChanges) {
+  if (data.status === 'done' && task.status !== 'done' && !canReview) {
+    throw ApiError.forbidden(`Only ${reviewerName} can review and mark this task as completed`);
+  }
+
+  if (askedChanges) {
+    if (!canReview) throw ApiError.forbidden(`Only ${reviewerName} can ask for changes`);
+    if (!note) throw ApiError.badRequest('Say what needs to change');
     data.status = 'in_progress';
-    delete data.requestChanges;
   } else {
     const contentKeys = Object.keys(data).filter(
-      (k) => !['status', 'completedAt', 'order', 'checklistProgress', 'totalLoggedHours', 'requestChanges'].includes(k)
+      (k) => !['status', 'completedAt', 'order', 'checklistProgress', 'totalLoggedHours', 'reviewer', 'helpers', 'assignedTo'].includes(k)
     );
     const hasContentChanges = contentKeys.some((k) => {
       const oldVal = task[k];
@@ -141,6 +192,20 @@ export const updateTask = async (id, data, user) => {
   if (data.status === 'done') data.completedAt = new Date().toISOString();
   if (data.status && data.status !== 'done') data.completedAt = null;
 
+  // The 1-working-hour review clock starts on submit, and again when review is handed to someone else.
+  const enteringReview = data.status === 'review' && task.status !== 'review';
+  const restartClock = enteringReview || (handedOver && task.status === 'review' && !data.status);
+  if (restartClock) {
+    const now = new Date();
+    Object.assign(data, {
+      reviewer: data.reviewer || idOf(task.reviewer || task.createdBy),
+      reviewRequestedAt: now, reviewDueAt: addWorkingMinutes(now, 60), reviewNudges: 0,
+    });
+    if (enteringReview) data.reviewNote = note;
+  } else if (data.status && data.status !== 'review') {
+    data.reviewDueAt = null;
+  }
+
   const changedFields = [];
   for (const [key, value] of Object.entries(data)) {
     if (key === 'status' && task.status !== value) {
@@ -150,9 +215,21 @@ export const updateTask = async (id, data, user) => {
       changedFields.push({ action: 'assigned', field: 'assignedTo', oldValue: task.assignedTo?.name || 'unassigned', newValue: value || 'unassigned' });
     }
   }
+  const addedHelpers = (data.helpers || []).filter((h) => !oldHelpers.includes(h));
+  const removedHelpers = data.helpers ? oldHelpers.filter((h) => !data.helpers.includes(h)) : [];
+  if (addedHelpers.length || removedHelpers.length) {
+    const names = new Map((await User.find({ _id: { $in: [...addedHelpers, ...removedHelpers] } }).select('name').lean()).map((u) => [String(u._id), u.name]));
+    const list = (ids) => ids.map((i) => names.get(i) || 'someone').join(', ');
+    changedFields.push({ action: 'helpers_changed', field: 'helpers', oldValue: removedHelpers.length ? `removed ${list(removedHelpers)}` : '', newValue: addedHelpers.length ? `added ${list(addedHelpers)}` : '' });
+  }
 
-  const updated = await taskRepo.updateById(id, data,
+  let updated = await taskRepo.updateById(id, data,
     deadlineActivity ? [deadlineActivity] : [], deadlineActivity ? (task.dueDate || null) : undefined);
+
+  // Notes land in the task chat so the whole thread sees why.
+  if (note && (enteringReview || askedChanges)) {
+    updated = await taskRepo.addComment(id, { text: `${askedChanges ? 'Changes needed' : 'For review'}: ${note}`, createdBy: user._id });
+  }
 
   if (changedFields.length > 0 && user) {
     for (const activity of changedFields) {
@@ -162,23 +239,33 @@ export const updateTask = async (id, data, user) => {
 
   if (user) {
     const statusChange = changedFields.find((c) => c.action === 'status_changed');
-    if (statusChange) {
+    const send = (recipient, type, extra = {}) => recipient && recipient !== userId && notificationService.createAndSend({
+      recipient, referenceId: updated._id, referenceModel: 'Task', actionBy: user._id, dedup: false,
+      link: taskLink(updated),
+      ...notificationService.buildNotification(type, { taskTitle: updated.title, actorName: user.name, ...extra }),
+    }).catch(() => {});
+    const team = [idOf(updated.assignedTo), ...(updated.helpers || []).map(idOf)];
+
+    if (restartClock) send(idOf(updated.reviewer), 'task_review_requested', { dueText: dueText(updated.reviewDueAt) });
+    else if (askedChanges) team.forEach((id) => send(id, 'task_changes_requested', { note }));
+    else if (statusChange?.newValue === 'done' && task.status === 'review') team.forEach((id) => send(id, 'task_approved'));
+    else if (statusChange) {
       const notif = notificationService.buildNotification('task_status_change', {
         taskTitle: updated.title, actorName: user.name, newStatus: statusChange.newValue,
       });
-      // Notify assignee
-      if (updated.assignedTo) {
+      // Notify assignee (never the person who made the change)
+      if (updated.assignedTo && String(updated.assignedTo._id) !== userId) {
         notificationService.createAndSend({
           recipient: updated.assignedTo._id, referenceId: updated._id, referenceModel: 'Task',
-          actionBy: user._id, link: `/projects/${updated.project?._id || updated.project}`, ...notif,
+          actionBy: user._id, link: taskLink(updated), ...notif,
         }).catch(() => {});
       }
       // Notify creator (skip if same as assignee — prevents duplicate)
-      if (updated.createdBy && (
+      if (updated.createdBy && String(updated.createdBy._id) !== userId && (
           !updated.assignedTo || String(updated.createdBy._id) !== String(updated.assignedTo._id))) {
         notificationService.createAndSend({
           recipient: updated.createdBy._id, referenceId: updated._id, referenceModel: 'Task',
-          actionBy: user._id, link: `/projects/${updated.project?._id || updated.project}`, ...notif,
+          actionBy: user._id, link: taskLink(updated), ...notif,
         }).catch(() => {});
       }
     }
@@ -189,10 +276,20 @@ export const updateTask = async (id, data, user) => {
       });
       notificationService.createAndSend({
         recipient: data.assignedTo, referenceId: updated._id, referenceModel: 'Task',
-        actionBy: user._id, link: `/projects/${updated.project?._id || updated.project}`, channels: { inApp: true, email: true },
+        actionBy: user._id, link: taskLink(updated),
         ...notif,
       }).catch(() => {});
     }
+    // The old owner hears where the task went (also when someone takes it for themselves).
+    const oldOwner = idOf(task.assignedTo);
+    if (assignChange && oldOwner && oldOwner !== userId && oldOwner !== String(data.assignedTo)) {
+      notificationService.createAndSend({
+        recipient: oldOwner, referenceId: updated._id, referenceModel: 'Task', actionBy: user._id, link: taskLink(updated),
+        ...notificationService.buildNotification('task_assigned', { taskTitle: updated.title, actorName: user.name }),
+        title: 'Task Reassigned', message: `${user.name} moved "${updated.title}" to ${updated.assignedTo?.name || 'someone else'}`,
+      }).catch(() => {});
+    }
+    if (addedHelpers.length) notifyHelpersAdded(updated, addedHelpers, user);
   }
 
   emitEntityUpdate('task', id, 'task_updated');
@@ -275,7 +372,7 @@ const sendMentionNotif = (mentioned, commenter, taskId, taskTitle, projectId) =>
     recipient: mentioned._id,
     referenceId: taskId, referenceModel: 'Task',
     actionBy: commenter._id,
-    link: `/projects/${projectId}`,
+    link: projectId ? `/projects/${projectId}` : '/tasks',
     ...notif,
   }).catch(() => {});
 };
@@ -305,18 +402,24 @@ const processMentions = async (text, commenter, taskId, taskTitle, projectId) =>
   matched.forEach((u) => sendMentionNotif(u, commenter, taskId, taskTitle, projectId));
 };
 
-export const addComment = async (taskId, text, user, clientProfile) => {
+export const addComment = async (taskId, { text = '', replyTo } = {}, user, clientProfile, uploads = []) => {
   const task = user?.role === 'client'
     ? await assertClientTaskAccess(taskId, clientProfile)
     : await taskRepo.findById(taskId);
   if (!task) throw ApiError.notFound('Task not found');
+  if (!text && !uploads.length) throw ApiError.badRequest('Write a message or add a file');
+  if (replyTo && !task.comments?.some((c) => String(c._id) === replyTo)) throw ApiError.badRequest('That message was deleted');
 
-  const comment = { text, createdBy: user._id };
+  const files = await Promise.all(uploads.map(async (f) => ({
+    ...(await uploadFile(f, 'crm/tasks')), name: f.originalname, mime: f.mimetype, size: f.size,
+  })));
+  const comment = { text, files, replyTo: replyTo || undefined, createdBy: user._id };
   const updated = await taskRepo.addComment(taskId, comment);
   if (!updated) throw ApiError.notFound('Task not found');
   await taskRepo.addActivity(taskId, { action: 'commented', field: 'comment', performedBy: user._id });
 
-  processMentions(text, user, taskId, task.title, task.project?._id || task.project).catch(() => {});
+  if (text) processMentions(text, user, taskId, task.title, task.project?._id || task.project).catch(() => {});
+  const preview = text ? text.slice(0, 120) : `📎 ${files.length === 1 ? files[0].name : `${files.length} files`}`;
 
   if (user?.role === 'client') {
     const User = (await import('../auth/auth.model.js')).default;
@@ -325,28 +428,31 @@ export const addComment = async (taskId, text, user, clientProfile) => {
       .map((u) => u._id.toString())
       .filter((uid) => uid !== String(user._id));
 
-    const newCommentId = updated.comments?.[updated.comments.length - 1]?._id || task._id;
-    const commentNotif = {
+    notificationService.createAndSendBulk(recipientIds, {
       type: 'task_comment',
       title: `Client Comment • ${task.title}`,
-      message: `${user.name || 'Client'}: ${text.slice(0, 120)}`,
+      message: `${user.name || 'Client'}: ${preview}`,
       priority: 'high',
-    };
-    notificationService.createAndSendBulk(recipientIds, {
-      referenceId: newCommentId,
+      referenceId: task._id,
       referenceModel: 'Task',
       actionBy: user._id,
-      link: `/projects/${task.project?._id || task.project}`,
-      ...commentNotif,
+      link: taskLink(task),
     }).catch(() => {});
-  } else if (task.assignedTo && !task.assignedTo._id.equals(user._id)) {
-    const notif = notificationService.buildNotification('task_comment', {
-      taskTitle: task.title, actorName: user.name,
-    });
-    const newCommentId = updated.comments?.[updated.comments.length - 1]?._id || task._id;
-    notificationService.createAndSend({
-      recipient: task.assignedTo._id, referenceId: newCommentId, referenceModel: 'Task',
-      actionBy: user._id, link: `/projects/${task.project?._id || task.project}`, ...notif,
+  } else {
+    // Everyone on the task hears about new messages (T1 groups repeats within 10 min into one push).
+    const repliedTo = replyTo && task.comments.find((c) => String(c._id) === replyTo);
+    const people = new Set([task.assignedTo, task.createdBy, task.reviewer, ...(task.helpers || []), ...(task.watchers || []), repliedTo?.createdBy]
+      .map(idOf).filter(Boolean));
+    people.delete(String(user._id));
+    notificationService.createAndSendBulk([...people], {
+      type: 'task_comment',
+      title: `New message • ${task.title}`,
+      message: `${user.name}: ${preview}`,
+      priority: 'low',
+      referenceId: task._id,
+      referenceModel: 'Task',
+      actionBy: user._id,
+      link: taskLink(task),
     }).catch(() => {});
   }
 
@@ -367,11 +473,13 @@ export const removeComment = async (taskId, commentId, user, clientProfile) => {
   const comment = task.comments?.find((c) => String(c._id) === String(commentId));
   if (!comment) throw ApiError.notFound('Comment not found');
 
-  if (user.role === 'client' && String(comment.createdBy?._id || comment.createdBy) !== String(user._id)) {
-    throw ApiError.forbidden('You can only delete your own comments');
+  const isAdminUser = ['admin', 'super_admin'].includes(user.role);
+  if (!isAdminUser && String(comment.createdBy?._id || comment.createdBy) !== String(user._id)) {
+    throw ApiError.forbidden('You can only delete your own messages');
   }
 
   const updated = await taskRepo.removeComment(taskId, commentId);
+  (comment.files || []).forEach((f) => deleteFile(f.fileId).catch(() => {}));
   if (!updated) throw ApiError.notFound('Task not found');
   await taskRepo.addActivity(taskId, { action: 'removed_comment', field: 'comment', performedBy: user._id });
 
@@ -520,18 +628,17 @@ export const reorderTasks = async (status, orderedIds, user) => {
   if (status === 'done') {
     const tasks = await Promise.all(orderedIds.map((id) => taskRepo.findById(id)));
     for (const t of tasks) {
-      if (t && t.status !== 'done') {
-        const creatorId = t.createdBy?._id?.toString() || t.createdBy?.toString();
-        const userId = user?._id?.toString();
-        if (creatorId && creatorId !== userId) {
-          const creatorName = t.createdBy?.name || 'the task creator';
-          throw ApiError.forbidden(`Only the task creator (${creatorName}) can review and mark "${t.title}" as completed`);
-        }
+      if (t && t.status !== 'done' && idOf(t.createdBy) && ![idOf(t.createdBy), idOf(t.reviewer)].includes(idOf(user))) {
+        throw ApiError.forbidden(`Only ${t.reviewer?.name || t.createdBy?.name || 'the task creator'} can review and mark "${t.title}" as completed`);
       }
     }
   }
 
+  // Moving into Review goes through updateTask, so the review clock starts and the reviewer hears about it.
+  const current = status === 'review' ? await Task.find({ _id: { $in: orderedIds } }).select('status').lean() : [];
+  const entering = new Set(current.filter((t) => t.status !== 'review').map((t) => String(t._id)));
   await Promise.all(orderedIds.map((id, i) => {
+    if (entering.has(String(id))) return updateTask(id, { status, order: i }, user);
     const update = { status, order: i };
     if (status === 'done') update.completedAt = new Date().toISOString();
     else if (status && status !== 'done') update.completedAt = null;
@@ -544,13 +651,8 @@ export const bulkUpdate = async (ids, data, user) => {
   if (data.status === 'done') {
     const tasks = await Promise.all(ids.map((id) => taskRepo.findById(id)));
     for (const t of tasks) {
-      if (t && t.status !== 'done') {
-        const creatorId = t.createdBy?._id?.toString() || t.createdBy?.toString();
-        const userId = user?._id?.toString();
-        if (creatorId && creatorId !== userId) {
-          const creatorName = t.createdBy?.name || 'the task creator';
-          throw ApiError.forbidden(`Only the task creator (${creatorName}) can review and mark "${t.title}" as completed`);
-        }
+      if (t && t.status !== 'done' && idOf(t.createdBy) && ![idOf(t.createdBy), idOf(t.reviewer)].includes(idOf(user))) {
+        throw ApiError.forbidden(`Only ${t.reviewer?.name || t.createdBy?.name || 'the task creator'} can review and mark "${t.title}" as completed`);
       }
     }
   }
@@ -558,5 +660,11 @@ export const bulkUpdate = async (ids, data, user) => {
   if (data.status === 'done') data.completedAt = new Date().toISOString();
   else if (data.status && data.status !== 'done') data.completedAt = null;
 
+  if (data.status === 'review') {
+    const entering = await Task.find({ _id: { $in: ids }, status: { $ne: 'review' } }).select('_id').lean();
+    const set = new Set(entering.map((t) => String(t._id)));
+    await Promise.all(ids.map((id) => (set.has(String(id)) ? updateTask(id, { ...data }, user) : taskRepo.updateById(id, data))));
+    return;
+  }
   await Promise.all(ids.map((id) => taskRepo.updateById(id, data)));
 };

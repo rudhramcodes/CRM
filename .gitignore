@@ -35,3 +35,5 @@ superpowers
 .agents
 rudhramgroup-website-prd-v2-adaptation.md
 brand kit quotation.pdf
+# local-dev uploads when Cloudinary is not set
+server/uploads/

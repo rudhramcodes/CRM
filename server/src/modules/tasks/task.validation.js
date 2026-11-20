@@ -12,6 +12,9 @@ export const createTaskSchema = z.object({
   status: z.enum(statusValues).optional().default(TASK_STATUS.TODO),
   priority: z.enum(priorityValues).optional().default(TASK_PRIORITY.MEDIUM),
   assignedTo: assigneeSchema,
+  helpers: z.array(assigneeSchema).max(30).optional().default([]),
+  // One task per person instead of one shared task
+  copyForEach: z.boolean().optional(),
   project: z.string().optional(),
   milestone: z.string().optional(),
   dueDate: dueDateSchema,
@@ -29,11 +32,16 @@ export const createTaskSchema = z.object({
 
 export const updateTaskSchema = z.object({
   reason: z.string().trim().max(2000).optional(),
+  // Submit-for-review note, or the reviewer's "what to change" note
+  note: z.string().trim().max(2000).optional(),
+  requestChanges: z.boolean().optional(),
+  reviewer: assigneeSchema.optional(),
   title: z.string().min(2).max(200).optional(),
   description: z.string().optional(),
   status: z.enum(statusValues).optional(),
   priority: z.enum(priorityValues).optional(),
   assignedTo: assigneeSchema.optional(),
+  helpers: z.array(assigneeSchema).max(30).optional(),
   project: z.string().nullable().optional(),
   milestone: z.string().nullable().optional(),
   dueDate: dueDateSchema.optional(),
@@ -61,6 +69,7 @@ export const tasksQuerySchema = z.object({
   dueDateFrom: z.string().optional(),
   dueDateTo: z.string().optional(),
   parent: z.string().optional(),
+  reviewer: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   sort: z.string().optional().default('-createdAt'),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(20),
@@ -105,5 +114,6 @@ export const bulkUpdateSchema = z.object({
 });
 
 export const addCommentSchema = z.object({
-  text: z.string().min(1).max(5000),
+  text: z.string().trim().max(5000).optional().default(''),
+  replyTo: z.string().regex(/^[a-f\d]{24}$/i).optional(),
 });

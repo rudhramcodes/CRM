@@ -37,6 +37,8 @@ const notificationSchema = new mongoose.Schema(
       email: { type: Boolean, default: false },
     },
 
+    count: { type: Number, default: 1 }, // >1 when repeats within 10 min were grouped into this one
+    pushAt: Date, // set while a push waits out quiet hours
     read: { type: Boolean, default: false, index: true },
     readAt: Date,
     deliveredAt: Date,
@@ -48,6 +50,8 @@ notificationSchema.index({ recipient: 1, read: 1, createdAt: -1 });
 notificationSchema.index({ recipient: 1, createdAt: -1 });
 notificationSchema.index({ referenceId: 1, referenceModel: 1 });
 notificationSchema.index({ createdAt: -1 });
+notificationSchema.index({ recipient: 1, type: 1, referenceId: 1, createdAt: -1 });
+notificationSchema.index({ pushAt: 1 }, { sparse: true });
 
 const Notification = mongoose.model('Notification', notificationSchema);
 export default Notification;

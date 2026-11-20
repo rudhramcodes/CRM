@@ -1,48 +1,54 @@
 import cron from 'node-cron';
 import Task from '../modules/tasks/task.model.js';
 import * as notificationService from '../modules/notifications/notification.service.js';
+import { taskLink } from '../modules/tasks/task.service.js';
 import logger from '../utils/logger.js';
 
-const sendTaskDueReminders = async () => {
-  const now = new Date();
+// Once a day at 9 am IST: tasks due in the next 24 h, one notification per person.
+// Each task is claimed per due date (dueSoonSentFor), so re-runs and restarts never repeat it; a reschedule re-arms it.
+export const sendTaskDueReminders = async (now = new Date()) => {
   const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
   const tasks = await Task.find({
     status: { $ne: 'done' },
     dueDate: { $gte: now, $lte: in24Hours },
     assignedTo: { $ne: null },
-  }).populate('assignedTo', '_id');
+    $expr: { $ne: ['$dueSoonSentFor', '$dueDate'] },
+  }).select('title dueDate assignedTo project priority').lean();
 
-  for (const task of tasks) {
-    if (task.assignedTo?._id) {
-      const notif = notificationService.buildNotification('task_due_soon', {
-        taskTitle: task.title,
-        dueDate: task.dueDate?.toLocaleDateString('en-IN') || 'soon',
-      });
-      await notificationService.createAndSend({
-        recipient: task.assignedTo._id,
-        referenceId: task._id,
-        referenceModel: 'Task',
-        link: `/projects/${task.project}`,
-        ...notif,
-      }).catch(() => {});
-    }
+  const byUser = new Map();
+  for (const t of tasks) {
+    const { modifiedCount } = await Task.updateOne({ _id: t._id, dueSoonSentFor: { $ne: t.dueDate } }, { $set: { dueSoonSentFor: t.dueDate } });
+    if (!modifiedCount) continue;
+    const k = String(t.assignedTo);
+    byUser.set(k, [...(byUser.get(k) || []), t]);
   }
 
-  if (tasks.length > 0) {
-    logger.info(`Task due cron: ${tasks.length} due-soon notifications sent`);
+  for (const [recipient, list] of byUser) {
+    const one = list.length === 1 ? list[0] : null;
+    const notif = notificationService.buildNotification('task_due_soon', {
+      taskTitle: one ? one.title : `${list.length} tasks`,
+      dueDate: one ? `on ${one.dueDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}` : 'in the next 24 hours',
+    });
+    await notificationService.createAndSend({
+      recipient,
+      ...(one ? { referenceId: one._id, referenceModel: 'Task', link: taskLink(one) } : { link: '/tasks' }),
+      ...notif,
+      ...(one ? {} : { message: `Due in the next 24 hours: ${list.map((t) => t.title).join(', ')}` }),
+    }).catch((err) => logger.error(`Task due cron: ${err.message}`));
   }
+
+  if (byUser.size) logger.info(`Task due cron: ${tasks.length} tasks, ${byUser.size} people notified`);
+  return byUser.size;
 };
 
 export const startTaskDueCron = () => {
-  cron.schedule('0 6 * * *', async () => {
-    logger.info('Task due cron: starting daily check');
+  cron.schedule('0 9 * * *', async () => {
     try {
       await sendTaskDueReminders();
     } catch (err) {
       logger.error('Task due cron failed', { error: err.message });
     }
-  });
+  }, { timezone: 'Asia/Kolkata' });
 
-  logger.info('Task due cron: scheduled daily at 06:00');
+  logger.info('Task due cron: scheduled daily at 09:00 IST');
 };

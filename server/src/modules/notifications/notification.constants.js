@@ -4,6 +4,11 @@ export const NOTIFICATION_TYPES = {
   TASK_STATUS_CHANGE: 'task_status_change',
   TASK_COMMENT: 'task_comment',
   TASK_DELETED: 'task_deleted',
+  TASK_REVIEW_REQUESTED: 'task_review_requested',
+  TASK_REVIEW_REMINDER: 'task_review_reminder',
+  TASK_REVIEW_LATE: 'task_review_late',
+  TASK_CHANGES_REQUESTED: 'task_changes_requested',
+  TASK_APPROVED: 'task_approved',
   MENTION: 'mention',
   PROJECT_ASSIGNED: 'project_assigned',
   PROJECT_STATUS_CHANGE: 'project_status_change',
@@ -45,7 +50,7 @@ export const NOTIFICATION_CHANNELS = {
 };
 
 // Channel routing per notification type:
-//   email — only main notifications (meetings, money, assignments) hit email
+//   email — only main notifications (meetings, money) hit email; task alerts are push + in-app only
 //   cliq  — only team-wide events broadcast to the Cliq channel (individual
 //           assignments/comments stay in-app to avoid spamming the channel)
 export const NOTIFICATION_TEMPLATES = {
@@ -53,13 +58,13 @@ export const NOTIFICATION_TEMPLATES = {
     title: 'Task Assigned',
     message: (d) => `${d.actorName} assigned you "${d.taskTitle}"`,
     priority: NOTIFICATION_PRIORITIES.HIGH,
-    channels: { email: true, cliq: false },
+    channels: { email: false, cliq: false },
   },
   task_due_soon: {
     title: 'Task Due Soon',
     message: (d) => `"${d.taskTitle}" is due ${d.dueDate}`,
     priority: NOTIFICATION_PRIORITIES.HIGH,
-    channels: { email: true, cliq: false },
+    channels: { email: false, cliq: false },
   },
   task_status_change: {
     title: 'Status Updated',
@@ -164,6 +169,39 @@ export const NOTIFICATION_TEMPLATES = {
     priority: NOTIFICATION_PRIORITIES.HIGH,
     channels: { email: true, cliq: true },
     cliqChannel: 'finance',
+  },
+  // Review loop: push + in-app only, never email
+  task_review_requested: {
+    title: 'Review needed',
+    message: (d) => `${d.actorName} sent "${d.taskTitle}" for review. Please check it ${d.dueText}.`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: false, cliq: false },
+  },
+  task_review_reminder: {
+    title: 'Review due soon',
+    message: (d) => `"${d.taskTitle}" is waiting for your review: 15 minutes left`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: false, cliq: false },
+  },
+  task_review_late: {
+    title: 'Review is late',
+    message: (d) => (d.reviewerName
+      ? `${d.reviewerName} hasn't reviewed "${d.taskTitle}" yet (sent by ${d.ownerName})`
+      : `"${d.taskTitle}" has waited more than 1 hour for your review`),
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: false, cliq: false },
+  },
+  task_changes_requested: {
+    title: 'Changes needed',
+    message: (d) => `${d.actorName} asked for changes on "${d.taskTitle}": ${d.note}`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: false, cliq: false },
+  },
+  task_approved: {
+    title: 'Task approved',
+    message: (d) => `${d.actorName} approved "${d.taskTitle}"`,
+    priority: NOTIFICATION_PRIORITIES.MEDIUM,
+    channels: { email: false, cliq: false },
   },
   task_deleted: {
     title: 'Task Deleted',

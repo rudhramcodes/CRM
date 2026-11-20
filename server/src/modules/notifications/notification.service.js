@@ -6,20 +6,36 @@ import logger from '../../utils/logger.js';
 import config from '../../config/index.js';
 import { shouldNotify } from '../settings/settings.service.js';
 
-// ponytail: simple in-memory dedup window, upgrade to Redis if scaling
+import { quietHoursEnd } from '../../utils/workingHours.js';
+
+// ponytail: in-memory dedup for the Cliq broadcast only, upgrade to Redis if scaling
 const dedupCache = new Map();
 const DEDUP_TTL = 5 * 60 * 1000; // 5 minutes
+const GROUP_WINDOW = 10 * 60 * 1000; // repeats within 10 min fold into one notification, no second push
 
-const dedupKey = (recipient, type, referenceId) =>
-  `${recipient}_${type}_${referenceId}`;
+// Task pushes wait out quiet hours (21:00–08:00 IST) unless the task is Urgent. Other modules keep sending at once.
+const pushHoldUntil = async ({ type, referenceModel, referenceId }) => {
+  if (!type?.startsWith('task_') && referenceModel !== 'Task') return null;
+  const until = quietHoursEnd(new Date());
+  if (!until) return null;
+  if (referenceModel === 'Task' && referenceId) {
+    const { default: Task } = await import('../tasks/task.model.js');
+    const task = await Task.findById(referenceId).select('priority').lean();
+    if (task?.priority === 'urgent') return null;
+  }
+  return until;
+};
 
-const isDuplicate = (recipient, type, referenceId) => {
-  if (!referenceId) return false;
-  const key = dedupKey(recipient, type, referenceId);
-  if (dedupCache.has(key)) return true;
-  dedupCache.set(key, true);
-  setTimeout(() => dedupCache.delete(key), DEDUP_TTL);
-  return false;
+const emitUnread = async (recipient, event, notification) => {
+  try {
+    const io = getIO();
+    if (!io) return;
+    const room = `user:${recipient}`;
+    io.to(room).emit(event, notification);
+    io.to(room).emit('notification:unread', { count: await notifRepo.countUnreadByRecipient(recipient) });
+  } catch (err) {
+    logger.error(`[Notification] Socket emit failed: ${err.message}`);
+  }
 };
 
 export const buildNotification = (type, data) => {
@@ -43,14 +59,20 @@ export const buildNotification = (type, data) => {
 
 export const createAndSend = async ({
   recipient, type, title, message, link, priority,
-  referenceId, referenceModel, actionBy, metadata, channels,
+  referenceId, referenceModel, actionBy, metadata, channels, dedup = true,
 }) => {
   logger.info(`[Notification] Creating: type=${type}, recipient=${recipient}, referenceId=${referenceId}`);
 
-  // Dedup: same type + same reference + same recipient within 5 min
-  if (isDuplicate(recipient, type, referenceId)) {
-    logger.info(`[Notification] Skipped duplicate: type=${type}, recipient=${recipient}`);
-    return null;
+  // Grouping, checked in the database so restarts and several servers never send twice:
+  // the same type + reference + recipient within 10 min updates the earlier notification, with no new push.
+  // dedup: false for review steps, which can repeat quickly (submit, changes, submit again)
+  if (dedup && referenceId) {
+    const grouped = await notifRepo.groupRecent({ recipient, type, referenceId, since: new Date(Date.now() - GROUP_WINDOW), message });
+    if (grouped) {
+      logger.info(`[Notification] Grouped into ${grouped._id}: type=${type}, count=${grouped.count}`);
+      await emitUnread(recipient, 'notification:updated', grouped);
+      return grouped;
+    }
   }
 
   const template = type ? NOTIFICATION_TEMPLATES[type] : null;
@@ -90,27 +112,16 @@ export const createAndSend = async ({
     channels: channels || { inApp: true, email: true },
   });
 
-  // Real-time via Socket.io (only if inApp is allowed)
+  // Real-time via Socket.io, then phone push (both ride the in-app channel)
   if (finalChannels.inApp) {
-    try {
-      const io = getIO();
-      if (io) {
-        const unreadCount = await notifRepo.countUnreadByRecipient(recipient);
-        const room = `user:${recipient}`;
-        logger.info(`[Notification] Emitting to room ${room}: notification:new`);
-        io.to(room).emit('notification:new', notification);
-        io.to(room).emit('notification:unread', { count: unreadCount });
-        logger.info(`[Notification] Socket emit successful, unread count: ${unreadCount}`);
-      } else {
-        logger.warn('[Notification] Socket.io not initialized - no real-time delivery');
-      }
-    } catch (err) {
-      logger.error(`[Notification] Socket emit failed: ${err.message}`);
+    await emitUnread(recipient, 'notification:new', notification);
+    const holdUntil = await pushHoldUntil({ type, referenceModel, referenceId }).catch(() => null);
+    if (holdUntil) {
+      await notifRepo.setPushAt(notification._id, holdUntil);
+    } else {
+      // never hold up the request for the push
+      sendExpoPush(recipient, notification).catch((err) => logger.error(`[Notification] Push failed: ${err.message}`));
     }
-    // Phone push rides the in-app channel; never hold up the request for it.
-    sendExpoPush(recipient, notification).catch((err) => logger.error(`[Notification] Push failed: ${err.message}`));
-  } else {
-    logger.info(`[Notification] InApp disabled, skipping socket emit for type=${type}`);
   }
 
   // Send email (only if email channel is allowed)
