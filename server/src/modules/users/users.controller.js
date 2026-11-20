@@ -3,9 +3,9 @@ import * as usersService from './users.service.js';
 
 export const list = async (req, res, next) => {
   try {
-    const { page, limit, search, role, isActive, sort } = req.query;
+    const { page, limit, search, role, location, isActive, sort } = req.query;
     const result = await usersService.listUsers(
-      { search, role, isActive },
+      { search, role, location, isActive },
       { page: parseInt(page), limit: parseInt(limit), sort },
       req.user,
     );

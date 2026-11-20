@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ROLES_LIST } from '../../constants/index.js';
+import { LOCATIONS, ROLES_LIST } from '../../constants/index.js';
 
 export const createUserSchema = z.object({
   name: z
@@ -16,6 +16,7 @@ export const createUserSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
   role: z.enum(ROLES_LIST).optional(),
   phone: z.string().optional(),
+  location: z.enum(LOCATIONS, { message: 'Pick Surat, Mumbai or Delhi' }).nullable().optional(),
   designation: z.string().max(100).nullable().optional(),
   dateOfJoining: z.string().nullable().optional(),
   dateOfLeaving: z.string().nullable().optional(),
@@ -35,6 +36,7 @@ export const updateUserSchema = z.object({
   email: z.string().email('Invalid email address').optional(),
   role: z.enum(ROLES_LIST).optional(),
   phone: z.string().optional(),
+  location: z.enum(LOCATIONS, { message: 'Pick Surat, Mumbai or Delhi' }).nullable().optional(),
   isActive: z.boolean().optional(),
   designation: z.string().max(100).nullable().optional(),
   dateOfJoining: z.string().nullable().optional(),
@@ -55,6 +57,7 @@ export const usersQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional().default(10),
   search: z.string().optional(),
   role: z.enum(ROLES_LIST).optional(),
+  location: z.enum([...LOCATIONS, 'none']).optional(), // 'none' = no location set
   isActive: z.coerce.boolean().optional(),
   sort: z.string().optional().default('-createdAt'),
 });

@@ -52,6 +52,12 @@ export const listUsers = async (query, options, requester) => {
     filter.role = query.role;
   }
 
+  // Location teams are staff only; null also matches older accounts without the field.
+  if (query.location) {
+    filter.location = query.location === 'none' ? null : query.location;
+    if (!query.role) filter.role = { $ne: 'client' };
+  }
+
   if (query.isActive !== undefined) {
     filter.isActive = query.isActive;
   }
