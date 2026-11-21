@@ -4,17 +4,7 @@ import Invoice from '../invoices/invoice.model.js';
 import { invoiceCollectionStages } from '../payments/payment.collections.js';
 import Payment from '../payments/payment.model.js';
 import Task from '../tasks/task.model.js';
-
-const buildDateFilter = (from, to) => {
-  const filter = {};
-  if (from) filter.$gte = new Date(from);
-  if (to) {
-    const toDate = new Date(to);
-    toDate.setHours(23, 59, 59, 999);
-    filter.$lte = toDate;
-  }
-  return Object.keys(filter).length ? filter : undefined;
-};
+import { AGING_BUCKETS, agingDueFilter, buildDateFilter, monthKey } from './reports.dates.js';
 
 // ── Revenue Report ──
 export const getRevenueReport = async (from, to) => {
@@ -27,7 +17,7 @@ export const getRevenueReport = async (from, to) => {
     ...invoiceCollectionStages(),
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } },
+        _id: monthKey('$issueDate'),
         invoiced: { $sum: '$total' },
         collected: { $sum: '$nonCashCollected' },
         cashCollected: { $sum: '$cashCollected' },
@@ -78,7 +68,8 @@ export const getRevenueReport = async (from, to) => {
     },
   ]);
 
-  const s = summary[0] || { totalRevenue: 0, totalOutstanding: 0, totalInvoiced: 0 };
+  // Same keys whether or not any invoice matched (the empty case used to drop cashCollected).
+  const { _id, ...s } = summary[0] || { totalRevenue: 0, cashCollected: 0, totalOutstanding: 0, totalInvoiced: 0 };
   const collectionRate = s.totalInvoiced > 0
     ? Math.round((s.totalRevenue / s.totalInvoiced) * 100)
     : 0;
@@ -115,13 +106,14 @@ export const getPipelineReport = async (from, to) => {
   const lostLeads = await Lead.countDocuments({ ...matchStage, status: 'lost' });
   const conversionRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0;
 
-  // Avg conversion time (days from createdAt to convertedAt for converted leads)
+  // Avg conversion time: days from createdAt to convertedAt. Older converted leads without convertedAt fall back
+  // to updatedAt (the previous behaviour), which any later edit pushes out.
   const convTime = await Lead.aggregate([
     { $match: { ...matchStage, convertedToClient: { $ne: null } } },
     {
       $project: {
         days: {
-          $divide: [{ $subtract: ['$updatedAt', '$createdAt'] }, 1000 * 60 * 60 * 24],
+          $divide: [{ $subtract: [{ $ifNull: ['$convertedAt', '$updatedAt'] }, '$createdAt'] }, 1000 * 60 * 60 * 24],
         },
       },
     },
@@ -158,7 +150,7 @@ export const getClientReport = async (from, to) => {
     { $match: matchStage },
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+        _id: monthKey('$createdAt'),
         count: { $sum: 1 },
       },
     },
@@ -189,28 +181,16 @@ export const getInvoiceReport = async (from, to) => {
     { $project: { _id: 0, status: '$_id', count: 1, total: { $round: ['$total', 2] } } },
   ]);
 
-  // Aging buckets (for unpaid invoices)
+  // Aging: every invoice still unpaid today, by days past its due date. Not limited to the report period,
+  // so "This Month" no longer hides older unpaid debt.
   const now = new Date();
-  const agingBuckets = [
-    { label: '0-30 days', min: 0, max: 30 },
-    { label: '31-60 days', min: 31, max: 60 },
-    { label: '61-90 days', min: 61, max: 90 },
-    { label: '90+ days', min: 91, max: Infinity },
-  ];
-
   const aging = [];
-  for (const bucket of agingBuckets) {
-    const olderDate = new Date(now.getTime() - bucket.max * 24 * 60 * 60 * 1000);
-    const newerDate = new Date(now.getTime() - bucket.min * 24 * 60 * 60 * 1000);
-    const dueDateFilter = bucket.max === Infinity
-      ? { $lte: newerDate }
-      : { $lte: newerDate, $gte: olderDate };
+  for (const bucket of AGING_BUCKETS) {
     const result = await Invoice.aggregate([
       {
         $match: {
-          ...matchStage,
           status: { $in: ['sent', 'overdue', 'partially_paid'] },
-          dueDate: dueDateFilter,
+          dueDate: agingDueFilter(bucket, now),
         },
       },
       { $group: { _id: null, count: { $sum: 1 }, amount: { $sum: '$balanceDue' } } },
@@ -228,7 +208,7 @@ export const getInvoiceReport = async (from, to) => {
     ...invoiceCollectionStages(),
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m', date: '$issueDate' } },
+        _id: monthKey('$issueDate'),
         total: { $sum: '$total' },
         paid: { $sum: '$nonCashCollected' },
         cashCollected: { $sum: '$cashCollected' },
