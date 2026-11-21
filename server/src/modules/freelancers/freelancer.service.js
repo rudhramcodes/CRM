@@ -16,16 +16,23 @@ const nextFreelancerCode = async () => {
   return `FRL-${String(nextNumber).padStart(5, '0')}`;
 };
 
-// Only fields that were sent are touched: a partial update (e.g. just { status }) must not blank the email.
-const normalize = (data) => ({
-  ...data,
-  ...('email' in data ? { email: data.email?.trim().toLowerCase() || '' } : {}),
-  ...('displayName' in data || 'fullName' in data ? { displayName: data.displayName?.trim() || data.fullName } : {}),
-  ventureProfiles: data.ventureProfiles?.map((profile) => ({
-    ...profile,
-    serviceCategories: [...new Set(profile.serviceCategories || [])],
-  })),
-});
+// Only fields that were sent are normalized: a partial update (e.g. just { status }) must not
+// blank the email or reset the display name.
+const normalize = (data) => {
+  const out = { ...data };
+  if ('email' in data) out.email = data.email?.trim().toLowerCase() || '';
+  if ('displayName' in data || 'fullName' in data) {
+    const name = data.displayName?.trim() || data.fullName;
+    if (name) out.displayName = name;
+  }
+  if (data.ventureProfiles) {
+    out.ventureProfiles = data.ventureProfiles.map((profile) => ({
+      ...profile,
+      serviceCategories: [...new Set(profile.serviceCategories || [])],
+    }));
+  }
+  return out;
+};
 
 const assertDuplicateFree = async (data, id = null) => {
   const [phoneMatch, emailMatch] = await Promise.all([

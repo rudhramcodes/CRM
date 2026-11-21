@@ -124,6 +124,11 @@ export const updateUser = async (id, updateData, updatedBy) => {
     throw ApiError.notFound('User not found');
   }
 
+  // Only the Super Admin edits the Super Admin: an admin changing its email could take the account over
+  // through "Forgot password".
+  if (user.role === 'super_admin' && String(updatedBy?._id) !== String(user._id)) {
+    throw ApiError.forbidden('Only the Super Admin can edit the Super Admin account.');
+  }
   if (updateData.role === 'super_admin' && user.role !== 'super_admin') {
     throw ApiError.forbidden('The existing Super Admin is the only Super Admin account.');
   }
