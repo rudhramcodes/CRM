@@ -13,6 +13,8 @@ export function CloudinaryImageUpload({
   helperText = 'Upload a professional photo (max 5MB)',
   className,
   required = false,
+  // Staff forms use the signed-in route; the public apply form passes '/freelancers/public/upload'.
+  endpoint = '/freelancers/upload/upload',
 }) {
   const [preview, setPreview] = useState(value);
   const [uploading, setUploading] = useState(false);
@@ -58,7 +60,8 @@ export function CloudinaryImageUpload({
       });
 
       const response = await new Promise((resolve, reject) => {
-        xhr.open('POST', `${API_BASE}/freelancers/upload/upload`);
+        xhr.open('POST', `${API_BASE}${endpoint}`);
+        xhr.withCredentials = true; // send the sign-in cookie, like the rest of the app's API calls
         xhr.onload = () => {
           try {
             const result = JSON.parse(xhr.responseText);
@@ -89,7 +92,7 @@ export function CloudinaryImageUpload({
       onUploadingChange?.(false);
       setTimeout(() => setProgress(0), 1000);
     }
-  }, [onChange, onUploadingChange, uploading, value]);
+  }, [endpoint, onChange, onUploadingChange, uploading, value]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];

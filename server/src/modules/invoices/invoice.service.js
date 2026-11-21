@@ -33,10 +33,10 @@ export const getInvoices = async (query, user, clientProfile) => {
   const { page, limit, sortBy, sortOrder, ...filters } = query;
   if (clientProfile) {
     filters.client = clientProfile._id;
-    // Clients see their invoices (sent, partially_paid, paid, overdue, draft), excluding cancelled unless requested
-    if (!filters.status) {
-      filters.status = { $nin: ['cancelled'] };
-    }
+    // Clients see their issued invoices (sent, partially_paid, paid, overdue); cancelled only when asked for.
+    // Drafts are internal work in progress and are never shown to clients.
+    if (!filters.status) filters.status = { $nin: ['draft', 'cancelled'] };
+    else if (filters.status === 'draft') filters.status = { $in: [] };
   }
   return invoiceRepository.findAll(filters, { page, limit, sortBy, sortOrder });
 };
@@ -59,6 +59,8 @@ const assertClientInvoiceAccess = (invoice, clientProfile) => {
   if (String(invoiceClientId) !== String(clientProfile._id)) {
     throw ApiError.forbidden('Access denied');
   }
+  // A draft isn't issued yet: to the client it doesn't exist (detail, HTML and PDF alike).
+  if (invoice.status === 'draft') throw ApiError.notFound('Invoice not found');
 };
 
 export const getInvoiceById = async (id, user, clientProfile) => {

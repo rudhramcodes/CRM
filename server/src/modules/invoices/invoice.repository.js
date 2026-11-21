@@ -53,10 +53,13 @@ export const findAll = async (query = {}, options = {}) => {
     filter.sourceQuotation = query.sourceQuotation;
   }
 
+  // The venture filter narrows the client filter, never replaces it: a client user is pinned to their own
+  // profile, and ?brand= must not widen that to every client of the venture.
   if (query.brand) {
-    const brandClients = await Client.find({ brand: query.brand }).select('_id').lean();
-    const clientIds = brandClients.map((c) => c._id);
-    filter.client = { $in: clientIds };
+    const brandFilter = { brand: query.brand };
+    if (filter.client) brandFilter._id = filter.client;
+    const brandClients = await Client.find(brandFilter).select('_id').lean();
+    filter.client = { $in: brandClients.map((c) => c._id) };
   }
 
   if (query.dateFrom || query.dateTo) {

@@ -1,5 +1,8 @@
 import * as freelancerRepo from './freelancer.repository.js';
 import ApiError from '../../utils/ApiError.js';
+import { ROLES } from '../../constants/index.js';
+
+const isAdmin = (user) => [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(user?.role);
 
 const nextFreelancerCode = async () => {
   const latest = await freelancerRepo.findLatestFreelancer();
@@ -62,7 +65,11 @@ export const create = async (data, user = null) => {
 };
 
 export const update = async (id, data, user) => {
-  await getById(id);
+  const current = await getById(id);
+  // Archiving and restoring are admin-only (same as DELETE /:id); a manager can't do it through an edit.
+  const touchesArchive = data.status !== undefined && data.status !== current.status
+    && (data.status === 'archived' || current.status === 'archived');
+  if (touchesArchive && !isAdmin(user)) throw ApiError.forbidden('Only admins can archive or restore freelancers');
   const normalized = normalize(data);
   if (normalized.phone || normalized.email) await assertDuplicateFree(normalized, id);
   return freelancerRepo.updateById(id, { ...normalized, updatedBy: user._id });
@@ -88,6 +95,8 @@ export const getStats = async () => {
 export const countByStatus = () => freelancerRepo.countByStatus();
 
 export const remove = async (id, user) => {
-  await getById(id);
+  const current = await getById(id);
+  // Permanent delete is the last step after archiving, as on the web and mobile screens.
+  if (current.status !== 'archived') throw ApiError.conflict('Archive the freelancer before deleting it permanently');
   return freelancerRepo.deleteById(id);
 };

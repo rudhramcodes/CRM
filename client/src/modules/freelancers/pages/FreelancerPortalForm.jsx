@@ -456,6 +456,7 @@ function BasicStep({ basic, update, errors, toggleLanguage }) {
           onChange={(url) => update('profilePhoto', url)}
           label="Profile Photo"
           helperText="Optional · A clear photo helps clients connect with you"
+          endpoint="/freelancers/public/upload"
         />
       </motion.div>
 

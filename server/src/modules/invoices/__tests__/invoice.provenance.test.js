@@ -6,7 +6,7 @@ import Client from '../../clients/client.model.js';
 import Quotation from '../../quotations/quotation.model.js';
 import Invoice from '../invoice.model.js';
 import { createInvoiceSchema, invoicesQuerySchema, updateInvoiceSchema } from '../invoice.validation.js';
-import { createInvoice, getInvoices, updateInvoice } from '../invoice.service.js';
+import { createInvoice, getInvoiceById, getInvoices, updateInvoice } from '../invoice.service.js';
 import { findBySourceQuotation } from '../invoice.repository.js';
 import * as invoiceController from '../invoice.controller.js';
 import validate, { validateQuery } from '../../../middleware/validate.js';
@@ -278,9 +278,52 @@ describe('invoice discovery', () => {
 
     const result = await getInvoices(invoicesQuerySchema.parse({ sourceQuotation }), user, { _id: client });
 
-    expect(query.getFilter()).toEqual({ sourceQuotation, client, status: { $nin: ['cancelled'] } });
+    expect(query.getFilter()).toEqual({ sourceQuotation, client, status: { $nin: ['draft', 'cancelled'] } });
     expect(count).toHaveBeenCalledWith(query.getFilter());
     expect(result.invoices).toEqual([invoice]);
     expect(result.pagination.total).toBe(1);
+  });
+
+  const listFilter = async (rawQuery, clientProfile) => {
+    const query = Invoice.find();
+    vi.spyOn(query, 'exec').mockResolvedValue([]);
+    vi.spyOn(Invoice, 'find').mockImplementation((filter) => query.find(filter));
+    vi.spyOn(Invoice, 'countDocuments').mockResolvedValue(0);
+    await getInvoices(invoicesQuerySchema.parse(rawQuery), user, clientProfile);
+    return query.getFilter();
+  };
+
+  it('keeps a client user on their own invoices when they add a venture filter', async () => {
+    const brandLookup = vi.spyOn(Client, 'find').mockReturnValue({ select: () => ({ lean: async () => [{ _id: client }] }) });
+
+    const filter = await listFilter({ brand: 'panigrahna' }, { _id: client });
+
+    expect(brandLookup).toHaveBeenCalledWith({ brand: 'panigrahna', _id: client });
+    expect(filter.client).toEqual({ $in: [client] });
+  });
+
+  it('still lists every client of a venture for staff', async () => {
+    const brandLookup = vi.spyOn(Client, 'find').mockReturnValue({ select: () => ({ lean: async () => [{ _id: client }, { _id: other }] }) });
+
+    const filter = await listFilter({ brand: 'panigrahna' });
+
+    expect(brandLookup).toHaveBeenCalledWith({ brand: 'panigrahna' });
+    expect(filter.client).toEqual({ $in: [client, other] });
+    expect(filter.status).toBeUndefined();
+  });
+
+  it('never lists drafts to a client, even when asked for', async () => {
+    expect((await listFilter({ status: 'draft' }, { _id: client })).status).toEqual({ $in: [] });
+    expect((await listFilter({ status: 'cancelled' }, { _id: client })).status).toBe('cancelled');
+    expect((await listFilter({ status: 'draft' })).status).toBe('draft'); // staff unchanged
+  });
+
+  it('hides a draft invoice from its client but not from staff', async () => {
+    const draft = new Invoice({ ...reviewed, status: 'draft' });
+    const chain = { populate: () => chain, then: (ok, fail) => Promise.resolve(draft).then(ok, fail) };
+    vi.spyOn(Invoice, 'findById').mockReturnValue(chain);
+
+    await expect(getInvoiceById(String(draft._id), user, { _id: client })).rejects.toMatchObject({ statusCode: 404 });
+    await expect(getInvoiceById(String(draft._id), user)).resolves.toBe(draft);
   });
 });

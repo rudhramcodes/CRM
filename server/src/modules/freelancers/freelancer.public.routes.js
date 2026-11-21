@@ -4,8 +4,12 @@ import { createFreelancerSchema } from './freelancer.validation.js';
 import * as freelancerService from './freelancer.service.js';
 import { sendFreelancerSubmissionEmail, sendFreelancerApplicantEmail } from '../../services/emailService.js';
 import logger from '../../utils/logger.js';
+import { publicPhotoUpload } from './freelancer.upload.routes.js';
 
 const router = Router();
+
+// Profile photo for the public apply form (rate limited; staff use the signed-in /freelancers/upload/upload).
+router.post('/upload', ...publicPhotoUpload);
 
 router.post('/apply', validate(createFreelancerSchema), async (req, res, next) => {
   try {

@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import multer from 'multer';
 import cloudinary from 'cloudinary';
+import rateLimit from 'express-rate-limit';
 import config from '../../config/index.js';
 import logger from '../../utils/logger.js';
-
-const router = Router();
+import { verifyToken, authorize } from '../../middleware/auth.js';
+import { ROLES } from '../../constants/index.js';
 
 cloudinary.v2.config({
   cloud_name: config.cloudinary.cloudName,
@@ -25,7 +26,8 @@ const upload = multer({
   },
 });
 
-router.post('/upload', upload.single('file'), async (req, res) => {
+// Stores one profile photo (form field `file`) in Cloudinary and returns its URL.
+const storeProfilePhoto = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file provided' });
@@ -55,6 +57,28 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     logger.error('Cloudinary upload failed:', error.message);
     res.status(500).json({ success: false, message: 'Failed to upload image' });
   }
+};
+
+// Staff upload (freelancer form on web and mobile): POST /api/freelancers/upload/upload, signed-in staff only,
+// same roles as the freelancer routes. It used to be open to anyone.
+const router = Router();
+router.post(
+  '/upload',
+  verifyToken,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER),
+  upload.single('file'),
+  storeProfilePhoto,
+);
+
+// Public apply form (no login): POST /api/freelancers/public/upload. A few photos per visitor per hour is plenty;
+// the cap stops anyone using it as free image hosting.
+const publicUploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many uploads. Please try again later.' },
 });
+export const publicPhotoUpload = [publicUploadLimiter, upload.single('file'), storeProfilePhoto];
 
 export default router;
