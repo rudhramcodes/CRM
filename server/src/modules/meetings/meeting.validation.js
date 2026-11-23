@@ -140,3 +140,12 @@ export const meetingsQuerySchema = z.object({
   sortBy: z.string().optional().default('date'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),
 });
+
+// Employee asks an admin/manager to set up a meeting (no meeting is created).
+export const requestMeetingSchema = z.object({
+  title: z.string().trim().min(2, 'Title must be at least 2 characters').max(200),
+  assignee: objectId,
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date').optional(),
+  startTime: z.string().regex(TIME_REGEX, 'Invalid time').optional(),
+  note: z.string().trim().max(500, 'Note must not exceed 500 characters').optional(),
+});

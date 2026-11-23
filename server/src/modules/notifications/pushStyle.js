@@ -27,6 +27,7 @@ const STYLES = {
   lead_created: { channelId: 'sales', interruptionLevel: 'passive' },
   lead_converted: { channelId: 'sales', interruptionLevel: 'passive' },
   meeting_scheduled: { channelId: 'sales', interruptionLevel: 'active' },
+  meeting_requested: { channelId: 'sales', interruptionLevel: 'active', categoryId: 'open' },
   meeting_reminder: { channelId: 'sales', interruptionLevel: 'time-sensitive', categoryId: 'open' },
   // Money
   invoice_paid: { channelId: 'money', interruptionLevel: 'active' },

@@ -19,6 +19,7 @@ export const NOTIFICATION_TYPES = {
   LEAD_CONVERTED: 'lead_converted',
   MEETING_SCHEDULED: 'meeting_scheduled',
   MEETING_REMINDER: 'meeting_reminder',
+  MEETING_REQUESTED: 'meeting_requested',
   INVOICE_PAID: 'invoice_paid',
   INVOICE_OVERDUE: 'invoice_overdue',
   PAYMENT_RECEIVED: 'payment_received',
@@ -140,6 +141,12 @@ export const NOTIFICATION_TEMPLATES = {
     priority: NOTIFICATION_PRIORITIES.MEDIUM,
     channels: { email: true, cliq: true },
     cliqChannel: 'management',
+  },
+  meeting_requested: {
+    title: 'Meeting Request',
+    message: (d) => `${d.requester} asked for a meeting: "${d.title}"${d.when ? ` (${d.when})` : ''}${d.note ? `. ${d.note}` : ''}`,
+    priority: NOTIFICATION_PRIORITIES.HIGH,
+    channels: { email: true, cliq: false },
   },
   meeting_reminder: {
     title: 'Meeting Reminder',

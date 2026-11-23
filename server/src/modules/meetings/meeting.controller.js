@@ -23,6 +23,15 @@ export const getById = async (req, res, next) => {
   }
 };
 
+export const request = async (req, res, next) => {
+  try {
+    const assignee = await meetingService.requestMeeting(req.body, req.user);
+    ApiResponse.success(res, 200, { assignee }, `Request sent to ${assignee.name}`);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const create = async (req, res, next) => {
   try {
     const result = await meetingService.createMeeting(req.body, req.user, req.clientProfile);

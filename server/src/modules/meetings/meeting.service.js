@@ -452,3 +452,32 @@ export const convertActionItemToTask = async (id, itemId, data, user) => {
   const updated = await meetingRepository.markActionItemConverted(id, itemId, task._id, { assignee: assignedTo, dueDate });
   return { task, meeting: updated };
 };
+
+const SCHEDULERS = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER];
+const to12h = (t) => { const [h, m] = t.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+
+// Employee asks an admin/manager for a meeting. Nothing is stored: the assignee gets a notification whose link
+// opens the schedule form with the title, day, time and the requester as attendee already filled in.
+export const requestMeeting = async ({ title, assignee, date, startTime, note }, user) => {
+  const User = (await import('../auth/auth.model.js')).default;
+  const target = await User.findOne({ _id: assignee, role: { $in: SCHEDULERS }, isActive: true }).select('_id name');
+  if (!target) throw ApiError.badRequest('Pick an admin or manager to schedule it');
+
+  const when = [
+    date && new Date(`${date}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }),
+    startTime && to12h(startTime),
+  ].filter(Boolean).join(', ');
+  const params = new URLSearchParams({ title, attendee: String(user._id), ...(date && { date }), ...(startTime && { startTime }) });
+  const notif = notificationService.buildNotification('meeting_requested', { requester: user.name, title, when, note });
+
+  await notificationService.createAndSend({
+    recipient: target._id,
+    referenceId: user._id,
+    referenceModel: 'User',
+    actionBy: user._id,
+    link: `/meetings/new?${params}`,
+    dedup: false, // two different requests in a row are two notifications
+    ...notif,
+  });
+  return { _id: target._id, name: target.name };
+};

@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import multer from 'multer';
+import ApiError from '../../utils/ApiError.js';
 import * as authController from './auth.controller.js';
 import validate from '../../middleware/validate.js';
 import { verifyToken, authorize } from '../../middleware/auth.js';
@@ -44,6 +46,10 @@ router.post('/verify-email-otp', authLimiter, validate(verifyEmailOtpSchema), au
 router.post('/resend-verification', authLimiter, validate(resendVerificationSchema), authController.resendVerification);
 
 router.patch('/profile', verifyToken, validate(updateProfileSchema), authController.updateProfile);
+// Own profile photo (mobile settings): one image, 5 MB, same limits as the freelancer photo upload.
+const avatarUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (_req, f, cb) => cb(null, f.mimetype.startsWith('image/')) });
+const avatarFile = (req, res, next) => avatarUpload.single('file')(req, res, (err) => next(err && ApiError.badRequest(err.code === 'LIMIT_FILE_SIZE' ? 'Photo must be 5 MB or less' : err.message)));
+router.post('/profile/avatar', verifyToken, avatarFile, authController.uploadAvatar);
 router.put('/password', verifyToken, validate(changePasswordSchema), authController.changePassword);
 
 router.post('/client/accept-invite', authLimiter, validate(acceptClientInviteSchema), authController.acceptClientInvite);

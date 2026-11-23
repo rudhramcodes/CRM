@@ -1,6 +1,8 @@
 import ApiResponse from '../../utils/ApiResponse.js';
 import * as authService from './auth.service.js';
 import * as authRepository from './auth.repository.js';
+import ApiError from '../../utils/ApiError.js';
+import { uploadBuffer } from '../../services/cloudinaryService.js';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -173,6 +175,17 @@ export const updateProfile = async (req, res, next) => {
   try {
     const user = await authService.updateProfile(req.user._id, req.body);
     ApiResponse.success(res, 200, { user }, 'Profile updated');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) throw ApiError.badRequest('Choose an image file');
+    const { url } = await uploadBuffer(req.file.buffer, { folder: 'crm/avatars' });
+    const user = await authService.updateProfile(req.user._id, { avatar: url });
+    ApiResponse.success(res, 200, { user }, 'Photo updated');
   } catch (error) {
     next(error);
   }
