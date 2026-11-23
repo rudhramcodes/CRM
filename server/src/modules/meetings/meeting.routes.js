@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import * as meetingController from './meeting.controller.js';
 import validate, { validateQuery } from '../../middleware/validate.js';
 import { verifyToken, authorize } from '../../middleware/auth.js';
@@ -13,6 +14,7 @@ import {
   convertActionItemSchema,
   generateLinkSchema,
   meetingsQuerySchema,
+  requestMeetingSchema,
 } from './meeting.validation.js';
 
 const router = Router();
@@ -29,6 +31,23 @@ router.get(
   ...meetingReadMiddlewares,
   validateQuery(meetingsQuerySchema),
   meetingController.list,
+);
+
+// Employees can't schedule; they ask an admin/manager, who gets a notification that opens a filled-in form.
+const requestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => String(req.user._id),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests. Try again in a minute.' },
+});
+router.post(
+  '/request',
+  authorize(ROLES.EMPLOYEE),
+  requestLimiter,
+  validate(requestMeetingSchema),
+  meetingController.request,
 );
 
 router.get(
