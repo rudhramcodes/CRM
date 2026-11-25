@@ -6,6 +6,7 @@ import {
   useApplyLeaveMutation,
   useApproveLeaveMutation,
   useRejectLeaveMutation,
+  useCancelLeaveMutation,
   useGetLeaveBalanceQuery,
 } from '../../../services/attendanceApi';
 import { useGetUsersQuery } from '../../../services/userApi';
@@ -48,6 +49,7 @@ const STATUS_BADGE = {
   pending: 'warning',
   approved: 'success',
   rejected: 'danger',
+  cancelled: 'default',
 };
 
 const BALANCE_KEYS = ['casual', 'sick'];
@@ -139,6 +141,27 @@ export default function AttendanceLeaves() {
   const [applyLeave, { isLoading: applying }] = useApplyLeaveMutation();
   const [approveLeave, { isLoading: approving }] = useApproveLeaveMutation();
   const [rejectLeave, { isLoading: rejecting }] = useRejectLeaveMutation();
+  const [cancelLeave, { isLoading: cancelling }] = useCancelLeaveMutation();
+  // Same rule as the server: own pending any time, own approved before it starts; reviewers can cancel any approved leave.
+  const canCancel = (leave) => {
+    const mine = String(leave.employee?._id || leave.employee) === String(user?._id);
+    const startStr = String(leave.startDate).slice(0, 10);
+    if (mine) return leave.status === 'pending' || (leave.status === 'approved' && startStr > format(new Date(), 'yyyy-MM-dd'));
+    return isAdmin && leave.status === 'approved';
+  };
+  const handleCancel = async (leave) => {
+    const msg = leave.status === 'approved'
+      ? 'Cancel this leave? The days go back to the leave balance and become normal working days.'
+      : 'Withdraw this leave request?';
+    if (!window.confirm(msg)) return;
+    try {
+      await cancelLeave(leave._id).unwrap();
+      toast.success('Leave cancelled');
+      if (viewingLeave?._id === leave._id) setViewingLeave(null);
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to cancel leave');
+    }
+  };
 
   const leaves = Array.isArray(leavesData?.data)
     ? leavesData.data
@@ -504,6 +527,7 @@ export default function AttendanceLeaves() {
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -631,7 +655,7 @@ export default function AttendanceLeaves() {
                       {isValid(s) ? format(s, 'dd MMM') : '—'} — {isValid(e) ? format(e, 'dd MMM yyyy') : '—'}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-zinc-800">
-                      {days ? `${days} ${days === 1 ? 'day' : 'days'}` : '—'}
+                      {leave.halfDay ? `Half day (${leave.halfDay} half)` : days ? `${days} ${days === 1 ? 'day' : 'days'}` : '—'}
                     </td>
                     <td className="px-4 py-3 text-sm text-zinc-600 max-w-[200px]">
                       <p className="truncate" title={leave.reason}>
@@ -672,6 +696,15 @@ export default function AttendanceLeaves() {
                               <X className="h-4 w-4" />
                             </button>
                           </>
+                        )}
+                        {canCancel(leave) && (
+                          <button
+                            onClick={() => handleCancel(leave)}
+                            disabled={cancelling}
+                            className="px-2 py-1 rounded-lg text-xs font-medium text-zinc-600 hover:bg-zinc-100 transition-colors"
+                          >
+                            Cancel leave
+                          </button>
                         )}
                       </div>
                     </td>
@@ -723,7 +756,7 @@ export default function AttendanceLeaves() {
                   <span>
                     {isValid(s) ? format(s, 'dd MMM') : '—'} — {isValid(e) ? format(e, 'dd MMM yyyy') : '—'}
                   </span>
-                  <span className="font-semibold text-zinc-900">{days ? `${days} ${days === 1 ? 'day' : 'days'}` : ''}</span>
+                  <span className="font-semibold text-zinc-900">{leave.halfDay ? `Half day (${leave.halfDay} half)` : days ? `${days} ${days === 1 ? 'day' : 'days'}` : ''}</span>
                 </div>
 
                 <p className="text-xs text-zinc-600 line-clamp-2">{leave.reason}</p>
@@ -745,6 +778,11 @@ export default function AttendanceLeaves() {
                         <X className="h-3.5 w-3.5" /> Reject
                       </Button>
                     </div>
+                  )}
+                  {canCancel(leave) && (
+                    <Button size="sm" variant="outline" onClick={() => handleCancel(leave)} loading={cancelling}>
+                      Cancel leave
+                    </Button>
                   )}
                 </div>
               </div>

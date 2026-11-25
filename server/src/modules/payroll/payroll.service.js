@@ -114,7 +114,13 @@ export const calculateSalarySlip = ({
         counts.absentDays += 1;
         break;
       case 'half_day':
-        counts.halfDays += 1;
+        // Approved half-day leave is paid: half present, half paid leave, no loss of pay
+        if (record.leave) {
+          counts.presentDays += 0.5;
+          counts.paidLeaveDays += 0.5;
+        } else {
+          counts.halfDays += 1;
+        }
         break;
       case 'holiday':
         counts.holidayDays += 1;

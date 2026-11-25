@@ -40,7 +40,8 @@ export default function AttendanceStats({ employeeId, monthDate = new Date() }) 
 
   const presentCount = present + wfh;
   const rateDenom = present + wfh + absent + halfDay;
-  const attendanceRate = rateDenom > 0 ? Math.round((presentCount / rateDenom) * 100) : null;
+  // A half day earns half credit, matching payroll
+  const attendanceRate = rateDenom > 0 ? Math.round(((presentCount + halfDay * 0.5) / rateDenom) * 100) : null;
   const title = isSameMonth(monthDate, new Date()) ? 'This Month' : format(monthDate, 'MMMM yyyy');
 
   return (

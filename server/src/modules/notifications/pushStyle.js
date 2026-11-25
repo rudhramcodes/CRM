@@ -39,6 +39,7 @@ const STYLES = {
   regularization_request: { channelId: 'people', interruptionLevel: 'active', categoryId: 'open' },
   leave_approved: { channelId: 'people', interruptionLevel: 'active' },
   leave_rejected: { channelId: 'people', interruptionLevel: 'active' },
+  leave_cancelled: { channelId: 'people', interruptionLevel: 'active' },
   regularization_approved: { channelId: 'people', interruptionLevel: 'active' },
   regularization_rejected: { channelId: 'people', interruptionLevel: 'active' },
   // Projects

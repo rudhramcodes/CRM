@@ -124,6 +124,7 @@ export const createLeaveSchema = z
     leaveType: z.enum(['sick', 'casual', 'maternity', 'paternity']),
     startDate: z.string().min(1, 'Start date is required'),
     endDate: z.string().min(1, 'End date is required'),
+    halfDay: z.enum(['first', 'second']).optional(),
     reason: z.string().min(10, 'Reason must be at least 10 characters').max(1000),
     documents: z.array(z.string().url()).max(5).optional(),
   })
@@ -134,13 +135,17 @@ export const createLeaveSchema = z
       return end >= start;
     },
     { message: 'End date must be on or after start date', path: ['endDate'] }
+  )
+  .refine(
+    (data) => !data.halfDay || data.startDate === data.endDate,
+    { message: 'A half-day leave must start and end on the same day', path: ['endDate'] }
   );
 
 export const leaveQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(10),
   employee: z.string().optional(),
-  status: z.enum(['pending', 'approved', 'rejected']).optional(),
+  status: z.enum(['pending', 'approved', 'rejected', 'cancelled']).optional(),
   leaveType: z.enum(['sick', 'casual', 'maternity', 'paternity']).optional(),
   search: z.string().optional(),
   startDate: z.string().optional(),

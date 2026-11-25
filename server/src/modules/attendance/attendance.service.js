@@ -12,6 +12,7 @@ import {
 import { resolveLocationDetails, resolveLocationFast } from '../../utils/geo.js';
 import {
   calculateLeaveDays,
+  formatLeaveDuration,
   isBalanceTrackedLeave,
   normalizeLeaveBalance,
 } from './leavePolicy.js';
@@ -45,7 +46,8 @@ export const applyWorkingDayClockInStatus = (record, isWFH) => {
   if (blockReason) {
     throw ApiError.badRequest(blockReason);
   }
-  record.status = isWFH ? 'wfh' : 'present';
+  // A half day (approved half-day leave or set by an admin) stays a half day after clock-in
+  if (record.status !== 'half_day') record.status = isWFH ? 'wfh' : 'present';
   return record;
 };
 
@@ -257,7 +259,8 @@ export const clockIn = async (employeeId, data, ip) => {
     const shiftStart = parseHHMM(shift.startTime);
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     const graceEnd = shiftStart + (shift.gracePeriod || 15);
-    const isLate = nowMinutes > graceEnd;
+    // Off for the first half on approved leave: arriving after shift start isn't late
+    const isLate = nowMinutes > graceEnd && !(record.leave && record.status === 'half_day');
     const lateMinutes = isLate ? nowMinutes - graceEnd : 0;
 
     // Resolve location (Office geofence or Area name)
@@ -871,7 +874,7 @@ export const deleteShift = async (id) => {
 export const applyLeave = async (employeeId, data) => {
   const start = new Date(data.startDate);
   const end = new Date(data.endDate);
-  const days = calculateLeaveDays(start, end);
+  const days = calculateLeaveDays(start, end, data.halfDay);
   const year = start.getFullYear();
 
   if (isBalanceTrackedLeave(data.leaveType)) {
@@ -914,7 +917,7 @@ export const applyLeave = async (employeeId, data) => {
       role: { $in: ['super_admin', 'admin', 'manager'] },
     }).select('_id email name');
 
-    const durationStr = `${days} ${days === 1 ? 'day' : 'days'}`;
+    const durationStr = formatLeaveDuration(days, data.halfDay);
     const datesStr = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} – ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 
     console.log(`[Leave Apply] Notifying ${adminsAndManagers.length} admins/managers for leave by ${applicant?.name}`);
@@ -1044,7 +1047,7 @@ export const approveLeave = async (id, adminId, comment) => {
 
   const start = new Date(leave.startDate);
   const end = new Date(leave.endDate);
-  const days = calculateLeaveDays(start, end);
+  const days = calculateLeaveDays(start, end, leave.halfDay);
   const year = start.getFullYear();
   const employeeId = leave.employee?._id || leave.employee;
 
@@ -1070,7 +1073,15 @@ export const approveLeave = async (id, adminId, comment) => {
     if (holiday) continue;
 
     const existing = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, date);
-    if (existing) {
+    if (leave.halfDay) {
+      // Keep any punches already made for the half they work
+      if (existing) {
+        await attendanceRepo.updateAttendance(existing._id, { status: 'half_day', leave: leave._id, isLate: false, lateMinutes: 0 });
+      } else {
+        const shift = await attendanceRepo.findDefaultShift();
+        await attendanceRepo.createAttendance({ employee: employeeId, date, shift: shift?._id, status: 'half_day', leave: leave._id, createdBy: adminId });
+      }
+    } else if (existing) {
       await attendanceRepo.updateAttendance(existing._id, {
         status: 'leave',
         leave: leave._id,
@@ -1133,7 +1144,7 @@ export const approveLeave = async (id, adminId, comment) => {
 
     // 2. Direct styled HTML Email
     if (emp?.email) {
-      const durationStr = `${days} ${days === 1 ? 'day' : 'days'}`;
+      const durationStr = formatLeaveDuration(days, leave.halfDay);
       try {
         await sendLeaveApprovedEmail({
           to: emp.email,
@@ -1189,7 +1200,8 @@ export const rejectLeave = async (id, adminId, comment) => {
 
     // 2. Direct HTML Email
     if (emp?.email) {
-      const durationStr = `${days} ${days === 1 ? 'day' : 'days'}`;
+      // `days` was never defined here, so the rejection email silently failed
+      const durationStr = formatLeaveDuration(calculateLeaveDays(start, end, leave.halfDay), leave.halfDay);
       try {
         await sendLeaveRejectedEmail({
           to: emp.email,
@@ -1208,6 +1220,100 @@ export const rejectLeave = async (id, adminId, comment) => {
   }
 
   return updated;
+};
+
+const LEAVE_REVIEWER_ROLES = ['super_admin', 'admin', 'manager'];
+
+// Who may cancel: the employee (pending any time, approved only before it starts) or a reviewer (any time).
+export const canCancelLeave = (leave, user, todayStr) => {
+  const ownerId = leave.employee?._id || leave.employee;
+  const isOwner = String(ownerId) === String(user._id);
+  const isReviewer = LEAVE_REVIEWER_ROLES.includes(user.role);
+  if (!isOwner && !isReviewer) return 'You can only cancel your own leave';
+  if (!['pending', 'approved'].includes(leave.status)) return 'Only pending or approved leave can be cancelled';
+  // Leave dates are stored as UTC midnight of the chosen day
+  const startStr = new Date(leave.startDate).toISOString().slice(0, 10);
+  if (leave.status === 'approved' && !isReviewer && startStr <= todayStr) {
+    return 'This leave has already started. Ask your manager to cancel it.';
+  }
+  return null;
+};
+
+export const cancelLeave = async (id, user) => {
+  const leave = await attendanceRepo.findLeaveById(id);
+  if (!leave) throw ApiError.notFound('Leave request not found');
+
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const blocked = canCancelLeave(leave, user, todayStr);
+  if (blocked) throw ApiError.badRequest(blocked);
+
+  const employeeId = leave.employee?._id || leave.employee;
+  const wasApproved = leave.status === 'approved';
+  const start = new Date(leave.startDate);
+  const end = new Date(leave.endDate);
+
+  leave.status = 'cancelled';
+  leave.cancelledBy = user._id;
+  leave.cancelledAt = now;
+  await leave.save();
+
+  if (wasApproved) {
+    // Give back exactly what approval took
+    await attendanceRepo.updateLeaveBalance(employeeId, start.getFullYear(), leave.leaveType, -calculateLeaveDays(start, end, leave.halfDay));
+
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const records = await Attendance.find({ leave: leave._id });
+    for (const rec of records) {
+      if (rec.sessions?.length) {
+        // They worked part of the day: it's an ordinary working day again
+        rec.status = rec.isWFH ? 'wfh' : 'present';
+        rec.leave = null;
+        await rec.save();
+      } else if (rec.date >= todayStart) {
+        // Today or later: remove so clock-in and the nightly job treat it as a normal day
+        await Attendance.deleteOne({ _id: rec._id });
+      } else {
+        rec.status = 'absent';
+        rec.leave = null;
+        await rec.save();
+      }
+    }
+  }
+
+  // Employee cancelled: tell reviewers. Reviewer cancelled: tell the employee.
+  try {
+    const User = mongoose.model('User');
+    const isOwner = String(employeeId) === String(user._id);
+    const recipients = isOwner
+      ? (await User.find({ role: { $in: LEAVE_REVIEWER_ROLES }, _id: { $ne: user._id } }).select('_id')).map((u) => u._id)
+      : [employeeId];
+    const datesStr = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} – ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    const employeeName = leave.employee?.name || 'An employee';
+    const leaveType = leave.leaveType.replace('_', ' ');
+    for (const recipient of recipients) {
+      await createAndSend({
+        recipient,
+        type: 'leave_cancelled',
+        title: 'Leave Cancelled',
+        message: isOwner
+          ? `${employeeName} cancelled their ${leaveType} leave for ${datesStr}`
+          : `Your ${leaveType} leave for ${datesStr} was cancelled by ${user.name || 'a manager'}`,
+        link: '/attendance/leaves',
+        priority: 'medium',
+        referenceId: leave._id,
+        referenceModel: 'LeaveRequest',
+        actionBy: user._id,
+        channels: { inApp: true, email: false },
+        metadata: { employeeName, leaveType, dates: datesStr },
+      }).catch((err) => console.error('[Leave Cancel] Notification failed:', err));
+    }
+  } catch (err) {
+    console.error('[Leave Cancel Notification Error]:', err);
+  }
+
+  return leave;
 };
 
 export const getLeaveBalance = async (employeeId, year = new Date().getFullYear()) => {
@@ -1379,10 +1485,9 @@ export const getDailyOverviewStats = async (dateParam) => {
   const Attendance = mongoose.model('Attendance');
   const LeaveRequest = mongoose.model('LeaveRequest');
 
-  // Only employee and manager roles count towards total staff
-  const targetRoles = ['employee', 'manager'];
+  // Every staff login counts (admins clock in too); only client logins are excluded
   const staff = await User.find({
-    role: { $in: targetRoles },
+    role: { $ne: 'client' },
     isActive: { $ne: false },
   }).select('_id name email role');
 
@@ -1421,7 +1526,7 @@ export const getDailyOverviewStats = async (dateParam) => {
 
   for (const rec of records) {
     const empIdStr = String(rec.employee);
-    if (rec.status === 'present' || rec.status === 'wfh') {
+    if (rec.status === 'present' || rec.status === 'wfh' || rec.status === 'half_day') {
       presentEmpIds.add(empIdStr);
       if (rec.isWFH || rec.status === 'wfh') {
         wfhEmpIds.add(empIdStr);

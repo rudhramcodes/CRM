@@ -4,8 +4,21 @@ export const BALANCE_TRACKED_LEAVE_TYPES = Object.keys(LEAVE_ENTITLEMENT);
 export const isBalanceTrackedLeave = (leaveType) =>
   BALANCE_TRACKED_LEAVE_TYPES.includes(leaveType);
 
-export const calculateLeaveDays = (start, end) =>
-  Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)) + 1;
+// A half-day request is always a single day and counts as 0.5
+export const calculateLeaveDays = (start, end, halfDay) =>
+  halfDay ? 0.5 : Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)) + 1;
+
+// End-of-day rule for a worked day with no leave behind it
+export const SHORT_DAY_ABSENT_HOURS = 2;
+export const SHORT_DAY_HALF_HOURS = 4;
+export const shortDayStatus = (workHours = 0) => {
+  if (workHours < SHORT_DAY_ABSENT_HOURS) return 'absent';
+  if (workHours < SHORT_DAY_HALF_HOURS) return 'half_day';
+  return null;
+};
+
+export const formatLeaveDuration = (days, halfDay) =>
+  halfDay ? `Half day (${halfDay} half)` : `${days} ${days === 1 ? 'day' : 'days'}`;
 
 export const getCasualAccrued = (year, now = new Date()) => {
   const currentYear = now.getFullYear();

@@ -4,6 +4,7 @@ import User from '../auth/auth.model.js';
 import logger from '../../utils/logger.js';
 import { ensureActiveSession, recalcRecordTotals } from './attendance.service.js';
 import { sendExpoPush } from '../notifications/expoPush.js';
+import { shortDayStatus } from './leavePolicy.js';
 
 // "18:30" → "6:30 PM"
 const toDisplay = (hhmm) => {
@@ -164,9 +165,55 @@ const autoEndBreaks = async () => {
   }
 };
 
+// Runs at day end: people can clock in more than once, so only the final total counts.
+const autoShortDayMarking = async () => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const records = await Attendance.find({
+      date: { $gte: today, $lt: tomorrow },
+      status: { $in: ['present', 'wfh'] },
+      leave: null,
+    });
+
+    let changed = 0;
+    for (const record of records) {
+      // No punches = set by hand by an admin; an open session = still working. Leave both alone.
+      if (!record.sessions?.length || record.sessions.some((s) => s.clockIn?.time && !s.clockOut?.time)) continue;
+      const to = shortDayStatus(record.workHours);
+      if (!to) continue;
+
+      const from = record.status;
+      record.status = to;
+      record.events.push({ type: 'status_change', timestamp: new Date(), metadata: { workHours: record.workHours, from, to, auto: true } });
+      await record.save();
+      changed += 1;
+
+      const label = to === 'half_day' ? 'a half day' : 'absent';
+      sendExpoPush(record.employee, {
+        type: 'auto_short_day',
+        title: `Today marked as ${label}`,
+        message: `You worked ${(record.workHours || 0).toFixed(1)} h today, so it was marked as ${label}. Request a regularization if this is wrong.`,
+        link: '/attendance',
+        priority: 'high',
+      }).catch((err) => logger.error(`[Attendance] Short day push failed: ${err.message}`));
+    }
+
+    logger.info(`[Attendance] Short day marking: ${changed} of ${records.length} records changed`);
+  } catch (error) {
+    logger.error(`[Attendance] Short day marking error: ${error.message}`);
+  }
+};
+
 export const startAttendanceCrons = () => {
   cron.schedule('* * * * *', autoClockOut);
-  cron.schedule('59 23 * * *', autoAbsentMarking);
+  cron.schedule('59 23 * * *', async () => {
+    await autoShortDayMarking();
+    await autoAbsentMarking();
+  });
   cron.schedule('*/5 * * * *', autoEndBreaks);
   logger.info('[Attendance] Cron jobs started');
 };

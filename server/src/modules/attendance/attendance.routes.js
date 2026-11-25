@@ -229,6 +229,13 @@ router.patch(
   attendanceController.rejectLeave
 );
 
+// Owners cancel their own; reviewers can cancel anyone's (rules in cancelLeave)
+router.patch(
+  '/leaves/:id/cancel',
+  authorize('super_admin', 'admin', 'manager', 'employee'),
+  attendanceController.cancelLeave
+);
+
 // --- Holidays ---
 
 router.get(

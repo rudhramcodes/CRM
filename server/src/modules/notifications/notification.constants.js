@@ -30,6 +30,7 @@ export const NOTIFICATION_TYPES = {
   REGULARIZATION_REJECTED: 'regularization_rejected',
   LEAVE_APPROVED: 'leave_approved',
   LEAVE_REJECTED: 'leave_rejected',
+  LEAVE_CANCELLED: 'leave_cancelled',
   SYSTEM: 'system',
 };
 
@@ -268,6 +269,12 @@ export const NOTIFICATION_TEMPLATES = {
     message: (d) => `Your ${d.leaveType} request was rejected: ${d.reason || 'No reason specified'}`,
     priority: NOTIFICATION_PRIORITIES.HIGH,
     channels: { email: true, cliq: false },
+  },
+  leave_cancelled: {
+    title: 'Leave Cancelled',
+    message: (d) => `${d.employeeName}'s ${d.leaveType} leave for ${d.dates} was cancelled`,
+    priority: NOTIFICATION_PRIORITIES.MEDIUM,
+    channels: { email: false, cliq: false },
   },
   system: {
     title: 'System Update',
