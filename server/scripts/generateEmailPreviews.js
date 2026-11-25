@@ -9,94 +9,45 @@ import {
   renderInvoiceEmail,
   renderQuotationEmail,
   renderPaymentEmail,
-  renderPortalInviteEmail,
   renderLeaveAppliedEmail,
   renderLeaveApprovedEmail,
   renderLeaveRejectedEmail,
   renderClientOnboardingEmail,
-  renderClientCredentialsEmail,
   renderFreelancerSubmissionEmail,
   renderFreelancerApplicantEmail,
   renderNewLeadEmail
 } from '../src/services/emailService.js';
 
 const emails = [
-  // 1. Client Onboarding
+  // 1. Clients
   {
     id: 'client-onboarding',
-    category: 'Client & Portal',
+    category: 'Clients',
     badge: 'Apollo Editorial',
     title: 'Client Welcome & Onboarding',
     recipient: 'Client (client@innovatex.com)',
-    trigger: 'When a lead is converted to a client or a new client is created in CRM with onboarding enabled.',
-    subject: 'Welcome to Rudhram, Rajesh Mehta   f dfjeifeifji',
-    preheader: 'Your partnership begins here. Your account has been created.',
+    trigger: 'When a lead is converted to a client or a new client is created in CRM.',
+    subject: 'Welcome to Rudhram, Rajesh Mehta',
+    preheader: 'Your partnership begins here. Your dedicated team will be in touch shortly.',
     html: renderClientOnboardingEmail({
       clientName: 'Rajesh Mehta',
-      companyName: 'InnovateX fijeifefji Media Ltd.',
+      companyName: 'InnovateX Media Ltd.',
       clientId: 'C-00249',
       brand: 'damrru'
     }),
     editableFields: [
       { label: 'Subject', value: 'Welcome to Rudhram, {clientName}' },
       { label: 'Design Style', value: 'Apollo-style Editorial (Stone & Ivory card, #8A5C2A bronze pill CTAs)' },
-      { label: 'Top Announcement Banner', value: '#8A5C2A Bronze Bar (White Text) — Welcome to Rudhram • Your client portal is now active →' },
+      { label: 'Top Announcement Banner', value: '#8A5C2A Bronze Bar (White Text) — Welcome to the Rudhram family →' },
       { label: 'Button Styling', value: 'Background: #8A5C2A | Text: #FFFFFF | Radius: 7px' },
       { label: 'Brand Logo', value: 'client/public/rudhram-logo.png' },
       { label: 'Hero Image', value: 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/welcome-banner.avif' },
       { label: 'Hero Headline', value: 'Welcome to Rudhram, {clientName}' },
-      { label: 'Feature 1 (Left Image / Right Copy)', value: 'Real-Time Project & Deliverable Tracking (Image: https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/team-support.avif)' },
+      { label: 'Feature 1 (Left Image / Right Copy)', value: 'Clear Updates at Every Milestone (Image: https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/team-support.avif)' },
       { label: 'Feature 2 (Left Copy / Right Image)', value: 'Dedicated Brand Team & Direct Communication (Image: https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775842/team-management.avif)' },
-      { label: 'Highlight Callout Card', value: 'Your Client Portal is Ready ({clientId} • {companyName})' },
+      { label: 'Highlight Callout Card', value: 'Your Client Profile is Set Up ({clientId} • {companyName})' },
       { label: 'Assigned Brand Support', value: 'Damrru (+91 8655695629 & damrru@rudhramenterprises.com)' }
     ] 
-  },
-  {
-    id: 'client-credentials',
-    category: 'Client & Portal',
-    badge: 'Credentials',
-    title: 'Client Portal Login Credentials',
-    recipient: 'Client (rajesh@innovatex.com)',
-    trigger: 'Sent to client when portal access is created or temporary credentials are generated.',
-    subject: 'Your Rudhram Portal Login Credentials',
-    preheader: 'Login details for your client portal account.',
-    html: renderClientCredentialsEmail({
-      clientName: 'Rajesh Mehta',
-      email: 'rajesh@innovatex.com',
-      password: 'Rud#Secure2026!',
-      portalUrl: 'https://crm.rudhram.in/portal/login',
-      brand: 'damrru'
-    }),
-    editableFields: [
-      { label: 'Subject', value: 'Your Rudhram Portal Login Credentials' },
-      { label: 'Rudhram Support', value: '+91 8655695623 & support@rudhramenterprises.com' },
-      { label: 'Brand Support (Damrru)', value: '+91 8655695629 & damrru@rudhramenterprises.com' },
-      { label: 'Greeting', value: 'Dear {clientName},' },
-      { label: 'Body', value: 'Your client portal account is ready. Use the credentials below to sign in and access your projects, invoices, and meetings.' },
-      { label: 'Button CTA', value: 'Sign In to Portal' },
-      { label: 'Security Warning', value: 'Important: For your security, please change your password after your first login. Go to Settings -> Change Password in the portal.' }
-    ]
-  },
-  {
-    id: 'portal-invite',
-    category: 'Client & Portal',
-    badge: 'Invite Link',
-    title: 'Client Portal Invitation Link',
-    recipient: 'Client (rajesh@innovatex.com)',
-    trigger: 'When an admin clicks "Send Portal Invitation" from the client details page.',
-    subject: "You're invited to the Rudhram client portal",
-    preheader: "You've been invited to the Rudhram client portal. Set your password to get started.",
-    html: renderPortalInviteEmail({
-      portalName: 'Rudhram',
-      inviteUrl: 'https://crm.rudhram.in/portal/accept-invite?token=e73bc89104fa28c'
-    }),
-    editableFields: [
-      { label: 'Subject', value: "You're invited to the {portalName} client portal" },
-      { label: 'Heading', value: 'Welcome to {portalName}' },
-      { label: 'Subtext', value: "You've been invited to the {portalName} client portal. Set a password to sign in and access your projects, tasks, and meetings." },
-      { label: 'Button CTA', value: 'Set your password' },
-      { label: 'Expiration', value: 'This link expires in 7 days.' }
-    ]
   },
 
   // 2. Leads & Sales

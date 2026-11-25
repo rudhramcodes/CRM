@@ -21,10 +21,9 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
       if (newToken) localStorage.setItem('accessToken', newToken);
       result = await baseQuery(args, api, extraOptions);
     } else {
-      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
       localStorage.removeItem('user');
       localStorage.removeItem('accessToken');
-      window.location.href = storedUser?.role === 'client' ? '/portal/login' : '/auth/login';
+      window.location.href = '/auth/login';
     }
   }
 
@@ -38,8 +37,6 @@ export const api = createApi({
     'Lead',
     'LeadStats',
     'Client',
-    'ClientMe',
-    'PortalStaff',
     'Meeting',
     'Project',
     'Task',

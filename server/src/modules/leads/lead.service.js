@@ -7,10 +7,8 @@ import * as notificationService from '../notifications/notification.service.js';
 import generateClientId from '../../utils/generateClientId.js';
 import * as XLSX from 'xlsx';
 import { LEAD_STATUS, LEAD_BRANDS } from '../../constants/index.js';
-import { sendClientOnboardingEmail, sendClientCredentialsEmail, sendNewLeadEmail } from '../../services/emailService.js';
-import User from '../auth/auth.model.js';
+import { sendClientOnboardingEmail, sendNewLeadEmail } from '../../services/emailService.js';
 
-const CLIENT_DEFAULT_PASSWORD = 'client@rudhram';
 
 const LEAD_SOURCES = ['google_ads', 'referral', 'instagram', 'linkedin', 'website', 'email', 'call', 'other'];
 const MAX_IMPORT_ROWS = 1000;
@@ -288,40 +286,7 @@ export const updateLead = async (id, data, user) => {
           companyName: lead.company || `${lead.name}'s Company`,
           clientId: client.clientId,
           brand,
-        }).catch((err) => logger.error(`[lead-convert] Onboarding email failed: ${err.message}`));
-
-        const existingUser = await User.findOne({ email: clientEmail });
-        let portalUserCreated = false;
-        if (!existingUser) {
-          try {
-            await User.create({
-              name: lead.name,
-              email: clientEmail,
-              password: CLIENT_DEFAULT_PASSWORD,
-              role: 'client',
-              mustChangePassword: true,
-              createdBy: user._id,
-            });
-            portalUserCreated = true;
-            logger.info(`[lead-convert] Portal user created for ${clientEmail}`);
-          } catch (userErr) {
-            logger.error(`[lead-convert] Portal user creation failed: ${userErr.message}`);
-          }
-        } else {
-          portalUserCreated = true;
-        }
-
-        if (portalUserCreated) {
-          new Promise((resolve) => setTimeout(resolve, 2500))
-            .then(() => sendClientCredentialsEmail(clientEmail, {
-              clientName: lead.name,
-              email: clientEmail,
-              password: CLIENT_DEFAULT_PASSWORD,
-              brand,
-            }))
-            .then(() => logger.info(`[lead-convert] Credentials email sent to ${clientEmail}`))
-            .catch((err) => logger.error(`[lead-convert] Credentials email failed: ${err.message}`));
-        }
+        }).catch((err) => logger.error(`[lead-convert] Welcome email failed: ${err.message}`));
       }
 
       data.convertedAt = new Date();

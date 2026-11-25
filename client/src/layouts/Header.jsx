@@ -156,7 +156,7 @@ export default function Header({ onMobileMenuOpen }) {
       // Proceed with local logout even if API fails
     }
     dispatch(logout());
-    navigate(user?.role === 'client' ? '/portal/login' : '/auth/login');
+    navigate('/auth/login');
   };
 
   return (

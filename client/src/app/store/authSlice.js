@@ -93,26 +93,6 @@ export const resetPassword = createAsyncThunk(
   },
 );
 
-export const acceptInvite = createAsyncThunk(
-  'auth/acceptInvite',
-  async ({ token, password }, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/auth/client/accept-invite`,
-        { token, password },
-        { withCredentials: true },
-      );
-      return response.data;
-    } catch (error) {
-      const data = error.response?.data || {};
-      return rejectWithValue({
-        message: data.message || 'Failed to set password',
-        errors: data.errors || [],
-      });
-    }
-  },
-);
-
 export const completeOnboarding = createAsyncThunk(
   'auth/completeOnboarding',
   async (_, { rejectWithValue }) => {
@@ -218,20 +198,6 @@ const authSlice = createSlice({
       .addCase(resetPassword.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message || 'Failed to reset password';
-        state.fieldErrors = action.payload?.errors || [];
-      })
-      .addCase(acceptInvite.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-        state.fieldErrors = [];
-      })
-      .addCase(acceptInvite.fulfilled, (state) => {
-        state.loading = false;
-        state.fieldErrors = [];
-      })
-      .addCase(acceptInvite.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload?.message || 'Failed to set password';
         state.fieldErrors = action.payload?.errors || [];
       })
       .addCase(completeOnboarding.pending, (state) => {

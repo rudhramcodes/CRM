@@ -2,16 +2,14 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { canAccessPayroll, canWriteModule } from '../utils/access';
 
-const roleHome = (role) => (role === 'client' ? '/portal' : '/dashboard');
+const roleHome = () => '/dashboard';
 
 export default function ProtectedRoute({ children, requiredRoles, requiredPayroll, requiredWriteModule }) {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const location = useLocation();
 
   if (!isAuthenticated) {
-    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
-    const redirect = storedUser?.role === 'client' ? '/portal/login' : '/auth/login';
-    return <Navigate to={redirect} state={{ from: location }} replace />;
+    return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
   if (requiredRoles && user && !requiredRoles.includes(user.role)) {

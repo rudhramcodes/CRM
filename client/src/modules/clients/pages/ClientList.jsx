@@ -160,7 +160,7 @@ export default function ClientList() {
             Client Directory
           </h2>
           <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-            Manage corporate client accounts, billing profiles, and portal credentials
+            Manage corporate client accounts, and billing profiles
           </p>
         </div>
 

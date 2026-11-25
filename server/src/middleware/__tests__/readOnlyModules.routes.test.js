@@ -13,7 +13,7 @@ vi.mock('../../modules/leads/lead.controller.js', () => Object.fromEntries(
     .map((name) => [name, vi.fn((_req, res) => res.sendStatus(204))]),
 ));
 vi.mock('../../modules/clients/client.controller.js', () => Object.fromEntries(
-  ['stats', 'getMyProfile', 'list', 'getById', 'convertFromLead', 'invite', 'create', 'update', 'remove']
+  ['stats', 'getMyProfile', 'list', 'getById', 'convertFromLead', 'create', 'update', 'remove']
     .map((name) => [name, vi.fn((_req, res) => res.sendStatus(204))]),
 ));
 
@@ -62,7 +62,6 @@ const writes = [
   ['clients', 'PATCH', '/record', { companyName: 'Edited Company' }],
   ['clients', 'DELETE', '/record'],
   ['clients', 'POST', '/convert/lead'],
-  ['clients', 'POST', '/record/invite'],
 ];
 
 describe('per-account read-only restrictions at the HTTP router boundary', () => {
@@ -107,11 +106,11 @@ describe('per-account read-only restrictions at the HTTP router boundary', () =>
       expect((await request(method, `/${module}/stats`)).status).toBe(204);
     });
 
-    it('preserves client role denial for reads', async () => {
+    it('signs out client accounts (the client portal is gone)', async () => {
       actor.role = 'client';
       actor.readOnlyModules = [module];
 
-      expect((await request('GET', `/${module}/`)).status).toBe(403);
+      expect((await request('GET', `/${module}/`)).status).toBe(401);
     });
 
     it('preserves manager delete denial without a restriction', async () => {

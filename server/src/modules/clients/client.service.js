@@ -1,63 +1,11 @@
 import ApiError from '../../utils/ApiError.js';
-import crypto from 'crypto';
 import generateClientId from '../../utils/generateClientId.js';
 import * as clientRepository from './client.repository.js';
 import * as leadRepository from '../leads/lead.repository.js';
 import * as notificationService from '../notifications/notification.service.js';
 import User from '../auth/auth.model.js';
-import { ROLES, ROLE_PERMISSIONS } from '../../constants/index.js';
-import { sendPortalInviteEmail, sendClientOnboardingEmail, sendClientCredentialsEmail } from '../../services/emailService.js';
+import { sendClientOnboardingEmail } from '../../services/emailService.js';
 import logger from '../../utils/logger.js';
-
-const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
-
-const PORTAL_INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-const CLIENT_DEFAULT_PASSWORD = 'client@rudhram';
-
-export const sendPortalInvite = async (clientId) => {
-  const client = await clientRepository.findById(clientId);
-  if (!client) {
-    throw ApiError.notFound('Client not found');
-  }
-
-  if (client.user) {
-    const existing = await User.findById(client.user);
-    if (existing?.isActive) {
-      throw ApiError.conflict('Portal account already active for this client');
-    }
-  } else {
-    const emailTaken = await User.findOne({ email: client.email });
-    if (emailTaken) {
-      throw ApiError.conflict('A user with this email already exists');
-    }
-
-    const portalUser = await User.create({
-      name: client.contactPerson,
-      email: client.email,
-      password: crypto.randomBytes(16).toString('hex'),
-      role: ROLES.CLIENT,
-      permissions: ROLE_PERMISSIONS[ROLES.CLIENT],
-      isActive: false,
-      isEmailVerified: false,
-    });
-    client.user = portalUser._id;
-  }
-
-  const inviteToken = crypto.randomBytes(32).toString('hex');
-  client.portalInviteToken = hashToken(inviteToken);
-  client.portalInviteExpires = new Date(Date.now() + PORTAL_INVITE_TTL_MS);
-  await client.save();
-
-  sendPortalInviteEmail(client.email, inviteToken).catch((err) =>
-    logger.error(`Portal invite email failed: ${err.message}`),
-  );
-
-  return {
-    clientId: client._id,
-    email: client.email,
-    expiresAt: client.portalInviteExpires,
-  };
-};
 
 export const create = async (data, user) => {
   if (data.gstNumber) {
@@ -89,51 +37,12 @@ export const create = async (data, user) => {
 
   const client = await clientRepository.create(payload);
 
-  // Auto-create portal user account for the client
-  let portalUserCreated = false;
-  const existingUser = await User.findOne({ email: data.email });
-  if (!existingUser) {
-    try {
-      const portalUser = await User.create({
-        name: data.contactPerson,
-        email: data.email,
-        password: CLIENT_DEFAULT_PASSWORD,
-        role: ROLES.CLIENT,
-        permissions: ROLE_PERMISSIONS[ROLES.CLIENT],
-        isActive: true,
-        isEmailVerified: true,
-        mustChangePassword: true,
-      });
-
-      client.user = portalUser._id;
-      await client.save();
-      portalUserCreated = true;
-    } catch (err) {
-      logger.error(`[create-client] Failed to create portal user: ${err.message}`);
-    }
-  }
-
-  if (portalUserCreated) {
-    sendClientOnboardingEmail(data.email, {
-      clientName: data.contactPerson,
-      companyName: data.companyName,
-      clientId: client.clientId,
-      brand: data.brand,
-    })
-      .catch((err) => logger.error(`[create-client] Onboarding email failed: ${err.message}`))
-      .finally(() => {
-        setTimeout(() => {
-          sendClientCredentialsEmail(data.email, {
-            clientName: data.contactPerson,
-            email: data.email,
-            password: CLIENT_DEFAULT_PASSWORD,
-            brand: data.brand,
-          })
-            .then(() => logger.info(`[create-client] Credentials email sent to ${data.email}`))
-            .catch((err) => logger.error(`[create-client] Credentials email failed: ${err.message}`));
-        }, 2500);
-      });
-  }
+  sendClientOnboardingEmail(data.email, {
+    clientName: data.contactPerson,
+    companyName: data.companyName,
+    clientId: client.clientId,
+    brand: data.brand,
+  }).catch((err) => logger.error(`[create-client] Welcome email failed: ${err.message}`));
 
   return client;
 };
@@ -187,43 +96,7 @@ export const convertFromLead = async (leadId, user) => {
     companyName: lead.company || `${lead.name}'s Company`,
     clientId: client.clientId,
     brand,
-  }).catch((err) => logger.error(`[convert-lead] Onboarding email failed: ${err.message}`));
-
-  let portalUserCreated = false;
-  const existingUser = await User.findOne({ email: lead.email });
-  if (!existingUser) {
-    try {
-      const portalUser = await User.create({
-        name: lead.name,
-        email: lead.email,
-        password: CLIENT_DEFAULT_PASSWORD,
-        role: ROLES.CLIENT,
-        permissions: ROLE_PERMISSIONS[ROLES.CLIENT],
-        isActive: true,
-        isEmailVerified: true,
-        mustChangePassword: true,
-      });
-
-      client.user = portalUser._id;
-      await client.save();
-      portalUserCreated = true;
-    } catch (err) {
-      logger.error(`[convert-lead] Failed to create portal user: ${err.message}`);
-    }
-  }
-
-  if (portalUserCreated) {
-    setTimeout(() => {
-      sendClientCredentialsEmail(lead.email, {
-        clientName: lead.name,
-        email: lead.email,
-        password: CLIENT_DEFAULT_PASSWORD,
-        brand,
-      })
-        .then(() => logger.info(`[convert-lead] Credentials email sent to ${lead.email}`))
-        .catch((err) => logger.error(`[convert-lead] Credentials email failed: ${err.message}`));
-    }, 2500);
-  }
+  }).catch((err) => logger.error(`[convert-lead] Welcome email failed: ${err.message}`));
 
   return client;
 };

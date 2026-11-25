@@ -5,6 +5,7 @@ import { once } from 'node:events';
 import User from '../auth.model.js';
 import * as authRepository from '../auth.repository.js';
 import authRoutes from '../auth.routes.js';
+import * as authService from '../auth.service.js';
 import * as settingsService from '../../settings/settings.service.js';
 
 // Real routes, controller and service; the repository's token writes run on an in-memory list
@@ -132,5 +133,19 @@ describe('per-device refresh tokens', () => {
     expect((await call('DELETE', 'ExponentPushToken[abc]')).status).toBe(200);
     expect(add).toHaveBeenCalledWith(actor._id, 'ExponentPushToken[abc]');
     expect(remove).toHaveBeenCalledWith(actor._id, ['ExponentPushToken[abc]']);
+  });
+});
+
+// Service level: the HTTP login above is rate-limited after this file's many sign-ins.
+describe('client accounts (the client portal is gone)', () => {
+  it('cannot sign in', async () => {
+    actor.role = 'client';
+    await expect(authService.loginUser(actor.email, 'TestPassword1')).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it('cannot refresh a session they already had', async () => {
+    const { refreshToken } = await authService.loginUser(actor.email, 'TestPassword1');
+    actor.role = 'client';
+    await expect(authService.refreshAccessToken(refreshToken)).rejects.toMatchObject({ statusCode: 401 });
   });
 });

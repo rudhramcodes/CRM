@@ -181,23 +181,6 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
     }
   }, [selectedClient, setValue, watch]);
 
-  // If client is selected and has an associated user ID in users, auto-select in attendees if not already
-  useEffect(() => {
-    if (selectedClient) {
-      const clientUser = users.find(
-        (u) =>
-          (selectedClient.user && u._id === selectedClient.user) ||
-          (selectedClient.email && u.email?.toLowerCase() === selectedClient.email?.toLowerCase())
-      );
-      if (clientUser) {
-        const currentAttendees = watch('attendees') || [];
-        if (!currentAttendees.includes(clientUser._id)) {
-          setValue('attendees', [...currentAttendees, clientUser._id]);
-        }
-      }
-    }
-  }, [selectedClient, users, setValue, watch]);
-
   useEffect(() => {
     if (prevStartTime.current && startTimeValue !== prevStartTime.current) {
       setValue('endTime', '', { shouldValidate: true });
@@ -415,9 +398,6 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
                   <span className="text-emerald-700 font-mono text-[11px]">&lt;{selectedClient.email}&gt;</span>
                 )}
               </div>
-              <p className="text-[11px] text-emerald-700/90 mt-0.5">
-                Session automatically syncs to Client Portal timeline & calendar invites.
-              </p>
             </div>
           </div>
         )}

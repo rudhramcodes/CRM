@@ -23,7 +23,7 @@ import { cn } from '../utils/cn';
 
 const CATEGORIES = [
   'All',
-  'Client & Portal',
+  'Clients',
   'Financials',
   'HR & Attendance',
   'Meetings & Calendar',
