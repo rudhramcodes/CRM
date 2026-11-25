@@ -53,7 +53,7 @@ export const existsSlipForEmployee = async (employeeId) =>
 
 export const findAttendanceForRange = async (start, end) =>
   Attendance.find({ date: { $gte: start, $lte: end } })
-    .select('employee date status')
+    .select('employee date status leave')
     .lean();
 
 export const findHolidaysForRange = async (start, end) =>

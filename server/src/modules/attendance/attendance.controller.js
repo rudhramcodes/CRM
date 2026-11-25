@@ -278,6 +278,15 @@ export const rejectLeave = async (req, res, next) => {
   }
 };
 
+export const cancelLeave = async (req, res, next) => {
+  try {
+    const leave = await attendanceService.cancelLeave(req.params.id, req.user);
+    ApiResponse.success(res, 200, { leave }, 'Leave cancelled');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getLeaveBalance = async (req, res, next) => {
   try {
     const employeeId = scopedEmployeeId(req, req.params.employeeId);

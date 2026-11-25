@@ -248,6 +248,8 @@ const leaveRequestSchema = new mongoose.Schema(
       type: Date,
       required: [true, 'End date is required'],
     },
+    // Set for a half-day request: which half of the day is taken off
+    halfDay: { type: String, enum: ['first', 'second'] },
     reason: {
       type: String,
       required: [true, 'Reason is required'],
@@ -256,7 +258,7 @@ const leaveRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
+      enum: ['pending', 'approved', 'rejected', 'cancelled'],
       default: 'pending',
     },
     approvedBy: {
@@ -266,6 +268,8 @@ const leaveRequestSchema = new mongoose.Schema(
     },
     approvedAt: { type: Date, default: null },
     comment: { type: String, default: null },
+    cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    cancelledAt: { type: Date, default: null },
     documents: [{ type: String }], // file URLs
   },
   {
