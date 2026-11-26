@@ -42,6 +42,7 @@ const STYLES = {
   leave_cancelled: { channelId: 'people', interruptionLevel: 'active' },
   regularization_approved: { channelId: 'people', interruptionLevel: 'active' },
   regularization_rejected: { channelId: 'people', interruptionLevel: 'active' },
+  clock_out_reminder: { channelId: 'people', interruptionLevel: 'time-sensitive', categoryId: 'clock_out' },
   // Projects
   project_assigned: { channelId: 'tasks', interruptionLevel: 'active' },
   project_status_change: { channelId: 'tasks', interruptionLevel: 'passive' },

@@ -12,63 +12,57 @@ const toDisplay = (hhmm) => {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
 };
 
+// Once a day at 11:45 PM IST: anyone still clocked in, on any shift, is clocked out at that time.
+export const AUTO_CLOCK_OUT_TIME = '23:45';
 const autoClockOut = async () => {
   try {
-    const now = new Date();
-    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const shifts = await Shift.find({ isActive: true });
+    const records = await Attendance.find({
+      date: { $gte: today, $lt: tomorrow },
+      $or: [
+        { sessions: { $elemMatch: { 'clockIn.time': { $ne: null }, 'clockOut.time': null } } },
+        { 'clockIn.time': { $exists: true, $ne: null }, 'clockOut.time': { $exists: false } },
+      ],
+    }).populate('shift', 'duration');
 
-    for (const shift of shifts) {
-      if (shift.endTime !== currentHHMM) continue;
+    let closed = 0;
+    for (const record of records) {
+      const activeSession = ensureActiveSession(record);
+      if (!activeSession) continue;
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      const clockOutTime = new Date();
+      activeSession.clockOut = { time: clockOutTime };
 
-      const records = await Attendance.find({
-        date: { $gte: today, $lt: tomorrow },
-        shift: shift._id,
-        $or: [
-          { sessions: { $elemMatch: { 'clockIn.time': { $ne: null }, 'clockOut.time': null } } },
-          { 'clockIn.time': { $exists: true, $ne: null }, 'clockOut.time': { $exists: false } },
-        ],
-      });
-
-      for (const record of records) {
-        const activeSession = ensureActiveSession(record);
-        if (!activeSession) continue;
-
-        const clockOutTime = new Date();
-        activeSession.clockOut = { time: clockOutTime };
-
-        for (const brk of activeSession.breaks || []) {
-          if (brk.start && !brk.end) {
-            brk.end = clockOutTime;
-            brk.duration = Math.round((clockOutTime - new Date(brk.start)) / 60000);
-          }
+      for (const brk of activeSession.breaks || []) {
+        if (brk.start && !brk.end) {
+          brk.end = clockOutTime;
+          brk.duration = Math.round((clockOutTime - new Date(brk.start)) / 60000);
         }
-
-        recalcRecordTotals(record, shift.duration || 8);
-        record.events.push({
-          type: 'auto_clock_out',
-          timestamp: clockOutTime,
-          metadata: { workHours: record.workHours, overtime: record.overtime, auto: true },
-        });
-        await record.save();
-        // Tell them on their phone, so a missed clock-out isn't a surprise on the attendance report.
-        sendExpoPush(record.employee, {
-          type: 'auto_clock_out',
-          title: 'Clocked out automatically',
-          message: `Your shift ended at ${toDisplay(shift.endTime)}, so you were clocked out. Request a regularization if this is wrong.`,
-          link: '/attendance',
-          priority: 'high',
-        }).catch((err) => logger.error(`[Attendance] Auto clock-out push failed: ${err.message}`));
       }
 
-      logger.info(`[Attendance] Auto clock-out: ${records.length} employees for shift ${shift.name}`);
+      recalcRecordTotals(record, record.shift?.duration || 8);
+      record.events.push({
+        type: 'auto_clock_out',
+        timestamp: clockOutTime,
+        metadata: { workHours: record.workHours, overtime: record.overtime, auto: true },
+      });
+      await record.save();
+      closed += 1;
+      // Tell them on their phone, so a missed clock-out isn't a surprise on the attendance report.
+      sendExpoPush(record.employee, {
+        type: 'auto_clock_out',
+        title: 'Clocked out automatically',
+        message: `You were still clocked in at ${toDisplay(AUTO_CLOCK_OUT_TIME)}, so you were clocked out. Request a regularization if this is wrong.`,
+        link: '/attendance',
+        priority: 'high',
+      }).catch((err) => logger.error(`[Attendance] Auto clock-out push failed: ${err.message}`));
     }
+
+    logger.info(`[Attendance] Auto clock-out: ${closed} employees`);
   } catch (error) {
     logger.error(`[Attendance] Auto clock-out error: ${error.message}`);
   }
@@ -210,7 +204,8 @@ const autoShortDayMarking = async () => {
 };
 
 export const startAttendanceCrons = () => {
-  cron.schedule('* * * * *', autoClockOut);
+  const [h, m] = AUTO_CLOCK_OUT_TIME.split(':').map(Number);
+  cron.schedule(`${m} ${h} * * *`, autoClockOut, { timezone: 'Asia/Kolkata' });
   cron.schedule('59 23 * * *', async () => {
     await autoShortDayMarking();
     await autoAbsentMarking();

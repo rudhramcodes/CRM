@@ -7,10 +7,14 @@ import logger from '../utils/logger.js';
 // shortcut: fixed office times for everyone; read them from each person's shift when shifts differ.
 export const CLOCK_IN_TIME = '09:50';
 export const LATE_TIME = '10:05';
+export const CLOCK_OUT_TIME = '18:10';
+// Everyone on staff; clients never clock in.
+export const STAFF_ROLES = ['employee', 'manager', 'admin', 'super_admin'];
 
 const MESSAGES = {
   in: { type: 'clock_in_reminder', title: 'Time to clock in', message: "It's 9:50. Clock in for today's shift." },
   late: { type: 'clock_in_missed', title: "You haven't clocked in yet", message: "It's 10:05 and you're not clocked in. Tap to clock in now." },
+  out: { type: 'clock_out_reminder', title: 'Clock out before you leave', message: 'Please clock out before leaving the office.' },
 };
 
 // Days off: no reminder.
@@ -52,6 +56,23 @@ export const sendClockInReminders = async (kind, now = new Date()) => {
   return due.length;
 };
 
+// Push to every active staff member (employee, manager, admin, super admin) at 6:10 PM; skipped on holidays.
+export const sendClockOutReminders = async (now = new Date()) => {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  if (await Holiday.exists({ date: { $gte: today, $lt: tomorrow } })) return 0;
+
+  const users = await User.find({ role: { $in: STAFF_ROLES }, isActive: true }).select('_id').lean();
+  const push = { ...MESSAGES.out, link: '/attendance', priority: 'high' };
+  await Promise.all(users.map((u) => sendExpoPush(u._id, push)
+    .catch((err) => logger.error(`[ClockReminder] ${u._id}: ${err.message}`))));
+  logger.info(`[ClockReminder] out: ${users.length} reminded`);
+  return users.length;
+};
+
 // "09:50" → "50 9 * * 1-6" (Monday–Saturday)
 const cronAt = (hhmm) => {
   const [h, m] = hhmm.split(':').map(Number);
@@ -63,5 +84,7 @@ export const startClockReminderCron = () => {
     cron.schedule(cronAt(time), () => sendClockInReminders(kind)
       .catch((err) => logger.error(`[ClockReminder] ${kind} failed: ${err.message}`)), { timezone: 'Asia/Kolkata' });
   }
-  logger.info(`[ClockReminder] scheduled at ${CLOCK_IN_TIME} and ${LATE_TIME} IST, Mon-Sat`);
+  cron.schedule(cronAt(CLOCK_OUT_TIME), () => sendClockOutReminders()
+    .catch((err) => logger.error(`[ClockReminder] out failed: ${err.message}`)), { timezone: 'Asia/Kolkata' });
+  logger.info(`[ClockReminder] scheduled at ${CLOCK_IN_TIME}, ${LATE_TIME} and ${CLOCK_OUT_TIME} IST, Mon-Sat`);
 };
