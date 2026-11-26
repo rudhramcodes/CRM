@@ -84,9 +84,10 @@ const autoAbsentMarking = async () => {
     const holiday = await Holiday.findOne({ date: { $gte: today, $lt: tomorrow } });
     if (holiday) return;
 
+    // Every active staff login, admins included: the same people the Records "Not clocked in" list shows.
     const employees = await User.find({
-      role: { $in: ['employee', 'manager'] },
-      isActive: true,
+      role: { $ne: 'client' },
+      isActive: { $ne: false },
     }).select('_id');
 
     const shift = await Shift.findOne({ isDefault: true, isActive: true });

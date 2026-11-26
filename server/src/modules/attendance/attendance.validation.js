@@ -50,8 +50,10 @@ export const attendanceQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(10),
   employee: z.string().optional(),
-  status: z.enum(['present', 'absent', 'half_day', 'wfh', 'leave', 'holiday', 'weekend', 'late']).optional(),
+  status: z.enum(['present', 'absent', 'half_day', 'wfh', 'leave', 'holiday', 'weekend', 'late', 'not_clocked_in']).optional(),
   isLate: z.coerce.boolean().optional(),
+  // Opt-in: today's list also gets staff with no record yet (mobile Records screen).
+  includeMissing: z.enum(['true']).optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   search: z.string().optional(),

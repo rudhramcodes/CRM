@@ -502,7 +502,59 @@ export const getAttendanceList = async (query, options) => {
     if (query.dateFrom) filter.date.$gte = parseStartOfDay(query.dateFrom);
     if (query.dateTo) filter.date.$lte = parseEndOfDay(query.dateTo);
   }
+  const wantsMissing = query.includeMissing === 'true' && !query.employee
+    && query.dateFrom === localYmd() && query.dateTo === query.dateFrom
+    && (!query.status || query.status === 'not_clocked_in');
+  if (wantsMissing) return listTodayWithNotClockedIn(query, filter, options);
   return attendanceRepo.findAllAttendance(filter, options);
+};
+
+const localYmd = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Today's records plus a placeholder row for each staff member with no record and no approved leave.
+// `status` 'not_clocked_in' keeps only the placeholders. Records come first, then placeholders by name.
+export const withNotClockedIn = (records, staff, leaveEmpIds, status, date) => {
+  const seen = new Set(records.map((r) => String(r.employee?._id || r.employee)));
+  const missing = staff
+    .filter((u) => !seen.has(String(u._id)) && !leaveEmpIds.has(String(u._id)))
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    .map((u) => ({ _id: `nc-${u._id}`, employee: u, date, status: 'not_clocked_in', sessions: [] }));
+  return status === 'not_clocked_in' ? missing : [...records, ...missing];
+};
+
+// shortcut: merges and pages in memory (staff is one company's headcount); move to an aggregation if it reaches thousands.
+const listTodayWithNotClockedIn = async (query, filter, options) => {
+  const User = mongoose.model('User');
+  const LeaveRequest = mongoose.model('LeaveRequest');
+  const start = parseStartOfDay(query.dateFrom);
+  const end = parseEndOfDay(query.dateTo);
+  const staffFilter = { role: { $ne: 'client' }, isActive: { $ne: false } };
+  if (query.search) {
+    const searchRegex = new RegExp(escapeRegex(query.search), 'i');
+    staffFilter.$or = [{ name: searchRegex }, { email: searchRegex }];
+  }
+  const { status, ...recordFilter } = filter;
+  const [records, staff, leaves] = await Promise.all([
+    status ? [] : attendanceRepo.findAttendanceForDay(recordFilter),
+    User.find(staffFilter).select('_id name email avatar role').lean(),
+    LeaveRequest.find({ status: 'approved', startDate: { $lte: end }, endDate: { $gte: start } }).select('employee').lean(),
+  ]);
+  // Who has a record at all must ignore the status filter, so fetch ids separately when only placeholders are wanted.
+  const present = status
+    ? await Attendance.find({ date: recordFilter.date }).select('employee').lean()
+    : records;
+  const leaveEmpIds = new Set(leaves.map((l) => String(l.employee)));
+  const all = withNotClockedIn(present, staff, leaveEmpIds, query.status, start);
+
+  const page = Number(options.page) || 1;
+  const limit = Number(options.limit) || 10;
+  const total = all.length;
+  const totalPages = Math.ceil(total / limit);
+  return {
+    records: all.slice((page - 1) * limit, page * limit),
+    pagination: { page, limit, total, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 },
+  };
 };
 
 export const getCalendarData = async (employeeId, year, month) => {

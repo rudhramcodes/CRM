@@ -71,6 +71,16 @@ export const findAllAttendance = async (filter, options = {}) => {
   };
 };
 
+// Every record matching the filter, unpaged, with the same fields as findAllAttendance (one day's records are few).
+export const findAttendanceForDay = async (filter) => {
+  return Attendance.find(filter)
+    .sort('-date')
+    .populate('employee', 'name email avatar role')
+    .populate('shift', 'name startTime endTime')
+    .populate('regularization.approval.approvedBy', 'name email')
+    .populate('leave');
+};
+
 export const findAttendanceById = async (id) => {
   return Attendance.findById(id)
     .populate('employee', 'name email avatar role')
