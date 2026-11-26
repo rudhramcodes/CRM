@@ -16,7 +16,8 @@
     "payroll:backfill": "node scripts/backfillEmployeeProfiles.mjs",
     "project:backfill-codes": "node scripts/backfillProjectCodes.mjs",
     "quotation:backfill-revisions": "node scripts/backfillQuotationRevisions.mjs",
-    "check:payroll": "node scripts/checkPayroll.mjs"
+    "check:payroll": "node scripts/checkPayroll.mjs",
+    "attendance:backfill-short-days": "node scripts/backfillShortDays.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
