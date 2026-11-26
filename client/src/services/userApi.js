@@ -14,11 +14,6 @@ export const userApi = api.injectEndpoints({
       query: () => '/users/stats',
       providesTags: ['UserStats'],
     }),
-    getPortalStaff: builder.query({
-      query: () => '/users/portal-staff',
-      providesTags: ['PortalStaff'],
-      keepUnusedDataFor: 0,
-    }),
     createUser: builder.mutation({
       query: (body) => ({ url: '/users', method: 'POST', body }),
       invalidatesTags: ['User', 'UserStats'],
@@ -38,7 +33,6 @@ export const {
   useGetUsersQuery,
   useGetUserByIdQuery,
   useGetUserStatsQuery,
-  useGetPortalStaffQuery,
   useCreateUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,

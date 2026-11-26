@@ -174,20 +174,6 @@ export default function Login() {
           )}
         </button>
       </form>
-
-      {/* Client Portal Link */}
-      <div className="mt-6 pt-5 border-t border-zinc-100 flex flex-col items-center gap-2 text-center">
-        <p className="text-xs text-zinc-500">
-          Client looking for project tracking?
-        </p>
-        <Link
-          to="/portal/login"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-900 hover:text-black py-1.5 px-3 rounded-lg hover:bg-zinc-100 transition-colors"
-        >
-          <span>Go to Client Portal</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
     </div>
   );
 }

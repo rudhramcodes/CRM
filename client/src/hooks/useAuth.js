@@ -7,7 +7,7 @@ export function useAuth() {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading, error, fieldErrors } = useSelector((state) => state.auth);
 
-  const roleHome = (role) => (role === 'client' ? '/portal' : '/dashboard');
+  const roleHome = () => '/dashboard';
 
   const login = async (credentials) => {
     const result = await dispatch(loginUser(credentials));

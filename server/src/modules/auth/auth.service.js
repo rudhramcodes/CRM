@@ -81,7 +81,7 @@ export const loginUser = async (email, password) => {
     throw ApiError.unauthorized('Invalid email or password');
   }
 
-  if (!user.isActive) {
+  if (!user.isActive || user.role === ROLES.CLIENT) {
     throw ApiError.forbidden('Account has been deactivated');
   }
 
@@ -114,7 +114,7 @@ export const refreshAccessToken = async (refreshToken) => {
   }
 
   const user = await authRepository.findById(decoded.userId);
-  if (!user || !user.isActive) {
+  if (!user || !user.isActive || user.role === ROLES.CLIENT) {
     throw ApiError.unauthorized('Invalid refresh token');
   }
 
@@ -277,41 +277,6 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
   user.password = newPassword;
   user.mustChangePassword = false;
   await user.save();
-};
-
-export const acceptClientInvite = async ({ token, password }) => {
-  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-  const clientRepository = await import('../clients/client.repository.js');
-  const client = await clientRepository.findOneByPortalInviteToken(hashedToken);
-  if (!client) {
-    throw ApiError.badRequest('Invite token is invalid or has expired');
-  }
-
-  if (!client.portalInviteExpires || client.portalInviteExpires < new Date()) {
-    throw ApiError.badRequest('Invite token has expired');
-  }
-
-  const user = await authRepository.findById(client.user);
-  if (!user) {
-    throw ApiError.badRequest('Portal account not found — please contact support');
-  }
-
-  const policyErrors = await validatePasswordAgainstPolicy(password);
-  if (policyErrors.length) {
-    throw ApiError.badRequest(policyErrors.join('; '));
-  }
-
-  user.password = password;
-  user.isEmailVerified = true;
-  user.isActive = true;
-  await user.save();
-
-  client.portalInviteToken = null;
-  client.portalInviteExpires = null;
-  await client.save();
-
-  return user;
 };
 
 export const completeOnboarding = async (userId) => {

@@ -45,7 +45,7 @@ export default function Sidebar({ open, onClose }) {
     }
     dispatch(logout());
     if (onClose) onClose();
-    navigate(user?.role === 'client' ? '/portal/login' : '/auth/login');
+    navigate('/auth/login');
   };
 
   // On mobile (< 1024px), sidebar is ALWAYS expanded as a full drawer.

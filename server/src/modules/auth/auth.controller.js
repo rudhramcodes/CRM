@@ -103,15 +103,6 @@ export const getMe = async (req, res, next) => {
   }
 };
 
-export const acceptClientInvite = async (req, res, next) => {
-  try {
-    await authService.acceptClientInvite(req.body);
-    ApiResponse.success(res, 200, null, 'Password set. You can now log in.');
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const completeOnboarding = async (req, res, next) => {
   try {
     await authService.completeOnboarding(req.user._id);

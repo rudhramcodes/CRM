@@ -16,7 +16,6 @@ import {
   resendVerificationSchema,
   updateProfileSchema,
   changePasswordSchema,
-  acceptClientInviteSchema,
   pushTokenSchema,
 } from './auth.validation.js';
 
@@ -52,7 +51,6 @@ const avatarFile = (req, res, next) => avatarUpload.single('file')(req, res, (er
 router.post('/profile/avatar', verifyToken, avatarFile, authController.uploadAvatar);
 router.put('/password', verifyToken, validate(changePasswordSchema), authController.changePassword);
 
-router.post('/client/accept-invite', authLimiter, validate(acceptClientInviteSchema), authController.acceptClientInvite);
 router.post('/complete-onboarding', verifyToken, authorize(ROLES.CLIENT), authController.completeOnboarding);
 
 export default router;

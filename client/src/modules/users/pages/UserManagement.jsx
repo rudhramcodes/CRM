@@ -25,7 +25,7 @@ const ROLES_LIST = [
   { value: 'client', label: 'Client' },
 ];
 
-const CREATABLE_ROLES = ROLES_LIST.filter((role) => role.value !== 'super_admin');
+const CREATABLE_ROLES = ROLES_LIST.filter((role) => !['super_admin', 'client'].includes(role.value));
 
 const ROLE_COLORS = {
   super_admin: 'bg-purple-100 text-purple-700',

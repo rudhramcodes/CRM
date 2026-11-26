@@ -848,228 +848,6 @@ export const renderPaymentEmail = ({ clientName, invoiceNumber, amount, date, ou
 export const sendVerificationEmail = async (email, otp, options = {}) =>
   sendEmail({ to: email, subject: `Your Rudhram verification code: ${otp}`, html: renderVerificationEmail(email, otp, options) });
 
-export const renderPortalInviteEmail = ({
-  portalName = 'Rudhram',
-  inviteUrl,
-  clientName = 'Valued Client',
-  brand = 'damrru',
-  logoUrl,
-  topBannerText = `You are invited to join ${portalName}`,
-  topBannerUrl,
-  topBannerBg = '#8A5C2A',
-  topBannerTextColor = '#ffffff',
-  buttonBg = '#8A5C2A',
-  buttonTextColor = '#ffffff',
-} = {}) => {
-  const { brandLabel, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
-
-  const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
-  const resolvedInviteUrl = inviteUrl || `${config.clientUrl}/portal/accept-invite`;
-  const effectiveTopBannerUrl = topBannerUrl || resolvedInviteUrl;
-  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-
-  return `<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
-<meta name="supported-color-scheme" content="light">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Welcome to ${portalName}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<!--[if mso]>
-<noscript>
-<xml>
-<o:OfficeDocumentSettings>
-<o:PixelsPerInch>96</o:PixelsPerInch>
-</o:OfficeDocumentSettings>
-</xml>
-</noscript>
-<![endif]-->
-<style>
-  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
-  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
-  @media only screen and (max-width: 620px) {
-    .email-container { width: 100% !important; max-width: 100% !important; }
-    .fluid { max-width: 100% !important; height: auto !important; }
-    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
-    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
-  }
-</style>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
-<tr><td align="center" style="padding:40px 16px;">
-<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
-
-  <!-- Main White Card Container -->
-  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
-    <!-- Top Announcement Strip -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
-            <tr>
-              <td valign="middle" style="padding-right:6px;">
-                <a
-                  href="${effectiveTopBannerUrl}"
-                  target="_blank"
-                  style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
-                >
-                  ${topBannerText}
-                </a>
-              </td>
-
-              <td valign="bottom" style="line-height:0;">
-                <a
-                  href="${effectiveTopBannerUrl}"
-                  target="_blank"
-                  style="display:block;color:${topBannerTextColor};text-decoration:none;"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m9 18 6-6-6-6"/>
-                  </svg>
-                </a>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Brand Header (Centered Rudhram Logo) -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td align="center" style="padding:34px 24px 20px;">
-          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
-            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
-          </a>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Hero Headline -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
-          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
-            Welcome to ${portalName}
-          </h1>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Body & CTA -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="padding:0 32px 34px;" class="mobile-padding">
-          <p style="margin:0 0 18px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
-            Hello ${clientName},<br>You have been invited to access the <strong style="color:#191919;">${portalName}</strong> client portal. Set your password to activate your account and start reviewing project deliverables, tracking timelines, and managing invoices seamlessly.
-          </p>
-
-          <!-- CTA Button -->
-          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:24px auto 16px;">
-            <tr>
-              <td align="center">
-                <a href="${resolvedInviteUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
-                  Set Your Password &rarr;
-                </a>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Direct Link Fallback Box -->
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;border:1px solid #ebe6dd;border-radius:12px;overflow:hidden;background-color:#faf9f6;">
-            <tr>
-              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:12px;color:#666666;line-height:1.5;">
-                If the button above doesn&rsquo;t work, copy and paste this link into your browser:<br>
-                <a href="${resolvedInviteUrl}" target="_blank" style="color:#191919;font-weight:600;word-break:break-all;text-decoration:underline;">${resolvedInviteUrl}</a>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Thin Divider -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="padding:0 32px;" class="mobile-padding">
-          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Expiration & Security Callout -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="padding:32px;" class="mobile-padding">
-          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
-            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:15px;font-weight:700;color:#191919;">
-              Important Security Information
-            </h3>
-            <p style="margin:0 0 14px;font-family:${SANS_FONT};font-size:12.5px;color:#555555;line-height:1.6;">
-              *This invitation link is valid for <strong>7 days</strong>. If you did not expect this invitation, you can safely ignore this email.
-            </p>
-            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
-                </tr>
-                <tr>
-                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
-                </tr>
-              </table>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </table>
-
-  </td></tr>
-  <!-- End of Main White Card -->
-
-  <!-- Outer Footer Section -->
-  <tr>
-    <td align="center" style="padding:32px 20px 0;">
-      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
-        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Client Portal</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
-        <a href="${config.clientUrl}" style="color:#555555;text-decoration:underline;">Support Center</a>
-      </p>
-      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
-        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
-        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
-      </p>
-      <div align="center" style="margin-top:20px;">
-        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
-          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
-        </a>
-      </div>
-    </td>
-  </tr>
-
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
-};
-
-export const sendPortalInviteEmail = async (email, inviteToken, options = {}) => {
-  const portalName = options.portalName || 'Rudhram';
-  const inviteUrl = `${config.clientUrl}/portal/accept-invite?token=${inviteToken}`;
-  return sendEmail({
-    to: email,
-    subject: `You're invited to the ${portalName} client portal`,
-    html: renderPortalInviteEmail({ portalName, inviteUrl, clientName: options.clientName, brand: options.brand }),
-  });
-};
-
 // ── Leave Emails ──
 
 export const renderLeaveAppliedEmail = ({
@@ -1871,12 +1649,11 @@ export const renderClientOnboardingEmail = ({
   companyName = 'Your Organization',
   clientId = 'C-00249',
   brand = 'damrru',
-  portalUrl = `${config.clientUrl}/portal/login`,
   welcomeImageUrl,
   projectImageUrl,
   teamImageUrl,
   logoUrl,
-  topBannerText = 'Your client portal is now active',
+  topBannerText = 'Welcome to the Rudhram family',
   topBannerUrl,
   topBannerBg = '#8A5C2A',
   topBannerTextColor = '#ffffff',
@@ -1884,22 +1661,22 @@ export const renderClientOnboardingEmail = ({
   buttonTextColor = '#ffffff',
   heroHeadline,
   heroBody,
-  heroCtaText = 'Access Client Portal',
+  heroCtaText = 'Contact Your Team',
   heroCtaUrl,
-  feature1Title = 'Real-Time Project & Deliverable Tracking',
-  feature1Body = 'Follow each phase of your project in real time. Review work-in-progress drafts and ensure timeline milestones are met without back-and-forth email chains.',
-  feature1CtaText = 'Explore Projects',
+  feature1Title = 'Clear Updates at Every Milestone',
+  feature1Body = 'Your team keeps you posted as your project moves forward. You will hear from us at every milestone and whenever there is work ready for your review.',
+  feature1CtaText = 'Ask for an Update',
   feature1CtaUrl,
   feature2Title = 'Dedicated Brand Team & Direct Communication',
   feature2Body = 'Work directly with your assigned account manager. Schedule check-ins, request adjustments, and get rapid responses during business hours.',
   feature2CtaText = 'Contact Account Team',
   feature2CtaUrl,
-  calloutTitle = 'Your Client Portal is Ready',
+  calloutTitle = 'Your Client Profile is Set Up',
   calloutSubtitle,
-  calloutBody = 'Your secure client workspace gives you centralized control over invoices, payments, project timelines, and real-time deliverables. Sign in now to get started.',
-  calloutCtaText = 'Open Client Portal &rarr;',
+  calloutBody = 'Your details are now with our team. Please keep your Client ID handy when you get in touch about projects, invoices or payments, so we can help you faster.',
+  calloutCtaText = 'Email Your Team &rarr;',
   calloutCtaUrl,
-  calloutFinePrint = '*For your security, you will be prompted to set a new password upon your first sign-in. Never share your credentials with unauthorized third parties.',
+  calloutFinePrint = 'Rudhram will never ask you for a password or payment details by email.',
 } = {}) => {
   const { brandLabel, brandPhone, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
 
@@ -1907,15 +1684,16 @@ export const renderClientOnboardingEmail = ({
   const resolvedWelcomeImageUrl = welcomeImageUrl || 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/welcome-banner.avif';
   const resolvedProjectImageUrl = projectImageUrl || 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/team-support.avif';
   const resolvedTeamImageUrl = teamImageUrl || 'https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775842/team-management.avif';
-  const resolvedPortalUrl = portalUrl || `${config.clientUrl}/portal/login`;
-  const effectiveTopBannerUrl = topBannerUrl || resolvedPortalUrl;
-  const effectiveHeroCtaUrl = heroCtaUrl || resolvedPortalUrl;
-  const effectiveFeature1CtaUrl = feature1CtaUrl || resolvedPortalUrl;
-  const effectiveFeature2CtaUrl = feature2CtaUrl || (brandEmail ? `mailto:${brandEmail}` : `mailto:${reEmail}`);
-  const effectiveCalloutCtaUrl = calloutCtaUrl || resolvedPortalUrl;
+  // Every button emails the client's brand team; clients have no login.
+  const contactUrl = brandEmail ? `mailto:${brandEmail}` : `mailto:${reEmail}`;
+  const effectiveTopBannerUrl = topBannerUrl || contactUrl;
+  const effectiveHeroCtaUrl = heroCtaUrl || contactUrl;
+  const effectiveFeature1CtaUrl = feature1CtaUrl || contactUrl;
+  const effectiveFeature2CtaUrl = feature2CtaUrl || contactUrl;
+  const effectiveCalloutCtaUrl = calloutCtaUrl || contactUrl;
 
   const resolvedHeadline = heroHeadline || `Welcome to Rudhram, ${clientName}`;
-  const resolvedHeroBody = heroBody || `We are thrilled to welcome ${companyName ? `<strong>${companyName}</strong>` : 'you'} to Rudhram. Your dedicated client portal has been initialized, giving you centralized access to track project milestones, review deliverables, collaborate with your creative team, and manage invoices seamlessly.`;
+  const resolvedHeroBody = heroBody || `We are thrilled to welcome ${companyName ? `<strong>${companyName}</strong>` : 'you'} to Rudhram. Your dedicated team is getting ready to start, and we will be in touch shortly to plan the next steps together.`;
   const resolvedCalloutSubtitle = calloutSubtitle || `Client ID: <strong style="color:#191919;">${clientId}</strong> &bull; <strong style="color:#191919;">${companyName}</strong>`;
 
   const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
@@ -2079,7 +1857,7 @@ export const renderClientOnboardingEmail = ({
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="mobile-full-width" style="max-width:230px;border-radius:12px;overflow:hidden;border:1px solid #ebe6dd;background-color:#ffffff;">
                   <tr>
                     <td style="padding:0;line-height:0;font-size:0;">
-                      <img src="${resolvedProjectImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/team-support.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='team-support.jpg';}" alt="Real-Time Project & Deliverable Tracking" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
+                      <img src="${resolvedProjectImageUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://res.cloudinary.com/dvsrgdyi7/image/upload/v1793775840/team-support.avif';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='team-support.jpg';}" alt="Clear Updates at Every Milestone" width="230" style="width:100%;max-width:230px;height:auto;display:block;border:0;" class="fluid">
                     </td>
                   </tr>
                 </table>
@@ -2168,7 +1946,7 @@ export const renderClientOnboardingEmail = ({
               <span style="display:inline-block;background-color:#ffffff;border:1px solid #dedad1;border-radius:24px;padding:8px 16px;font-family:${SANS_FONT};font-size:12px;color:#2c2c2c;">
                 <span style="color:#8a8a8a;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;margin-right:4px;">Assigned Brand</span><br/>
                 <strong>${brandLabel}</strong> &nbsp;&bull;&nbsp;
-                <span style="color:#15803d;font-weight:600;">Verified Access</span>
+                <span style="color:#15803d;font-weight:600;">Active Client</span>
               </span>
             </div>
             <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;">
@@ -2240,218 +2018,6 @@ export const sendClientOnboardingEmail = async (email, { clientName, companyName
     to: email,
     subject: `Welcome to Rudhram, ${clientName}`,
     html: renderClientOnboardingEmail({ clientName, companyName, clientId, brand }),
-  });
-};
-
-export const renderClientCredentialsEmail = ({ clientName = 'Valued Client', email, password, portalUrl = `${config.clientUrl}/portal/login`, brand = 'damrru', logoUrl, topBannerText = 'Your client portal login is ready', topBannerUrl, topBannerBg = '#8A5C2A', topBannerTextColor = '#ffffff', buttonBg = '#8A5C2A', buttonTextColor = '#ffffff' } = {}) => {
-  const { brandLabel, brandPhone, brandPhoneFormatted, rePhoneFormatted, brandEmail, reEmail } = getBrandSupportInfo(brand);
-
-  const resolvedLogoUrl = logoUrl || `${config.clientUrl}/rudhram-logo.png`;
-  const resolvedPortalUrl = portalUrl || `${config.clientUrl}/portal/login`;
-  const effectiveTopBannerUrl = topBannerUrl || resolvedPortalUrl;
-  const SANS_FONT = "-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-
-  return `<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
-<meta name="supported-color-scheme" content="light">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Your Rudhram Portal Login Credentials</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<!--[if mso]>
-<noscript>
-<xml>
-<o:OfficeDocumentSettings>
-<o:PixelsPerInch>96</o:PixelsPerInch>
-</o:OfficeDocumentSettings>
-</xml>
-</noscript>
-<![endif]-->
-<style>
-  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
-  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f3ef; }
-  @media only screen and (max-width: 620px) {
-    .email-container { width: 100% !important; max-width: 100% !important; }
-    .fluid { max-width: 100% !important; height: auto !important; }
-    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
-    .mobile-hero-title { font-size: 24px !important; line-height: 1.25 !important; }
-  }
-</style>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f3ef;font-family:${SANS_FONT};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f3ef;">
-<tr><td align="center" style="padding:40px 16px;">
-<table role="presentation" width="580" cellpadding="0" cellspacing="0" class="email-container" style="max-width:580px;width:100%;">
-
-  <!-- Main White Card Container -->
-  <tr><td style="background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eae7e0;">
-    <!-- Top Announcement Strip -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="background-color:${topBannerBg};padding:11px 20px;text-align:center;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
-            <tr>
-              <td valign="middle" style="padding-right:6px;">
-                <a
-                  href="${effectiveTopBannerUrl}"
-                  target="_blank"
-                  style="color:${topBannerTextColor};font-family:${SANS_FONT}; text-decoration:underline; text-underline-offset: 3px; font-size:12.5px;font-weight:600;letter-spacing:0.2px;line-height:20px;white-space:nowrap;"
-                >
-                  ${topBannerText}
-                </a>
-              </td>
-
-              <td valign="bottom" style="line-height:0;">
-                <a
-                  href="${effectiveTopBannerUrl}"
-                  target="_blank"
-                  style="display:block;color:${topBannerTextColor};text-decoration:none;"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${topBannerTextColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m9 18 6-6-6-6"/>
-                  </svg>
-                </a>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Brand Header (Centered Rudhram Logo) -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td align="center" style="padding:34px 24px 20px;">
-          <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
-            <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="135" style="width:135px;max-width:135px;height:auto;display:block;margin:0 auto;border:0;">
-          </a>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Hero Headline -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td align="center" style="padding:0 32px 24px;" class="mobile-padding">
-          <h1 class="mobile-hero-title" style="margin:0;font-family:${SANS_FONT};font-size:27px;font-weight:700;color:#181818;line-height:1.25;letter-spacing:-0.5px;text-align:center;">
-            Your Client Portal Credentials
-          </h1>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Hero Description & Credentials Box -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="padding:0 32px 34px;" class="mobile-padding">
-          <p style="margin:0 0 20px;font-family:${SANS_FONT};font-size:14.5px;color:#4c4c4c;line-height:1.65;text-align:center;">
-            Dear <strong style="color:#191919;">${clientName}</strong>,<br>Your secure client portal account has been activated. Use your assigned credentials below to sign in.
-          </p>
-          
-          <!-- Credentials Card Table -->
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;border:1px solid #ebe6dd;border-radius:12px;overflow:hidden;background-color:#faf9f6;">
-            <tr><td style="padding:14px 18px;background-color:#f3efe6;border-bottom:1px solid #ebe6dd;font-family:${SANS_FONT};font-size:13px;font-weight:700;color:#191919;" colspan="2">Secure Portal Login Access</td></tr>
-            <tr>
-              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;color:#666666;width:110px;">Email / ID</td>
-              <td style="padding:14px 18px;border-bottom:1px solid #f0ebe0;font-family:${SANS_FONT};font-size:13px;font-weight:600;color:#191919;text-align:right;">${email}</td>
-            </tr>
-            <tr>
-              <td style="padding:14px 18px;font-family:${SANS_FONT};font-size:13px;color:#666666;">Password</td>
-              <td style="padding:14px 18px;font-family:monospace;font-size:14px;font-weight:700;color:#191919;text-align:right;letter-spacing:1px;">${password}</td>
-            </tr>
-          </table>
-
-          <!-- CTA Button -->
-          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:24px auto 10px;">
-            <tr>
-              <td align="center">
-                <a href="${resolvedPortalUrl}" target="_blank" style="display:inline-block;background-color:${buttonBg};color:${buttonTextColor};font-family:${SANS_FONT};font-size:13.5px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:7px;letter-spacing:0.2px;">
-                  Sign In to Portal &rarr;
-                </a>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Thin Divider -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="padding:0 32px;" class="mobile-padding">
-          <div style="height:1px;background-color:#eeece6;font-size:0;line-height:0;">&nbsp;</div>
-        </td>
-      </tr>
-    </table>
-
-    <!-- Highlight Callout Card (Security & Support) -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="padding:32px;" class="mobile-padding">
-          <div style="background-color:#eeede7;border:1px solid #e2dfd7;border-radius:14px;padding:26px 20px;text-align:center;">
-            <h3 style="margin:0 0 8px;font-family:${SANS_FONT};font-size:16px;font-weight:700;color:#191919;">
-              Important Security Notice
-            </h3>
-            <p style="margin:0 0 16px;font-family:${SANS_FONT};font-size:13px;color:#555555;line-height:1.6;">
-              For your protection, please update your temporary password immediately upon your first sign-in via <strong>Settings &rarr; Change Password</strong>.
-            </p>
-            <div style="margin:0 auto;border-top:1px solid #dcd7ce;padding-top:14px;text-align:left;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>Rudhram Support:</strong> ${rePhoneFormatted} &bull; ${reEmail}</td>
-                </tr>
-                <tr>
-                  <td style="font-family:${SANS_FONT};font-size:12px;color:#666666;padding:3px 0;"><strong>${brandLabel} Lead:</strong> ${brandPhoneFormatted !== '-' ? brandPhoneFormatted : 'Dedicated Support'} &bull; ${brandEmail}</td>
-                </tr>
-              </table>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </table>
-
-  </td></tr>
-  <!-- End of Main White Card -->
-
-  <!-- Outer Footer Section -->
-  <tr>
-    <td align="center" style="padding:32px 20px 0;">
-      <p style="margin:0 0 8px;font-family:${SANS_FONT};font-size:11.5px;color:#555555;line-height:1.6;">
-        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Client Portal</a> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
-        <a href="${resolvedPortalUrl}" style="color:#555555;text-decoration:underline;">Support Center</a>
-      </p>
-      <p style="margin:0 0 4px;font-family:${SANS_FONT};font-size:11px;color:#8a8780;line-height:1.5;">
-        &copy; 2026 Rudhram Enterprises. All rights reserved.<br>
-        RE Support: ${rePhoneFormatted} &middot; ${reEmail}
-      </p>
-      <div align="center" style="margin-top:20px;">
-        <a href="${config.clientUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
-          <img src="${resolvedLogoUrl}" onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='rudhram-logo.png';}else if(this.dataset.tried==1){this.dataset.tried=2;this.src='client/public/rudhram-logo.png';}" alt="Rudhram" width="85" style="width:85px;max-width:85px;height:auto;display:block;margin:0 auto;opacity:0.85;border:0;">
-        </a>
-      </div>
-    </td>
-  </tr>
-
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
-};
-
-export const sendClientCredentialsEmail = async (to, { clientName, email, password, brand }) => {
-  const portalUrl = `${config.clientUrl}/portal/login`;
-  return sendEmail({
-    to,
-    subject: `Your Rudhram Portal Login Credentials`,
-    html: renderClientCredentialsEmail({ clientName, email, password, portalUrl, brand }),
   });
 };
 

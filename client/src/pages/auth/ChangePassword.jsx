@@ -80,7 +80,7 @@ export default function ChangePassword() {
       dispatch(setUser(updatedUser));
       localStorage.setItem('user', JSON.stringify(updatedUser));
 
-      navigate(user?.role === 'client' ? '/portal' : '/dashboard');
+      navigate('/dashboard');
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to change password. Please try again.');
     } finally {

@@ -183,7 +183,7 @@ export default function ClientForm({ client, onSuccess, onCancel }) {
               Create Client Account
             </h2>
             <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-              Register a corporate or individual client profile with billing and portal access
+              Register a corporate or individual client profile with billing details
             </p>
           </div>
           <button

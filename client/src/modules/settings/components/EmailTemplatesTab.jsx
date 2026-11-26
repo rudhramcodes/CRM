@@ -6,7 +6,7 @@ export default function EmailTemplatesTab() {
   const { data: templates = [] } = useGetEmailPreviewsQuery();
 
   const categories = [
-    { name: 'Client & Portal', count: 3, desc: 'Welcome onboarding, client login credentials, portal invites' },
+    { name: 'Clients', count: 1, desc: 'Welcome email for new clients' },
     { name: 'Financials', count: 3, desc: 'Invoices with PDF, Quotations with PDF, Payment receipts' },
     { name: 'HR & Attendance', count: 3, desc: 'Leave applications, leave approvals, leave rejections' },
     { name: 'Meetings & Calendar', count: 2, desc: 'Meeting scheduling confirmations & 1-hour cron reminders' },

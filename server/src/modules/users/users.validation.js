@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { LOCATIONS, ROLES_LIST } from '../../constants/index.js';
 
+// The client portal is gone: nobody can be given the client role any more (existing ones stay listable).
+const ASSIGNABLE_ROLES = ROLES_LIST.filter((r) => r !== 'client');
+
 export const createUserSchema = z.object({
   name: z
     .string()
@@ -14,7 +17,7 @@ export const createUserSchema = z.object({
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
-  role: z.enum(ROLES_LIST).optional(),
+  role: z.enum(ASSIGNABLE_ROLES).optional(),
   phone: z.string().optional(),
   location: z.enum(LOCATIONS, { message: 'Pick Surat, Mumbai or Delhi' }).nullable().optional(),
   designation: z.string().max(100).nullable().optional(),
@@ -34,7 +37,7 @@ export const updateUserSchema = z.object({
     .max(100, 'Name must not exceed 100 characters')
     .optional(),
   email: z.string().email('Invalid email address').optional(),
-  role: z.enum(ROLES_LIST).optional(),
+  role: z.enum(ASSIGNABLE_ROLES).optional(),
   phone: z.string().optional(),
   location: z.enum(LOCATIONS, { message: 'Pick Surat, Mumbai or Delhi' }).nullable().optional(),
   isActive: z.boolean().optional(),
@@ -49,7 +52,7 @@ export const updateUserSchema = z.object({
 });
 
 export const updateUserRoleSchema = z.object({
-  role: z.enum(ROLES_LIST, { message: 'Invalid role' }),
+  role: z.enum(ASSIGNABLE_ROLES, { message: 'Invalid role' }),
 });
 
 export const usersQuerySchema = z.object({
