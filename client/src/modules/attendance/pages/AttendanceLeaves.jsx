@@ -871,6 +871,7 @@ export default function AttendanceLeaves() {
                 value={form.startDate}
                 onChange={(val) => handleFieldChange('startDate', val)}
                 placeholder="Pick start date"
+                minDate={new Date()}
                 error={!!formErrors.startDate}
               />
               {formErrors.startDate && (

@@ -13,9 +13,16 @@ describe('half-day leave', () => {
   });
 
   it('accepts a single-day half day and rejects one spanning several days', () => {
-    expect(createLeaveSchema.safeParse({ ...base, startDate: '2026-11-25', endDate: '2026-11-25', halfDay: 'first' }).success).toBe(true);
-    expect(createLeaveSchema.safeParse({ ...base, startDate: '2026-11-25', endDate: '2026-11-26', halfDay: 'first' }).success).toBe(false);
-    expect(createLeaveSchema.safeParse({ ...base, startDate: '2026-11-25', endDate: '2026-11-25', halfDay: 'morning' }).success).toBe(false);
+    expect(createLeaveSchema.safeParse({ ...base, startDate: '2099-11-25', endDate: '2099-11-25', halfDay: 'first' }).success).toBe(true);
+    expect(createLeaveSchema.safeParse({ ...base, startDate: '2099-11-25', endDate: '2099-11-26', halfDay: 'first' }).success).toBe(false);
+    expect(createLeaveSchema.safeParse({ ...base, startDate: '2099-11-25', endDate: '2099-11-25', halfDay: 'morning' }).success).toBe(false);
+  });
+
+  it('accepts leave from today and rejects leave that starts in the past', () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    expect(createLeaveSchema.safeParse({ ...base, startDate: today, endDate: today }).success).toBe(true);
+    const past = createLeaveSchema.safeParse({ ...base, startDate: '2020-01-01', endDate: today });
+    expect(past.error?.issues.map((i) => i.path[0])).toEqual(['startDate']);
   });
 
   it('marks short worked days at day end', () => {
