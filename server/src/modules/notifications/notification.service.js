@@ -143,16 +143,17 @@ export const createAndSend = async ({
   }
 
   // Zoho Cliq team channel — one broadcast per event, not per recipient.
-  await broadcastCliq({ type, referenceId, title, message, link });
+  await broadcastCliq({ type, referenceId, title, message, link, channels });
 
   return notification;
 };
 
 // Zoho Cliq team channel — one broadcast per event (reference-scoped dedup),
 // fired even when there are no recipients (e.g. unassigned lead / no members).
-export const broadcastCliq = async ({ type, referenceId, title, message, link }) => {
+// A caller can skip it with channels.cliq: false (e.g. editing a meeting is not a new meeting).
+export const broadcastCliq = async ({ type, referenceId, title, message, link, channels }) => {
   const template = type ? NOTIFICATION_TEMPLATES[type] : null;
-  if (template?.channels?.cliq !== true) return;
+  if (template?.channels?.cliq !== true || channels?.cliq === false) return;
   if (!referenceId || dedupCache.has(`cliq_${referenceId}`)) return;
   dedupCache.set(`cliq_${referenceId}`, true);
   setTimeout(() => dedupCache.delete(`cliq_${referenceId}`), DEDUP_TTL);

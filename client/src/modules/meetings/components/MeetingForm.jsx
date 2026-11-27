@@ -3,6 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import { useSelector } from 'react-redux';
 import {
   Loader2,
   CheckCircle2,
@@ -63,7 +64,7 @@ const meetingFormSchema = z
     brand: z.string().optional().nullable(),
     client: z.string().optional().nullable(),
     lead: z.string().optional().nullable(),
-    attendees: z.array(z.string()).default([]),
+    attendees: z.array(z.string()).min(1, 'Select at least one attendee'),
     recurrenceType: z.string().optional(),
     recurrenceOccurrences: z.coerce.number().int().min(2).max(100).optional(),
   })
@@ -92,6 +93,7 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
   const { data: leadsData, isLoading: isLeadsLoading } = useGetLeadsQuery({ limit: 100 });
 
   const [attendeeSearch, setAttendeeSearch] = useState('');
+  const meId = useSelector((state) => state.auth.user?._id);
 
   const isEditing = !!meeting;
 
@@ -143,11 +145,12 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
             brand: '',
             client: defaultClient || '',
             lead: defaultLead || '',
-            attendees: [],
+            // The organizer starts ticked so they get the reminder; untick to skip it.
+            attendees: meId ? [meId] : [],
             recurrenceType: 'none',
             recurrenceOccurrences: 3,
           },
-    [meeting, defaultClient, defaultLead]
+    [meeting, defaultClient, defaultLead, meId]
   );
 
   const {
@@ -614,7 +617,7 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
                   </span>
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800">
-                      Attendees & Team Invites
+                      Attendees & Team Invites *
                     </h4>
                     <span className="text-[11px] text-zinc-500">
                       {selectedSet.size} attendee{selectedSet.size !== 1 ? 's' : ''} assigned
@@ -710,6 +713,7 @@ export default function MeetingForm({ meeting, onSuccess, onCancel, defaultClien
                   })}
                 </div>
               )}
+              {errors.attendees?.message && <p className="text-xs text-red-600 mt-1">{errors.attendees.message}</p>}
             </div>
           );
         }}
