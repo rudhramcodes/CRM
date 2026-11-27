@@ -41,6 +41,7 @@ describe('half-day leave', () => {
 describe('cancel leave rules', () => {
   const emp = { _id: 'e1', role: 'employee' };
   const mgr = { _id: 'm1', role: 'manager' };
+  const admin = { _id: 'a1', role: 'admin' };
   const other = { _id: 'e2', role: 'employee' };
   const leave = (status, startDate) => ({ employee: { _id: 'e1' }, status, startDate: new Date(`${startDate}T00:00:00Z`) });
   const today = '2026-11-25';
@@ -49,12 +50,21 @@ describe('cancel leave rules', () => {
     expect(canCancelLeave(leave('pending', '2026-11-20'), emp, today)).toBe(null);
     expect(canCancelLeave(leave('approved', '2026-11-26'), emp, today)).toBe(null);
     expect(canCancelLeave(leave('approved', '2026-11-25'), emp, today)).toMatch(/already started/);
+    expect(canCancelLeave(leave('approved', '2026-11-20'), emp, today)).toMatch(/before today/);
   });
 
-  it('lets reviewers cancel started leave, and blocks other employees and finished requests', () => {
-    expect(canCancelLeave(leave('approved', '2026-11-01'), mgr, today)).toBe(null);
+  it('lets reviewers cancel pending or approved leave from today on, never before', () => {
+    expect(canCancelLeave(leave('pending', '2026-11-25'), admin, today)).toBe(null);
+    expect(canCancelLeave(leave('pending', '2026-11-26'), mgr, today)).toBe(null);
+    expect(canCancelLeave(leave('approved', '2026-11-25'), admin, today)).toBe(null);
+    expect(canCancelLeave(leave('approved', '2026-11-30'), mgr, today)).toBe(null);
+    expect(canCancelLeave(leave('approved', '2026-11-24'), admin, today)).toMatch(/before today/);
+    expect(canCancelLeave(leave('pending', '2026-11-01'), mgr, today)).toMatch(/before today/);
+  });
+
+  it('blocks other employees, rejected leave and leave that is already cancelled', () => {
     expect(canCancelLeave(leave('pending', '2026-11-26'), other, today)).toMatch(/your own/);
-    expect(canCancelLeave(leave('rejected', '2026-11-26'), emp, today)).toMatch(/Only pending or approved/);
-    expect(canCancelLeave(leave('cancelled', '2026-11-26'), mgr, today)).toMatch(/Only pending or approved/);
+    expect(canCancelLeave(leave('rejected', '2026-11-26'), admin, today)).toMatch(/Rejected leave/);
+    expect(canCancelLeave(leave('cancelled', '2026-11-26'), admin, today)).toMatch(/already cancelled/);
   });
 });

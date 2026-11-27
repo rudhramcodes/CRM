@@ -1276,18 +1276,20 @@ export const rejectLeave = async (id, adminId, comment) => {
 
 const LEAVE_REVIEWER_ROLES = ['super_admin', 'admin', 'manager'];
 
-// Who may cancel: the employee (pending any time, approved only before it starts) or a reviewer (any time).
+// Who may cancel: the employee (own pending any time, own approved only before it starts) or a reviewer
+// (pending or approved from today on). Nobody cancels leave that started before today: its days are already settled.
 export const canCancelLeave = (leave, user, todayStr) => {
   const ownerId = leave.employee?._id || leave.employee;
   const isOwner = String(ownerId) === String(user._id);
   const isReviewer = LEAVE_REVIEWER_ROLES.includes(user.role);
   if (!isOwner && !isReviewer) return 'You can only cancel your own leave';
-  if (!['pending', 'approved'].includes(leave.status)) return 'Only pending or approved leave can be cancelled';
+  if (leave.status === 'cancelled') return 'This leave is already cancelled';
+  if (leave.status === 'rejected') return "Rejected leave doesn't need to be cancelled";
+  if (leave.status === 'pending' && isOwner) return null;
   // Leave dates are stored as UTC midnight of the chosen day
   const startStr = new Date(leave.startDate).toISOString().slice(0, 10);
-  if (leave.status === 'approved' && !isReviewer && startStr <= todayStr) {
-    return 'This leave has already started. Ask your manager to cancel it.';
-  }
+  if (startStr < todayStr) return "Leave that started before today can't be cancelled";
+  if (startStr === todayStr && !isReviewer) return 'This leave has already started. Ask your manager to cancel it.';
   return null;
 };
 
@@ -1296,7 +1298,8 @@ export const cancelLeave = async (id, user) => {
   if (!leave) throw ApiError.notFound('Leave request not found');
 
   const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  // Today in India, not in the server's timezone
+  const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   const blocked = canCancelLeave(leave, user, todayStr);
   if (blocked) throw ApiError.badRequest(blocked);
 
