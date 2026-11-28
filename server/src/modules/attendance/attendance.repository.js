@@ -223,10 +223,10 @@ export const findAllLeaves = async (filter, options = {}) => {
   };
 };
 
-export const updateLeaveStatus = async (id, status, approvedBy, comment) => {
+export const updateLeaveStatus = async (id, status, approvedBy, comment, extra = {}) => {
   return LeaveRequest.findByIdAndUpdate(
     id,
-    { status, approvedBy, approvedAt: new Date(), comment },
+    { status, approvedBy, approvedAt: new Date(), comment, ...extra },
     { new: true, runValidators: true }
   ).populate('employee', 'name email avatar role');
 };

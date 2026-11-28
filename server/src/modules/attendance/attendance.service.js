@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import ApiError from '../../utils/ApiError.js';
 import * as attendanceRepo from './attendance.repository.js';
-import { Shift, Attendance } from './attendance.model.js';
+import { Shift, Attendance, Holiday } from './attendance.model.js';
 import { escapeRegex } from '../../utils/pagination.js';
 import { createAndSend } from '../notifications/notification.service.js';
 import {
@@ -12,6 +12,7 @@ import {
 import { resolveLocationDetails, resolveLocationFast } from '../../utils/geo.js';
 import {
   calculateLeaveDays,
+  calendarLeaveDays,
   formatLeaveDuration,
   isBalanceTrackedLeave,
   normalizeLeaveBalance,
@@ -930,10 +931,18 @@ export const deleteShift = async (id) => {
 
 // ===================== LEAVE =====================
 
+// Working days in a leave range, holidays fetched for it. Throws when the range has none.
+const leaveWorkingDays = async (start, end, halfDay) => {
+  const holidays = await Holiday.find({ date: { $gte: start, $lte: end } }).select('date').lean();
+  const working = calculateLeaveDays(start, end, null, holidays.map((h) => h.date));
+  if (!working) throw ApiError.badRequest('These dates are all Sundays or holidays, so no leave is needed');
+  return halfDay ? 0.5 : working;
+};
+
 export const applyLeave = async (employeeId, data) => {
   const start = new Date(data.startDate);
   const end = new Date(data.endDate);
-  const days = calculateLeaveDays(start, end, data.halfDay);
+  const days = await leaveWorkingDays(start, end, data.halfDay);
   const year = start.getFullYear();
 
   if (isBalanceTrackedLeave(data.leaveType)) {
@@ -966,6 +975,7 @@ export const applyLeave = async (employeeId, data) => {
     ...data,
     startDate: start,
     endDate: end,
+    days,
   });
 
   // Notify admins and managers via in-app & email
@@ -1106,7 +1116,8 @@ export const approveLeave = async (id, adminId, comment) => {
 
   const start = new Date(leave.startDate);
   const end = new Date(leave.endDate);
-  const days = calculateLeaveDays(start, end, leave.halfDay);
+  // Counted again: a holiday may have been added since the request
+  const days = await leaveWorkingDays(start, end, leave.halfDay);
   const year = start.getFullYear();
   const employeeId = leave.employee?._id || leave.employee;
 
@@ -1120,7 +1131,7 @@ export const approveLeave = async (id, adminId, comment) => {
     }
   }
 
-  const updated = await attendanceRepo.updateLeaveStatus(id, 'approved', adminId, comment);
+  const updated = await attendanceRepo.updateLeaveStatus(id, 'approved', adminId, comment, { days });
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const date = new Date(d);
@@ -1260,7 +1271,7 @@ export const rejectLeave = async (id, adminId, comment) => {
     // 2. Direct HTML Email
     if (emp?.email) {
       // `days` was never defined here, so the rejection email silently failed
-      const durationStr = formatLeaveDuration(calculateLeaveDays(start, end, leave.halfDay), leave.halfDay);
+      const durationStr = formatLeaveDuration(leave.days ?? calculateLeaveDays(start, end, leave.halfDay), leave.halfDay);
       try {
         await sendLeaveRejectedEmail({
           to: emp.email,
@@ -1321,8 +1332,8 @@ export const cancelLeave = async (id, user) => {
   await leave.save();
 
   if (wasApproved) {
-    // Give back exactly what approval took
-    await attendanceRepo.updateLeaveBalance(employeeId, start.getFullYear(), leave.leaveType, -calculateLeaveDays(start, end, leave.halfDay));
+    // Give back exactly what approval took: the stored count, or calendar days for leave approved before it was stored
+    await attendanceRepo.updateLeaveBalance(employeeId, start.getFullYear(), leave.leaveType, -(leave.days ?? calendarLeaveDays(start, end, leave.halfDay)));
 
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
