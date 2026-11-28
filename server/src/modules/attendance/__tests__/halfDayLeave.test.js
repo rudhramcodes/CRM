@@ -13,9 +13,16 @@ describe('half-day leave', () => {
   });
 
   it('accepts a single-day half day and rejects one spanning several days', () => {
-    expect(createLeaveSchema.safeParse({ ...base, startDate: '2026-11-25', endDate: '2026-11-25', halfDay: 'first' }).success).toBe(true);
-    expect(createLeaveSchema.safeParse({ ...base, startDate: '2026-11-25', endDate: '2026-11-26', halfDay: 'first' }).success).toBe(false);
-    expect(createLeaveSchema.safeParse({ ...base, startDate: '2026-11-25', endDate: '2026-11-25', halfDay: 'morning' }).success).toBe(false);
+    expect(createLeaveSchema.safeParse({ ...base, startDate: '2099-11-25', endDate: '2099-11-25', halfDay: 'first' }).success).toBe(true);
+    expect(createLeaveSchema.safeParse({ ...base, startDate: '2099-11-25', endDate: '2099-11-26', halfDay: 'first' }).success).toBe(false);
+    expect(createLeaveSchema.safeParse({ ...base, startDate: '2099-11-25', endDate: '2099-11-25', halfDay: 'morning' }).success).toBe(false);
+  });
+
+  it('accepts leave from today and rejects leave that starts in the past', () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    expect(createLeaveSchema.safeParse({ ...base, startDate: today, endDate: today }).success).toBe(true);
+    const past = createLeaveSchema.safeParse({ ...base, startDate: '2020-01-01', endDate: today });
+    expect(past.error?.issues.map((i) => i.path[0])).toEqual(['startDate']);
   });
 
   it('marks short worked days at day end', () => {
@@ -34,6 +41,7 @@ describe('half-day leave', () => {
 describe('cancel leave rules', () => {
   const emp = { _id: 'e1', role: 'employee' };
   const mgr = { _id: 'm1', role: 'manager' };
+  const admin = { _id: 'a1', role: 'admin' };
   const other = { _id: 'e2', role: 'employee' };
   const leave = (status, startDate) => ({ employee: { _id: 'e1' }, status, startDate: new Date(`${startDate}T00:00:00Z`) });
   const today = '2026-11-25';
@@ -42,12 +50,21 @@ describe('cancel leave rules', () => {
     expect(canCancelLeave(leave('pending', '2026-11-20'), emp, today)).toBe(null);
     expect(canCancelLeave(leave('approved', '2026-11-26'), emp, today)).toBe(null);
     expect(canCancelLeave(leave('approved', '2026-11-25'), emp, today)).toMatch(/already started/);
+    expect(canCancelLeave(leave('approved', '2026-11-20'), emp, today)).toMatch(/before today/);
   });
 
-  it('lets reviewers cancel started leave, and blocks other employees and finished requests', () => {
-    expect(canCancelLeave(leave('approved', '2026-11-01'), mgr, today)).toBe(null);
+  it('lets reviewers cancel pending or approved leave from today on, never before', () => {
+    expect(canCancelLeave(leave('pending', '2026-11-25'), admin, today)).toBe(null);
+    expect(canCancelLeave(leave('pending', '2026-11-26'), mgr, today)).toBe(null);
+    expect(canCancelLeave(leave('approved', '2026-11-25'), admin, today)).toBe(null);
+    expect(canCancelLeave(leave('approved', '2026-11-30'), mgr, today)).toBe(null);
+    expect(canCancelLeave(leave('approved', '2026-11-24'), admin, today)).toMatch(/before today/);
+    expect(canCancelLeave(leave('pending', '2026-11-01'), mgr, today)).toMatch(/before today/);
+  });
+
+  it('blocks other employees, rejected leave and leave that is already cancelled', () => {
     expect(canCancelLeave(leave('pending', '2026-11-26'), other, today)).toMatch(/your own/);
-    expect(canCancelLeave(leave('rejected', '2026-11-26'), emp, today)).toMatch(/Only pending or approved/);
-    expect(canCancelLeave(leave('cancelled', '2026-11-26'), mgr, today)).toMatch(/Only pending or approved/);
+    expect(canCancelLeave(leave('rejected', '2026-11-26'), admin, today)).toMatch(/Rejected leave/);
+    expect(canCancelLeave(leave('cancelled', '2026-11-26'), admin, today)).toMatch(/already cancelled/);
   });
 });

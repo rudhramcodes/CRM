@@ -50,7 +50,7 @@ export const createMeetingSchema = z
     client: z.string().optional().nullable(),
     brand: z.enum(LEAD_BRANDS).optional().nullable(),
     status: z.enum(MEETING_STATUS_LIST).optional(),
-    attendees: z.array(objectId).optional(),
+    attendees: z.array(objectId).min(1, 'Select at least one attendee'),
     actionItems: z.array(actionItemInputSchema).optional(),
     recurrence: recurrenceSchema.optional(),
   })
@@ -81,7 +81,7 @@ export const updateMeetingSchema = z
     client: z.string().optional().nullable(),
     brand: z.enum(LEAD_BRANDS).optional().nullable(),
     status: z.enum(MEETING_STATUS_LIST).optional(),
-    attendees: z.array(objectId).optional(),
+    attendees: z.array(objectId).min(1, 'Select at least one attendee').optional(),
     actionItems: z.array(actionItemInputSchema).optional(),
   })
   .refine(

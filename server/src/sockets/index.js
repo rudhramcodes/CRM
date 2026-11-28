@@ -43,9 +43,10 @@ export const initSocketIO = (httpServer) => {
 
     registerNotificationHandlers(io, socket);
 
-    // Entity rooms — join when viewing a detail page
+    // Entity rooms — join when viewing a detail page. Only project/task rooms: user:<id>
+    // rooms are joined server-side at connect, so nobody can listen to someone else's notifications.
     socket.on('join:room', (room) => {
-      if (typeof room !== 'string') return;
+      if (typeof room !== 'string' || !/^(project|task):/.test(room)) return;
       socket.join(room);
       logger.debug(`Socket ${socket.id} joined room ${room}`);
     });

@@ -142,12 +142,14 @@ export default function AttendanceLeaves() {
   const [approveLeave, { isLoading: approving }] = useApproveLeaveMutation();
   const [rejectLeave, { isLoading: rejecting }] = useRejectLeaveMutation();
   const [cancelLeave, { isLoading: cancelling }] = useCancelLeaveMutation();
-  // Same rule as the server: own pending any time, own approved before it starts; reviewers can cancel any approved leave.
+  // Same rule as the server: own pending any time, own approved before it starts; reviewers can cancel pending or approved leave from today on.
   const canCancel = (leave) => {
     const mine = String(leave.employee?._id || leave.employee) === String(user?._id);
     const startStr = String(leave.startDate).slice(0, 10);
-    if (mine) return leave.status === 'pending' || (leave.status === 'approved' && startStr > format(new Date(), 'yyyy-MM-dd'));
-    return isAdmin && leave.status === 'approved';
+    const today = format(new Date(), 'yyyy-MM-dd');
+    if (!['pending', 'approved'].includes(leave.status)) return false;
+    if (mine && (leave.status === 'pending' || startStr > today)) return true;
+    return isAdmin && startStr >= today;
   };
   const handleCancel = async (leave) => {
     const msg = leave.status === 'approved'
@@ -871,6 +873,7 @@ export default function AttendanceLeaves() {
                 value={form.startDate}
                 onChange={(val) => handleFieldChange('startDate', val)}
                 placeholder="Pick start date"
+                minDate={new Date()}
                 error={!!formErrors.startDate}
               />
               {formErrors.startDate && (

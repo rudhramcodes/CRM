@@ -47,7 +47,7 @@ export const create = async (req, res, next) => {
 
 export const update = async (req, res, next) => {
   try {
-    const meeting = await meetingService.updateMeeting(req.params.id, req.body);
+    const meeting = await meetingService.updateMeeting(req.params.id, req.body, req.user);
     ApiResponse.success(res, 200, { meeting }, 'Meeting updated successfully');
   } catch (error) {
     next(error);

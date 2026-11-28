@@ -15,10 +15,15 @@ function computeDuration(startTime, endTime) {
   return (eh * 60 + em) - (sh * 60 + sm);
 }
 
-// Active staff users + the linked client's email (client has no login, email only)
+// The meeting's attendees who are active staff + the linked client's email (client has no login, email only).
+// Only attendees hear about a meeting — never the whole staff, not even the organizer unless invited.
 export const getMeetingContacts = async (meeting) => {
   const User = (await import('../auth/auth.model.js')).default;
-  const staff = await User.find({ role: { $in: STAFF_ROLES }, isActive: true }).select('_id name email');
+  const staff = await User.find({
+    _id: { $in: meeting.attendees || [] },
+    role: { $in: STAFF_ROLES },
+    isActive: true,
+  }).select('_id name email');
   let clientEmail = null;
   if (meeting.client) {
     const Client = (await import('../clients/client.model.js')).default;
@@ -27,6 +32,26 @@ export const getMeetingContacts = async (meeting) => {
     clientEmail = client?.email || null;
   }
   return { staff, clientEmail };
+};
+
+// "Meeting Scheduled" (in-app, push, email) to these attendees, never to whoever made the change.
+// A new meeting also emails the linked client and gets its one Cliq post; an edit only tells the people it added.
+const notifyScheduled = async (meeting, attendeeIds, user, { isNew = false } = {}) => {
+  const recipients = attendeeIds.map(String).filter((id) => id !== String(user._id));
+  notificationService.createAndSendBulk(recipients, {
+    referenceId: meeting._id,
+    referenceModel: 'Meeting',
+    actionBy: user._id,
+    link: `/meetings/${meeting._id}`,
+    channels: { inApp: true, email: false, cliq: isNew },
+    ...notificationService.buildNotification('meeting_scheduled', { meetingTitle: meeting.title, date: meeting.date }),
+  }).catch(() => {});
+
+  const { staff, clientEmail } = await getMeetingContacts({ attendees: recipients, client: isNew ? meeting.client : null });
+  await Promise.allSettled([
+    ...staff.map((s) => sendMeetingEmail(s.email, meeting, 'scheduled')),
+    clientEmail ? sendMeetingEmail(clientEmail, meeting, 'scheduled') : null,
+  ].filter(Boolean));
 };
 
 const toMinutes = (time) => {
@@ -122,34 +147,6 @@ export const createMeeting = async (data, user, clientProfile) => {
   // deliberate: no auto-generate on create — office meetings have no link
   const meetLink = data.meetingLink || '';
 
-  const { staff, clientEmail } = await getMeetingContacts(data);
-
-  const notifyScheduled = async (meeting) => {
-    const notif = notificationService.buildNotification('meeting_scheduled', {
-      meetingTitle: data.title, date: meeting.date,
-    });
-    const recipients = attendees.length > 0 ? attendees : staff.map((s) => s._id.toString());
-
-    notificationService.createAndSendBulk(recipients, {
-      referenceId: meeting._id,
-      referenceModel: 'Meeting',
-      actionBy: user._id,
-      link: `/meetings/${meeting._id}`,
-      channels: { inApp: true, email: false },
-      ...notif,
-    }).catch(() => {});
-
-    const staffById = new Map(staff.map((s) => [s._id.toString(), s]));
-    const emailQueue = [
-      ...recipients.map((id) => {
-        const s = staffById.get(id);
-        return s ? sendMeetingEmail(s.email, meeting, 'scheduled') : null;
-      }),
-      clientEmail ? sendMeetingEmail(clientEmail, meeting, 'scheduled') : null,
-    ].filter(Boolean);
-    await Promise.allSettled(emailQueue);
-  };
-
   const buildPayload = (date, occurrenceIndex, seriesId) => ({
     title: data.title,
     date: new Date(date),
@@ -201,7 +198,7 @@ export const createMeeting = async (data, user, clientProfile) => {
       created.push(await meetingRepository.create(datePayload));
     }
 
-    await notifyScheduled(created[0]);
+    await notifyScheduled(created[0], attendees, user, { isNew: true });
     return { meetings: created, seriesId, count: created.length };
   }
 
@@ -215,7 +212,7 @@ export const createMeeting = async (data, user, clientProfile) => {
   }
 
   const meeting = await meetingRepository.create(payload);
-  await notifyScheduled(meeting);
+  await notifyScheduled(meeting, attendees, user, { isNew: true });
   return meeting;
 };
 
@@ -292,7 +289,7 @@ export const regenerateMeetLink = async (id) => {
   return meetingRepository.updateById(id, { meetingLink: link });
 };
 
-export const updateMeeting = async (id, data) => {
+export const updateMeeting = async (id, data, user) => {
   const meeting = await meetingRepository.findById(id);
   if (!meeting) {
     throw ApiError.notFound('Meeting not found');
@@ -339,7 +336,15 @@ export const updateMeeting = async (id, data) => {
     }));
   }
 
-  return meetingRepository.updateById(id, updateData);
+  const updated = await meetingRepository.updateById(id, updateData);
+
+  // People added to a still-scheduled meeting get the same "Meeting Scheduled" notice as at creation.
+  if (updateData.attendees && updated?.status === 'scheduled') {
+    const before = new Set((meeting.attendees || []).map((a) => String(a._id || a)));
+    const added = updateData.attendees.filter((a) => !before.has(a));
+    if (added.length) await notifyScheduled(updated, added, user);
+  }
+  return updated;
 };
 
 export const updateMeetingNotes = async (id, notes) => {

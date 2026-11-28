@@ -141,6 +141,11 @@ export const createLeaveSchema = z
   .refine(
     (data) => !data.halfDay || data.startDate === data.endDate,
     { message: 'A half-day leave must start and end on the same day', path: ['endDate'] }
+  )
+  .refine(
+    // Today in India, not in the server's timezone
+    (data) => data.startDate.slice(0, 10) >= new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }),
+    { message: 'Leave can only be applied for today or a future date', path: ['startDate'] }
   );
 
 export const leaveQuerySchema = z.object({
