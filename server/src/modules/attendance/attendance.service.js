@@ -76,6 +76,16 @@ export const applyWorkingDayClockInStatus = (record, isWFH) => {
   return record;
 };
 
+// Late is judged on the day's first clock-in only; later sessions get null and leave it as is.
+export const firstClockInLateness = (record, shift, now) => {
+  if ((record.sessions || []).some((s) => s.clockIn?.time)) return null;
+  const graceEnd = parseHHMM(shift.startTime) + (shift.gracePeriod || 15);
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  // Off for the first half on approved leave: arriving after shift start isn't late
+  const isLate = nowMinutes > graceEnd && !(record.leave && record.status === 'half_day');
+  return { isLate, lateMinutes: isLate ? nowMinutes - graceEnd : 0 };
+};
+
 export const parseStartOfDay = (val) => {
   if (!val) return null;
   if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
@@ -268,14 +278,7 @@ export const clockIn = async (employeeId, data, ip) => {
       }
     }
 
-    // Late detection: only the day's first clock-in counts, so coming back from lunch isn't "late"
-    const firstPunch = !(record.sessions || []).some((s) => s.clockIn?.time);
-    const shiftStart = parseHHMM(shift.startTime);
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const graceEnd = shiftStart + (shift.gracePeriod || 15);
-    // Off for the first half on approved leave: arriving after shift start isn't late
-    const isLate = firstPunch && nowMinutes > graceEnd && !(record.leave && record.status === 'half_day');
-    const lateMinutes = isLate ? nowMinutes - graceEnd : 0;
+    const late = firstClockInLateness(record, shift, now);
 
     // Resolve location (Office geofence or Area name)
     let resolvedLocation = data?.location || {};
@@ -307,10 +310,7 @@ export const clockIn = async (employeeId, data, ip) => {
 
     if (!record.sessions) record.sessions = [];
     record.sessions.push(newSession);
-    if (firstPunch) {
-      record.isLate = isLate;
-      record.lateMinutes = lateMinutes;
-    }
+    if (late) Object.assign(record, late);
     applyWorkingDayClockInStatus(record, data?.isWFH);
     if (data?.isWFH) {
       record.isWFH = true;
@@ -322,7 +322,7 @@ export const clockIn = async (employeeId, data, ip) => {
     record.events.push({
       type: 'clock_in',
       timestamp: now,
-      metadata: { ip, isLate, lateMinutes, sessionIndex: record.sessions.length - 1 },
+      metadata: { ip, ...late, sessionIndex: record.sessions.length - 1 },
     });
 
     // Two clock-ins at once: only the save that finds no open session wins (the other gets DocumentNotFoundError)
