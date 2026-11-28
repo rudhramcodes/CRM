@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calculateLeaveDays, calendarLeaveDays, formatLeaveDuration, shortDayStatus } from '../leavePolicy.js';
 import { createLeaveSchema } from '../attendance.validation.js';
-import { applyWorkingDayClockInStatus, canCancelLeave } from '../attendance.service.js';
+import { applyWorkingDayClockInStatus, canCancelLeave, firstClockInLateness } from '../attendance.service.js';
 
 const base = { leaveType: 'casual', reason: 'Doctor appointment in the morning' };
 
@@ -45,6 +45,22 @@ describe('half-day leave', () => {
   it('keeps a half day as half day after clock-in', () => {
     expect(applyWorkingDayClockInStatus({ status: 'half_day' }, false).status).toBe('half_day');
     expect(applyWorkingDayClockInStatus({ status: 'absent' }, true).status).toBe('wfh');
+  });
+});
+
+describe('late on clock-in', () => {
+  const shift = { startTime: '09:00', gracePeriod: 15 };
+  const at = (hhmm) => new Date(`2026-11-25T${hhmm}:00`);
+
+  it('judges only the first clock-in of the day', () => {
+    expect(firstClockInLateness({ sessions: [] }, shift, at('09:10'))).toEqual({ isLate: false, lateMinutes: 0 });
+    expect(firstClockInLateness({ sessions: [] }, shift, at('10:15'))).toEqual({ isLate: true, lateMinutes: 75 });
+    // Clocked in on time, clocked out, back at 2 pm: not late
+    expect(firstClockInLateness({ sessions: [{ clockIn: { time: at('09:00') } }] }, shift, at('14:00'))).toBe(null);
+  });
+
+  it('is not late on a first-half leave day', () => {
+    expect(firstClockInLateness({ sessions: [], leave: 'l1', status: 'half_day' }, shift, at('13:30')).isLate).toBe(false);
   });
 });
 
