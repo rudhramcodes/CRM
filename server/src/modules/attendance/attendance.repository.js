@@ -5,7 +5,7 @@ import {
   Holiday,
   LeaveBalance,
 } from './attendance.model.js';
-import { normalizeLeaveBalance } from './leavePolicy.js';
+import { isBalanceTrackedLeave } from './leavePolicy.js';
 
 // ===================== ATTENDANCE =====================
 
@@ -223,9 +223,10 @@ export const findAllLeaves = async (filter, options = {}) => {
   };
 };
 
-export const updateLeaveStatus = async (id, status, approvedBy, comment, extra = {}) => {
-  return LeaveRequest.findByIdAndUpdate(
-    id,
+// Only a pending request moves, so two reviewers acting at once can't both approve it: the second gets null.
+export const updateLeaveStatus = async (id, status, approvedBy, comment, extra = {}, from = 'pending') => {
+  return LeaveRequest.findOneAndUpdate(
+    { _id: id, status: from },
     { status, approvedBy, approvedAt: new Date(), comment, ...extra },
     { new: true, runValidators: true }
   ).populate('employee', 'name email avatar role');
@@ -293,15 +294,14 @@ export const createLeaveBalance = async (data) => {
   return LeaveBalance.create(data);
 };
 
-export const updateLeaveBalance = async (employeeId, year, leaveType, days) => {
-  const balance = await LeaveBalance.findOne({ employee: employeeId, year });
-  if (!balance) return null;
-
-  normalizeLeaveBalance(balance, year);
-  if (!balance[leaveType]) return null;
-  balance[leaveType].used += days;
-  normalizeLeaveBalance(balance, year);
-  return balance.save();
+// Adds `days` to the used count in one atomic step (negative = refund). With `maxUsed`, it only deducts while
+// used + days stays within it, so two approvals at once can't overdraw: null means not enough balance.
+// The stored `balance` field is recomputed from `used` on every read (getLeaveBalance).
+export const updateLeaveBalance = async (employeeId, year, leaveType, days, maxUsed = null) => {
+  if (!isBalanceTrackedLeave(leaveType)) return null;
+  const filter = { employee: employeeId, year };
+  if (maxUsed != null) filter[`${leaveType}.used`] = { $lte: maxUsed - days };
+  return LeaveBalance.findOneAndUpdate(filter, { $inc: { [`${leaveType}.used`]: days } }, { new: true });
 };
 
 // ===================== REPORTS =====================

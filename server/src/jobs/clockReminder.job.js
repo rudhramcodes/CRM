@@ -56,7 +56,7 @@ export const sendClockInReminders = async (kind, now = new Date()) => {
   return due.length;
 };
 
-// Push to every active staff member (employee, manager, admin, super admin) at 6:10 PM; skipped on holidays.
+// Push at 6:10 PM only to active staff who are still clocked in today; skipped on holidays.
 export const sendClockOutReminders = async (now = new Date()) => {
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
@@ -65,7 +65,12 @@ export const sendClockOutReminders = async (now = new Date()) => {
 
   if (await Holiday.exists({ date: { $gte: today, $lt: tomorrow } })) return 0;
 
-  const users = await User.find({ role: { $in: STAFF_ROLES }, isActive: true }).select('_id').lean();
+  const openIds = await Attendance.distinct('employee', {
+    date: { $gte: today, $lt: tomorrow },
+    sessions: { $elemMatch: { 'clockIn.time': { $ne: null }, 'clockOut.time': null } },
+  });
+  if (!openIds.length) return 0;
+  const users = await User.find({ _id: { $in: openIds }, role: { $in: STAFF_ROLES }, isActive: true }).select('_id').lean();
   const push = { ...MESSAGES.out, link: '/attendance', priority: 'high' };
   await Promise.all(users.map((u) => sendExpoPush(u._id, push)
     .catch((err) => logger.error(`[ClockReminder] ${u._id}: ${err.message}`))));

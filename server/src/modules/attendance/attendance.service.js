@@ -15,6 +15,7 @@ import {
   calendarLeaveDays,
   formatLeaveDuration,
   isBalanceTrackedLeave,
+  LEAVE_MAX_DAYS,
   normalizeLeaveBalance,
 } from './leavePolicy.js';
 
@@ -667,6 +668,7 @@ export const manualOverride = async (id, data, adminId) => {
     status: data.status,
     clockInTime: data.clockInTime,
     clockOutTime: data.clockOutTime,
+    breakMinutes: data.breakMinutes ?? record.totalBreakMinutes,
     dateStr,
     notes: data.notes,
     isWFH: data.isWFH,
@@ -680,7 +682,7 @@ export const manualOverride = async (id, data, adminId) => {
 // ===================== MANUAL ENTRY =====================
 
 export const manualEntry = async (data, adminId) => {
-  const { recordId, employee, date, clockInTime, clockOutTime, status, notes, isWFH } = data;
+  const { recordId, employee, date, clockInTime, clockOutTime, breakMinutes, status, notes, isWFH } = data;
   const targetDate = parseStartOfDay(date);
 
   let shift = await attendanceRepo.findDefaultShift();
@@ -708,6 +710,7 @@ export const manualEntry = async (data, adminId) => {
       status,
       clockInTime,
       clockOutTime,
+      breakMinutes: breakMinutes ?? record.totalBreakMinutes,
       dateStr: date,
       notes,
       isWFH,
@@ -728,6 +731,7 @@ export const manualEntry = async (data, adminId) => {
     status: status || 'present',
     clockInTime,
     clockOutTime,
+    breakMinutes: breakMinutes ?? 0,
     dateStr: date,
     notes,
     isWFH,
@@ -745,15 +749,17 @@ export const requestRegularization = async (employeeId, data) => {
   if (data.attendanceId) {
     record = await attendanceRepo.findAttendanceById(data.attendanceId);
   } else if (data.date) {
-    const targetDate = new Date(data.date);
+    const targetDate = parseStartOfDay(data.date);
     record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, targetDate);
     if (!record) {
-      const startOfDay = new Date(targetDate);
-      startOfDay.setHours(0, 0, 0, 0);
+      const shift = await attendanceRepo.findDefaultShift();
+      if (!shift) throw ApiError.badRequest('No default shift is set up');
       record = await attendanceRepo.createAttendance({
         employee: employeeId,
-        date: startOfDay,
+        date: targetDate,
+        shift: shift._id,
         status: 'absent',
+        createdBy: employeeId,
       });
     }
   }
@@ -858,8 +864,13 @@ export const approveRegularization = async (id, action, adminId, comment) => {
     const shift = record.shift || await attendanceRepo.findDefaultShift();
     const recordDate = new Date(record.date);
     const dateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
-    applyOverrideToRecord(updated, shift, {
-      status: 'present',
+    const status = record.leave && record.status === 'half_day' ? 'half_day' : (record.isWFH ? 'wfh' : 'present');
+    // No times asked for: only the status is reviewed, the real punches stay
+    if (!request.clockInTime) {
+      updated.status = status;
+      updated.updatedBy = adminId;
+    } else applyOverrideToRecord(updated, shift, {
+      status,
       clockInTime: request.clockInTime,
       clockOutTime: request.clockOutTime,
       breakMinutes: request.breakMinutes,
@@ -931,18 +942,28 @@ export const deleteShift = async (id) => {
 
 // ===================== LEAVE =====================
 
-// Working days in a leave range, holidays fetched for it. Throws when the range has none.
-const leaveWorkingDays = async (start, end, halfDay) => {
+// Working days in a leave range, holidays fetched for it. Throws when the range has none or is over the type's cap.
+const leaveWorkingDays = async (start, end, halfDay, leaveType) => {
   const holidays = await Holiday.find({ date: { $gte: start, $lte: end } }).select('date').lean();
   const working = calculateLeaveDays(start, end, null, holidays.map((h) => h.date));
   if (!working) throw ApiError.badRequest('These dates are all Sundays or holidays, so no leave is needed');
+  const max = LEAVE_MAX_DAYS[leaveType];
+  if (max && working > max) throw ApiError.badRequest(`${leaveType[0].toUpperCase()}${leaveType.slice(1)} leave is at most ${max} working days per request`);
   return halfDay ? 0.5 : working;
+};
+
+// Reviewers can't approve or reject their own leave; only a super admin, who has no one above them, can.
+export const assertNotOwnLeave = (leave, reviewer) => {
+  const ownerId = leave.employee?._id || leave.employee;
+  if (String(ownerId) === String(reviewer._id) && reviewer.role !== 'super_admin') {
+    throw ApiError.forbidden("You can't review your own leave. Another manager or admin has to.");
+  }
 };
 
 export const applyLeave = async (employeeId, data) => {
   const start = new Date(data.startDate);
   const end = new Date(data.endDate);
-  const days = await leaveWorkingDays(start, end, data.halfDay);
+  const days = await leaveWorkingDays(start, end, data.halfDay, data.leaveType);
   const year = start.getFullYear();
 
   if (isBalanceTrackedLeave(data.leaveType)) {
@@ -1109,30 +1130,8 @@ export const getLeaveById = async (id) => {
   return leave;
 };
 
-export const approveLeave = async (id, adminId, comment) => {
-  const leave = await attendanceRepo.findLeaveById(id);
-  if (!leave) throw ApiError.notFound('Leave request not found');
-  if (leave.status !== 'pending') throw ApiError.badRequest('Leave already processed');
-
-  const start = new Date(leave.startDate);
-  const end = new Date(leave.endDate);
-  // Counted again: a holiday may have been added since the request
-  const days = await leaveWorkingDays(start, end, leave.halfDay);
-  const year = start.getFullYear();
-  const employeeId = leave.employee?._id || leave.employee;
-
-  if (isBalanceTrackedLeave(leave.leaveType)) {
-    const balance = await getLeaveBalance(employeeId, year);
-    const available = balance[leave.leaveType]?.balance ?? 0;
-    if (days > available) {
-      throw ApiError.badRequest(
-        `Insufficient ${leave.leaveType} leave balance. Available: ${available} day(s). Cannot approve ${days} day(s).`
-      );
-    }
-  }
-
-  const updated = await attendanceRepo.updateLeaveStatus(id, 'approved', adminId, comment, { days });
-
+// Marks each working day of an approved leave on the attendance calendar.
+const markLeaveDays = async (leave, start, end, employeeId, adminId) => {
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const date = new Date(d);
     date.setHours(0, 0, 0, 0);
@@ -1177,8 +1176,65 @@ export const approveLeave = async (id, adminId, comment) => {
       });
     }
   }
+};
 
-  await attendanceRepo.updateLeaveBalance(employeeId, year, leave.leaveType, days);
+export const approveLeave = async (id, reviewer, comment) => {
+  const adminId = reviewer._id;
+  const leave = await attendanceRepo.findLeaveById(id);
+  if (!leave) throw ApiError.notFound('Leave request not found');
+  if (leave.status !== 'pending') throw ApiError.badRequest('Leave already processed');
+  assertNotOwnLeave(leave, reviewer);
+
+  const start = new Date(leave.startDate);
+  const end = new Date(leave.endDate);
+  // Counted again: a holiday may have been added since the request
+  const days = await leaveWorkingDays(start, end, leave.halfDay, leave.leaveType);
+  const year = start.getFullYear();
+  const employeeId = leave.employee?._id || leave.employee;
+
+  // A full day off can't cover a day they already clocked in: approving would erase those punches.
+  if (!leave.halfDay) {
+    const worked = await Attendance.findOne({
+      employee: employeeId,
+      date: { $gte: parseStartOfDay(start), $lte: parseEndOfDay(end) },
+      'sessions.clockIn.time': { $ne: null },
+    }).select('date').lean();
+    if (worked) {
+      const day = new Date(worked.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+      throw ApiError.badRequest(`They already clocked in on ${day}. Reject this and ask for a half day, or correct that day first.`);
+    }
+  }
+
+  let maxUsed = null;
+  if (isBalanceTrackedLeave(leave.leaveType)) {
+    const balance = await getLeaveBalance(employeeId, year);
+    const { used = 0, balance: available = 0 } = balance[leave.leaveType] || {};
+    if (days > available) {
+      throw ApiError.badRequest(
+        `Insufficient ${leave.leaveType} leave balance. Available: ${available} day(s). Cannot approve ${days} day(s).`
+      );
+    }
+    maxUsed = used + available;
+  }
+
+  // Claim the request first: of two reviewers approving at once, only one gets it
+  const updated = await attendanceRepo.updateLeaveStatus(id, 'approved', adminId, comment, { days });
+  if (!updated) throw ApiError.badRequest('Leave already processed');
+
+  let deducted = false;
+  try {
+    if (maxUsed != null) {
+      deducted = !!(await attendanceRepo.updateLeaveBalance(employeeId, year, leave.leaveType, days, maxUsed));
+      if (!deducted) throw ApiError.badRequest(`Insufficient ${leave.leaveType} leave balance. Cannot approve ${days} day(s).`);
+    }
+    await markLeaveDays(leave, start, end, employeeId, adminId);
+  } catch (err) {
+    // The writes aren't one transaction, so undo by hand: give the balance back and make the request pending again.
+    // Days already marked keep the leave link; approving again rewrites them.
+    if (deducted) await attendanceRepo.updateLeaveBalance(employeeId, year, leave.leaveType, -days);
+    await attendanceRepo.updateLeaveStatus(id, 'pending', null, null, { approvedAt: null, days: leave.days ?? null }, 'approved');
+    throw err;
+  }
 
   // Notify applicant employee via In-App, Socket, and Email
   try {
@@ -1235,12 +1291,15 @@ export const approveLeave = async (id, adminId, comment) => {
   return updated;
 };
 
-export const rejectLeave = async (id, adminId, comment) => {
+export const rejectLeave = async (id, reviewer, comment) => {
+  const adminId = reviewer._id;
   const leave = await attendanceRepo.findLeaveById(id);
   if (!leave) throw ApiError.notFound('Leave request not found');
   if (leave.status !== 'pending') throw ApiError.badRequest('Leave already processed');
+  assertNotOwnLeave(leave, reviewer);
 
   const updated = await attendanceRepo.updateLeaveStatus(id, 'rejected', adminId, comment);
+  if (!updated) throw ApiError.badRequest('Leave already processed');
 
   // Notify applicant employee via In-App, Socket, and Email
   try {

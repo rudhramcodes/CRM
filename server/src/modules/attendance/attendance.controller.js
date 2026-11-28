@@ -262,7 +262,7 @@ export const getLeaveById = async (req, res, next) => {
 
 export const approveLeave = async (req, res, next) => {
   try {
-    const leave = await attendanceService.approveLeave(req.params.id, req.user._id, req.body.comment);
+    const leave = await attendanceService.approveLeave(req.params.id, req.user, req.body.comment);
     ApiResponse.success(res, 200, { leave }, 'Leave approved');
   } catch (error) {
     next(error);
@@ -271,7 +271,7 @@ export const approveLeave = async (req, res, next) => {
 
 export const rejectLeave = async (req, res, next) => {
   try {
-    const leave = await attendanceService.rejectLeave(req.params.id, req.user._id, req.body.comment);
+    const leave = await attendanceService.rejectLeave(req.params.id, req.user, req.body.comment);
     ApiResponse.success(res, 200, { leave }, 'Leave rejected');
   } catch (error) {
     next(error);

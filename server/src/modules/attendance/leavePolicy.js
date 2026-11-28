@@ -1,6 +1,10 @@
 export const LEAVE_ENTITLEMENT = { casual: 12, sick: 5 };
 export const BALANCE_TRACKED_LEAVE_TYPES = Object.keys(LEAVE_ENTITLEMENT);
 
+// shortcut: per-request cap in working days for leave with no balance (maternity: 26 weeks, Sundays off;
+// paternity: one week). A yearly cap needs the approved days summed per type.
+export const LEAVE_MAX_DAYS = { maternity: 156, paternity: 5 };
+
 export const isBalanceTrackedLeave = (leaveType) =>
   BALANCE_TRACKED_LEAVE_TYPES.includes(leaveType);
 
