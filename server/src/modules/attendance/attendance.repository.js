@@ -176,8 +176,9 @@ export const updateShift = async (id, data) => {
   return Shift.findByIdAndUpdate(id, data, { new: true, runValidators: true });
 };
 
+// Soft delete: old attendance records still point at the shift
 export const deleteShift = async (id) => {
-  return Shift.findByIdAndDelete(id);
+  return Shift.findByIdAndUpdate(id, { isActive: false, isDefault: false }, { new: true });
 };
 
 export const findDefaultShift = async () => {
@@ -349,7 +350,7 @@ const findPaginatedReport = async (filter, options = {}, sort = { date: -1 }) =>
       summary: {
         totalEmployees: employees.length,
         totalRecords: total,
-        presentRecords: statusCounts.filter((item) => ['present', 'wfh', 'late', 'half_day'].includes(item._id)).reduce((sum, item) => sum + item.value, 0),
+        presentRecords: statusCounts.filter((item) => ['present', 'wfh', 'half_day'].includes(item._id)).reduce((sum, item) => sum + item.value, 0),
         absentRecords: statusCounts.find((item) => item._id === 'absent')?.value || 0,
         leaveRecords: statusCounts.find((item) => item._id === 'leave')?.value || 0,
         workedRecords: workSummary[0]?.workedRecords || 0,

@@ -277,7 +277,7 @@ export const clockIn = async (employeeId, data, ip) => {
     const graceEnd = shiftStart + (shift.gracePeriod || 15);
     // Off for the first half on approved leave: arriving after shift start isn't late
     const isLate = firstPunch && nowMinutes > graceEnd && !(record.leave && record.status === 'half_day');
-    const lateMinutes = isLate ? nowMinutes - graceEnd : 0;
+    const lateMinutes = isLate ? nowMinutes - shiftStart : 0; // grace decides late or not; minutes count from shift start
 
     // Resolve location (Office geofence or Area name)
     let resolvedLocation = data?.location || {};
@@ -482,7 +482,7 @@ export const getAttendanceList = async (query, options) => {
   const filter = {};
   if (query.employee) filter.employee = query.employee;
   if (query.status === 'late' || query.isLate) {
-    filter.$or = [{ isLate: true }, { status: 'late' }];
+    filter.isLate = true;
   } else if (query.status === 'wfh') {
     filter.$or = [{ status: 'wfh' }, { isWFH: true }];
   } else if (query.status) {
@@ -570,8 +570,16 @@ export const getCalendarData = async (employeeId, year, month) => {
   return attendanceRepo.findAttendanceForCalendar(employeeId, year, month);
 };
 
-const applyOverrideToRecord = (record, shift, { status, clockInTime, clockOutTime, breakMinutes = 0, dateStr, notes, isWFH, adminId }) => {
-  const isNonWorking = ['absent', 'leave', 'holiday', 'weekend'].includes(status || record.status);
+export const applyOverrideToRecord = (record, shift, { status, clockInTime, clockOutTime, breakMinutes = 0, dateStr, notes, isWFH, adminId }) => {
+  // Times sent with no new status mean the person worked, whatever the day was marked before
+  const isNonWorking = ['absent', 'leave', 'holiday', 'weekend'].includes(status || (clockInTime ? null : record.status));
+  if (clockInTime && !isNonWorking) {
+    if (clockOutTime && clockOutTime <= clockInTime) throw ApiError.badRequest('Clock out must be after clock in');
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    // Nothing ever closes an open session on a past day
+    if (!clockOutTime && dateStr < todayStr) throw ApiError.badRequest('Add a clock-out time for a past day');
+  }
 
   const sessions = [];
   let isLate = false;
@@ -598,7 +606,7 @@ const applyOverrideToRecord = (record, shift, { status, clockInTime, clockOutTim
       const inMinutes = clockInDate.getHours() * 60 + clockInDate.getMinutes();
       const graceEnd = shiftStart + (shift.gracePeriod || 15);
       isLate = inMinutes > graceEnd;
-      lateMinutes = isLate ? inMinutes - graceEnd : 0;
+      lateMinutes = isLate ? inMinutes - shiftStart : 0;
     }
 
     sessions.push({
@@ -798,7 +806,9 @@ export const requestRegularization = async (employeeId, data) => {
     const User = mongoose.model('User');
     const applicant = await User.findById(employeeId).select('name email');
     const adminsAndManagers = await User.find({
+      _id: { $ne: employeeId },
       role: { $in: ['super_admin', 'admin', 'manager'] },
+      isActive: { $ne: false },
     }).select('_id email name');
     const attendanceDate = record.date
       ? new Date(record.date).toLocaleDateString('en-GB', {
@@ -806,8 +816,7 @@ export const requestRegularization = async (employeeId, data) => {
         })
       : 'attendance record';
 
-    console.log(`[Regularization Apply] Notifying ${adminsAndManagers.length} admins/managers for request by ${applicant?.name}`);
-    for (const manager of adminsAndManagers) {
+    await Promise.all(adminsAndManagers.map(async (manager) => {
       try {
         await createAndSend({
           recipient: manager._id,
@@ -829,7 +838,7 @@ export const requestRegularization = async (employeeId, data) => {
       } catch (notifErr) {
         console.error(`[Regularization Notification to ${manager.name} Failed]:`, notifErr);
       }
-    }
+    }));
   } catch (err) {
     console.error('[Regularization Notification Error]:', err);
   }
@@ -912,11 +921,13 @@ export const getRegularizationRequests = async (status = 'pending') =>
 
 // ===================== SHIFT =====================
 
+// Set the new default first, then clear the others, so a failed write never leaves no default shift
+const clearOtherDefaults = (id) => Shift.updateMany({ _id: { $ne: id }, isDefault: true }, { isDefault: false });
+
 export const createShift = async (data, userId) => {
-  if (data.isDefault) {
-    await Shift.updateMany({ isDefault: true }, { isDefault: false });
-  }
-  return attendanceRepo.createShift({ ...data, createdBy: userId });
+  const shift = await attendanceRepo.createShift({ ...data, createdBy: userId });
+  if (shift.isDefault) await clearOtherDefaults(shift._id);
+  return shift;
 };
 
 export const getShifts = async (options = {}) => {
@@ -926,17 +937,19 @@ export const getShifts = async (options = {}) => {
 export const updateShift = async (id, data) => {
   const shift = await attendanceRepo.findShiftById(id);
   if (!shift) throw ApiError.notFound('Shift not found');
-
-  if (data.isDefault) {
-    await Shift.updateMany({ isDefault: true }, { isDefault: false });
+  if (shift.isDefault && (data.isDefault === false || data.isActive === false)) {
+    throw ApiError.badRequest('This is the default shift. Make another shift the default first.');
   }
 
-  return attendanceRepo.updateShift(id, data);
+  const updated = await attendanceRepo.updateShift(id, data);
+  if (updated?.isDefault) await clearOtherDefaults(id);
+  return updated;
 };
 
 export const deleteShift = async (id) => {
   const shift = await attendanceRepo.findShiftById(id);
   if (!shift) throw ApiError.notFound('Shift not found');
+  if (shift.isDefault) throw ApiError.badRequest('This is the default shift. Make another shift the default first.');
   return attendanceRepo.deleteShift(id);
 };
 
@@ -963,6 +976,10 @@ export const assertNotOwnLeave = (leave, reviewer) => {
 export const applyLeave = async (employeeId, data) => {
   const start = new Date(data.startDate);
   const end = new Date(data.endDate);
+  // shortcut: balances are per year, so a leave over 31 Dec is two requests; split it here if HR wants one
+  if (start.getUTCFullYear() !== end.getUTCFullYear()) {
+    throw ApiError.badRequest(`Leave can't cross the year end. Apply up to 31 Dec, then a second request from 1 Jan.`);
+  }
   const days = await leaveWorkingDays(start, end, data.halfDay, data.leaveType);
   const year = start.getFullYear();
 
@@ -1004,15 +1021,15 @@ export const applyLeave = async (employeeId, data) => {
     const User = mongoose.model('User');
     const applicant = await User.findById(employeeId).select('name email role');
     const adminsAndManagers = await User.find({
+      _id: { $ne: employeeId },
       role: { $in: ['super_admin', 'admin', 'manager'] },
+      isActive: { $ne: false },
     }).select('_id email name');
 
     const durationStr = formatLeaveDuration(days, data.halfDay);
     const datesStr = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} – ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 
-    console.log(`[Leave Apply] Notifying ${adminsAndManagers.length} admins/managers for leave by ${applicant?.name}`);
-
-    for (const manager of adminsAndManagers) {
+    await Promise.all(adminsAndManagers.map(async (manager) => {
       // 1. In-app & Socket notification (skip email here — we send a styled one below)
       try {
         await createAndSend({
@@ -1032,7 +1049,6 @@ export const applyLeave = async (employeeId, data) => {
             duration: durationStr,
           },
         });
-        console.log(`[Leave Apply] In-app notification sent to ${manager.name} (${manager._id})`);
       } catch (notifErr) {
         console.error(`[Leave Apply] In-app notification to ${manager.name} failed:`, notifErr);
       }
@@ -1048,12 +1064,11 @@ export const applyLeave = async (employeeId, data) => {
             duration: durationStr,
             reason: data.reason,
           });
-          console.log(`[Leave Apply] Email sent to ${manager.email}`);
         } catch (emailErr) {
           console.error(`[Leave Apply Email to ${manager.email} Failed]:`, emailErr);
         }
       }
-    }
+    }));
   } catch (err) {
     console.error('[Leave Apply Notification Error]:', err);
   }
@@ -1243,7 +1258,6 @@ export const approveLeave = async (id, reviewer, comment) => {
     const User = mongoose.model('User');
     const emp = await User.findById(empId).select('email name');
 
-    console.log(`[Leave Approve] Notifying employee ${emp?.name} (${empId}) of leave approval`);
 
     // 1. In-App & Socket notification (skip generic email — styled one sent below)
     try {
@@ -1263,7 +1277,6 @@ export const approveLeave = async (id, reviewer, comment) => {
           dates: datesStr,
         },
       });
-      console.log(`[Leave Approve] In-app notification sent to ${emp?.name}`);
     } catch (notifErr) {
       console.error(`[Leave Approve] In-app notification failed:`, notifErr);
     }
@@ -1279,7 +1292,6 @@ export const approveLeave = async (id, reviewer, comment) => {
           dates: datesStr,
           duration: durationStr,
         });
-        console.log(`[Leave Approve] Email sent to ${emp.email}`);
       } catch (emailErr) {
         console.error(`[Leave Approval Email to ${emp.email} Failed]:`, emailErr);
       }
@@ -1419,13 +1431,12 @@ export const cancelLeave = async (id, user) => {
     const User = mongoose.model('User');
     const isOwner = String(employeeId) === String(user._id);
     const recipients = isOwner
-      ? (await User.find({ role: { $in: LEAVE_REVIEWER_ROLES }, _id: { $ne: user._id } }).select('_id')).map((u) => u._id)
+      ? (await User.find({ role: { $in: LEAVE_REVIEWER_ROLES }, _id: { $ne: user._id }, isActive: { $ne: false } }).select('_id')).map((u) => u._id)
       : [employeeId];
     const datesStr = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} – ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
     const employeeName = leave.employee?.name || 'An employee';
     const leaveType = leave.leaveType.replace('_', ' ');
-    for (const recipient of recipients) {
-      await createAndSend({
+    await Promise.all(recipients.map((recipient) => createAndSend({
         recipient,
         type: 'leave_cancelled',
         title: 'Leave Cancelled',
@@ -1439,8 +1450,7 @@ export const cancelLeave = async (id, user) => {
         actionBy: user._id,
         channels: { inApp: true, email: false },
         metadata: { employeeName, leaveType, dates: datesStr },
-      }).catch((err) => console.error('[Leave Cancel] Notification failed:', err));
-    }
+      }).catch((err) => console.error('[Leave Cancel] Notification failed:', err))));
   } catch (err) {
     console.error('[Leave Cancel Notification Error]:', err);
   }
@@ -1478,16 +1488,30 @@ export const getHolidays = async (year, options = {}) => {
   return attendanceRepo.findAllHolidays(year, options);
 };
 
+// Clock-in on a holiday leaves an empty "holiday" record; once the holiday is gone that day is a normal day again.
+const clearHolidayRecords = (date) => {
+  const day = new Date(date).toISOString().slice(0, 10);
+  return Attendance.deleteMany({
+    date: { $gte: parseStartOfDay(day), $lte: parseEndOfDay(day) },
+    status: 'holiday',
+    'sessions.clockIn.time': { $exists: false },
+  });
+};
+
 export const updateHoliday = async (id, data) => {
   const holiday = await attendanceRepo.findHolidayById(id);
   if (!holiday) throw ApiError.notFound('Holiday not found');
-  return attendanceRepo.updateHoliday(id, data);
+  const updated = await attendanceRepo.updateHoliday(id, data);
+  if (data.date && new Date(data.date).getTime() !== new Date(holiday.date).getTime()) await clearHolidayRecords(holiday.date);
+  return updated;
 };
 
 export const deleteHoliday = async (id) => {
   const holiday = await attendanceRepo.findHolidayById(id);
   if (!holiday) throw ApiError.notFound('Holiday not found');
-  return attendanceRepo.deleteHoliday(id);
+  const deleted = await attendanceRepo.deleteHoliday(id);
+  await clearHolidayRecords(holiday.date);
+  return deleted;
 };
 
 // ===================== REPORTS =====================
@@ -1564,9 +1588,11 @@ export const bulkImport = async (records, userId) => {
   let imported = 0;
   let skipped = 0;
   const errors = [];
+  const shift = await attendanceRepo.findDefaultShift();
 
   for (const row of records) {
     try {
+      if (row.clockIn && !row.clockOut) throw new Error('clockOut is required when clockIn is given');
       const employeeId = row.employee;
       const date = new Date(row.date);
       date.setHours(0, 0, 0, 0);
@@ -1576,8 +1602,6 @@ export const bulkImport = async (records, userId) => {
         skipped++;
         continue;
       }
-
-      const shift = await attendanceRepo.findDefaultShift();
 
       const sessions = [];
       if (row.clockIn) {
@@ -1590,16 +1614,16 @@ export const bulkImport = async (records, userId) => {
         });
       }
 
-      await attendanceRepo.createAttendance({
+      const record = new Attendance({
         employee: employeeId,
         date,
         shift: shift?._id,
         sessions,
-        clockIn: row.clockIn ? { time: new Date(row.clockIn) } : undefined,
-        clockOut: row.clockOut ? { time: new Date(row.clockOut) } : undefined,
         status: row.status || 'present',
         createdBy: userId,
       });
+      recalcRecordTotals(record, shift?.duration || 8);
+      await record.save();
       imported++;
     } catch (err) {
       errors.push({ row, error: err.message });

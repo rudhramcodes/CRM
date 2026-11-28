@@ -22,7 +22,10 @@ export const clockInSchema = z.object({
     .nullable()
     .optional(),
   isWFH: z.boolean().optional(),
-  wfhReason: z.string().max(500).optional(),
+  wfhReason: z.string().trim().max(500).optional(),
+}).refine((d) => !d.isWFH || (d.wfhReason?.length ?? 0) >= 3, {
+  message: 'Say why you are working from home',
+  path: ['wfhReason'],
 });
 
 export const clockOutSchema = z.object({

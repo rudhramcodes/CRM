@@ -35,7 +35,7 @@ describe('sendClockOutReminders', () => {
 
     expect(await sendClockOutReminders(new Date('2026-11-26T18:10:00'))).toBe(2);
     expect(open.mock.calls[0][1].sessions).toEqual({ $elemMatch: { 'clockIn.time': { $ne: null }, 'clockOut.time': null } });
-    expect(find).toHaveBeenCalledWith({ _id: { $in: ['a', 'b'] }, role: { $in: ['employee', 'manager', 'admin', 'super_admin'] }, isActive: true });
+    expect(find).toHaveBeenCalledWith({ _id: { $in: ['a', 'b'] }, role: { $in: ['employee', 'manager', 'admin', 'super_admin'] }, isActive: { $ne: false } });
     expect(sendExpoPush).toHaveBeenCalledTimes(2);
     expect(sendExpoPush.mock.calls[0][1]).toMatchObject({ type: 'clock_out_reminder', message: 'Please clock out before leaving the office.' });
   });
