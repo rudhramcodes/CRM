@@ -241,7 +241,7 @@ export default function AttendanceList() {
         {/* Absent Today Card */}
         <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-xs cursor-default">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Absent Today</span>
+            <span className="text-xs font-medium text-zinc-500">Not In Yet</span>
             <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
               <XCircle className="w-4 h-4" />
             </div>

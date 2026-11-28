@@ -32,7 +32,8 @@ export const whoToRemind = (users, records = [], onLeave = []) => {
   });
 };
 
-// Push (phone only, no Inbox entry) to every active employee/manager who hasn't clocked in today.
+// Push (phone only, no Inbox entry) to every active staff member who hasn't clocked in today:
+// the same people auto-absent marks absent at 23:59.
 // Day bounds use the server's local midnight, the same way attendance records are dated.
 export const sendClockInReminders = async (kind, now = new Date()) => {
   const today = new Date(now);
@@ -43,7 +44,7 @@ export const sendClockInReminders = async (kind, now = new Date()) => {
   if (await Holiday.exists({ date: { $gte: today, $lt: tomorrow } })) return 0;
 
   const [users, records, leaves] = await Promise.all([
-    User.find({ role: { $in: ['employee', 'manager'] }, isActive: true }).select('_id').lean(),
+    User.find({ role: { $in: STAFF_ROLES }, isActive: { $ne: false } }).select('_id').lean(),
     Attendance.find({ date: { $gte: today, $lt: tomorrow } }).select('employee status sessions clockIn').lean(),
     LeaveRequest.find({ status: 'approved', startDate: { $lt: tomorrow }, endDate: { $gte: today } }).select('employee').lean(),
   ]);
@@ -56,7 +57,7 @@ export const sendClockInReminders = async (kind, now = new Date()) => {
   return due.length;
 };
 
-// Push to every active staff member (employee, manager, admin, super admin) at 6:10 PM; skipped on holidays.
+// Push at 6:10 PM only to active staff who are still clocked in today; skipped on holidays.
 export const sendClockOutReminders = async (now = new Date()) => {
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
@@ -65,7 +66,12 @@ export const sendClockOutReminders = async (now = new Date()) => {
 
   if (await Holiday.exists({ date: { $gte: today, $lt: tomorrow } })) return 0;
 
-  const users = await User.find({ role: { $in: STAFF_ROLES }, isActive: true }).select('_id').lean();
+  const openIds = await Attendance.distinct('employee', {
+    date: { $gte: today, $lt: tomorrow },
+    sessions: { $elemMatch: { 'clockIn.time': { $ne: null }, 'clockOut.time': null } },
+  });
+  if (!openIds.length) return 0;
+  const users = await User.find({ _id: { $in: openIds }, role: { $in: STAFF_ROLES }, isActive: { $ne: false } }).select('_id').lean();
   const push = { ...MESSAGES.out, link: '/attendance', priority: 'high' };
   await Promise.all(users.map((u) => sendExpoPush(u._id, push)
     .catch((err) => logger.error(`[ClockReminder] ${u._id}: ${err.message}`))));

@@ -8,6 +8,7 @@ import {
   useRejectLeaveMutation,
   useCancelLeaveMutation,
   useGetLeaveBalanceQuery,
+  useGetHolidaysQuery,
 } from '../../../services/attendanceApi';
 import { useGetUsersQuery } from '../../../services/userApi';
 import { useAuth } from '../../../hooks/useAuth';
@@ -203,14 +204,24 @@ export default function AttendanceLeaves() {
   };
 
   // Calculate duration in days between start and end date for apply modal
+  // shortcut: holidays of the start year only; the server's count wins for leave that crosses into a new year.
+  const startYear = isValid(new Date(form.startDate)) ? new Date(form.startDate).getFullYear() : new Date().getFullYear();
+  const { data: holidayData } = useGetHolidaysQuery({ year: startYear, page: 1, limit: 100 });
+  // Working days only, as the server charges leave: Sundays and holidays are free. -1 = end before start.
   const leaveDuration = useMemo(() => {
     if (!form.startDate || !form.endDate) return 0;
     const start = new Date(form.startDate);
     const end = new Date(form.endDate);
     if (!isValid(start) || !isValid(end)) return 0;
-    const diff = differenceInCalendarDays(end, start);
-    return diff >= 0 ? diff + 1 : -1;
-  }, [form.startDate, form.endDate]);
+    if (differenceInCalendarDays(end, start) < 0) return -1;
+    const list = Array.isArray(holidayData?.data) ? holidayData.data : holidayData?.data?.holidays || [];
+    const off = new Set(list.map((h) => format(new Date(h.date), 'yyyy-MM-dd')));
+    let days = 0;
+    for (const d = new Date(start); differenceInCalendarDays(end, d) >= 0; d.setDate(d.getDate() + 1)) {
+      if (d.getDay() !== 0 && !off.has(format(d, 'yyyy-MM-dd'))) days += 1;
+    }
+    return days;
+  }, [form.startDate, form.endDate, holidayData]);
 
   const currentTypeBalance = balance[form.leaveType]?.balance;
   const hasTrackedBalance = ['casual', 'sick'].includes(form.leaveType);
@@ -632,7 +643,7 @@ export default function AttendanceLeaves() {
               {leaves.map((leave) => {
                 const s = new Date(leave.startDate);
                 const e = new Date(leave.endDate);
-                const days = isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null;
+                const days = leave.days ?? (isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null);
                 const isPending = leave.status === 'pending';
 
                 return (
@@ -736,7 +747,7 @@ export default function AttendanceLeaves() {
           leaves.map((leave) => {
             const s = new Date(leave.startDate);
             const e = new Date(leave.endDate);
-            const days = isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null;
+            const days = leave.days ?? (isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null);
             const isPending = leave.status === 'pending';
 
             return (
@@ -1014,7 +1025,7 @@ export default function AttendanceLeaves() {
                   {(() => {
                     const s = new Date(viewingLeave.startDate);
                     const e = new Date(viewingLeave.endDate);
-                    const d = isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null;
+                    const d = viewingLeave.days ?? (isValid(s) && isValid(e) ? Math.max(1, differenceInCalendarDays(e, s) + 1) : null);
                     return d ? `${d} ${d === 1 ? 'day' : 'days'}` : '—';
                   })()}
                 </p>

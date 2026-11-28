@@ -50,6 +50,7 @@ export default function AttendanceWidget() {
 
   const [showSummary, setShowSummary] = useState(false);
   const [isWFH, setIsWFH] = useState(false);
+  const [wfhReason, setWfhReason] = useState('');
   const [clockInError, setClockInError] = useState(null);
 
   const today = data?.data?.attendance;
@@ -97,7 +98,7 @@ export default function AttendanceWidget() {
     }
     try {
       const location = await getLocation();
-      await clockIn({ isWFH, location }).unwrap();
+      await clockIn({ isWFH, wfhReason: isWFH ? wfhReason.trim() : undefined, location }).unwrap();
       showToast.success(isWFH ? 'Clocked in (WFH)' : 'Clocked in successfully');
     } catch (err) {
       setClockInError(err?.data?.message || 'Clock in failed');
@@ -253,6 +254,16 @@ export default function AttendanceWidget() {
         {!isClockedIn && !blockedKind && (
           <div className="mb-6 px-4 py-3 bg-zinc-50 rounded-lg">
             <Switch checked={isWFH} onChange={setIsWFH} label="Work From Home" />
+            {isWFH && (
+              <input
+                value={wfhReason}
+                onChange={(e) => setWfhReason(e.target.value)}
+                maxLength={500}
+                placeholder="Why are you working from home?"
+                aria-label="Reason for working from home"
+                className="mt-3 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+              />
+            )}
           </div>
         )}
 
@@ -289,7 +300,7 @@ export default function AttendanceWidget() {
         {(isClockedIn || !blockedKind) && (
         <div className="flex gap-3">
           {!isClockedIn ? (
-            <Button className="w-full" size="lg" onClick={handleClockIn} loading={clockingIn}>
+            <Button className="w-full" size="lg" onClick={handleClockIn} loading={clockingIn} disabled={isWFH && wfhReason.trim().length < 3}>
               <PlayCircle className="h-5 w-5" />
               Clock In
             </Button>

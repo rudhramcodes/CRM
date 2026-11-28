@@ -22,7 +22,10 @@ export const clockInSchema = z.object({
     .nullable()
     .optional(),
   isWFH: z.boolean().optional(),
-  wfhReason: z.string().max(500).optional(),
+  wfhReason: z.string().trim().max(500).optional(),
+}).refine((d) => !d.isWFH || (d.wfhReason?.length ?? 0) >= 3, {
+  message: 'Say why you are working from home',
+  path: ['wfhReason'],
 });
 
 export const clockOutSchema = z.object({
@@ -44,6 +47,7 @@ export const manualEntrySchema = z.object({
   status: z.enum(['present', 'absent', 'half_day', 'wfh', 'leave', 'holiday', 'weekend']).optional(),
   notes: z.string().max(500).optional(),
   isWFH: z.boolean().optional(),
+  breakMinutes: z.coerce.number().int().min(0).max(1440).optional(),
 });
 
 export const attendanceQuerySchema = z.object({
@@ -70,6 +74,7 @@ export const attendanceUpdateSchema = z.object({
   clockOutTime: z.string().optional(),
   isWFH: z.boolean().optional(),
   date: z.string().optional(),
+  breakMinutes: z.coerce.number().int().min(0).max(1440).optional(),
 });
 
 export const regularizeSchema = z.object({

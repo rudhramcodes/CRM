@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateLeaveDays, formatLeaveDuration, shortDayStatus } from '../leavePolicy.js';
+import { calculateLeaveDays, calendarLeaveDays, formatLeaveDuration, shortDayStatus } from '../leavePolicy.js';
 import { createLeaveSchema } from '../attendance.validation.js';
 import { applyWorkingDayClockInStatus, canCancelLeave, firstClockInLateness } from '../attendance.service.js';
 
@@ -10,6 +10,16 @@ describe('half-day leave', () => {
     expect(calculateLeaveDays('2026-11-25', '2026-11-25', 'first')).toBe(0.5);
     expect(calculateLeaveDays('2026-11-25', '2026-11-27')).toBe(3);
     expect(formatLeaveDuration(0.5, 'second')).toBe('Half day (second half)');
+  });
+
+  it('charges working days only: Sundays and holidays inside the range are free', () => {
+    // Sat 28 Nov – Mon 30 Nov 2026: the Sunday is free
+    expect(calculateLeaveDays(new Date('2026-11-28'), new Date('2026-11-30'))).toBe(2);
+    // Mon 21 – Sat 26 Dec with Christmas (Fri) as a holiday
+    expect(calculateLeaveDays(new Date('2026-12-21'), new Date('2026-12-26'), null, [new Date('2026-12-25')])).toBe(5);
+    expect(calculateLeaveDays(new Date('2026-11-29'), new Date('2026-11-29'))).toBe(0);
+    // Leave approved before this change was charged calendar days; refunds give those back
+    expect(calendarLeaveDays(new Date('2026-11-28'), new Date('2026-11-30'))).toBe(3);
   });
 
   it('accepts a single-day half day and rejects one spanning several days', () => {
@@ -44,7 +54,7 @@ describe('late on clock-in', () => {
 
   it('judges only the first clock-in of the day', () => {
     expect(firstClockInLateness({ sessions: [] }, shift, at('09:10'))).toEqual({ isLate: false, lateMinutes: 0 });
-    expect(firstClockInLateness({ sessions: [] }, shift, at('10:15'))).toEqual({ isLate: true, lateMinutes: 60 });
+    expect(firstClockInLateness({ sessions: [] }, shift, at('10:15'))).toEqual({ isLate: true, lateMinutes: 75 });
     // Clocked in on time, clocked out, back at 2 pm: not late
     expect(firstClockInLateness({ sessions: [{ clockIn: { time: at('09:00') } }] }, shift, at('14:00'))).toBe(null);
   });

@@ -197,6 +197,29 @@ const autoShortDayMarking = async () => {
   }
 };
 
+// shortcut: copies the same calendar date, so only fixed-date holidays (26 Jan, 15 Aug) should be marked recurring.
+// Holidays marked "Repeats every year" get next year's copy, so they show up for leave planning.
+export const copyRecurringHolidays = async (now = new Date()) => {
+  const year = now.getFullYear();
+  const recurring = await Holiday.find({
+    isRecurring: true,
+    date: { $gte: new Date(Date.UTC(year, 0, 1)), $lt: new Date(Date.UTC(year + 1, 0, 1)) },
+  }).lean();
+  let added = 0;
+  for (const h of recurring) {
+    const d = new Date(h.date);
+    const date = new Date(Date.UTC(year + 1, d.getUTCMonth(), d.getUTCDate()));
+    const res = await Holiday.updateOne(
+      { date },
+      { $setOnInsert: { name: h.name, description: h.description, type: h.type, isRecurring: true, createdBy: h.createdBy, date } },
+      { upsert: true }
+    );
+    added += res.upsertedCount || 0;
+  }
+  if (added) logger.info(`[Attendance] Copied ${added} recurring holidays to ${year + 1}`);
+  return added;
+};
+
 export const startAttendanceCrons = () => {
   const [h, m] = AUTO_CLOCK_OUT_TIME.split(':').map(Number);
   cron.schedule(`${m} ${h} * * *`, autoClockOut, { timezone: 'Asia/Kolkata' });
@@ -205,5 +228,8 @@ export const startAttendanceCrons = () => {
     await autoAbsentMarking();
   }, { timezone: 'Asia/Kolkata' });
   cron.schedule('*/5 * * * *', autoEndBreaks, { timezone: 'Asia/Kolkata' });
+  // Once a year on 1 Dec, so a copy an admin deletes stays deleted
+  cron.schedule('30 1 1 12 *', () => copyRecurringHolidays()
+    .catch((err) => logger.error(`[Attendance] Recurring holiday copy error: ${err.message}`)), { timezone: 'Asia/Kolkata' });
   logger.info('[Attendance] Cron jobs started');
 };

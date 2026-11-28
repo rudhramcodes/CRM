@@ -257,6 +257,8 @@ const leaveRequestSchema = new mongoose.Schema(
     },
     // Set for a half-day request: which half of the day is taken off
     halfDay: { type: String, enum: ['first', 'second'] },
+    // Working days charged to the balance (Sundays and holidays excluded); null on leave from before this was stored
+    days: { type: Number, default: null },
     reason: {
       type: String,
       required: [true, 'Reason is required'],
