@@ -11,22 +11,29 @@ const breakSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Where a punch happened, as resolved by utils/geo.js (office geofence or area name)
+const locationSchema = new mongoose.Schema(
+  {
+    lat: { type: Number, default: null },
+    lng: { type: Number, default: null },
+    isOffice: { type: Boolean, default: null },
+    locationName: { type: String, default: null },
+    address: { type: String, default: null },
+    distanceMeters: { type: Number, default: null },
+  },
+  { _id: false }
+);
+
 const sessionSchema = new mongoose.Schema(
   {
     clockIn: {
       time: { type: Date, default: null },
       ip: { type: String, default: null },
-      location: {
-        lat: { type: Number, default: null },
-        lng: { type: Number, default: null },
-      },
+      location: locationSchema,
     },
     clockOut: {
       time: { type: Date, default: null },
-      location: {
-        lat: { type: Number, default: null },
-        lng: { type: Number, default: null },
-      },
+      location: locationSchema,
     },
     breaks: { type: [breakSchema], default: [] },
     workMinutes: { type: Number, default: 0 },

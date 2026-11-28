@@ -29,6 +29,31 @@ const isWeekend = (date) => {
   return day === 0;
 };
 
+const OPEN_SESSION = { $elemMatch: { 'clockIn.time': { $ne: null }, 'clockOut.time': null } };
+const NO_OPEN_SESSION = { sessions: { $not: OPEN_SESSION } };
+const hasOpenSession = (record) => (record.sessions || []).some((s) => s.clockIn?.time && !s.clockOut?.time);
+// Lost a clock-in race: the guarded save matched nothing, a second create hit the unique index, or a transaction write conflict
+const isClockInRace = (err) => err?.name === 'DocumentNotFoundError' || err?.code === 11000 || err?.code === 112;
+
+// Shift length in hours, whether or not the record's shift is populated.
+export const shiftHours = async (record) => {
+  if (record.shift?.duration) return record.shift.duration;
+  const id = record.shift?._id || record.shift;
+  const shift = id ? await Shift.findById(id).select('duration').lean() : null;
+  return shift?.duration || 8;
+};
+
+// A forgotten clock-out counts work up to that day's shift end: never later than now, never before the clock-in.
+export const autoClockOutTime = (clockInTime, recordDate, shift, now = new Date()) => {
+  const end = new Date(recordDate);
+  const [h, m] = (shift?.endTime || '18:00').split(':').map(Number);
+  end.setHours(h, m, 0, 0);
+  if (shift?.startTime && shift?.endTime && parseHHMM(shift.endTime) <= parseHHMM(shift.startTime)) {
+    end.setDate(end.getDate() + 1); // overnight shift ends the next morning
+  }
+  return new Date(Math.min(now, Math.max(end, new Date(clockInTime))));
+};
+
 export const NON_WORKING_ATTENDANCE_STATUSES = ['leave', 'holiday', 'weekend'];
 
 export const getClockInBlockReason = (record) => {
@@ -194,11 +219,11 @@ export const clockIn = async (employeeId, data, ip) => {
 
     let record = existingRecord;
 
-    // Check if already has active session
     if (record) {
-      const activeSession = (record.sessions || []).find(s => s.clockIn?.time && !s.clockOut?.time);
-      if (activeSession) {
-        throw ApiError.badRequest('Already clocked in. Clock out first before clocking in again.');
+      // Already clocked in (a double tap, or a retry after a lost reply): the punch they wanted exists.
+      if (hasOpenSession(record)) {
+        await mongoSession.abortTransaction();
+        return record;
       }
 
       const blockReason = getClockInBlockReason(record);
@@ -209,18 +234,6 @@ export const clockIn = async (employeeId, data, ip) => {
     if (!record) {
       if (holiday) {
         await attendanceRepo.createAttendance({
-          employee: employeeId,
-          date: today,
-          shift: shift._id,
-          status: 'holiday',
-          sessions: [],
-          createdBy: employeeId,
-        });
-        throw ApiError.badRequest(`Today is a holiday: ${holiday.name}`);
-      }
-
-      if (isWeekend(today)) {
-        record = await attendanceRepo.createAttendance({
           employee: employeeId,
           date: today,
           shift: shift._id,
@@ -255,12 +268,13 @@ export const clockIn = async (employeeId, data, ip) => {
       }
     }
 
-    // Late detection
+    // Late detection: only the day's first clock-in counts, so coming back from lunch isn't "late"
+    const firstPunch = !(record.sessions || []).some((s) => s.clockIn?.time);
     const shiftStart = parseHHMM(shift.startTime);
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     const graceEnd = shiftStart + (shift.gracePeriod || 15);
     // Off for the first half on approved leave: arriving after shift start isn't late
-    const isLate = nowMinutes > graceEnd && !(record.leave && record.status === 'half_day');
+    const isLate = firstPunch && nowMinutes > graceEnd && !(record.leave && record.status === 'half_day');
     const lateMinutes = isLate ? nowMinutes - graceEnd : 0;
 
     // Resolve location (Office geofence or Area name)
@@ -293,8 +307,10 @@ export const clockIn = async (employeeId, data, ip) => {
 
     if (!record.sessions) record.sessions = [];
     record.sessions.push(newSession);
-    record.isLate = isLate;
-    record.lateMinutes = lateMinutes;
+    if (firstPunch) {
+      record.isLate = isLate;
+      record.lateMinutes = lateMinutes;
+    }
     applyWorkingDayClockInStatus(record, data?.isWFH);
     if (data?.isWFH) {
       record.isWFH = true;
@@ -309,12 +325,18 @@ export const clockIn = async (employeeId, data, ip) => {
       metadata: { ip, isLate, lateMinutes, sessionIndex: record.sessions.length - 1 },
     });
 
+    // Two clock-ins at once: only the save that finds no open session wins (the other gets DocumentNotFoundError)
+    if (!record.isNew) record.$where = NO_OPEN_SESSION;
     await record.save({ session: mongoSession });
     await mongoSession.commitTransaction();
     return record;
   } catch (err) {
-    await mongoSession.abortTransaction();
-    throw err;
+    if (mongoSession.inTransaction()) await mongoSession.abortTransaction();
+    if (!isClockInRace(err)) throw err;
+    // The other request clocked in first: return its record, as for any repeat clock-in
+    const latest = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, new Date());
+    if (latest && hasOpenSession(latest)) return latest;
+    throw ApiError.conflict('Clock-in clashed with another request. Please try again.');
   } finally {
     mongoSession.endSession();
   }
@@ -327,16 +349,10 @@ export const clockOut = async (employeeId, location) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    let record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
-    let activeSession = record ? ensureActiveSession(record) : null;
-
-    if (!activeSession) {
-      const activeRecord = await attendanceRepo.findActiveAttendanceByEmployee(employeeId);
-      if (activeRecord) {
-        record = activeRecord;
-        activeSession = ensureActiveSession(record);
-      }
-    }
+    // Today's session only: one left open on an earlier day is closed by the auto clock-out cron at that day's shift end,
+    // not here at "now" (that would count 30+ hours).
+    const record = await attendanceRepo.findAttendanceByEmployeeAndDate(employeeId, today);
+    const activeSession = record ? ensureActiveSession(record) : null;
 
     if (!record || !activeSession) {
       throw ApiError.badRequest('No active clock-in session found to clock out');
@@ -358,14 +374,7 @@ export const clockOut = async (employeeId, location) => {
       }
     }
 
-    let shiftDuration = 8;
-    if (record.shift?.duration) shiftDuration = record.shift.duration;
-    else if (record.shift?._id) {
-      const shift = await attendanceRepo.findShiftById(record.shift._id);
-      if (shift) shiftDuration = shift.duration;
-    }
-
-    recalcRecordTotals(record, shiftDuration);
+    recalcRecordTotals(record, await shiftHours(record));
 
     const sessionIdx = record.sessions.indexOf(activeSession);
     record.events.push({
@@ -427,9 +436,7 @@ export const endBreak = async (employeeId) => {
   lastBreak.end = now;
   lastBreak.duration = duration;
 
-  let shiftDuration = 8;
-  if (record.shift?.duration) shiftDuration = record.shift.duration;
-  recalcRecordTotals(record, shiftDuration);
+  recalcRecordTotals(record, await shiftHours(record));
 
   record.events.push({ type: 'break_end', timestamp: now, metadata: { duration } });
   await record.save();

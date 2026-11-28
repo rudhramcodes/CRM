@@ -2,61 +2,60 @@ import cron from 'node-cron';
 import { Attendance, Shift, Holiday } from './attendance.model.js';
 import User from '../auth/auth.model.js';
 import logger from '../../utils/logger.js';
-import { ensureActiveSession, recalcRecordTotals } from './attendance.service.js';
+import { autoClockOutTime, ensureActiveSession, recalcRecordTotals } from './attendance.service.js';
 import { sendExpoPush } from '../notifications/expoPush.js';
 import { shortDayStatus } from './leavePolicy.js';
 
-// "18:30" → "6:30 PM"
-const toDisplay = (hhmm) => {
-  const [h, m] = hhmm.split(':').map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-};
-
-// Once a day at 11:45 PM IST: anyone still clocked in, on any shift, is clocked out at that time.
+// Once a day at 11:45 PM IST: every session still open, today's or left over from an earlier day, is closed.
+// A forgotten clock-out counts work only up to that day's shift end (see autoClockOutTime), not up to 11:45 PM.
 export const AUTO_CLOCK_OUT_TIME = '23:45';
 const autoClockOut = async () => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setHours(0, 0, 0, 0);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const records = await Attendance.find({
-      date: { $gte: today, $lt: tomorrow },
+      date: { $lt: tomorrow },
       $or: [
         { sessions: { $elemMatch: { 'clockIn.time': { $ne: null }, 'clockOut.time': null } } },
         { 'clockIn.time': { $exists: true, $ne: null }, 'clockOut.time': { $exists: false } },
       ],
-    }).populate('shift', 'duration');
+    }).populate('shift', 'duration startTime endTime');
 
     let closed = 0;
     for (const record of records) {
-      const activeSession = ensureActiveSession(record);
-      if (!activeSession) continue;
+      ensureActiveSession(record); // moves a legacy punch into sessions[]
+      const open = record.sessions.filter((s) => s.clockIn?.time && !s.clockOut?.time);
+      if (!open.length) continue;
 
-      const clockOutTime = new Date();
-      activeSession.clockOut = { time: clockOutTime };
-
-      for (const brk of activeSession.breaks || []) {
-        if (brk.start && !brk.end) {
-          brk.end = clockOutTime;
-          brk.duration = Math.round((clockOutTime - new Date(brk.start)) / 60000);
+      let clockOutTime;
+      for (const session of open) {
+        clockOutTime = autoClockOutTime(session.clockIn.time, record.date, record.shift, now);
+        session.clockOut = { time: clockOutTime };
+        for (const brk of session.breaks || []) {
+          if (brk.start && !brk.end) {
+            brk.end = new Date(Math.max(clockOutTime, new Date(brk.start)));
+            brk.duration = Math.round((brk.end - new Date(brk.start)) / 60000);
+          }
         }
       }
 
       recalcRecordTotals(record, record.shift?.duration || 8);
       record.events.push({
         type: 'auto_clock_out',
-        timestamp: clockOutTime,
-        metadata: { workHours: record.workHours, overtime: record.overtime, auto: true },
+        timestamp: now,
+        metadata: { clockOutTime, workHours: record.workHours, overtime: record.overtime, auto: true },
       });
       await record.save();
       closed += 1;
       // Tell them on their phone, so a missed clock-out isn't a surprise on the attendance report.
+      const at = clockOutTime.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toUpperCase();
       sendExpoPush(record.employee, {
         type: 'auto_clock_out',
         title: 'Clocked out automatically',
-        message: `You were still clocked in at ${toDisplay(AUTO_CLOCK_OUT_TIME)}, so you were clocked out. Request a regularization if this is wrong.`,
+        message: `You didn't clock out, so you were clocked out at ${at}. Request a regularization if you worked longer.`,
         link: '/attendance',
         priority: 'high',
       }).catch((err) => logger.error(`[Attendance] Auto clock-out push failed: ${err.message}`));
@@ -113,47 +112,42 @@ const autoAbsentMarking = async () => {
   }
 };
 
+// A break still open after 60 minutes is ended at start + 60 min, so it counts as a 60-minute break.
+export const endLongBreak = (brk, cutoff) => {
+  if (!brk.start || brk.end || new Date(brk.start) > cutoff) return false;
+  brk.end = new Date(new Date(brk.start).getTime() + 60 * 60 * 1000);
+  brk.duration = 60;
+  return true;
+};
+
 const autoEndBreaks = async () => {
   try {
-    const now = new Date();
-    const sixtyMinAgo = new Date(now - 60 * 60 * 1000);
+    const sixtyMinAgo = new Date(Date.now() - 60 * 60 * 1000);
 
     const records = await Attendance.find({
       $or: [
         { sessions: { $elemMatch: { 'breaks.end': null, 'breaks.start': { $lte: sixtyMinAgo } } } },
         { 'breaks.end': null, 'breaks.start': { $lte: sixtyMinAgo } },
       ],
-    });
+    }).populate('shift', 'duration');
 
+    let changed = 0;
     for (const record of records) {
-      let changed = false;
-
+      let ended = false;
       for (const session of record.sessions || []) {
-        for (const brk of session.breaks || []) {
-          if (brk.start && !brk.end && new Date(brk.start) <= sixtyMinAgo) {
-            brk.end = sixtyMinAgo;
-            brk.duration = 60;
-            changed = true;
-          }
-        }
+        for (const brk of session.breaks || []) ended = endLongBreak(brk, sixtyMinAgo) || ended;
       }
+      for (const brk of record.breaks || []) ended = endLongBreak(brk, sixtyMinAgo) || ended;
 
-      for (const brk of record.breaks || []) {
-        if (brk.start && !brk.end && new Date(brk.start) <= sixtyMinAgo) {
-          brk.end = sixtyMinAgo;
-          brk.duration = 60;
-          changed = true;
-        }
-      }
-
-      if (changed) {
+      if (ended) {
         recalcRecordTotals(record, record.shift?.duration || 8);
         await record.save();
+        changed += 1;
       }
     }
 
-    if (records.length > 0) {
-      logger.info(`[Attendance] Auto ended breaks for ${records.length} employees`);
+    if (changed > 0) {
+      logger.info(`[Attendance] Auto ended breaks for ${changed} employees`);
     }
   } catch (error) {
     logger.error(`[Attendance] Auto end breaks error: ${error.message}`);
@@ -209,7 +203,7 @@ export const startAttendanceCrons = () => {
   cron.schedule('59 23 * * *', async () => {
     await autoShortDayMarking();
     await autoAbsentMarking();
-  });
-  cron.schedule('*/5 * * * *', autoEndBreaks);
+  }, { timezone: 'Asia/Kolkata' });
+  cron.schedule('*/5 * * * *', autoEndBreaks, { timezone: 'Asia/Kolkata' });
   logger.info('[Attendance] Cron jobs started');
 };
